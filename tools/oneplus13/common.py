@@ -52,3 +52,36 @@ def boot_sections(data):
         result[name] = data[offset:offset + size]
         offset += (size + page - 1) // page * page
     return result
+
+
+def read_cpio(data):
+    """Bounded independent newc reader for artifact inspection (never extracts)."""
+    offset, result = 0, {}
+    while offset + 110 <= len(data):
+        header = data[offset:offset + 110]
+        if header[:6] != b'070701':
+            raise ValueError('Invalid newc magic')
+        try:
+            fields = [int(header[6 + n*8:14 + n*8], 16) for n in range(13)]
+        except ValueError as error:
+            raise ValueError('Invalid newc fields') from error
+        size, namesize = fields[6], fields[11]
+        offset += 110
+        if namesize < 1 or offset + namesize > len(data):
+            raise ValueError('Truncated newc name')
+        raw = data[offset:offset + namesize]
+        if raw[-1:] != b'\0' or b'\0' in raw[:-1]:
+            raise ValueError('Invalid newc name')
+        name = raw[:-1].decode('utf-8')
+        offset = (offset + namesize + 3) & ~3
+        if offset + size > len(data):
+            raise ValueError('Truncated newc content')
+        if name == 'TRAILER!!!':
+            return result
+        path = PurePosixPath(name)
+        if not name or path.is_absolute() or '..' in path.parts or name in result:
+            raise ValueError('Unsafe or duplicate newc path')
+        result[name] = {'mode': fields[1], 'major': fields[9], 'minor': fields[10],
+                        'data': data[offset:offset + size]}
+        offset = (offset + size + 3) & ~3
+    raise ValueError('Missing newc trailer')

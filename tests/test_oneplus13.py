@@ -9,7 +9,7 @@ import unittest
 
 TOOLS = pathlib.Path(__file__).resolve().parents[1] / 'tools/oneplus13'
 sys.path.insert(0, str(TOOLS))
-from common import boot_sections, make_cpio
+from common import boot_sections, make_cpio, read_cpio
 from verify import check_config, REQUIRED
 
 
@@ -56,6 +56,13 @@ class PhoneFormats(unittest.TestCase):
             config.write_text(config.read_text().replace('CONFIG_USB_DWC3=y', 'CONFIG_USB_DWC3=m'))
             with self.assertRaisesRegex(ValueError, 'USB_DWC3'):
                 check_config(config)
+
+    def test_cpio_reader_rejects_truncation_and_missing_trailer(self):
+        archive = make_cpio([('init', stat.S_IFREG | 0o755, b'#!/bin/sh\n', 0, 0)])
+        self.assertEqual(read_cpio(archive)['init']['data'], b'#!/bin/sh\n')
+        for bad in [archive[:10], archive[:115], archive[:-20]]:
+            with self.assertRaises(ValueError):
+                read_cpio(bad)
 
 
 if __name__ == '__main__':

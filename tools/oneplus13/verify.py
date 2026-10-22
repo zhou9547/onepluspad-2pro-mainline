@@ -7,8 +7,10 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import stat
+import tarfile
 
-from common import boot_sections, sha256
+from common import boot_sections, read_cpio, sha256
 
 REQUIRED = ['ARCH_QCOM', 'ARCH_VEXPRESS', 'BLK_DEV_INITRD', 'RD_GZIP',
             'DEVTMPFS', 'DEVTMPFS_MOUNT', 'TMPFS', 'CONFIGFS_FS', 'USB_GADGET',
@@ -47,6 +49,24 @@ def verify_artifacts(out):
                            ('dtb', 'sm8750-oneplus-dodge.dtb')]:
         if sections[part] != (out / filename).read_bytes():
             raise ValueError(f'Boot image section differs: {part}')
+    cpio = read_cpio(gzip.decompress(sections['ramdisk']))
+    if hashlib.sha256(cpio['init']['data']).hexdigest() != manifest['phone_inputs_sha256']['init']:
+        raise ValueError('Packaged init differs from phone source')
+    if not cpio['init']['mode'] & stat.S_IXUSR:
+        raise ValueError('Packaged init is not executable')
+    if hashlib.sha256(cpio['bin/busybox']['data']).hexdigest() != manifest['tools_sha256']['busybox']:
+        raise ValueError('Packaged BusyBox differs from pinned binary')
+    console = cpio['dev/console']
+    if stat.S_IFMT(console['mode']) != stat.S_IFCHR or (console['major'], console['minor']) != (5, 1):
+        raise ValueError('Wrong console device in initramfs')
+    with tarfile.open(out / 'modules.tar.gz') as archive:
+        names = [member.name for member in archive.getmembers()]
+        if any(Path(name).is_absolute() or '..' in Path(name).parts for name in names):
+            raise ValueError('Unsafe module archive path')
+        prefix = 'lib/modules/' + manifest['kernel_release'] + '/'
+        if not any(name.removeprefix('./').startswith(prefix) and
+                   name.endswith(('.ko', '.ko.zst', '.ko.xz', '.ko.gz')) for name in names):
+            raise ValueError('Module archive does not match kernel release')
     dtb = out / 'sm8750-oneplus-dodge.dtb'
     compatible = subprocess.check_output(['fdtget', str(dtb), '/', 'compatible'], text=True)
     if compatible.strip().split() != ['oneplus,dodge', 'qcom,sm8750']:
@@ -58,6 +78,7 @@ def verify_artifacts(out):
             'boot_sha256': sha256(out / 'boot-oneplus13-ram-experimental.img'),
             'checks': ['artifact sizes and SHA256', 'required built-in dependencies',
                        'ARM64 Image magic', 'Image gzip roundtrip', 'Android v2 section roundtrip',
+                       'independent cpio inspection: init, BusyBox, console', 'matching module release archive',
                        'DTB identity and independent decompilation']}
 
 
