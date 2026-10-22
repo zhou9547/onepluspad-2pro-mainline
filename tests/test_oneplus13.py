@@ -11,6 +11,9 @@ TOOLS = pathlib.Path(__file__).resolve().parents[1] / 'tools/oneplus13'
 sys.path.insert(0, str(TOOLS))
 from common import boot_sections, make_cpio, read_cpio
 from verify import check_config, REQUIRED
+spec = importlib.util.spec_from_file_location('phone_stock_collector', TOOLS / 'collect-stock.py')
+collector = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(collector)
 
 
 class PhoneFormats(unittest.TestCase):
@@ -66,6 +69,16 @@ class PhoneFormats(unittest.TestCase):
         for bad in [archive[:10], archive[:115], archive[:-20]]:
             with self.assertRaises(ValueError):
                 read_cpio(bad)
+
+    def test_stock_partition_selection_prefers_current_slot(self):
+        present = {'dtbo', 'dtbo_a', 'dtbo_b'}
+        self.assertEqual(collector.resolve_partition('dtbo', '_b', present.__contains__), 'dtbo_b')
+        self.assertEqual(collector.resolve_partition('dtbo', '_a', {'dtbo'}.__contains__), 'dtbo')
+
+    def test_stock_partition_selection_never_falls_back_to_inactive_slot(self):
+        for present in [{'boot_a'}, {'boot'}]:
+            with self.assertRaises(ValueError):
+                collector.resolve_partition('boot', '_b', present.__contains__)
 
 
 if __name__ == '__main__':

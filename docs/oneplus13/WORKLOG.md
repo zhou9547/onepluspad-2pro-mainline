@@ -90,3 +90,13 @@ duplicate bin/busybox entry: this pinned Ubuntu binary includes `busybox` in its
 applet list. Preserve its real file and skip only that self-link. The exact
 binary/appet/archive preflight now runs before source compilation. CI now saves
 compiler cache immediately after the build attempt, including packaging failures.
+
+Read-only collector review removed an assumption that dtbo is always unslotted.
+It now discovers current-slot dtbo/vbmeta first, records the partition mapping,
+and never substitutes an inactive boot slot. Empty/whitespace serials are
+rejected. Eight host-side tests pass, including slotted/unslotted metadata and
+inactive-slot rejection. This collection tool has not been run on a phone.
+
+The pinned real AOSP mkbootimg also passed an independent local Android v2
+section roundtrip test; the module archive prefix was checked against the pinned
+kernel's actual MODLIB definition. No hardware result is inferred from these checks.

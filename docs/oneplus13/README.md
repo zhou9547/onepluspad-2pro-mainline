@@ -45,6 +45,8 @@ python3 tools/oneplus13/collect-stock.py --serial YOUR_ADB_SERIAL --output /priv
 此工具只读取；输出目录须在 Git 仓库外或已忽略的私有目录。默认只取启动
 镜像头，不能当完整恢复备份；加 `--include-boot-images` 才读取完整的当前槽
 启动镜像。它也不备份 GPT、校准或 Android 数据，不能代替完整恢复方案。
+工具按实际存在的分区选择当前槽，并记录 dtbo/vbmeta 是否有槽位后缀；不会
+用另一槽位的启动镜像代替当前槽位。
 取证文件可能包含设备唯一信息，请保存在本机，不要直接上传公开仓库。
 
 RAM 环境设计为 300 秒后重启；kernel panic 为 15 秒。实际硬件死锁可能令

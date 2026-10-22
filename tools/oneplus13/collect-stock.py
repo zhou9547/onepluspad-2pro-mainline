@@ -32,6 +32,19 @@ def private_destination(path):
     return path
 
 
+def resolve_partition(base, slot, exists):
+    """Prefer the verified current slot; discover unslotted metadata explicitly."""
+    if base not in {'boot', 'init_boot', 'vendor_boot', 'dtbo', 'vbmeta'} or slot not in {'_a', '_b'}:
+        raise ValueError('Unexpected partition identity')
+    names = [base + slot]
+    if base in {'dtbo', 'vbmeta'}:
+        names.append(base)
+    for name in names:
+        if exists(name):
+            return name
+    raise ValueError(f'No current-slot or unslotted partition found for {base}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--serial', required=True, help='Explicit adb serial; never selects an implicit device')
@@ -40,6 +53,8 @@ def main():
     parser.add_argument('--include-boot-images', action='store_true',
                         help='Read complete current-slot boot/init_boot/vendor_boot/dtbo/vbmeta for local recovery evidence')
     args = parser.parse_args()
+    if not args.serial.strip() or any(char.isspace() for char in args.serial) or '\0' in args.serial:
+        parser.error('Use one explicit, non-empty adb serial')
     out = private_destination(args.output)
     prop = lambda key: adb_read(args.adb, args.serial, 'shell', 'getprop', key).decode().strip()
     metadata = {key: prop(key) for key in [
@@ -79,8 +94,11 @@ def main():
                               ('power-supply.txt', 'cat /sys/class/power_supply/battery/uevent'),
                               ('partitions.txt', 'ls -l /dev/block/by-name')]:
         (out / filename).write_bytes(root_read(command))
+    partition_map = {}
+    exists = lambda name: root_read(f'test -e /dev/block/by-name/{name} && echo yes || echo no').decode().strip() == 'yes'
     for base in ['boot', 'init_boot', 'vendor_boot', 'dtbo', 'vbmeta']:
-        name = base + slot if base in {'boot', 'init_boot', 'vendor_boot', 'vbmeta'} else base
+        name = resolve_partition(base, slot, exists)
+        partition_map[base] = name
         assert re.fullmatch(r'[a-z_]+', name)
         count = '' if args.include_boot_images else ' count=2'
         image = root_read(f'dd if=/dev/block/by-name/{name} bs=4096{count} status=none', timeout=180)
@@ -93,6 +111,7 @@ def main():
     (out / 'manifest.json').write_text(json.dumps({
         'scope': 'Read-only stock Android evidence; private, not for public upload',
         'full_boot_images': args.include_boot_images,
+        'partition_map': partition_map,
         'files': files}, indent=2) + '\n', encoding='utf-8')
     print('Private stock evidence collected. No device partition was written.')
 
