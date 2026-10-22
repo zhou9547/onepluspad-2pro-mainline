@@ -86,6 +86,9 @@ def main():
             result['checks'].append('QEMU virt boots the exact Image/initramfs and reaches init marker')
             result['qemu_scope'] = 'ARM64 userspace only; not an SM8750 hardware emulator'
         (out / 'verification.json').write_text(json.dumps(result, indent=2) + '\n')
+        (out / 'SHA256SUMS').write_text(''.join(
+            f'{sha256(path)}  {path.name}\n' for path in sorted(out.iterdir())
+            if path.is_file() and path.name != 'SHA256SUMS'))
         print(json.dumps(result, indent=2))
 
 

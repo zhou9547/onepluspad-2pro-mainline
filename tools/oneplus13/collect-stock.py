@@ -10,6 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shlex
 import subprocess
 
 
@@ -57,12 +58,14 @@ def main():
     slot = metadata['ro.boot.slot_suffix']
     if slot not in {'_a', '_b'}:
         raise SystemExit('Unexpected active slot; refusing to guess partition names')
-    uid = adb_read(args.adb, args.serial, 'shell', 'su', '-c', 'id -u').decode().strip()
+    root_read = lambda command, timeout=30: adb_read(
+        args.adb, args.serial, 'exec-out', 'su -c ' + shlex.quote(command), timeout=timeout)
+    uid = root_read('id -u').decode().strip()
     if uid != '0':
         raise SystemExit('Stock root is required for FDT and boot evidence; no root changes are performed')
     out.mkdir(parents=True, exist_ok=True)
     (out / 'android.json').write_text(json.dumps(metadata, indent=2) + '\n', encoding='utf-8')
-    fdt = adb_read(args.adb, args.serial, 'exec-out', 'su', '-c', 'cat /sys/firmware/fdt')
+    fdt = root_read('cat /sys/firmware/fdt')
     if len(fdt) < 40 or fdt[:4] != bytes.fromhex('d00dfeed'):
         raise SystemExit('No valid runtime FDT returned; do not substitute a different device dump')
     size = int.from_bytes(fdt[4:8], 'big')
@@ -75,13 +78,12 @@ def main():
                               ('meminfo.txt', 'cat /proc/meminfo'),
                               ('power-supply.txt', 'cat /sys/class/power_supply/battery/uevent'),
                               ('partitions.txt', 'ls -l /dev/block/by-name')]:
-        (out / filename).write_bytes(adb_read(args.adb, args.serial, 'exec-out', 'su', '-c', command))
+        (out / filename).write_bytes(root_read(command))
     for base in ['boot', 'init_boot', 'vendor_boot', 'dtbo', 'vbmeta']:
         name = base + slot if base in {'boot', 'init_boot', 'vendor_boot', 'vbmeta'} else base
         assert re.fullmatch(r'[a-z_]+', name)
         count = '' if args.include_boot_images else ' count=2'
-        image = adb_read(args.adb, args.serial, 'exec-out', 'su', '-c',
-                         f'dd if=/dev/block/by-name/{name} bs=4096{count} status=none', timeout=180)
+        image = root_read(f'dd if=/dev/block/by-name/{name} bs=4096{count} status=none', timeout=180)
         if not image:
             raise SystemExit(f'Empty partition evidence: {base}')
         (out / (base + ('.img' if args.include_boot_images else '.header.bin'))).write_bytes(image)

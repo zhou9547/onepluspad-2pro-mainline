@@ -92,6 +92,7 @@ find "$root/var/lib/apt/lists" -type f -delete
 find "$root/var/log" -type f -exec truncate -s 0 {} +
 truncate -s 0 "$root/etc/machine-id"
 rm -f "$root/var/lib/dbus/machine-id"
+rm -f "$root/var/lib/systemd/random-seed"
 ln -s /etc/machine-id "$root/var/lib/dbus/machine-id"
 rm -f "$root/etc/resolv.conf"
 ln -s /run/systemd/resolve/stub-resolv.conf "$root/etc/resolv.conf"
