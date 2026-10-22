@@ -52,3 +52,9 @@ and asserted after installation. Root credential lock and empty machine-id are
 also checked from the actual completed SquashFS, not just the staging tree.
 Phone DTS static label inspection found a missing VPH fixed supply; the exact
 provider from the attributed phone reference was restored before the next build.
+
+First full native configuration passed all required built-in dependency checks.
+The DT compiler rejected missing board-supplied bi_tcxo divide-by-two clocks,
+alongside the already diagnosed VPH supply. The complete DTS + included DTSI
+reference graph was inspected; both fixed-factor providers were restored from
+the same phone source. No force-output flag or disabled compiler check is used.

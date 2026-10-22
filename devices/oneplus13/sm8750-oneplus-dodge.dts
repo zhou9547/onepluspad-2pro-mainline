@@ -49,6 +49,20 @@
             clock-frequency = <32000>;
             #clock-cells = <0>;
         };
+        bi_tcxo_div2: bi-tcxo-div2-clk {
+            compatible = "fixed-factor-clock";
+            #clock-cells = <0>;
+            clocks = <&rpmhcc RPMH_CXO_CLK>;
+            clock-mult = <1>;
+            clock-div = <2>;
+        };
+        bi_tcxo_ao_div2: bi-tcxo-ao-div2-clk {
+            compatible = "fixed-factor-clock";
+            #clock-cells = <0>;
+            clocks = <&rpmhcc RPMH_CXO_CLK_A>;
+            clock-mult = <1>;
+            clock-div = <2>;
+        };
     };
     gpio-keys {
         compatible = "gpio-keys";
