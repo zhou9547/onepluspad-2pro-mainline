@@ -58,3 +58,20 @@ The DT compiler rejected missing board-supplied bi_tcxo divide-by-two clocks,
 alongside the already diagnosed VPH supply. The complete DTS + included DTSI
 reference graph was inspected; both fixed-factor providers were restored from
 the same phone source. No force-output flag or disabled compiler check is used.
+
+## 2026-10-23
+
+Native rootfs build 39809729390 succeeded after explicit DNS dependency checks.
+Independent verification run 39812509439 downloaded that artifact on a fresh
+runner and verified every checksum, all 782 package architectures, actual ARM64
+GNOME/GDM/NetworkManager binaries, locked root and empty machine-id in SquashFS.
+The image is GNOME Shell 50.1, 419479552 bytes, SHA256
+97611cd24f0bc73c67a7393b9def55cbea3e952d26ca1ecfeb99b1d0b6e5ecef.
+This does not establish phone hardware support.
+
+Local artifact storage downloads were measured at only a few tens of KiB/s.
+Bulk downloads were stopped; actual artifact re-download and verification uses
+the fresh CI runner instead. Small verification reports will accompany delivery.
+The BusyBox matching Ubuntu source archives are locked from its official .dsc
+checksums and included with the diagnostic image, together with Linux source
+identity and the generated phone patch.

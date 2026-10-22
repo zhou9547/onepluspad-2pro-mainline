@@ -86,6 +86,26 @@ def main():
                     '--cmdline', cmdline,
                     '--output', str(out / 'boot-oneplus13-ram-experimental.img')], check=True)
     source = json.loads((REPO / 'devices/oneplus13/source.json').read_text())
+    for item in source['busybox_source']['files']:
+        archive = cache / item['file']
+        if not archive.is_file() or sha256(archive) != item['sha256']:
+            with urllib.request.urlopen(item['url'], timeout=120) as stream, archive.open('wb') as target:
+                shutil.copyfileobj(stream, target)
+        if archive.stat().st_size != item['bytes'] or sha256(archive) != item['sha256']:
+            raise SystemExit('BusyBox source archive checksum/size mismatch')
+        shutil.copy2(archive, out / item['file'])
+    (out / 'SOURCES.md').write_text(
+        '# Corresponding sources\n\n'
+        'BusyBox: the included Ubuntu source .dsc, original tarball, signature and\n'
+        'Debian packaging archive correspond to the pinned busybox-static package.\n'
+        'Extract with dpkg-source -x busybox_1.36.1-6ubuntu3.1.dsc on an Ubuntu build host.\n\n'
+        'Linux platform source: ' + source['kernel']['repository'] + '\n'
+        'Commit: ' + source['kernel']['commit'] + '\n'
+        'Source archive: https://github.com/yzddmr6/linux-sm8750-erhai/archive/'
+        + source['kernel']['commit'] + '.tar.gz\n'
+        'Apply phone-kernel.patch to that source. The configuration is kernel.config.\n'
+        'The build recipe is tools/oneplus13/build.sh in the integration commit\n'
+        'recorded in manifest.json. The phone board carries BSD-3-Clause attribution.\n')
     shutil.copy2(REPO / 'devices/oneplus13/source.json', out / 'source.json')
     shutil.copy2(REPO / 'docs/oneplus13/README.md', out / 'README.md')
     shutil.copy2(REPO / 'COPYING' if (REPO / 'COPYING').exists() else REPO / 'LICENSE',
