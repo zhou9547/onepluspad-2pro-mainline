@@ -34,6 +34,17 @@ Ubuntu 26.04.1 + GNOME。基础 tarball 以 Canonical 官方 SHA256 固定，软
 容量、系统版本和解锁状态，校验恢复文件后再设计唯一一次 RAM 测试。
 本项目没有对设备执行任何命令，也没有提供自动分区或擦除工具。
 
+后续可在保留原厂 Android、已具备 root 且由你操作的电脑上取证：
+
+```sh
+python3 tools/oneplus13/collect-stock.py --serial YOUR_ADB_SERIAL --output /private/oneplus13-stock
+```
+
+此工具只读取；输出目录须在 Git 仓库外或已忽略的私有目录。默认只取启动
+镜像头，不能当完整恢复备份；加 `--include-boot-images` 才读取完整的当前槽
+启动镜像。它也不备份 GPT、校准或 Android 数据，不能代替完整恢复方案。
+取证文件可能包含设备唯一信息，请保存在本机，不要直接上传公开仓库。
+
 RAM 环境设计为 300 秒后重启；kernel panic 为 15 秒。实际硬件死锁可能令
 软件计时器失效，自动恢复也需要真机验证。启动后逐个将块设备设置为只读，
 不挂载 Android；USB NCM 地址为 172.16.13.1，HTTP 日志端口 8080，

@@ -28,6 +28,13 @@ jobs:
       - name: Install build dependencies
         timeout-minutes: 10
         run: |
+          # The Azure HTTP mirror was measured downloading small cross-toolchain
+          # packages for minutes. Use Ubuntu's HTTPS archive in this disposable VM.
+          for file in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
+            if [ -f "$file" ]; then
+              sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' "$file"
+            fi
+          done
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio qemu-user
       - name: Check phone tooling
