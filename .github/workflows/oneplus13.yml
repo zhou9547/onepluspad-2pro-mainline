@@ -1,0 +1,72 @@
+name: OnePlus 13 offline build
+
+on:
+  push:
+    branches: [oneplus13-bringup]
+    paths:
+      - .github/workflows/oneplus13.yml
+      - devices/oneplus13/**
+      - tools/oneplus13/**
+      - tests/test_oneplus13.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: oneplus13-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  kernel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install build and independent inspection tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio qemu-system-arm qemu-user-static
+      - name: Check phone tooling
+        run: python3 -m unittest discover -s tests -p test_oneplus13.py -v
+      - name: Restore compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: oneplus13-v1-${{ runner.os }}-${{ hashFiles('devices/oneplus13/**') }}
+          restore-keys: oneplus13-v1-${{ runner.os }}-
+      - name: Build pinned phone candidate
+        env:
+          CCACHE_MAXSIZE: 3G
+        run: bash tools/oneplus13/build.sh
+      - name: QEMU userspace smoke test
+        run: python3 tools/oneplus13/verify.py --artifacts out/oneplus13 --qemu
+      - name: Publish build evidence in job summary
+        if: always()
+        run: |
+          echo '## OnePlus 13 offline candidate' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Build/QEMU results do not establish hardware support. No device was flashed.' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f out/oneplus13/verification.json ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat out/oneplus13/verification.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: oneplus13-offline-${{ github.sha }}
+          path: out/oneplus13/
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: oneplus13-failure-logs-${{ github.run_id }}
+          path: |
+            out/oneplus13-kbuild/*.log
+            out/oneplus13/*.json
+            out/oneplus13/qemu.log
+          if-no-files-found: ignore
+          retention-days: 7
