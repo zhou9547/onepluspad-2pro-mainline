@@ -20,6 +20,10 @@ base="$repo/cache/oneplus13-ubuntu-base.tar.gz"
 curl --fail --location --output "$base" "${pin[0]}"
 printf '%s  %s\n' "${pin[1]}" "$base" | sha256sum --check -
 tar --extract --gzip --numeric-owner --preserve-permissions --file "$base" --directory "$root"
+# Ubuntu Base intentionally omits ca-certificates. Bootstrap HTTPS using the
+# runner's standard trust bundle; apt replaces it when installing the target
+# ca-certificates package. Never disable TLS verification or archive signatures.
+install -D -m 0644 /etc/ssl/certs/ca-certificates.crt "$root/etc/ssl/certs/ca-certificates.crt"
 # The archive's symlink layout is preserved; never copy the host machine identity.
 printf 'nameserver 1.1.1.1\n' > "$root/etc/resolv.conf"
 cat > "$root/etc/apt/sources.list.d/ubuntu.sources" <<EOF
@@ -45,7 +49,7 @@ for d in dev proc sys run; do
   mount --rbind "/$d" "$root/$d"
   mount --make-rslave "$root/$d"
 done
-chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get update
+chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -o APT::Update::Error-Mode=any update
 # Read the exact package set from the locked JSON. Package versions are fixed by
 # the signed Ubuntu snapshot and recorded in the delivered manifest.
 read -r -a packages <<< "${pin[3]}"

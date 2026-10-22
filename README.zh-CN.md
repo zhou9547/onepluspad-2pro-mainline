@@ -1,3 +1,5 @@
+> **一加 13 适配分支：**见[手机构建与限制](docs/oneplus13/README.md)。下方平板功能表不代表手机已支持。
+
 # Ubuntu for OnePlus Pad 2 Pro
 
 在一加平板 2 Pro 上运行 Ubuntu Desktop 26.04，采用 GNOME 桌面与基于上游 Linux

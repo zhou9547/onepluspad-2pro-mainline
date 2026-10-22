@@ -22,6 +22,7 @@
   "stock_reference": {
     "repository": "https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750",
     "branch": "oneplus/sm8750_b_16.0.0_oneplus_13",
+    "commit": "d50b305f7da9e14715a25120a4ac7b1a4b8b97c3",
     "scope": "Research only; not a substitute for this phone's running FDT and stock images"
   }
 }

@@ -21,3 +21,14 @@ Added a separate native ARM64 Ubuntu 26.04.1 GNOME staging build. The official
 base SHA256 was checked against Canonical's SHA256SUMS and package resolution
 uses the 20261020T000000Z signed snapshot. No phone firmware, default password,
 partition writer or automatic installer is included.
+
+The first rootfs build failed before package installation because Ubuntu Base
+does not include the CA bundle needed by HTTPS apt. The fix seeds the standard
+host bundle until the signed target ca-certificates package installs it. TLS
+and archive signatures remain enabled; apt update now fails on any index error.
+
+Official OnePlus vendor sources were locally inspected at
+d50b305f7da9e14715a25120a4ac7b1a4b8b97c3. The dodge touch overlay confirms an
+S3910 variant with SPI at 19 MHz, IRQ162/reset161, PM8550VS_J GPIO3 and L4B.
+Multiple display/touch variants exist, so matching the user's actual panel is
+still required. No guessed active driver node is added to the diagnostic DTB.
