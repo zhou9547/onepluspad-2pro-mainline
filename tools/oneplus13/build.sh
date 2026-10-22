@@ -41,6 +41,7 @@ python3 tools/oneplus13/verify.py --config "$kout/.config"
 config_id=$(sha256sum "$kout/.config" | cut -c1-12)
 args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id")
 # DTB first: reject unresolved phandles before the expensive kernel build.
+make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference-dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
 time make "${args[@]}" -j"$(nproc)" Image Image.gz modules 2>&1 | tee "$kout/build.log"
 make "${args[@]}" -j"$(nproc)" modules_install INSTALL_MOD_PATH="$dest/modules" INSTALL_MOD_STRIP=1 \

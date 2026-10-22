@@ -2,26 +2,27 @@
 # SPDX-License-Identifier: GPL-2.0-only
 # RAM diagnostic environment. It never mounts Android or flashes a partition.
 export PATH=/bin:/sbin
-mount -t devtmpfs devtmpfs /dev || exec sh
-mount -t proc proc /proc || exec sh
-mount -t sysfs sysfs /sys || exec sh
-mount -t tmpfs tmpfs /run || exec sh
-mount -t tmpfs tmpfs /tmp || exec sh
+# Arm recovery before the first mount. PID 1 exits on a critical setup failure,
+# making the kernel panic timer the second recovery path instead of an unbounded shell.
+(
+  sleep 300
+  echo 'RAM diagnostic deadline reached; rebooting to the installed OS'
+  reboot -f
+) &
+mount -t devtmpfs devtmpfs /dev || exit 1
+mount -t proc proc /proc || exit 1
+mount -t sysfs sysfs /sys || exit 1
+mount -t tmpfs tmpfs /run || exit 1
+mount -t tmpfs tmpfs /tmp || exit 1
 mkdir -p /dev/pts /sys/kernel/config /run/evidence
 mount -t devpts devpts /dev/pts
 mount -t configfs configfs /sys/kernel/config
 echo 'ONEPLUS13_RAM_INIT_STARTED'
 # A deadline is armed before peripheral initialization; kernel panic has its own timer.
-watchdog=300
 case " $(cat /proc/cmdline) " in
-  *' oneplus13.smoke=1 '*) smoke=1; watchdog=30 ;;
+  *' oneplus13.smoke=1 '*) smoke=1 ;;
   *) smoke=0 ;;
 esac
-(
-  sleep "$watchdog"
-  echo 'RAM diagnostic deadline reached; rebooting to the installed OS'
-  reboot -f
-) &
 # This runs continuously: later-arriving UFS disks are covered as well.
 protect_storage() {
   for disk in /sys/class/block/*; do
@@ -42,6 +43,13 @@ protect_storage || { echo 'Cannot protect storage'; reboot -f; }
 uname -a > /run/evidence/uname.txt
 cat /proc/cmdline > /run/evidence/cmdline.txt
 cat /proc/meminfo > /run/evidence/meminfo.txt
+cat /proc/partitions > /run/evidence/partitions.txt
+if [ -r /sys/firmware/devicetree/base/compatible ]; then
+  tr '\000' '\n' < /sys/firmware/devicetree/base/compatible > /run/evidence/compatible.txt
+fi
+if [ -r /sys/firmware/devicetree/base/model ]; then
+  tr '\000' '\n' < /sys/firmware/devicetree/base/model > /run/evidence/model.txt
+fi
 dmesg > /run/evidence/dmesg.txt
 if [ "$smoke" = 1 ]; then
   echo 'ONEPLUS13_QEMU_INIT_OK'
@@ -88,5 +96,10 @@ else
 fi
 while :; do
   dmesg > /run/evidence/dmesg.txt
+  for disk in /sys/class/block/*; do
+    [ -e "$disk/ro" ] || continue
+    printf '%s ' "${disk##*/}"
+    cat "$disk/ro"
+  done > /run/evidence/block-readonly.txt
   sleep 5
 done
