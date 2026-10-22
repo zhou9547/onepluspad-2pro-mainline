@@ -1,6 +1,9 @@
 name: OnePlus 13 downloaded artifact verification
 
 on:
+  push:
+    branches: [oneplus13-bringup]
+    paths: [.github/workflows/oneplus13-verify.yml]
   workflow_dispatch:
     inputs:
       rootfs_run_id:
