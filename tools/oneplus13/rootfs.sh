@@ -82,6 +82,7 @@ chroot "$root" passwd -l root
 chroot "$root" dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' > "$dest/packages.tsv"
 chroot "$root" /usr/bin/gnome-shell --version > "$dest/gnome-version.txt"
 chroot "$root" /usr/bin/env bash -n /etc/profile
+chroot "$root" dpkg-query -W systemd-resolved > /dev/null
 chroot "$root" apt-get clean
 rm -f "$root/etc/apt/apt.conf.d/80bootstrap-ca"
 rm -f "$root/usr/sbin/policy-rc.d"
@@ -103,6 +104,9 @@ unsquashfs -s "$dest/rootfs.squashfs" > "$dest/squashfs-info.txt"
 unsquashfs -cat "$dest/rootfs.squashfs" etc/os-release > "$dest/os-release"
 cp devices/oneplus13/ubuntu.json "$dest/ubuntu-source.json"
 cp docs/oneplus13/README.md "$dest/README.md"
+test -z "$(unsquashfs -cat "$dest/rootfs.squashfs" etc/machine-id)"
+unsquashfs -cat "$dest/rootfs.squashfs" etc/shadow | \
+  awk -F: '$1 == "root" { if ($2 !~ /^[!*]/) exit 1; found=1 } END { if (!found) exit 1 }'
 python3 - "$dest" <<'PY'
 import hashlib,json,pathlib,subprocess,sys
 out=pathlib.Path(sys.argv[1])

@@ -25,6 +25,8 @@ git -C "$src" checkout --detach FETCH_HEAD
 cp devices/oneplus13/sm8750-oneplus-dodge.dts "$src/arch/arm64/boot/dts/qcom/"
 grep -q 'sm8750-oneplus-dodge.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
+git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dts
+git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1
 export KBUILD_BUILD_TIMESTAMP
@@ -36,6 +38,8 @@ make "${args[@]}" defconfig > "$kout/configure.log" 2>&1
   "$repo/devices/oneplus13/oneplus13.config" >> "$kout/configure.log" 2>&1
 make "${args[@]}" olddefconfig >> "$kout/configure.log" 2>&1
 python3 tools/oneplus13/verify.py --config "$kout/.config"
+config_id=$(sha256sum "$kout/.config" | cut -c1-12)
+args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id")
 # DTB first: reject unresolved phandles before the expensive kernel build.
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
 time make "${args[@]}" -j"$(nproc)" Image Image.gz modules 2>&1 | tee "$kout/build.log"

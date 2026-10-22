@@ -90,6 +90,7 @@ def main():
     shutil.copy2(REPO / 'docs/oneplus13/README.md', out / 'README.md')
     shutil.copy2(REPO / 'COPYING' if (REPO / 'COPYING').exists() else REPO / 'LICENSE',
                  out / 'LICENSE')
+    shutil.copy2(REPO / 'devices/oneplus13/LICENSE.BSD-3-Clause', out / 'LICENSE.BSD-3-Clause')
     files = {p.name: {'sha256': sha256(p), 'size': p.stat().st_size}
              for p in sorted(out.iterdir()) if p.is_file() and
              p.name not in {'manifest.json', 'SHA256SUMS', 'verification.json', 'qemu.log'}}

@@ -12,6 +12,8 @@
 
 产物包含 Image / Image.gz、手机 DTB、匹配的模块、内核配置、只读 RAM
 initramfs、实验性 Android v2 RAM 镜像、输入版本、SHA256 和独立检查结果。
+`phone-kernel.patch` 可应用到固定的内核提交复现手机板级修改；内核版本后缀
+包含来源提交和配置哈希，模块须与该版本及清单一致。
 `verification.json` 和 `qemu.log` 只证明离线格式、构建和 ARM64 用户态路径。
 QEMU virt 不模拟 SM8750 手机硬件。
 

@@ -11,7 +11,7 @@
     "systemd-sysv", "ubuntu-standard", "gnome-shell", "gnome-session", "ubuntu-session",
     "gdm3", "gnome-control-center", "gnome-terminal", "gnome-initial-setup",
     "nautilus", "network-manager", "dbus-user-session", "xwayland", "libgl1-mesa-dri",
-    "mesa-utils", "sudo", "locales", "console-setup", "busybox-static", "curl",
+    "mesa-utils", "systemd-resolved", "sudo", "locales", "console-setup", "busybox-static", "curl",
     "ca-certificates", "openssh-client", "kmod", "zstd"
   ],
   "hardware_status": "NOT_DEVICE_TESTED",

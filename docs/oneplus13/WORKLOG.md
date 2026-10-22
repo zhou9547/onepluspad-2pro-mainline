@@ -45,3 +45,10 @@ Actions artifact. The x86 runner remained in slow cross-toolchain downloads
 even after changing the mirror, while the native ARM64 rootfs runner fetched
 its dependencies quickly. Kernel CI therefore moves to the proven native
 ARM64 runner and uses its native triplet-named GCC, avoiding that download.
+
+Review found that --no-install-recommends omitted systemd-resolved while the
+image's resolv.conf targets its stub. It is now an explicit package requirement
+and asserted after installation. Root credential lock and empty machine-id are
+also checked from the actual completed SquashFS, not just the staging tree.
+Phone DTS static label inspection found a missing VPH fixed supply; the exact
+provider from the attributed phone reference was restored before the next build.
