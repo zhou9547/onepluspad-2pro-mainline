@@ -100,7 +100,7 @@ def main():
         result = verify_artifacts(out)
         if args.qemu:
             command = ['qemu-system-aarch64', '-machine', 'virt', '-cpu', 'cortex-a76',
-                       '-m', '1024', '-smp', '2', '-nographic', '-no-reboot',
+                       '-m', '1024', '-smp', '2', '-nographic', '-no-reboot', '-nic', 'none',
                        '-kernel', str(out / 'Image'), '-initrd', str(out / 'initramfs.cpio.gz'),
                        '-append', 'console=ttyAMA0 rdinit=/init panic=3 oneplus13.smoke=1']
             proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,

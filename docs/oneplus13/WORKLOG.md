@@ -100,3 +100,11 @@ inactive-slot rejection. This collection tool has not been run on a phone.
 The pinned real AOSP mkbootimg also passed an independent local Android v2
 section roundtrip test; the module archive prefix was checked against the pinned
 kernel's actual MODLIB definition. No hardware result is inferred from these checks.
+
+Build 39817564813 passed full kernel/module compilation, Android v2 section
+checks, initramfs binary identity and module ABI checks. QEMU then failed before
+starting the VM: the minimal qemu-system-arm install lacks efi-virtio.rom for
+its default virtual NIC. The userspace smoke test does not exercise networking,
+so explicitly omit the virtual NIC. This changes only the emulator invocation;
+it does not change phone drivers or weaken the image checks. Compiler cache was
+saved successfully before this environment failure.
