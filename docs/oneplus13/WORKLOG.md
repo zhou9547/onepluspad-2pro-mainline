@@ -32,3 +32,10 @@ d50b305f7da9e14715a25120a4ac7b1a4b8b97c3. The dodge touch overlay confirms an
 S3910 variant with SPI at 19 MHz, IRQ162/reset161, PM8550VS_J GPIO3 and L4B.
 Multiple display/touch variants exist, so matching the user's actual panel is
 still required. No guessed active driver node is added to the diagnostic DTB.
+
+The TLS failure repeated with a copied bundle. Local HTTPS retrieval of the same
+snapshot succeeded, narrowing this to Ubuntu Base's unconfigured trust lookup.
+The next build diagnoses host HTTPS separately and explicitly configures apt's
+CA file until target ca-certificates is installed; no third blind TLS bypass.
+System QEMU installation is deferred until after compilation, and user-mode
+QEMU uses the smaller dynamic host package instead of every static emulator.

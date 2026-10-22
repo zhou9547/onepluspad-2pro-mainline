@@ -25,10 +25,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install build and independent inspection tools
+      - name: Install build dependencies
+        timeout-minutes: 10
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio qemu-system-arm qemu-user-static
+          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio qemu-user
       - name: Check phone tooling
         run: python3 -m unittest discover -s tests -p test_oneplus13.py -v
       - name: Restore compiler cache
@@ -41,6 +42,9 @@ jobs:
         env:
           CCACHE_MAXSIZE: 3G
         run: bash tools/oneplus13/build.sh
+      - name: Install QEMU inspection tools
+        timeout-minutes: 10
+        run: sudo apt-get install -y --no-install-recommends qemu-system-arm
       - name: QEMU userspace smoke test
         run: python3 tools/oneplus13/verify.py --artifacts out/oneplus13 --qemu
       - name: Publish build evidence in job summary

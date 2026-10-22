@@ -43,7 +43,7 @@ def main():
     busybox = cache / 'busybox-root' / bb['archive_path']
     if sha256(busybox) != bb['sha256']:
         raise SystemExit('BusyBox binary checksum mismatch')
-    applets = run('qemu-aarch64-static', str(busybox), '--list').splitlines()
+    applets = run('qemu-aarch64', str(busybox), '--list').splitlines()
     required = {'sh', 'mount', 'blockdev', 'reboot', 'poweroff', 'ip', 'httpd',
                 'telnetd', 'udhcpd', 'setsid', 'cttyhack', 'dmesg'}
     if not required <= set(applets):

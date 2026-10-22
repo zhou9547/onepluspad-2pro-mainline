@@ -24,6 +24,13 @@ tar --extract --gzip --numeric-owner --preserve-permissions --file "$base" --dir
 # runner's standard trust bundle; apt replaces it when installing the target
 # ca-certificates package. Never disable TLS verification or archive signatures.
 install -D -m 0644 /etc/ssl/certs/ca-certificates.crt "$root/etc/ssl/certs/ca-certificates.crt"
+# Diagnose transport before entering the chroot, then name the trust file
+# explicitly: Ubuntu Base's TLS backend has no ca-certificates configuration yet.
+curl --fail --silent --show-error --output /dev/null "${pin[2]}dists/resolute/InRelease"
+test -r "$root/etc/ssl/certs/ca-certificates.crt"
+cat > "$root/etc/apt/apt.conf.d/80bootstrap-ca" <<'EOF'
+Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";
+EOF
 # The archive's symlink layout is preserved; never copy the host machine identity.
 printf 'nameserver 1.1.1.1\n' > "$root/etc/resolv.conf"
 cat > "$root/etc/apt/sources.list.d/ubuntu.sources" <<EOF
@@ -76,6 +83,7 @@ chroot "$root" dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' > "$
 chroot "$root" /usr/bin/gnome-shell --version > "$dest/gnome-version.txt"
 chroot "$root" /usr/bin/env bash -n /etc/profile
 chroot "$root" apt-get clean
+rm -f "$root/etc/apt/apt.conf.d/80bootstrap-ca"
 rm -f "$root/usr/sbin/policy-rc.d"
 cleanup
 trap - EXIT
