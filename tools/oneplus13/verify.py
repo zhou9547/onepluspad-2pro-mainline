@@ -26,6 +26,11 @@ def check_config(path):
     missing = [name for name in REQUIRED if f'CONFIG_{name}=y' not in settings]
     if missing:
         raise ValueError(f'Required early-boot drivers are not built in: {missing}')
+    unrelated = ['ARCH_APPLE', 'ARCH_MEDIATEK', 'ARCH_ROCKCHIP', 'ARCH_TEGRA',
+                 'ARCH_EXYNOS', 'ARCH_RENESAS', 'ARCH_MESON', 'ARCH_SUNXI']
+    enabled = [name for name in unrelated if f'CONFIG_{name}=y' in settings]
+    if enabled:
+        raise ValueError(f'Unrelated platform families enabled by mistake: {enabled}')
 
 
 def verify_artifacts(out):

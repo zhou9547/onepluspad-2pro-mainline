@@ -56,6 +56,9 @@ class PhoneFormats(unittest.TestCase):
             config.write_text(config.read_text().replace('CONFIG_USB_DWC3=y', 'CONFIG_USB_DWC3=m'))
             with self.assertRaisesRegex(ValueError, 'USB_DWC3'):
                 check_config(config)
+            config.write_text('\n'.join(f'CONFIG_{name}=y' for name in REQUIRED) + '\nCONFIG_ARCH_MEDIATEK=y\n')
+            with self.assertRaisesRegex(ValueError, 'Unrelated platform'):
+                check_config(config)
 
     def test_cpio_reader_rejects_truncation_and_missing_trailer(self):
         archive = make_cpio([('init', stat.S_IFREG | 0o755, b'#!/bin/sh\n', 0, 0)])

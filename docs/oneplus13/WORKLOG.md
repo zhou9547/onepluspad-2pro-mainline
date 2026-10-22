@@ -75,3 +75,11 @@ the fresh CI runner instead. Small verification reports will accompany delivery.
 The BusyBox matching Ubuntu source archives are locked from its official .dsc
 checksums and included with the diagnostic image, together with Linux source
 identity and the generated phone patch.
+
+Configuration review found that the initial fragment conversion dropped Kconfig
+negative assignments (`# CONFIG_... is not set`) as if they were prose comments.
+That unintentionally retained other vendors' default ARM64 platforms and
+expanded the cold build. Restore the original platform exclusions, assert the
+absence of unrelated platform families in the final .config, and add a failing
+test for accidental ARCH_MEDIATEK enablement. Stop the superseded oversized
+build; this is a recipe correction, not a hardware workaround.
