@@ -9,6 +9,7 @@ dest="$repo/out/oneplus13"
 mkdir -p "$kout" "$dest"
 exec 9>"$kout/.build.lock"
 flock -n 9 || { echo 'Build already running' >&2; exit 1; }
+python3 tools/oneplus13/package.py --output "$dest" --initramfs-only
 readarray -t pin < <(python3 - <<'PY'
 import json
 s=json.load(open('devices/oneplus13/source.json'))['kernel']

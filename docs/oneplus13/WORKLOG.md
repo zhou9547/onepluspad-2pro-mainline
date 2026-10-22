@@ -83,3 +83,10 @@ expanded the cold build. Restore the original platform exclusions, assert the
 absence of unrelated platform families in the final .config, and add a failing
 test for accidental ARCH_MEDIATEK enablement. Stop the superseded oversized
 build; this is a recipe correction, not a hardware workaround.
+
+Build 39813227953 compiled Image, phone/reference DTBs and the complete configured
+module set successfully (C build: 22m29.933s). Packaging then correctly rejected a
+duplicate bin/busybox entry: this pinned Ubuntu binary includes `busybox` in its
+applet list. Preserve its real file and skip only that self-link. The exact
+binary/appet/archive preflight now runs before source compilation. CI now saves
+compiler cache immediately after the build attempt, including packaging failures.

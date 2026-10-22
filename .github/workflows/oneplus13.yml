@@ -40,15 +40,23 @@ jobs:
       - name: Check phone tooling
         run: python3 -m unittest discover -s tests -p test_oneplus13.py -v
       - name: Restore compiler cache
-        uses: actions/cache@v4
+        id: compiler-cache
+        uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
           key: oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/**') }}
           restore-keys: oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Build pinned phone candidate
+        id: build
         env:
           CCACHE_MAXSIZE: 3G
         run: bash tools/oneplus13/build.sh
+      - name: Save compiler cache even when packaging fails
+        if: always() && !cancelled() && steps.compiler-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/ccache
+          key: oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/**') }}
       - name: Install QEMU inspection tools
         timeout-minutes: 10
         run: sudo apt-get install -y --no-install-recommends qemu-system-arm

@@ -13,7 +13,7 @@ import subprocess
 import tarfile
 import urllib.request
 
-from common import make_cpio, sha256
+from common import make_cpio, read_cpio, sha256
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -24,8 +24,9 @@ def run(*args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--kernel-out', required=True, type=Path)
+    parser.add_argument('--kernel-out', type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--initramfs-only', action='store_true', help='Cheap archive preflight before compiling Linux')
     args = parser.parse_args()
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -61,11 +62,20 @@ def main():
                 ('init', stat.S_IFREG | 0o755,
                  (REPO / 'devices/oneplus13/init').read_bytes(), 0, 0)]
     for applet in applets:
+        if applet == 'busybox':
+            continue  # Ubuntu's list includes the multicall binary itself.
         entries.append((f'bin/{applet}', stat.S_IFLNK | 0o777, b'busybox', 0, 0))
     # sbin paths are used by shutdown helpers and interactive diagnostics.
     for applet in ['reboot', 'poweroff']:
         entries.append((f'sbin/{applet}', stat.S_IFLNK | 0o777, b'../bin/busybox', 0, 0))
-    (out / 'initramfs.cpio.gz').write_bytes(gzip.compress(make_cpio(entries), mtime=0))
+    archive_bytes = make_cpio(entries)
+    inspected = read_cpio(archive_bytes)
+    if not stat.S_ISREG(inspected['bin/busybox']['mode']) or inspected['bin/busybox']['data'] != busybox.read_bytes():
+        raise SystemExit('Multicall binary was replaced by an applet link')
+    (out / 'initramfs.cpio.gz').write_bytes(gzip.compress(archive_bytes, mtime=0))
+    if args.initramfs_only:
+        print('INITRAMFS_PREFLIGHT_PASSED: pinned BusyBox, applets, executable init and console archive')
+        return
     mk = inputs['mkbootimg.py']
     archive = REPO / mk['bundled_archive']
     if sha256(archive) != mk['archive_sha256']:

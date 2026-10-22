@@ -8,7 +8,7 @@
 
 在本仓库 Actions 中运行 **OnePlus 13 offline build**，下载成功运行中的
 `oneplus13-offline-<commit>` artifact。也可在 Ubuntu 24.04 主机上安装工作流
-列出的依赖后运行 `bash tools/oneplus13/build.sh`。
+列出的依赖后，在原生 ARM64 主机运行 `bash tools/oneplus13/build.sh`。
 
 产物包含 Image / Image.gz、手机 DTB、匹配的模块、内核配置、只读 RAM
 initramfs、实验性 Android v2 RAM 镜像、输入版本、SHA256 和独立检查结果。
