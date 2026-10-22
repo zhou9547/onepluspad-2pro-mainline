@@ -4,6 +4,15 @@
 这是针对后续真机测试的开发候选，**没有真机启动或外设可用的结论**。
 仓库原有 Pad 2 Pro 的功能表、固件包、分区脚本和刷机步骤均不适用于手机。
 
+2026-10-23 离线首版已构建并完成全新主机下载复验：
+
+- [内核、手机 DTB、模块与实验性 RAM 镜像](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39821954442/artifacts/12444478734)
+- [Ubuntu 26.04.1 GNOME 用户态](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39809729390/artifacts/12438829003)
+- [内核下载复验](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39823094330) · [桌面下载复验](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39812509439)
+
+这证明编译与离线启动路径通过，**不代表完整硬件适配完成**。内核附件保留 14 天，
+根文件系统附件保留 7 天，请下载保存；也可按固定来源重新构建。
+
 ## 下载与复现
 
 在本仓库 Actions 中运行 **OnePlus 13 offline build**，下载成功运行中的

@@ -108,3 +108,19 @@ its default virtual NIC. The userspace smoke test does not exercise networking,
 so explicitly omit the virtual NIC. This changes only the emulator invocation;
 it does not change phone drivers or weaken the image checks. Compiler cache was
 saved successfully before this environment failure.
+
+Final candidate 44315dbe991d28d476bc1a9fca0da3ff2403b280 passed complete build
+39821954442, including eight host checks, pinned input/source checks, reference
+and phone DTBs, full modules, Android v2/CPIO/ELF/hash validation and QEMU.
+Artifact 12444478734 is 60972932 bytes; its archive SHA256 is
+1dafb99bb38b1ffc341edf3d5395afa67cc8f8971b2e11d78af8b069e5d8b2b3.
+
+Independent run 39823094330 downloaded that actual artifact on a fresh runner,
+repeated every artifact check and QEMU test, and passed. Its QEMU log reaches
+ONEPLUS13_QEMU_INIT_OK then `reboot: Power down`, with no kernel panic.
+Kernel release: 7.2.0-oneplus13-g7a81d184e309-cd25741ea7aea.
+RAM boot image SHA256: 31a042d62726e825946e5cc595de73f872de3f67d8b6db81ff14786c79073f06.
+
+Small independent reports were downloaded, their GitHub ZIP digests and CRCs
+verified locally, and the actual startup/shutdown log inspected. The sole next
+step and hardware evidence blockers are in STATUS.md. No phone was operated.

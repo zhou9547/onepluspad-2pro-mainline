@@ -1,27 +1,27 @@
-# OnePlus 13 status
+# 一加 13 适配状态
 
-This is an offline bring-up project. No phone has been connected or booted.
-The Pad's support table and installation instructions do not apply to this phone.
+截至 2026-10-23，离线编译首版及实际下载产物复验通过。**完整硬件适配尚未完成，没有连接、启动或操作过用户的手机。** 平板项目的功能表和安装脚本不适用于手机。
 
-| Component | State | Evidence / limitation |
+| 组件 | 状态 | 证据与边界 |
 | --- | --- | --- |
-| SM8750 platform | Source available | Pinned reference kernel in device source manifest |
-| Phone DTB | Source available | Adapted from index986's pinned OnePlus-13-WIP board |
-| Kernel / modules | Pending build | Dedicated Actions workflow |
-| RAM diagnostic image | Pending build | No persistent installer; all discovered block devices read-only |
-| USB NCM / console | Pending hardware | Build checks cannot prove enumeration |
-| Display | Pending hardware | Firmware framebuffer reference; no phone panel initialization |
-| Touch | Driver port required | S3910 vendor HBP node does not imply a mainline driver exists |
-| GPU | Pending hardware | SoC driver present; phone firmware closure not established |
-| Wi-Fi / Bluetooth | Pending hardware | Phone wiring and firmware need device-specific confirmation |
-| Battery / charging | Pending hardware | No charging support claim; ADSP not started by diagnostic profile |
-| Audio / sensors / modem / camera | Pending port | Pad board configuration cannot be reused |
-| Persistent install / dual boot | Not enabled | Requires stock recovery set, partition evidence and hardware validation |
-| Ubuntu 26.04.1 GNOME userspace | Building | Separate native ARM64 workflow; no phone firmware or default credentials |
+| SM8750 平台内核和完整模块 | 离线通过 | Actions 39821954442；7.2.0-oneplus13-g7a81d184e309-cd25741ea7aea |
+| 手机设备树 | 离线通过 | 编译、独立反编译、compatible 检查；尚未验证实际 ABL/stock DTBO |
+| 实验性 RAM 镜像 | 离线通过 | Android v2 分段、initramfs 二进制身份、校验值和匹配模块检查 |
+| ARM64 RAM 用户态 | 离线通过 | 实际 Image/initramfs 在 QEMU virt 到达 init 标记并正常关机；不模拟 SM8750 |
+| Ubuntu 26.04.1 GNOME | 离线通过 | 构建 39809729390；下载复验 39812509439；GNOME Shell 50.1，782 个软件包 |
+| USB NCM / ACM | 有源码线索 | 驱动及 RAM 配置已编译；真实枚举、网络和恢复期限待验证 |
+| 显示 | 有源码线索 | 社区 framebuffer 线索；手机原生面板接管未完成 |
+| 触控 | 有源码线索 | 官方 S3910 变体资料；vendor HBP 驱动尚未完成主线移植 |
+| GPU | 有源码线索 | SoC 驱动存在；手机固件及实际渲染未建立验证闭环 |
+| Wi-Fi / Bluetooth | 有源码线索 | 手机布线、固件和校准需要独立确认 |
+| 电量 / 充电 | 有源码线索 | 诊断设备树不启动 ADSP；没有充电可用结论 |
+| 音频 / 传感器 / 蜂窝 / 相机 | 有源码线索 | 厂商源代码可供研究；尚未完成手机适配 |
+| 持久安装 / 双系统 | 待调研 | 不提供手机分区、擦除或自动安装工具 |
 
-Next: compile and inspect the candidate through GitHub Actions, then collect the
-phone's stock FDT and boot metadata before any device experiment.
+内核实际下载复验为 [39823094330](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39823094330)，重新验证了校验值、镜像结构、模块版本及 QEMU 启动。QEMU 日志没有 kernel panic，到达 ONEPLUS13_QEMU_INIT_OK 后显示 reboot: Power down。
 
-The source comparison and first hardware experiment are documented in HARDWARE.md.
+唯一下一步：由用户在原厂 Android 中进行只读取证，取得本机运行时 FDT 和匹配的当前槽启动镜像。见 README.md 的 collect-stock.py 说明；原始输出必须留在私有目录。
 
-Device state: user-owned phone; untouched. Operator: user only.
+阻塞：本机真实 FDT、固件版本、容量、解锁状态与完整恢复输入尚未确认，不能据此开始分区安装或声称硬件功能可用。板级来源与首个实验判据见 HARDWARE.md。
+
+设备状态：手机由用户保管，未被本项目操作。操作者：用户。离线构建和复验任务均已结束。
