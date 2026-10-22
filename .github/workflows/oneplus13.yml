@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   kernel:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 150
     steps:
       - uses: actions/checkout@v4
@@ -36,15 +36,15 @@ jobs:
             fi
           done
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio qemu-user
+          sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio
       - name: Check phone tooling
         run: python3 -m unittest discover -s tests -p test_oneplus13.py -v
       - name: Restore compiler cache
         uses: actions/cache@v4
         with:
           path: ~/.cache/ccache
-          key: oneplus13-v1-${{ runner.os }}-${{ hashFiles('devices/oneplus13/**') }}
-          restore-keys: oneplus13-v1-${{ runner.os }}-
+          key: oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/**') }}
+          restore-keys: oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Build pinned phone candidate
         env:
           CCACHE_MAXSIZE: 3G

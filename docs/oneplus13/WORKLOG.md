@@ -39,3 +39,9 @@ The next build diagnoses host HTTPS separately and explicitly configures apt's
 CA file until target ca-certificates is installed; no third blind TLS bypass.
 System QEMU installation is deferred until after compilation, and user-mode
 QEMU uses the smaller dynamic host package instead of every static emulator.
+
+Ubuntu GNOME staging build 39807949262 succeeded and produced a 419261065-byte
+Actions artifact. The x86 runner remained in slow cross-toolchain downloads
+even after changing the mirror, while the native ARM64 rootfs runner fetched
+its dependencies quickly. Kernel CI therefore moves to the proven native
+ARM64 runner and uses its native triplet-named GCC, avoiding that download.
