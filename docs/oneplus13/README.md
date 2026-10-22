@@ -15,6 +15,13 @@ initramfs、实验性 Android v2 RAM 镜像、输入版本、SHA256 和独立检
 `verification.json` 和 `qemu.log` 只证明离线格式、构建和 ARM64 用户态路径。
 QEMU virt 不模拟 SM8750 手机硬件。
 
+另一个工作流 **OnePlus 13 Ubuntu GNOME rootfs** 在原生 ARM64 runner 上构建
+Ubuntu 26.04.1 + GNOME。基础 tarball 以 Canonical 官方 SHA256 固定，软件包
+从固定的 Ubuntu 签名快照获取，产物包含 `rootfs.squashfs`、精确软件包列表和
+校验清单。它是独立的用户态暂存产物，不含手机固件、已配置用户或默认密码；
+部署前需创建用户并合入同一次内核构建的模块。它不会自动写入手机存储。
+为避免未经验证的休眠路径，暂存桌面禁用自动休眠，见技术债 D04。
+
 ## 真机测试前
 
 当前默认设备树只提供源自社区参考的保守低内存区，避免把未知容量当成

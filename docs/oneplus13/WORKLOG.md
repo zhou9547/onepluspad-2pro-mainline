@@ -16,3 +16,8 @@ It is not used as a hardware validation source.
 Plan: build the pinned platform kernel with a separate phone DTB/config, a
 read-only RAM diagnostics initramfs and a non-flashing boot image; run automated
 artifact and QEMU userspace checks. Do not inherit the Pad partition/AVB values.
+
+Added a separate native ARM64 Ubuntu 26.04.1 GNOME staging build. The official
+base SHA256 was checked against Canonical's SHA256SUMS and package resolution
+uses the 20261020T000000Z signed snapshot. No phone firmware, default password,
+partition writer or automatic installer is included.
