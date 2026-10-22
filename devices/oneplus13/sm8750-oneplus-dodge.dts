@@ -60,6 +60,14 @@
             wakeup-source;
         };
     };
+    vph_pwr: vph-pwr-regulator {
+        compatible = "regulator-fixed";
+        regulator-name = "vph_pwr";
+        regulator-min-microvolt = <3700000>;
+        regulator-max-microvolt = <3700000>;
+        regulator-always-on;
+        regulator-boot-on;
+    };
 };
 
 /* Conservative low-memory fallback from the attributed community reference.
