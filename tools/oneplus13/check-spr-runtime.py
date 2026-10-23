@@ -203,7 +203,7 @@ int main(void){
 }
 '''
     combined = '\n'.join([scalar, strip(header), strip(core), declarations,
-        array(catalog,'static const struct dpu_dspp_sub_blks sm8750_dspp_sblk[]'),
+        array(catalog,'static const struct dpu_dspp_sub_blks sm8750_aa569_dspp_sblk[]'),
         array(dspps,'static const struct dpu_dspp_cfg sm8750_dspp[]'),
         functions, strip(runtime), fixture, suffix])
     with tempfile.TemporaryDirectory(prefix='oneplus13-spr-runtime-') as temp:

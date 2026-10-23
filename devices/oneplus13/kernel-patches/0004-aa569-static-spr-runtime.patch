@@ -216,14 +216,11 @@
  struct dpu_pingpong_sub_blks {
 --- a/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_catalog.c
 +++ b/drivers/gpu/drm/msm/disp/dpu1/dpu_hw_catalog.c
-@@ -413,9 +413,31 @@
- 		.len = 0x40, .version = 0x10008},
+@@ -418,6 +418,33 @@
+ 		.len = 0x90, .version = 0x60000},
  };
  
--static const struct dpu_dspp_sub_blks sm8750_dspp_sblk = {
--	.pcc = {.name = "pcc", .base = 0x1700,
--		.len = 0x90, .version = 0x60000},
-+static const struct dpu_dspp_sub_blks sm8750_dspp_sblk[] = {
++static const struct dpu_dspp_sub_blks sm8750_aa569_dspp_sblk[] = {
 +	{
 +		.pcc = {.name = "pcc", .base = 0x1700,
 +			.len = 0x90, .version = 0x60000},
@@ -248,9 +245,11 @@
 +		.spr = {.name = "spr", .base = 0x12400,
 +			.len = 0x200, .version = 0x20000},
 +	}
- };
- 
++};
++
  /*************************************************************
+  * PINGPONG sub blocks config
+  *************************************************************/
 --- a/drivers/gpu/drm/msm/disp/dpu1/catalog/dpu_12_0_sm8750.h
 +++ b/drivers/gpu/drm/msm/disp/dpu1/catalog/dpu_12_0_sm8750.h
 @@ -197,19 +197,19 @@
@@ -258,22 +257,22 @@
  		.name = "dspp_0", .id = DSPP_0,
  		.base = 0x54000, .len = 0x1800,
 -		.sblk = &sm8750_dspp_sblk,
-+		.sblk = &sm8750_dspp_sblk[0],
++		.sblk = &sm8750_aa569_dspp_sblk[0],
  	}, {
  		.name = "dspp_1", .id = DSPP_1,
  		.base = 0x56000, .len = 0x1800,
 -		.sblk = &sm8750_dspp_sblk,
-+		.sblk = &sm8750_dspp_sblk[1],
++		.sblk = &sm8750_aa569_dspp_sblk[1],
  	}, {
  		.name = "dspp_2", .id = DSPP_2,
  		.base = 0x58000, .len = 0x1800,
 -		.sblk = &sm8750_dspp_sblk,
-+		.sblk = &sm8750_dspp_sblk[2],
++		.sblk = &sm8750_aa569_dspp_sblk[2],
  	}, {
  		.name = "dspp_3", .id = DSPP_3,
  		.base = 0x5a000, .len = 0x1800,
 -		.sblk = &sm8750_dspp_sblk,
-+		.sblk = &sm8750_dspp_sblk[3],
++		.sblk = &sm8750_aa569_dspp_sblk[3],
  	},
  };
  

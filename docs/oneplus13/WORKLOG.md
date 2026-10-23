@@ -24,6 +24,12 @@ rule. Moved both SPR objects into the existing DPU object list in patch0004,
 before header dependencies, and removed the late build.sh append. Also dropped
 an unused dpu_crtc.h include. No generated file was fabricated or check removed.
 
+Run39953182467 at66f28a3 compiled the new runtime object but failed the full
+catalog build: Glymur/Eliza/Kaanapali also referenced the shared scalar
+sm8750_dspp_sblk. Preserve that scalar unchanged and introduce a separately
+named four-entry SM8750 AA569 array instead; do not change other SoC catalogs
+or suppress incompatible-pointer warnings. The next full build checks them.
+
 ## 2026-10-23 — corrected SSH port and DPU/SPR continuation
 
 Owner corrected the private SSH endpoint's port. An independent auditor reviewed
