@@ -4,6 +4,13 @@
 这是针对后续真机测试的开发候选，**没有真机启动或外设可用的结论**。
 仓库原有 Pad 2 Pro 的功能表、固件包、分区脚本和刷机步骤均不适用于手机。
 
+最新候选：e6766eb4a477 / [Actions39981240118](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39981240118)。
+完整内核/模块、23项Python、主机C ASan/UBSan和QEMU通过，实际附件已下载复验。
+新增独立AA569原生显示DTB与静态SPR保护路径；默认与触控DTB保持不变。
+本机私有显示RAM候选已在电脑生成，参数不公开，原始诊断与恢复逻辑保持不变。
+尚未真机验证，完整外设、6800us性能预算及安装支持仍在推进。最新边界见STATUS.md。
+以下较早构建记录用于追溯。
+
 2026-10-23 只读取证后的更新候选：
 
 - [源码 d337d2f4bea9 的编译与 QEMU 检查](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39892351557)

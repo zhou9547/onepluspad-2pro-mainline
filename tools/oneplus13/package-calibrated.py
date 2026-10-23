@@ -118,9 +118,12 @@ def main():
         module_archive = args.artifacts / 'modules.tar.gz'
         if sha256(module_archive) != manifest['files']['modules.tar.gz']['sha256']:
             raise ValueError('Native module archive hash mismatch')
+        helper = REPO/'devices/oneplus13/start-native-display'
+        if sha256(helper) != manifest['phone_inputs_sha256'].get('start-native-display'):
+            raise ValueError('Native helper differs from the compiled integration inputs')
         ramdisk, native_report = build_initramfs(ramdisk, module_archive.read_bytes(),
             manifest['kernel_release'], args.native_xml.read_bytes(),
-            (REPO/'devices/oneplus13/start-native-display').read_bytes())
+            helper.read_bytes())
         native_report['dtb_checks'] = native_tree_report
     stock_geometry = boot_image((args.stock / 'vendor_boot.img').read_bytes())
     pin = json.loads((REPO / 'kernel/source.json').read_text())['tool_inputs']['mkbootimg.py']

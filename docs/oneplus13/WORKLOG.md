@@ -450,3 +450,17 @@ DTB controls and private module/profile initramfs packing. Twenty-three Python
 checks now pass locally, including dependency cycles/traversal, wrong module
 identity and byte-exact diagnostic recovery preservation. Full CI and downloaded
 artifact inspection must pass before promoting any new local delivery.
+
+### Actual native artifact and private RAM readback
+
+Actions39981240118/e6766eb passed. Downloaded12513218063 matches GitHub digest,
+ZIP CRC,30 manifest files, CI hashes, modules and real runtime FUNC symbols.
+Three fresh stock-positive/all6-overlay/15-bank calibrations and v4/RAM packing
+pass. Private derived ramdisk preserves all original entries and includes the
+matching9-module closure and176-byte owner profile. It is not hardware tested
+and its derived image has not been run in QEMU. Host staging first used a six-
+versus-seven-character directory tag; corrected that local helper and preserved
+the incomplete calibration directory as failure evidence. No device access.
+Added helper-input hash binding to the private packer; existing artifact's helper
+hash matches. Next isolated work package is the static-mode burst performance
+budget, as scoped in NATIVE-DISPLAY.

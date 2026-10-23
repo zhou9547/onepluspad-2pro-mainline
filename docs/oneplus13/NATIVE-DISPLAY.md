@@ -1,28 +1,13 @@
 # AA569 native display investigation
 
-## Current boundary and next work package: runtime SPR integration
+## Current boundary
 
-The isolated DPU container/initial-line, SM8750 full-ICH precision, modern
-native422 wrapper and PPB FIFO corrections are now compiled and verified.
-The private-profile decoder and typed transaction planner are also compiled,
-with no runtime callers or device accesses. See the versioned results below.
-Next implement explicit SPR resources and UDC preflight, bounded REGDMA
-completion/stop and power-loss restore before connecting a native panel tree.
-
-Do not import the community widebus STREAM0_TOTAL doubling: the pinned OnePlus
-dsi_ctrl_hw_cmn_setup_cmd_stream divides compressed line bytes by6 for widebus,
-which matches this mainline host. Its global bpp convention and board-specific
-SPR offsets do not apply here. SPR follows these prerequisites with explicit
-resource ownership, private profile validation and runtime-PM lifecycle checks.
-
-Completed isolated SPR component: kernel C decodes a bounded private AA569
-profile, rejects corrupt/reserved/foreign geometry fields and produces a
-typed relative register plan. Preserve the distinction between
-direct PBA, SPR_INIT REGDMA and partial-update REGDMA, including UDC bit25.
-Acceptance is independent Python/vendor-plan comparison, malformed-input C
-checks with sanitizers, and a real ARM64 object/module build. This component
-has no MMIO, firmware loader, resource allocation or runtime registration;
-it does not substitute for those missing lifecycle pieces or enable a DTB.
+The fixed static SPR runtime and independent native DTB have passed full ARM64
+build and actual downloaded artifact checks. The private host-derived display
+RAM candidate also passes module/profile and boot-section readback. See latest
+versioned evidence below and STATUS.md; older component-only sections are history.
+Physical scanout, the6800us DPU transfer budget and clock/USB/recovery acceptance
+remain unverified. No device experiment has run.
 
 ## Work package: fixed-profile SPR startup and PM restore
 
@@ -478,3 +463,32 @@ it automatically. The derived ramdisk is not covered by the original QEMU run.
 All coefficients stay outside Git/Actions/public outputs. Static SPR has no DMA,
 live profile updates, UDC/fingerprint or partial-update support. The6800-us DPU
 window, PLL rounding, real power/USB recovery and scanout remain unverified.
+
+### Native candidate actual delivery, 2026-10-23
+
+Actions39981240118/e6766eb4a47759232f73ebd242627b8d765b64a5 passed23 Python
+checks, real C sanitizers, all ARM64 modules and QEMU. Actual artifact12513218063
+was downloaded:60239015 bytes, SHA256
+d33a5d49f385e4edfe42f953bd93a5cf7cd2d31add79a44d39450af440324262.
+CRC,30 manifest files, CI hashes, image sections and actual function symbols pass.
+Release7.2.0-oneplus13-g7a81d184e309-c6c2e0d66c4eb-p1e1c44d34e25.
+Both older DTBs remain byte-exact; separate native wiring and all7 negative
+controls pass again. Three fresh private calibrations pass stock positive control,
+all6 overlays and15-bank protected memory. Host v4/RAM packing and readback pass.
+The private derived display RAM image is14929920 bytes, SHA256
+16c5bd805eb87094a0b196cd7c74c6f01c2c1126dbfcee539fb51e1aa1f0eaed.
+Its9-module closure and176-byte owner profile match; every original initramfs
+entry is unchanged. QEMU covers the original diagnostic ramdisk only. No phone
+connection, command or transfer was made in this continuation.
+
+Next bounded work package: account for the6800us command burst in DPU performance
+votes while retaining nominal120Hz TE. The public vendor dsi_panel.c forwards
+mdp_transfer_time_us to mode info even with explicit bit clock; sde_core_perf.c
+obtains bandwidth/clock from HAL properties, rather than a reusable kernel-side
+formula. Mainline derives its votes from nominal mode/plane timing. A restricted
+conservative125/102 ceiling multiplier (1e6/(6800*120)) is appropriate only for
+this fixed mode; it is not an exact HAL algorithm or hardware schedule register.
+Acceptance: execute real C arithmetic/integration against independent integer
+expectations, reject overflow/OPP/ICC failures, preserve non-opt-in behavior,
+then full ARM64 build and actual artifact checks. Register timing still needs
+physical measurements. No global performance override will be added.
