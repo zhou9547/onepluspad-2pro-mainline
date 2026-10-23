@@ -45,3 +45,10 @@ tree, replace only this phone package's support files, recheck units/udev, and
 repack with provenance linking the base image hash. Include exactly matching
 modules and the four verified graphics firmware files. Do not install pending
 WLAN inputs into any firmware search path before board selection is known.
+
+The previously independently downloaded/verified GNOME base39809729390 remains
+available as artifact12438829003 (419515851 bytes). Use its exact artifact name
+as the refresh source, instead of waiting for another complete apt build. The
+refresh verifier rechecks every file and actual SquashFS binaries before changes.
+The initial fresh build40004679869 and queued667a490 iteration are superseded;
+cancel them before running the verified-base refresh. No device state is changed.

@@ -94,6 +94,7 @@ def main():
                   rootfs_sha256=sha256(rootfs), rootfs_bytes=rootfs.stat().st_size,
                   initramfs_sha256=sha256(ramdisk), absolute_boot_deadline_seconds=900,
                   default_diagnostic_artifact_modified=False, qemu_handoff_verified=False)
+    (out/'manifest.json').write_text(json.dumps(report, indent=2)+'\n')
     if a.qemu:
         command = ['qemu-system-aarch64', '-machine', 'virt', '-cpu', 'cortex-a76',
                    '-m', '6144', '-smp', '2', '-nographic', '-no-reboot', '-nic', 'none',
@@ -101,8 +102,16 @@ def main():
                    '-drive', 'file='+str(rootfs)+',format=raw,if=none,readonly=on,id=rootfs',
                    '-device', 'virtio-blk-device,drive=rootfs',
                    '-append', 'console=ttyAMA0 '+cmdline+' oneplus13.desktop.qemu=1']
-        proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              text=True, timeout=300)
+        try:
+            proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  text=True, timeout=300)
+        except subprocess.TimeoutExpired as error:
+            output = error.stdout or b''
+            if isinstance(output, bytes):
+                output = output.decode(errors='replace')
+            (out/'qemu-desktop.log').write_text(output)
+            print(output[-12000:])
+            raise SystemExit('QEMU handoff exceeded 300 seconds; partial log retained') from None
         (out/'qemu-desktop.log').write_text(proc.stdout)
         if proc.returncode or 'ONEPLUS13_DESKTOP_HANDOFF_OK' not in proc.stdout:
             print(proc.stdout[-12000:])
