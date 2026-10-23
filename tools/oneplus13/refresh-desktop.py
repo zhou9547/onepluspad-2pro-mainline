@@ -39,9 +39,10 @@ def main():
     if not rule.resolve().is_relative_to(root) or not rule.is_file():
         raise ValueError('Installed udev rule missing or outside staging root')
     print('Installed RAM storage rule verified inside staging root', flush=True)
-    # The offline extraction has no /proc mount. Use udevadm's documented root
-    # prefix instead of a chroot whose path chasing depends on /proc/self/fd.
-    subprocess.run(['udevadm', 'verify', '--root='+str(root), rule.name], check=True)
+    # v255 forbids --root with FILE arguments. Parse this exact absolute file;
+    # verify performs no RUN command or device event and needs no target mounts.
+    subprocess.run(['udevadm', '--version'], check=True)
+    subprocess.run(['udevadm', 'verify', str(rule)], check=True)
     dest.mkdir()
     for name in ['packages.tsv', 'gnome-version.txt', 'os-release', 'ubuntu-source.json', 'README.md']:
         shutil.copy2(base/name, dest/name)

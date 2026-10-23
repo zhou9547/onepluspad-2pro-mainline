@@ -60,3 +60,12 @@ checks passed. The udev verifier failed during offline chroot path resolution;
 that extraction has no /proc mount. Use documented udevadm verify --root with
 the rule basename, and assert the installed path is a regular file inside the
 staging tree before validation. Do not bypass the verifier or execute udev rules.
+
+Correction after40007507201: the installed rule is confirmed present and inside
+the staging root, but the runner's v255 verifier explicitly rejects --root with
+FILE arguments. The current/latest manual describes a newer interface. Examined
+[v255 implementation](https://github.com/systemd/systemd/blob/v255/src/udev/udevadm-verify.c):
+its FILE-only branch directly parses absolute paths without executing RUN.
+Validate the asserted absolute staging-file path using that branch and record
+the verifier version. The initial offline-chroot missing-path cause is not
+independently proven; it is no longer needed by this verification route.
