@@ -11,7 +11,7 @@ from common import sha256
 CHUNK = 64*1024*1024
 
 
-def handler(image):
+def handler(image, stats=None):
     size = image.stat().st_size
 
     class Handler(BaseHTTPRequestHandler):
@@ -46,7 +46,11 @@ def handler(image):
                             self.close_connection = True
                             return
                         self.wfile.write(data)
+                        if stats is not None:
+                            stats['bytes'] += len(data)
                         remaining -= len(data)
+                if stats is not None:
+                    stats['parts'].append(int(match[1]))
             except (BrokenPipeError, ConnectionResetError):
                 self.close_connection = True
     return Handler

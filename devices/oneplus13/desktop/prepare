@@ -3,15 +3,17 @@
 # Executed only in an explicitly selected experimental RAM initramfs.
 set -eu
 set -o pipefail
-sha=; bytes=; desktop=0; qemu=0
+sha=; bytes=; desktop=0; qemu=0; qemu_http=0
 for arg in $(cat /proc/cmdline); do
     case "$arg" in
         oneplus13.desktop=1) desktop=1 ;;
         oneplus13.rootfs.sha256=*) sha=${arg#*=} ;;
         oneplus13.rootfs.bytes=*) bytes=${arg#*=} ;;
         oneplus13.desktop.qemu=1) qemu=1 ;;
+        oneplus13.desktop.qemu-http=1) qemu_http=1 ;;
     esac
 done
+echo ONEPLUS13_RAM_ROOT_VALIDATING_INPUT
 [ "$desktop" = 1 ]
 case "$sha" in ''|*[!0-9a-f]*) exit 1 ;; esac
 [ "${#sha}" = 64 ]
@@ -23,6 +25,15 @@ mkdir -p /run/oneplus13 /run/rootfs.ro /run/rootfs.rw /run/rootfs.wk /newroot
 if [ "$qemu" = 1 ]; then
     # The block input is an emulator-only test fixture, never a phone root path.
     tr '\000' '\n' < /sys/firmware/devicetree/base/compatible | grep -qx linux,dummy-virt
+fi
+if [ "$qemu_http" = 1 ]; then
+    [ "$qemu" = 1 ]
+    ip link set dev eth0 down
+    ip link set dev eth0 name usb0
+    ip address add 172.16.13.1/24 dev usb0
+    ip link set dev usb0 up
+fi
+if [ "$qemu" = 1 ] && [ "$qemu_http" = 0 ]; then
     [ "$(blockdev --getro /dev/vda)" = 1 ]
     [ "$(blockdev --getsize64 /dev/vda)" = "$bytes" ]
     image=/dev/vda
@@ -38,6 +49,7 @@ else
         expected=$((bytes - index * chunk))
         [ "$expected" -le "$chunk" ] || expected=$chunk
         part=$(printf 'part%04d' "$index")
+        echo "ONEPLUS13_RAM_ROOT_FETCH $part $expected"
         # Bound both elapsed time and received bytes, including a hostile server.
         timeout -k 2 60 wget -q -T 15 -O - \
             "http://172.16.13.2:8000/oneplus13-rootfs.parts/$part" |
@@ -49,6 +61,7 @@ else
     done
     [ "$(stat -c %s "$image")" = "$bytes" ]
 fi
+echo ONEPLUS13_RAM_ROOT_VERIFYING_SHA256
 [ "$(sha256sum "$image" | cut -d' ' -f1)" = "$sha" ]
 mount -t squashfs -o ro,loop "$image" /run/rootfs.ro
 mount -t overlay overlay -o lowerdir=/run/rootfs.ro,upperdir=/run/rootfs.rw,workdir=/run/rootfs.wk /newroot

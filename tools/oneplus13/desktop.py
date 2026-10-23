@@ -4,10 +4,12 @@
 import argparse
 import gzip
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import stat
 import subprocess
+import threading
 from common import make_cpio, read_cpio, sha256
 
 REPO = Path(__file__).resolve().parents[2]
@@ -73,7 +75,10 @@ def main():
     p.add_argument('--rootfs', required=True, type=Path)
     p.add_argument('--output', required=True, type=Path)
     p.add_argument('--qemu', action='store_true')
+    p.add_argument('--qemu-http', action='store_true', help='Exercise the production chunk fetch via an emulator-only virtual link')
     a = p.parse_args()
+    if a.qemu_http and not a.qemu:
+        p.error('--qemu-http requires --qemu')
     kernel, rootfs, out = a.kernel.resolve(), a.rootfs.resolve(), a.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     manifest = json.loads((kernel/'manifest.json').read_text())
@@ -102,6 +107,19 @@ def main():
                    '-drive', 'file='+str(rootfs)+',format=raw,if=none,readonly=on,id=rootfs',
                    '-device', 'virtio-blk-device,drive=rootfs',
                    '-append', 'console=ttyAMA0 '+cmdline+' oneplus13.desktop.qemu=1']
+        server = None
+        stats = {'bytes': 0, 'parts': []}
+        if a.qemu_http:
+            spec = importlib.util.spec_from_file_location('rootfs_server', REPO/'tools/oneplus13/serve-rootfs.py')
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            server = module.ThreadingHTTPServer(('127.0.0.1', 8000), module.handler(rootfs, stats))
+            server.daemon_threads = True
+            thread = threading.Thread(target=server.serve_forever, daemon=True)
+            thread.start()
+            command[-1] += ' oneplus13.desktop.qemu-http=1'
+            command += ['-netdev', 'user,id=rootfsnet,net=172.16.13.0/24,host=172.16.13.2',
+                        '-device', 'virtio-net-device,netdev=rootfsnet,mac=02:13:00:00:00:01']
         try:
             proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   text=True, timeout=300)
@@ -112,6 +130,11 @@ def main():
             (out/'qemu-desktop.log').write_text(output)
             print(output[-12000:])
             raise SystemExit('QEMU handoff exceeded 300 seconds; partial log retained') from None
+        finally:
+            if server:
+                server.shutdown()
+                server.server_close()
+                thread.join()
         (out/'qemu-desktop.log').write_text(proc.stdout)
         markers = ['ONEPLUS13_DESKTOP_HANDOFF_OK', 'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
         if (proc.returncode or any(m not in proc.stdout for m in markers) or
@@ -120,8 +143,15 @@ def main():
             raise SystemExit('Actual GNOME rootfs QEMU handoff failed')
         report['qemu_handoff_verified'] = True
         report['qemu_deadline_expiry_verified'] = True
-        report['qemu_deadline_test_seconds'] = 120
+        report['qemu_deadline_test_seconds'] = 180 if a.qemu_http else 120
         report['physical_deadline_exercised'] = False
+        if a.qemu_http:
+            count = (rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
+            if stats['bytes'] != rootfs.stat().st_size or stats['parts'] != list(range(count)):
+                raise ValueError('HTTP path did not consume exactly the selected complete image')
+            report['qemu_http_chunk_fetch_verified'] = True
+            report['qemu_http_served_bytes'] = stats['bytes']
+            report['qemu_http_served_parts'] = stats['parts']
         report['qemu_scope'] = 'systemd, actual GNOME userspace binary, storage guard, NetworkManager and D-Bus; no display/input/radio emulation'
     (out/'manifest.json').write_text(json.dumps(report, indent=2)+'\n')
     (out/'SHA256SUMS').write_text(''.join(f'{sha256(f)}  {f.name}\n' for f in sorted(out.iterdir())

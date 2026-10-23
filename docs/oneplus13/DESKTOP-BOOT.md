@@ -109,3 +109,17 @@ to120 seconds and adds a console marker before the original reboot command.
 Require HANDOFF_OK, then expiry marker, then kernel restart/process termination.
 Production unit900s and initramfs900s remain unchanged. This proves systemd timer
 execution under QEMU, not phone recovery, kernel-stall coverage or actual900s timing.
+
+Final software-path acceptance: the first test supplies SquashFS via read-only
+virtio block, while the phone must fetch chunks. Exercise the same production
+fetch/size/hash/overlay/handoff path using an emulator-only virtio network named
+usb0 and the fixed172.16.13.1/.2 addresses. Bind the host chunk server only to
+loopback. Require exactly the expected bytes/parts, successful systemd/GDM
+checks and expiry-driven restart. Keep the read-only virtual disk as a storage
+guard positive control. This tests HTTP client/assembly, not real NCM hardware.
+Both emulator selectors require the dummy-virt DT before any emulator setup.
+
+The block-input recovery test40009535169/0379a3a passes: HANDOFF_OK is followed
+by the shortened120s systemd deadline and kernel restart. The exact a6c8ceb
+rootfs bytes remain unchanged. The HTTP variant uses a180s emulator deadline to
+include the additional full-image transfer; production900s remains unchanged.

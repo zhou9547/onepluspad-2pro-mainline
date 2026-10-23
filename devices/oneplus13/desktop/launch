@@ -4,6 +4,7 @@
 desktop_main() {
     if ! /bin/oneplus13-ram-prepare > /run/evidence/rootfs.txt 2>&1; then
         echo 'RAM root preparation failed; diagnostics and deadline remain active'
+        cat /run/evidence/rootfs.txt
         return 1
     fi
     # Every PID belongs to this init. Never kill by executable name.

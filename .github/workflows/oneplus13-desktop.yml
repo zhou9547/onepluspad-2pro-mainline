@@ -98,7 +98,7 @@ jobs:
         run: |
           python3 tools/oneplus13/desktop.py --kernel out/oneplus13-desktop-kernel \
             --rootfs out/oneplus13-rootfs-artifacts/rootfs.squashfs \
-            --output out/oneplus13-desktop --qemu
+            --output out/oneplus13-desktop --qemu --qemu-http
       - uses: actions/upload-artifact@v4
         if: always() && !cancelled()
         with:
