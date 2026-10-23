@@ -11,12 +11,49 @@ TOOLS = pathlib.Path(__file__).resolve().parents[1] / 'tools/oneplus13'
 sys.path.insert(0, str(TOOLS))
 from common import boot_sections, make_cpio, read_cpio
 from verify import check_config, REQUIRED
+from stock import Fdt, boot_image, split_dtbs
+from calibrate import boot_index, selected_panel, prepare_sink
 spec = importlib.util.spec_from_file_location('phone_stock_collector', TOOLS / 'collect-stock.py')
 collector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collector)
 
 
 class PhoneFormats(unittest.TestCase):
+    def test_stock_boot_v4_geometry_and_truncation(self):
+        blob = bytearray(12288)
+        blob[:8] = b'ANDROID!'
+        struct.pack_into('<II', blob, 8, 3, 4)
+        struct.pack_into('<I', blob, 20, 1584)
+        struct.pack_into('<I', blob, 40, 4)
+        self.assertEqual(boot_image(blob)['sections']['ramdisk'], [8192, 4])
+        with self.assertRaises(ValueError):
+            boot_image(blob[:8193])
+
+    def test_stock_fdt_roundtrip_bounds_and_overlay_isolation(self):
+        tree = Fdt.__new__(Fdt)
+        tree.nodes = {'/': {'model': b'synthetic fixture\0'}, '/test': {'reg': struct.pack('>III', 0, 0x80000000, 0x1000)}}
+        tree.reservations = [[0x90000000, 4096]]
+        blob = tree.to_blob()
+        parsed = Fdt(blob)
+        self.assertEqual(parsed.nodes, tree.nodes)
+        self.assertEqual(parsed.reservations, tree.reservations)
+        self.assertEqual(len(split_dtbs(blob + b'\0\0' + blob)), 2)
+        with self.assertRaises(ValueError):
+            Fdt(blob[:-1])
+        bad_overlay = Fdt.__new__(Fdt)
+        bad_overlay.nodes = {'/': {}, '/fragment@0': {'target-path': b'/soc\0'}}
+        with self.assertRaisesRegex(ValueError, 'Absolute overlay target'):
+            prepare_sink(parsed, [], [{'tree': bad_overlay}], parsed)
+
+    def test_calibration_uses_actual_indices_and_strips_panel_serial(self):
+        self.assertEqual(boot_index('androidboot.dtb_idx = "2"\n', 'dtb_idx'), 2)
+        for text in ['', 'androidboot.dtb_idx = "2"\nandroidboot.dtb_idx = "3"']:
+            with self.assertRaises(ValueError):
+                boot_index(text, 'dtb_idx')
+        path = selected_panel('msm_drm.dsi_display0=qcom,panel_a:PanelSN-SECRET:')
+        self.assertEqual(path, '/soc/qcom,mdss_mdp@ae00000/qcom,panel_a')
+        self.assertNotIn('SECRET', path)
+
     def test_rejects_truncated_android_image(self):
         with self.assertRaises(ValueError):
             boot_sections(b'ANDROID!')

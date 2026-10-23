@@ -23,10 +23,25 @@ fi
 git -C "$src" fetch --depth 1 origin "${pin[1]}"
 git -C "$src" checkout --detach FETCH_HEAD
 [[ $(git -C "$src" rev-parse HEAD) == "${pin[1]}" ]]
-cp devices/oneplus13/sm8750-oneplus-dodge.dts "$src/arch/arm64/boot/dts/qcom/"
+cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
+cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
+if ! grep -q TOUCHSCREEN_DODGE_S3910 "$src/drivers/input/touchscreen/Kconfig"; then
+  cat >> "$src/drivers/input/touchscreen/Kconfig" <<'KCONFIG'
+
+config TOUCHSCREEN_DODGE_S3910
+	tristate "Experimental OnePlus 13 Synaptics S3910 LBP"
+	depends on SPI && OF && GPIOLIB && INPUT_TOUCHSCREEN
+	depends on DRM_PANEL
+	help
+	  Isolated offline bring-up candidate, not hardware validated.
+KCONFIG
+  printf '\nobj-$(CONFIG_TOUCHSCREEN_DODGE_S3910) += synaptics-dodge/\n' >> "$src/drivers/input/touchscreen/Makefile"
+fi
 grep -q 'sm8750-oneplus-dodge.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
-git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dts
+grep -q 'sm8750-oneplus-dodge-touch.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
+  printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-touch.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
+git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dts drivers/input/touchscreen/synaptics-dodge
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1
@@ -44,6 +59,7 @@ args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id")
 # DTB first: reject unresolved phandles before the expensive kernel build.
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference-dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
+make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-touch.dtb 2>&1 | tee "$kout/touch-dtb.log"
 time make "${args[@]}" -j"$(nproc)" Image Image.gz modules 2>&1 | tee "$kout/build.log"
 make "${args[@]}" -j"$(nproc)" modules_install INSTALL_MOD_PATH="$dest/modules" INSTALL_MOD_STRIP=1 \
   2>&1 | tee "$kout/modules.log"
@@ -54,6 +70,7 @@ tar --sort=name --mtime="@$(( $(git -C "$repo" show -s --format=%ct HEAD) ))" \
 rm -rf -- "$dest/modules"
 cp "$kout/arch/arm64/boot/Image" "$kout/arch/arm64/boot/Image.gz" "$dest/"
 cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb" "$dest/"
+cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-touch.dtb" "$dest/"
 cp "$kout/.config" "$dest/kernel.config"
 cp "$kout/include/config/kernel.release" "$dest/kernel.release"
 cp "$kout/System.map" "$dest/"

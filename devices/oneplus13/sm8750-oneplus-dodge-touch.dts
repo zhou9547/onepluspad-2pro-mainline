@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/* Single-subsystem candidate. No native display or radio is enabled here. */
+#include "sm8750-oneplus-dodge.dts"
+
+/ { model = "OnePlus 13 (S3910 LBP experimental candidate)"; };
+
+&qupv3_1 { status = "okay"; };
+&gpi_dma1 { status = "okay"; };
+
+&spi4 {
+	status = "okay";
+	touchscreen@0 {
+		compatible = "oneplus,dodge-s3910-lbp";
+		reg = <0>;
+		spi-max-frequency = <19000000>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <162 IRQ_TYPE_LEVEL_LOW>;
+		reset-gpios = <&tlmm 161 GPIO_ACTIVE_LOW>;
+		/* Vendor ignores its legacy GPIO flags and drives physical HIGH. */
+		avdd-gpios = <&pm8550vs_j_gpios 3 GPIO_ACTIVE_HIGH>;
+		vdd-supply = <&vreg_l4b_1p8>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_irq_default>, <&touch_reset_default>;
+	};
+};
+
+&tlmm {
+	touch_irq_default: touch-irq-default-state {
+		pins = "gpio162";
+		function = "gpio";
+		input-enable;
+		bias-pull-up;
+		drive-strength = <6>;
+	};
+	touch_reset_default: touch-reset-default-state {
+		pins = "gpio161";
+		function = "gpio";
+		bias-disable;
+		drive-strength = <6>;
+	};
+};

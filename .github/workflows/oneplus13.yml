@@ -38,7 +38,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio
       - name: Check phone tooling
-        run: python3 -m unittest discover -s tests -p test_oneplus13.py -v
+        run: |
+          python3 -m unittest discover -s tests -p test_oneplus13.py -v
+          gcc -Wall -Wextra -Werror -fsanitize=address,undefined tests/s3910_report_test.c -o /tmp/s3910-report-test
+          /tmp/s3910-report-test
       - name: Restore compiler cache
         id: compiler-cache
         uses: actions/cache/restore@v4

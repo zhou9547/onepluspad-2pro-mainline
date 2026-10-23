@@ -9,6 +9,14 @@ changes or assertions of hardware success are authorized by this offline task.
 Use Ubuntu with GNOME as the reference distribution. Preserve Android and defer
 storage layout decisions until recovery inputs and device evidence are known.
 
+User authorization, 2026-10-23: the owner's network ADB endpoint may be used
+with existing root for READ-ONLY evidence collection. Every command must select
+that explicit endpoint (kept only in private local records). Save evidence only
+on the host. No push, device-side files, remounts, setprop, service control,
+input injection, firmware commands, reboots, unlocking or partition writes.
+This overrides the earlier prohibition on device queries only; booting a test
+kernel and any operation that changes the phone remain unauthorized.
+
 Keep the existing Pad integration intact. Phone work lives in devices/oneplus13,
 tools/oneplus13, docs/oneplus13 and its dedicated workflow. Do not use Pad stock
 boot references, calibration, firmware or partition sizes for the phone.
