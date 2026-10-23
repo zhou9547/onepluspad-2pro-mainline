@@ -13,7 +13,6 @@
 #include <drm/drm_managed.h>
 
 #include "dpu_kms.h"
-#include "dpu_crtc.h"
 #include "dpu_encoder.h"
 #include "dpu_aa569_spr.h"
 #include "dpu_aa569_spr_runtime.h"

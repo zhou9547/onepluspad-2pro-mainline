@@ -49,12 +49,6 @@ cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
 cp devices/oneplus13/kernel/spr-aa569/dpu_aa569_spr*.[ch] "$src/drivers/gpu/drm/msm/disp/dpu1/"
-if ! grep -q 'disp/dpu1/dpu_aa569_spr.o' "$src/drivers/gpu/drm/msm/Makefile"; then
-  printf '\nmsm-display-$(CONFIG_DRM_MSM_DPU) += disp/dpu1/dpu_aa569_spr.o\n' >> "$src/drivers/gpu/drm/msm/Makefile"
-fi
-if ! grep -q 'disp/dpu1/dpu_aa569_spr_runtime.o' "$src/drivers/gpu/drm/msm/Makefile"; then
-  printf '\nmsm-display-$(CONFIG_DRM_MSM_DPU) += disp/dpu1/dpu_aa569_spr_runtime.o\n' >> "$src/drivers/gpu/drm/msm/Makefile"
-fi
 if ! grep -q DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL "$src/drivers/gpu/drm/panel/Kconfig"; then
   cat >> "$src/drivers/gpu/drm/panel/Kconfig" <<'KCONFIG'
 

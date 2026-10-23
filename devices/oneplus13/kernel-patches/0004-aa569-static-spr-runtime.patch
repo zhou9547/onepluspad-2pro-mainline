@@ -333,3 +333,14 @@
  }
  
  /*
+--- a/drivers/gpu/drm/msm/Makefile
++++ b/drivers/gpu/drm/msm/Makefile
+@@ -69,6 +69,8 @@
+ 	disp/mdp5/mdp5_smp.o \
+ 
+ msm-display-$(CONFIG_DRM_MSM_DPU) += \
++	disp/dpu1/dpu_aa569_spr.o \
++	disp/dpu1/dpu_aa569_spr_runtime.o \
+ 	disp/dpu1/dpu_core_perf.o \
+ 	disp/dpu1/dpu_crtc.o \
+ 	disp/dpu1/dpu_encoder.o \

@@ -17,6 +17,13 @@ integration reserves DSPP without CTM/gamma and restores before encoders;
 suspend refusal returns before clocks-off. Pending ARM64/ASan build results
 are not hardware tests. Both prior diagnostic/touch DTS files are unchanged.
 
+Actions39952445486 atfcafb8d passed the host C/sanitizer checks but failed the
+early ARM64 object compile: mdp_common.xml.h was missing. The new object was
+appended after Makefile's immediately expanded generated-header dependency
+rule. Moved both SPR objects into the existing DPU object list in patch0004,
+before header dependencies, and removed the late build.sh append. Also dropped
+an unused dpu_crtc.h include. No generated file was fabricated or check removed.
+
 ## 2026-10-23 — corrected SSH port and DPU/SPR continuation
 
 Owner corrected the private SSH endpoint's port. An independent auditor reviewed
