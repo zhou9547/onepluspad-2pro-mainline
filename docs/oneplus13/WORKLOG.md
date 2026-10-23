@@ -583,3 +583,13 @@ does not expose its selected BDF name here. ODM and modem BDF/regdb hashes diffe
 the public lineage-23.2 ODM pair also mismatches. No binary transfers, phone
 changes, reboot, boot or radio operation. Existing native display packages remain
 diagnostic-only; a complete GNOME handoff is still required before system use.
+
+### Matching OTA extraction scope
+
+Public BDF history (COS11.A.47, transition to OOS, current OOS) also mismatches
+the owner hashes. Corrected the official OTA client-header assumption using
+documented public clients; the exact .501 gate now returns302. Prior2306 evidence
+is retained. Next scope/acceptance is STOCK-FIRMWARE: Actions-only extraction of
+three selected partitions, independent partition hashes and owner file equality,
+no phone binary transfer and no unrelated partition/image publication. Reuse a
+pinned Go tool with64-bit offsets, not the Python tool's32-bit offset schema.
