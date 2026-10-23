@@ -91,7 +91,11 @@ def verify_artifacts(out):
                     'icc_per_path_average_ceiling': True, 'missing_icc_path_rejected': True,
                     'te_timing_changed': False, 'hardware_transfer_timer_programmed': False,
                     'exact_vendor_hal_algorithm': False}
-        if (manifest['command_budget_version'] != 1 or
+        if manifest['command_budget_version'] == 2:
+            expected.update(new_atomic_plane_geometry_checked=True, original_plane_math_unchanged=True)
+        elif manifest['command_budget_version'] != 1:
+            raise ValueError('Unknown command-budget evidence version')
+        if (
                 any(budget.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C DPU command-budget verification')
     if 'panel_component_version' in manifest:

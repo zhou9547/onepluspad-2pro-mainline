@@ -475,3 +475,12 @@ positions and three baseline performance-mode comparisons. Fixed current-state
 limit checking rather than relying on generic aggregation of the previous state.
 No clock maximum is raised, no TE/timer register is changed, and no phone command
 is executed. ASan/ARM64/actual artifact checks are pending the next Actions run.
+
+### Fresh-frame plane geometry follow-up, 2026-10-24
+
+39983634509/cc88ea9 compiled successfully, but is not promoted: source review
+found cached plane performance is assigned in atomic_update, later than the
+atomic budget check. Added a restricted calculation from new assigned pipe
+geometry with the original unmodified helpers. Host C checks split/new/invalid
+geometry and source identity, in addition to the prior261 budget vectors and
+ICC/OPP/legacy controls. Evidence report version is now2. No device access.

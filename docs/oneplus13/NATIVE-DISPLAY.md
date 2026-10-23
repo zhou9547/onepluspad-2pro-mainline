@@ -492,3 +492,18 @@ Acceptance: execute real C arithmetic/integration against independent integer
 expectations, reject overflow/OPP/ICC failures, preserve non-opt-in behavior,
 then full ARM64 build and actual artifact checks. Register timing still needs
 physical measurements. No global performance override will be added.
+
+### New atomic plane state review, 2026-10-24
+
+Intermediate Actions39983634509/cc88ea9 passed full compilation and sanitizers;
+its archive has not been locally downloaded or promoted. Further source review
+found that dpu_plane_sspp_atomic_update computes cached plane_fetch_bw/clock only
+after atomic_check. Scaling cached values alone is insufficient on first enable.
+Patch0007 now recomputes the isolated AA569 request from the NEW assigned pipe
+geometry, using the original unchanged plane helpers and catalog factors before
+the burst budget. It does not change generic RGB/other-board performance.
+Real C host checks now include two720px pipes, a new smaller geometry independent
+of old cached inputs, invalid dimensions and original-helper identity. The test
+uses a narrowly scoped host-only signed-comparison warning exception for the
+unchanged upstream BW helper; new functions retain -Werror. ARM64 compilation
+and actual artifact checks follow; there is no physical timing result.

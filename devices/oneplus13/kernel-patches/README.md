@@ -78,3 +78,11 @@ TE/timer registers are unchanged and actual burst completion remains untested.
 check-command-budget.py executes actual C arithmetic/check/ICC functions with
 261 independently generated integer expectations, five overflow/limit controls,
 fresh-enable negative baseline, two ICC failure positions and legacy controls.
+
+0007 closes a first-enable gap found during source review: plane_fetch_bw/clock
+are normally updated in atomic_update, so atomic_check can still see the prior
+frame. For explicit AA569 SPR only, calculate from the NEW assigned pipe geometry
+using the original unchanged plane BW/clock helpers, then apply existing catalog
+inefficiency and burst factors. The wrapper rejects invalid/unassigned visible
+geometry. Non-opt-in calculation remains unchanged. Host C executes both split
+pipe math and the real check/ICC paths with differing old/new inputs.

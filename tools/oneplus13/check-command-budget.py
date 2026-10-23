@@ -29,11 +29,25 @@ def main():
     check = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(check)
     extract = check.extract_function
-    signatures = ['static int dpu_aa569_spr_scale(', 'static int dpu_aa569_spr_budget(',
+    signatures = ['static int dpu_aa569_spr_scale(', 'static int dpu_aa569_spr_calc(', 'static int dpu_aa569_spr_budget(',
                   'int dpu_core_perf_crtc_check(', 'static int _dpu_core_perf_crtc_update_bus(']
-    functions = '\n'.join(extract(source, s) for s in signatures)
-    for signature, name, new_name in [(signatures[2], 'dpu_core_perf_crtc_check', 'baseline_check'),
-                                      (signatures[3], '_dpu_core_perf_crtc_update_bus', 'baseline_bus')]:
+    plane_source = ((args.patched_source or args.kernel_source)/'drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c').read_text()
+    baseline_plane = subprocess.check_output(['git', '-C', str(args.kernel_source), 'show',
+        pin+':drivers/gpu/drm/msm/disp/dpu1/dpu_plane.c'], text=True)
+    for signature in ['static u64 _dpu_plane_calc_bw(', 'static u64 _dpu_plane_calc_clk(']:
+        if extract(plane_source, signature) != extract(baseline_plane, signature):
+            raise ValueError('Original plane helpers must remain unchanged')
+    # The untouched kernel BW helper compares signed porch sums with u32.
+    # Limit the host-only -Wextra exception to that original helper; retain
+    # all diagnostics for the new wrapper, budget and integration functions.
+    functions = ('#pragma GCC diagnostic push\n#pragma GCC diagnostic ignored "-Wsign-compare"\n'+
+                 extract(plane_source, 'static u64 _dpu_plane_calc_bw(')+
+                 '\n#pragma GCC diagnostic pop\n')
+    functions += '\n'.join(extract(plane_source, s) for s in [
+        'static u64 _dpu_plane_calc_clk(', 'int dpu_plane_calc_aa569_perf('])
+    functions += '\n'+'\n'.join(extract(source, s) for s in signatures)
+    for signature, name, new_name in [(signatures[3], 'dpu_core_perf_crtc_check', 'baseline_check'),
+                                      (signatures[4], '_dpu_core_perf_crtc_update_bus', 'baseline_bus')]:
         functions += '\n'+extract(baseline, signature).replace(name+'(', new_name+'(', 1)
     prefix = r'''
 #include <stdint.h>
@@ -49,6 +63,9 @@ typedef uint64_t u64;typedef uint32_t u32;
 #define ENODEV 19
 #define EOVERFLOW 75
 #define check_mul_overflow(a,b,out) __builtin_mul_overflow(a,b,out)
+#define check_add_overflow(a,b,out) __builtin_add_overflow(a,b,out)
+#define mult_frac(x,n,d) ((u64)(x)*(n)/(d))
+#define do_div(n,d) ((n)/=(d))
 #define max(a,b) ((a)>(b)?(a):(b))
 #define DIV_ROUND_UP_ULL(a,b) (((a)+(b)-1)/(b))
 #define DPU_ERROR(...) ((void)0)
@@ -57,10 +74,28 @@ typedef uint64_t u64;typedef uint32_t u32;
 enum {DPU_PERF_MODE_NORMAL,DPU_PERF_MODE_MINIMUM,DPU_PERF_MODE_FIXED};
 enum {RT_CLIENT,NRT_CLIENT};
 struct dpu_core_perf_params {u32 max_per_pipe_ib;u64 bw_ctl,core_clk_rate;};
-struct dpu_perf_cfg {u32 max_bw_high;};
+struct dpu_perf_cfg {u32 max_bw_high,min_dram_ib,bw_inefficiency_factor,clk_inefficiency_factor,min_prefill_lines;};
+struct dpu_mdss_cfg {struct dpu_perf_cfg *perf;};
+struct drm_rect {int x1,y1,x2,y2;};
+struct dpu_sw_pipe_cfg {struct drm_rect src_rect,dst_rect;};
+struct drm_display_mode {int hdisplay,vdisplay,vtotal,vsync_start,vsync_end;};
+struct msm_format {int bpp;};
+struct drm_plane {struct dpu_mdss_cfg *catalog;};
+struct drm_plane_state {struct drm_plane *plane;bool visible;struct msm_format *fb;};
+struct dpu_plane_state {struct drm_plane_state base;struct dpu_sw_pipe_cfg pipe_cfg[2];};
+#define PIPES_PER_PLANE 2
+#define to_dpu_plane(p) (p)
+#define dpu_plane drm_plane
+#define to_dpu_plane_state(p) ((struct dpu_plane_state *)(p))
+static int drm_rect_width(const struct drm_rect*r){return r->x2-r->x1;}
+static int drm_rect_height(const struct drm_rect*r){return r->y2-r->y1;}
+static int drm_mode_vrefresh(const struct drm_display_mode*m){(void)m;return 120;}
+static const struct msm_format *msm_framebuffer_format(struct msm_format*f){return f;}
 struct dpu_core_perf {struct dpu_perf_cfg *perf_cfg;u64 max_opp_clk_rate;struct {u32 mode;}perf_tune;u32 fix_core_ab_vote,fix_core_ib_vote;};
 struct dpu_kms {void *aa569_spr;int num_paths,path[4];struct dpu_core_perf perf;};
-struct drm_crtc_state {bool enable;};
+struct drm_crtc_state {bool enable;struct drm_display_mode adjusted_mode;struct drm_plane_state *planes[2];};
+#define drm_atomic_crtc_state_for_each_plane_state(plane,pstate,state) \
+ for(unsigned idx=0;idx<2&&((pstate)=(state)->planes[idx])&&((plane)=(pstate)->plane);idx++)
 struct dpu_crtc_state {struct drm_crtc_state base;struct dpu_core_perf_params new_perf;};
 struct drm_crtc {void *dev;};
 static struct dpu_kms kms;
@@ -90,7 +125,11 @@ static int icc_set_bw(int path,u32 avg,u32 peak){unsigned n=icc_calls++;(void)pa
     fixture += '};\n'
     suffix = r'''
 int main(void){
- struct dpu_perf_cfg cfg={28500000};struct drm_crtc crtc={0};struct dpu_crtc_state state={.base.enable=true};
+ struct dpu_perf_cfg cfg={.max_bw_high=28500000,.min_dram_ib=800000,.bw_inefficiency_factor=120,.clk_inefficiency_factor=105,.min_prefill_lines=35};
+ struct drm_crtc crtc={0};struct dpu_crtc_state state={.base.enable=true,.base.adjusted_mode={1440,3168,3200,3184,3188}};
+ struct dpu_mdss_cfg catalog={&cfg};struct drm_plane plane={&catalog};struct msm_format format={4};
+ struct dpu_plane_state pstate={.base={&plane,true,&format},.pipe_cfg={{{0,0,720,3168},{0,0,720,3168}},{{720,0,1440,3168},{720,0,1440,3168}}}};
+ state.base.planes[0]=&pstate.base;
  kms.perf.perf_cfg=&cfg;kms.perf.max_opp_clk_rate=1000000000;kms.num_paths=2;
  for(unsigned i=0;i<sizeof(vectors)/sizeof(vectors[0]);i++){
   const u64*v=vectors[i];struct dpu_core_perf_params p={.bw_ctl=v[0],.core_clk_rate=v[1],.max_per_pipe_ib=v[2]};
@@ -110,7 +149,13 @@ int main(void){
  input=(struct dpu_core_perf_params){.bw_ctl=2211840000,.core_clk_rate=580608000,.max_per_pipe_ib=800000};
  kms.aa569_spr=&kms;
  CHECK(!dpu_core_perf_crtc_check(&crtc,&state.base));
- CHECK(state.new_perf.core_clk_rate==711529412&&state.new_perf.bw_ctl==2710588236ULL);
+ CHECK(state.new_perf.core_clk_rate==711529412&&state.new_perf.bw_ctl==3557647059ULL);
+ /* NEW visible geometry is authoritative even though old cached votes differ. */
+ struct dpu_core_perf_params full=state.new_perf;
+ pstate.pipe_cfg[1].src_rect.x2=720;pstate.pipe_cfg[0].src_rect.x2=360;pstate.pipe_cfg[0].dst_rect.x2=360;
+ CHECK(!dpu_core_perf_crtc_check(&crtc,&state.base));CHECK(state.new_perf.bw_ctl<full.bw_ctl);
+ pstate.pipe_cfg[0].dst_rect.y2=0;CHECK(dpu_core_perf_crtc_check(&crtc,&state.base)==-EINVAL);
+ pstate.pipe_cfg[0].dst_rect.y2=3168;pstate.pipe_cfg[0].src_rect.x2=720;pstate.pipe_cfg[0].dst_rect.x2=720;pstate.pipe_cfg[1].src_rect.x2=1440;
  /* A fresh enable has an empty old aggregate. Still reject the NEW limits. */
  kms.perf.max_opp_clk_rate=600000000;
  CHECK(dpu_core_perf_crtc_check(&crtc,&state.base)==-E2BIG);
@@ -131,7 +176,7 @@ int main(void){
   icc_calls=0;icc_error_at=fail;CHECK(_dpu_core_perf_crtc_update_bus(&kms,&crtc)==-5);CHECK(icc_calls==(unsigned)fail+1);
  }
  icc_calls=0;icc_error_at=-1;CHECK(!_dpu_core_perf_crtc_update_bus(&kms,&crtc));
- CHECK(icc_calls==2&&icc_avg[0]==1355295&&icc_avg[1]==1355295&&icc_peak[0]==2710589);
+ CHECK(icc_calls==2&&icc_avg[0]==1778824&&icc_avg[1]==1778824&&icc_peak[0]==3557648);
  kms.num_paths=0;CHECK(_dpu_core_perf_crtc_update_bus(&kms,&crtc)==-ENODEV);
  kms.aa569_spr=NULL;CHECK(!_dpu_core_perf_crtc_update_bus(&kms,&crtc));kms.num_paths=2;
  for(int mode=0;mode<=2;mode++){
@@ -157,6 +202,9 @@ int main(void){
               'ceiling_multiplier': [125, 102], 'arithmetic_vectors': len(cases),
               'overflow_peak_opp_zero_limit_rejected': 5,
               'fresh_enable_new_state_limits_checked': True, 'baseline_underbudget_rejected': True,
+              'new_atomic_plane_geometry_checked': True,
+              'original_plane_math_unchanged': True,
+              'plane_source_sha256': hashlib.sha256(plane_source.encode()).hexdigest(),
               'nonoptin_legacy_modes_unchanged': 3, 'icc_error_positions': 2,
               'icc_per_path_average_ceiling': True, 'missing_icc_path_rejected': True,
               'te_timing_changed': False, 'hardware_transfer_timer_programmed': False,
