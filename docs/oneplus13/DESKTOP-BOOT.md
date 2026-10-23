@@ -69,3 +69,33 @@ its FILE-only branch directly parses absolute paths without executing RUN.
 Validate the asserted absolute staging-file path using that branch and record
 the verifier version. The initial offline-chroot missing-path cause is not
 independently proven; it is no longer needed by this verification route.
+
+### First complete handoff version, a6c8ceb
+
+Actions40007875169 passes. The actual rootfs has782 packages and SHA256
+b047f84a6766b23d2c1de733acfda873df148686ee299433bf0989e6c956bc72
+(432734208 bytes). Artifact12524664064 is432771590 bytes, ZIP SHA256
+213f54f49b5b81a265ccb0e6338d9dcd397542e1824b4201f000bea76f897811.
+Handoff artifact12525316939 is1023409 bytes, SHA256
+01f1f7be00a29ad736e5d8431f4a5e2e97c2b0ef0c48eb143c01aad6c976a26e.
+Both actual downloads match GitHub digests; local CRC/manifest/file checks pass.
+
+QEMU reaches systemd, confirms the root is OverlayFS, vda is read-only, root is
+locked, and the matching kernel marker is present. Guard, deadline timer,
+NetworkManager and D-Bus are active. Actual GNOME Shell reports50.1; GDM is
+active/running. HANDOFF_OK occurs at62.85s and controlled poweroff at65.05s.
+This proves userspace only; no display pixels, input event or radio is emulated.
+The900-second timer is armed but its expiry was not exercised by this first run.
+
+Host-only package-desktop.py produces separately named PRIVATE RAM images after
+fresh positive-stock / all-six-overlay /15-bank checks. Its image-header and DTB
+bootargs must agree with the tested rootfs. Default image14032896 bytes hashes
+d8740f3a2e0c96bfa774b6f1840dc19a9eeb9f40e8973a7e7c9ad5d489dc2042;
+native image14680064 bytes hashes
+f904630641caa55aba25b166547be00db4550ee28a027dab75891a92bc789399.
+The native archive adds only the matching existing nine modules and private SPR
+profile to the same public control flow; this private archive is not QEMU-tested.
+Neither image was booted on the phone. No v4 desktop install image is generated.
+
+Host chunk-server checks pass the64MiB boundary/final-part length and reject four
+unlisted paths without changing host networking or contacting the phone.

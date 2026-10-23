@@ -612,3 +612,22 @@ SHA/size/memory checks, RAM overlay, PID1 handoff, opt-in runtime USB services,
 physical block guard and an absolute900-second timer. GNOME builds with exactly
 the c2e659a modules. Three host checks pass. cd1c131 Actions40004679869 is building
 the actual rootfs for a full systemd handoff test; no phone boot is performed.
+
+### Actual GNOME RAM handoff passed
+
+Cancelled the redundant fresh apt build and its queued iteration after locating
+the still-available419515851-byte independently verified base. The first refresh
+failed at offline-chroot udev path resolution; the second proved the rule existed
+but the runner's255 interface rejected --root with FILE. Inspected that version's
+implementation and used its absolute FILE-only parser, without executing rules.
+40007875169/a6c8ceb passes unit/rule checks, complete SquashFS repacking, downloaded
+rootfs verification and actual QEMU switch_root. GDM is active/running, GNOME50.1
+executes, four guarded/runtime services are active, and the root block is read-only.
+Both artifacts are downloaded, CRC/SHA/manifests verified. The900-second timer
+was armed; this first observer powered off at65s before expiry.
+
+Two private RAM packages pass fresh stock-positive, all-six-overlay,15-bank,
+header/DTB cmdline and image-section readback checks. The native package retains
+the existing exact module/SPR inputs and identical tested public control flow.
+There is still no phone boot, native scanout/touch/radio acceptance or persistent
+installation. Phone access remains read-only; this packaging makes no connection.
