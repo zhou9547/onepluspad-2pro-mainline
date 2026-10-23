@@ -41,6 +41,7 @@
 
 #include <linux/version.h>
 #include <linux/kernel.h>
+#include <linux/string.h>
 #include <linux/module.h>
 #include <linux/input.h>
 #include <linux/delay.h>
@@ -683,6 +684,7 @@ static inline unsigned int syna_pal_str_len(const char *str)
 static inline int syna_pal_str_cpy(char *dest, unsigned int dest_size,
 		const char *src, unsigned int src_size, unsigned int num)
 {
+	size_t length;
 	if (dest == NULL || src == NULL)
 		return -1;
 
@@ -692,7 +694,11 @@ static inline int syna_pal_str_cpy(char *dest, unsigned int dest_size,
 		return -1;
 	}
 
-	strncpy(dest, src, num);
+	/* Linux 7.2 removed strncpy(). Preserve the vendor fixed-buffer copy
+	 * semantics without reading beyond the explicit source bound. */
+	length = strnlen(src, num);
+	memcpy(dest, src, length);
+	memset(dest + length, 0, num - length);
 
 	return 0;
 }

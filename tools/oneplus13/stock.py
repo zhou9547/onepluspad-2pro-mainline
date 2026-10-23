@@ -259,8 +259,13 @@ def boot_image(blob):
         raise ValueError('Not an Android boot image')
     for offset, size in sections.values():
         bounded(blob, offset, size)
-    return {'type': kind, 'header_version': ver, 'page_size': page, 'sections': sections,
-            'partition_bytes': len(blob), 'sha256': hashlib.sha256(blob).hexdigest()}
+    result = {'type': kind, 'header_version': ver, 'page_size': page, 'sections': sections,
+              'partition_bytes': len(blob), 'sha256': hashlib.sha256(blob).hexdigest()}
+    if kind == 'vendor_boot':
+        result['kernel_addr'], result['ramdisk_addr'] = struct.unpack('<II', bounded(blob, 16, 8))
+        result['tags_addr'], = struct.unpack('<I', bounded(blob, 2080, 4))
+        result['dtb_addr'], = struct.unpack('<Q', bounded(blob, 2104, 8))
+    return result
 
 
 def dtbo_entries(blob):

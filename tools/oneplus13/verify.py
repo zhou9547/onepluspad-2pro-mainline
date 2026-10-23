@@ -66,6 +66,12 @@ def verify_artifacts(out):
         raise ValueError('Wrong console device in initramfs')
     with tarfile.open(out / 'modules.tar.gz') as archive:
         names = [member.name for member in archive.getmembers()]
+        config = (out / 'kernel.config').read_text().splitlines()
+        for setting, filename in [('CONFIG_TOUCHSCREEN_DODGE_S3910=m', 'dodge-s3910.ko'),
+                                   ('CONFIG_DRM_MSM=m', 'msm.ko')]:
+            if setting in config and not any(Path(name).name in
+                    {filename, filename + '.xz', filename + '.zst', filename + '.gz'} for name in names):
+                raise ValueError('Configured candidate module is missing: ' + filename)
         if any(Path(name).is_absolute() or '..' in Path(name).parts for name in names):
             raise ValueError('Unsafe module archive path')
         prefix = 'lib/modules/' + manifest['kernel_release'] + '/'

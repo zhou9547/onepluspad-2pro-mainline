@@ -129,6 +129,68 @@ def prepare_sink(mainline, bases, entries, identity):
     return mainline.to_blob(), len(union)
 
 
+def subtract_ranges(ranges, excluded):
+    """Half-open intervals; never recover a hole just because a reference did."""
+    result = list(ranges)
+    for left, right in excluded:
+        next_result = []
+        for start, end in result:
+            if right <= start or left >= end:
+                next_result.append((start, end))
+            else:
+                if start < left:
+                    next_result.append((start, left))
+                if right < end:
+                    next_result.append((right, end))
+        result = next_result
+    return result
+
+
+def calibrate_memory(mainline, runtime):
+    banks = [r for p in runtime.nodes if p == '/memory' or p.startswith('/memory@')
+             for r in runtime.ranges(p) if r[1]]
+    banks.sort()
+    if not banks or any(start < 0 or size <= 0 or start + size > 1 << 64 for start, size in banks):
+        raise ValueError('Invalid runtime RAM geometry')
+    if any(a + size > b for (a, size), (b, _) in zip(banks, banks[1:])):
+        raise ValueError('Overlapping runtime RAM banks')
+    for key in ('#address-cells', '#size-cells'):
+        if cells(mainline.nodes['/'][key]) != [2] or cells(mainline.nodes['/reserved-memory'][key]) != [2]:
+            raise ValueError('Memory calibration requires 64-bit root/reserved addressing')
+    paths = [p for p, props in mainline.nodes.items() if props.get('device_type') == b'memory\0']
+    if len(paths) != 1:
+        raise ValueError('Ambiguous mainline RAM node')
+    mainline.nodes[paths[0]]['reg'] = b''.join(struct.pack('>QQ', *bank) for bank in banks)
+    existing = [(start, start + size) for p in mainline.nodes
+                if p.startswith('/reserved-memory/') and 'reg' in mainline.nodes[p]
+                for start, size in mainline.ranges(p) if size]
+    protected = [(start, start + size) for p in runtime.nodes
+                 if p.startswith('/reserved-memory/') and 'reg' in runtime.nodes[p]
+                 for start, size in runtime.ranges(p) if size]
+    protected += [(start, start + size) for start, size in runtime.reservations if size]
+    added = []
+    # Keep existing labeled platform reservations and reserve only uncovered
+    # stock ranges inside actual RAM. This avoids duplicate overlapping nodes.
+    for left, right in protected:
+        if right <= left or right > 1 << 64:
+            raise ValueError('Invalid protected memory interval')
+        intersections = [(max(left, start), min(right, start + size))
+                         for start, size in banks if left < start + size and right > start]
+        for start, end in subtract_ranges(intersections, existing):
+            path = f'/reserved-memory/stock-protected@{start:x}'
+            if path in mainline.nodes:
+                raise ValueError('Stock reservation name collision')
+            mainline.nodes[path] = {'reg': struct.pack('>QQ', start, end - start), 'no-map': b''}
+            existing.append((start, end))
+            added.append([start, end - start])
+    Fdt(mainline.to_blob())
+    return {'scope': 'Exact owner stock snapshot only; bootloader fixups still require a RAM test',
+            'banks': banks, 'additional_no_map_ranges': added,
+            'stock_reserved_ranges_all_excluded': not subtract_ranges(
+                [(max(l, s), min(r, s + n)) for l, r in protected for s, n in banks
+                 if l < s + n and r > s], existing)}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stock', required=True, type=Path)
@@ -136,6 +198,8 @@ def main():
     ufdt_args.add_argument('--libufdt', type=Path)
     ufdt_args.add_argument('--ufdt-tool', type=Path, help='Host ufdt-apply executable, including 32-bit Windows')
     parser.add_argument('--mainline-dtb', type=Path)
+    parser.add_argument('--use-runtime-memory', action='store_true',
+                        help='Owner-specific candidate only; preserve every stock protected RAM interval')
     parser.add_argument('--output', required=True, type=Path, help='New PRIVATE directory outside Git')
     args = parser.parse_args()
     import importlib.util
@@ -190,6 +254,8 @@ def main():
               'panel': panel, 'touch': touch[0]}
     if args.mainline_dtb:
         original = Fdt(args.mainline_dtb.read_bytes())
+        if args.use_runtime_memory:
+            report['memory_calibration'] = calibrate_memory(original, runtime)
         candidate, count = prepare_sink(original, bases, entries, bases[base_index])
         # ALL stock table entries must merge, and no operational node may change.
         final = Fdt(candidate)

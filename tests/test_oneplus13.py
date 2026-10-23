@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib.util
+import json
 import pathlib
 import stat
 import struct
@@ -12,13 +13,47 @@ sys.path.insert(0, str(TOOLS))
 from common import boot_sections, make_cpio, read_cpio
 from verify import check_config, REQUIRED
 from stock import Fdt, boot_image, split_dtbs
-from calibrate import boot_index, selected_panel, prepare_sink
+from calibrate import boot_index, selected_panel, prepare_sink, calibrate_memory
+from panel import command_packets, pps_summary
 spec = importlib.util.spec_from_file_location('phone_stock_collector', TOOLS / 'collect-stock.py')
 collector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collector)
 
 
 class PhoneFormats(unittest.TestCase):
+    def test_native_panel_pps_uses_422_group_bpp_not_rgb(self):
+        fixture = json.loads((TOOLS.parents[1] / 'devices/oneplus13/panel-aa569-120hz.json').read_text())
+        pps = pps_summary(fixture['on_packets'])
+        self.assertTrue(pps['native_422'])
+        self.assertFalse(pps['convert_rgb'])
+        self.assertEqual((pps['width'], pps['height'], pps['chunk_bytes']), (1440, 3168, 720))
+        self.assertEqual(pps['encoded_bits_per_pixel_x16'], 256)
+        packet = bytes.fromhex('39000040000004ff5aa500')
+        self.assertEqual(command_packets(packet)[0]['vendor_flags'], 64)
+        for bad in [packet[:6], packet[:-1]]:
+            with self.assertRaises(ValueError):
+                command_packets(bad)
+
+    def test_runtime_memory_never_exposes_stock_protected_holes(self):
+        def tree(memory, reservations):
+            t = Fdt.__new__(Fdt)
+            addressing = {'#address-cells': struct.pack('>I', 2), '#size-cells': struct.pack('>I', 2)}
+            t.nodes = {'/': addressing.copy(), '/memory@80000000': {
+                'device_type': b'memory\0', 'reg': b''.join(struct.pack('>QQ', *r) for r in memory)},
+                '/reserved-memory': addressing.copy()}
+            for i, r in enumerate(reservations):
+                t.nodes[f'/reserved-memory/test{i}'] = {'reg': struct.pack('>QQ', *r), 'no-map': b''}
+            t.reservations = []
+            return Fdt(t.to_blob())
+        original = tree([(0x80000000, 0x1000)], [(0x80001000, 0x1000)])
+        runtime = tree([(0x80000000, 0x10000)], [(0x80001800, 0x1800)])
+        report = calibrate_memory(original, runtime)
+        self.assertEqual(report['additional_no_map_ranges'], [[0x80002000, 0x1000]])
+        self.assertTrue(report['stock_reserved_ranges_all_excluded'])
+        runtime.nodes['/memory@80000000']['reg'] *= 2
+        with self.assertRaisesRegex(ValueError, 'Overlapping'):
+            calibrate_memory(original, runtime)
+
     def test_stock_boot_v4_geometry_and_truncation(self):
         blob = bytearray(12288)
         blob[:8] = b'ANDROID!'

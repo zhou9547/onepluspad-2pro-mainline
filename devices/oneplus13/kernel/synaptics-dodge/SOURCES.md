@@ -13,6 +13,11 @@ and fixed descriptor, negotiated in controller RAM. They never flash or update
 touch firmware. The protocol core can detect both TouchCom versions; a device
 outside application firmware fails without attempting firmware recovery.
 
+Local compatibility edit: syna_tcm2_runtime.h replaces the removed Linux 7.2
+strncpy call with bounded strnlen/memcpy/zero-padding preserving its fixed-buffer
+semantics. Actions 39888606647 found this issue; no warning suppression or fake
+function declaration was added to disguise an unsupported API.
+
 The single canonical source is this directory in the integration repository.
 build.sh copies it into the disposable kernel build tree and exports all edits
 in phone-kernel.patch. Do not edit that generated copy or maintain another fork

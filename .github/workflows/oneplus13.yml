@@ -8,6 +8,7 @@ on:
       - devices/oneplus13/**
       - tools/oneplus13/**
       - tests/test_oneplus13.py
+      - tests/s3910_report_test.c
   workflow_dispatch:
 
 permissions:
@@ -60,6 +61,16 @@ jobs:
         with:
           path: ~/.cache/ccache
           key: oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/**') }}
+      - name: Upload small device-tree review inputs
+        if: always() && !cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oneplus13-dtb-review-${{ github.sha }}
+          path: |
+            out/oneplus13-kbuild/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dtb
+            out/oneplus13-kbuild/.config
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Install QEMU inspection tools
         timeout-minutes: 10
         run: sudo apt-get install -y --no-install-recommends qemu-system-arm
