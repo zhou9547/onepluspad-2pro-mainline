@@ -332,3 +332,33 @@ resolved alongside SPR before connecting the panel; the current compiled
 component-only delivery deliberately does not enable a native display path.
 Primary vendor files at d50b305f are msm/sde/sde_encoder_dce.c,
 msm/sde/sde_hw_dsc_1_2.c and msm/sde/sde_hw_catalog.c in display-drivers.
+
+
+### Verified DPU buffer implementation, 2026-10-23
+
+Phone-only patch0003 now resolves the above source differences. Native422
+uses a two-pixel container and 128-bit output buffering for initial lines;
+AA569 now gives4 instead of the pinned baseline3. SM8750's eight DSC blocks
+advertise full ICH precision, applied only above8bpc. Modern native422 clears
+the legacy wrapper bit17, preserves existing physical-bpp to hardware-bpp
+conversion128->256 and clears 4HS state only within an extended CTL range.
+PPB FIFO sizing is restored through the existing enable/runtime-resume helper;
+noncontiguous PP slots are handled. Nothing changes DSI STREAM0_TOTAL.
+
+The real patched C functions pass48 native422 calculations against the
+unmodified public OnePlus vendor function and48 RGB cases against vendor and
+baseline. Captured writes verify the precision/wrapper bits, hardware bpp,
+legacy register bounds, RGB8 equivalence, two PP slots and replay. CI also
+uses ASan/UBSan and compiles the complete ARM64 driver. Host capture is not
+live register readback or proof of display output.
+
+Actions39946199507 atdb3012e345f75da4b54ddab73765c4abaa7b5b02 succeeded.
+Actual full artifact12497598833 is60207128 bytes, SHA256
+9c46428a25fa6d9a0e13e4d9d8a687f0da044c109cc53ddaa0ee79b16e2f23a9.
+ZIP CRC,26 manifest files, CI hashes, image sections, all three AArch64 modules
+and vermagic passed again. Release:
+7.2.0-oneplus13-g7a81d184e309-c6c2e0d66c4eb-pb61f52cc6834.
+The two DTBs still match the earlier baseline and keep MDSS disabled/panel absent.
+Both were freshly recalibrated against stock with all six overlays and15 RAM
+banks, then repacked/read back on the host. SPR2 resource/REGDMA/UDC lifecycle
+and DPU transfer-window scheduling remain prerequisites to enabling AA569.

@@ -18,8 +18,25 @@ Patch0003 now passes 48 native422 cases against unmodified public vendor C,
 48 RGB cases against vendor and the pinned baseline, register captures for
 full ICH/wrapper/hardware-bpp, legacy register bounds and two noncontiguous
 PPB slots with replay. AA569 initial lines now match vendor4 versus baseline3.
-Actions will compile the complete ARM64 driver and run these C checks with
-ASan/UBSan. No panel node or SPR implementation is enabled by this patch.
+Actions39946199507 atdb3012e345f75da4b54ddab73765c4abaa7b5b02 subsequently
+passed all19 Python checks, DSC/clock/panel/DPU C ASan/UBSan, complete ARM64
+kernel/modules and QEMU init/shutdown. No panel node or SPR implementation is
+enabled by this patch. Full artifact12497598833 was actually downloaded and
+verified against GitHub's digest:60207128 bytes, SHA256
+9c46428a25fa6d9a0e13e4d9d8a687f0da044c109cc53ddaa0ee79b16e2f23a9.
+CRC,26 manifest files, CI checksums, Image/Android sections, module AArch64
+identity/vermagic and all reports passed. The bounded downloader's first host
+pass hit its105-second deadline with partial ranges retained; one suffix-only
+resume completed and verified. Neither the signed URL nor credential was saved.
+
+Both downloaded DTBs remain identical to the earlier diagnostics, MDSS disabled
+and no AA569 node. Repeated private stock-positive/all-six-overlay/15-bank
+calibration and host-only unsigned v4/RAM-format repacking/readback passed.
+Release7.2.0-oneplus13-g7a81d184e309-c6c2e0d66c4eb-pb61f52cc6834.
+Only the one bounded non-root SSH getprop ran on the phone; no transfers,
+changes, reboot or test boot. Next: explicit SPR2 ownership/update/recovery
+and DPU transfer window, then an isolated display tree. Native display,
+physical touch and a normally flashable system are not completed.
 
 ## 2026-10-22
 
