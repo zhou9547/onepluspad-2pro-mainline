@@ -29,3 +29,21 @@ Six legacy/video/C-PHY/bonded/RGB/uncompressed controls retain their original
 results. check-command-clock.py compiles the real functions, including the PHY
 request, and rejects ten invalid inputs. This is a clock request correction,
 not a complete implementation of the vendor DPU transfer window or SPR.
+
+0003 corrects native422 initial-line arithmetic (half-width containers and
+128-bit output buffer), marks SM8750 full ICH precision capability, clears the
+legacy wrapper bit only for modern native422 DSC and restores PPB FIFO sizes
+on enable/runtime resume. Older wrapper ranges are not accessed out of bounds.
+The physical-bpp API and existing hardware bpp conversion remain unchanged.
+The existing DSI STREAM0_TOTAL matches the public vendor wide-bus arithmetic;
+the unrelated community stream-width doubling is deliberately omitted.
+
+References: EYC's GPLv2 TB323FU/kaanapali DSC fixes in
+joonhoekim/tb323fu-linux at da44c8412fed3baa609a8084a214ae9b5c9f4311,
+and OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750 at
+d50b305f7da9e14715a25120a4ac7b1a4b8b97c3, especially sde_encoder_dce.c,
+sde_hw_dsc_1_2.c and sde_hw_pingpong.c. check-dpu.py compares real patched C
+against an unmodified, attributed vendor initial-line function, checks 96 math
+cases, captures register writes, preserves a legacy RGB control and checks PPB
+replay and runtime-PM call integration. These are host checks, not register
+readback or a physical display test. No SPR or board display node is added.

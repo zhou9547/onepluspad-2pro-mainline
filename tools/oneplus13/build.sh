@@ -39,6 +39,8 @@ python3 tools/oneplus13/check-command-clock.py --kernel-source "$src" \
   --output "$dest/command-clock-verification.json" --sanitize
 python3 tools/oneplus13/check-panel.py --kernel-source "$src" \
   --output "$dest/panel-component-verification.json" --sanitize
+python3 tools/oneplus13/check-dpu.py --kernel-source "$src" \
+  --output "$dest/dpu-buffer-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"

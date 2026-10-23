@@ -89,6 +89,23 @@ def verify_artifacts(out):
         if (manifest['panel_component_version'] != 1 or
                 any(panel.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C panel component verification')
+    if 'dpu_buffer_version' in manifest:
+        dpu = json.loads((out / 'dpu-buffer-verification.json').read_text())
+        expected = {'scope': 'HOST_C_DPU_BUFFER_AND_REGISTER_ONLY',
+                    'hardware_tested': False, 'sanitizers': True,
+                    'kernel_commit': manifest['kernel_commit'],
+                    'native422_vendor_math_cases': 48, 'rgb_baseline_math_cases': 48,
+                    'aa569_initial_lines': 4, 'baseline_initial_lines': 3,
+                    'physical_bpp_q4': 128, 'hardware_bpp_field_q4': 256,
+                    'full_ich_precision_capability_checked': True,
+                    'modern_native422_wrapper_bit17_cleared': True,
+                    'legacy_ctl_bounds_checked': True,
+                    'rgb8_register_baseline_match': True,
+                    'ppb_fifo_entries_per_720px_pipe': 720,
+                    'ppb_pm_restore_call_present': True}
+        if (manifest['dpu_buffer_version'] != 1 or
+                any(dpu.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed C DPU buffer verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':

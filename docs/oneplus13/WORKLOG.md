@@ -1,5 +1,26 @@
 # Work log
 
+## 2026-10-23 — corrected SSH port and DPU/SPR continuation
+
+Owner corrected the private SSH endpoint's port. An independent auditor reviewed
+the single read-only 1KiB fingerprint query with a 45-second host deadline and
+no forwarding/local commands. Connection and authentication succeeded. The
+reported build fingerprint exactly matches the earlier private Android JSON.
+No root command, device modification or phone/host file transfer occurred.
+
+Before code changes rechecked original kernel upstream: erhai/v0.2 is still
+7a81d184e309. Current work scope/acceptance is in NATIVE-DISPLAY. The vendor
+widebus command-stream setup confirms mainline's bytes/6 total; the community
+reference's extra factor2 must not be copied. Investigate whole pipeline and
+preserve public PPS/RGB controls before enabling any independent native tree.
+
+Patch0003 now passes 48 native422 cases against unmodified public vendor C,
+48 RGB cases against vendor and the pinned baseline, register captures for
+full ICH/wrapper/hardware-bpp, legacy register bounds and two noncontiguous
+PPB slots with replay. AA569 initial lines now match vendor4 versus baseline3.
+Actions will compile the complete ARM64 driver and run these C checks with
+ASan/UBSan. No panel node or SPR implementation is enabled by this patch.
+
 ## 2026-10-22
 
 The user requested offline adaptation and successful Actions artifacts before

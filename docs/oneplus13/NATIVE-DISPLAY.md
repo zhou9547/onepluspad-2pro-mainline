@@ -1,5 +1,20 @@
 # AA569 native display investigation
 
+## Current work package: DPU native422 and controlled SPR bring-up
+
+Implement the isolated DPU differences against vendor d50b305f and pinned
+kernel7a81d184: native422 container/output-buffer initial-line calculation,
+explicit SM8750 full-ICH precision capability, modern native422 wrapper state
+and PPB FIFO sizing. Keep physical bpp in MSM/DPU. Compile the real changed
+functions with register-write captures, compare vendor calculation/RGB
+controls, then build ARM64 in Actions.
+
+Do not import the community widebus STREAM0_TOTAL doubling: the pinned OnePlus
+dsi_ctrl_hw_cmn_setup_cmd_stream divides compressed line bytes by6 for widebus,
+which matches this mainline host. Its global bpp convention and board-specific
+SPR offsets do not apply here. SPR follows these prerequisites with explicit
+resource ownership, private profile validation and runtime-PM lifecycle checks.
+
 ## Versioned evidence, 2026-10-23
 
 The owner's Android selects AA569 P3 A0019 production at 1440x3168. Stock DSI
