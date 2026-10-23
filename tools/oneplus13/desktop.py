@@ -113,10 +113,15 @@ def main():
             print(output[-12000:])
             raise SystemExit('QEMU handoff exceeded 300 seconds; partial log retained') from None
         (out/'qemu-desktop.log').write_text(proc.stdout)
-        if proc.returncode or 'ONEPLUS13_DESKTOP_HANDOFF_OK' not in proc.stdout:
+        markers = ['ONEPLUS13_DESKTOP_HANDOFF_OK', 'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
+        if (proc.returncode or any(m not in proc.stdout for m in markers) or
+                not proc.stdout.index(markers[0]) < proc.stdout.index(markers[1]) < proc.stdout.index(markers[2])):
             print(proc.stdout[-12000:])
             raise SystemExit('Actual GNOME rootfs QEMU handoff failed')
         report['qemu_handoff_verified'] = True
+        report['qemu_deadline_expiry_verified'] = True
+        report['qemu_deadline_test_seconds'] = 120
+        report['physical_deadline_exercised'] = False
         report['qemu_scope'] = 'systemd, actual GNOME userspace binary, storage guard, NetworkManager and D-Bus; no display/input/radio emulation'
     (out/'manifest.json').write_text(json.dumps(report, indent=2)+'\n')
     (out/'SHA256SUMS').write_text(''.join(f'{sha256(f)}  {f.name}\n' for f in sorted(out.iterdir())

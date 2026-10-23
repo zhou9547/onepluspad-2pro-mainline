@@ -99,3 +99,13 @@ Neither image was booted on the phone. No v4 desktop install image is generated.
 
 Host chunk-server checks pass the64MiB boundary/final-part length and reject four
 unlisted paths without changing host networking or contacting the phone.
+
+### Next bounded acceptance: exercise recovery expiry
+
+Use the exact already verified a6c8ceb rootfs bytes, without refreshing/repacking
+them. Change only the emulator observer: after HANDOFF_OK, leave the VM running;
+an emulator-identity-guarded runtime drop-in shortens the existing deadline timer
+to120 seconds and adds a console marker before the original reboot command.
+Require HANDOFF_OK, then expiry marker, then kernel restart/process termination.
+Production unit900s and initramfs900s remain unchanged. This proves systemd timer
+execution under QEMU, not phone recovery, kernel-stall coverage or actual900s timing.
