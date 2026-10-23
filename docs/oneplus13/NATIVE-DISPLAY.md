@@ -507,3 +507,17 @@ of old cached inputs, invalid dimensions and original-helper identity. The test
 uses a narrowly scoped host-only signed-comparison warning exception for the
 unchanged upstream BW helper; new functions retain -Werror. ARM64 compilation
 and actual artifact checks follow; there is no physical timing result.
+
+### Final command-budget artifact verification, 2026-10-24
+
+Actions39984526255/d67f5640f14b7c99dc77793cb776b4c141847cc8 passed full ARM64,
+261 budget vectors/new-plane and ICC controls, all other sanitizers and QEMU.
+Actual downloaded artifact12515471474 is60243240 bytes, SHA256
+521fb0e4986e967467a33510c4ff6416d393262c89bb6cff42b076db51db6a02.
+CRC,31 manifest files, CI hashes, both budget-source identities, modules and
+SPR functions pass. Release7.2.0-oneplus13-g7a81d184e309-c6c2e0d66c4eb-pe7e4167f3b06.
+All three fresh stock-positive/6-overlay/15-bank calibrations and v4/RAM section
+roundtrips pass. The new private14929920-byte RAM image SHA256 is
+a61d555bddaa6262169cc5a70db675c2125954cbfa591b6bdf8e20547e91f537.
+All original ramdisk entries remain unchanged; derived ramdisk is not QEMU-tested.
+Budget correction does not program a new transfer timer or prove physical output.

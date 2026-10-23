@@ -484,3 +484,17 @@ atomic budget check. Added a restricted calculation from new assigned pipe
 geometry with the original unmodified helpers. Host C checks split/new/invalid
 geometry and source identity, in addition to the prior261 budget vectors and
 ICC/OPP/legacy controls. Evidence report version is now2. No device access.
+
+### Budget delivery verified; wireless evidence, 2026-10-24
+
+39984526255/d67f564 passed and actual60243240-byte archive matches GitHub digest,
+CRC,31 manifest files, source identities, modules, QEMU and image readback.
+Recalibrated all three trees and rebuilt private display RAM image; hash is in
+STATUS/NATIVE-DISPLAY. Old e6766eb delivery remains preserved.
+Wireless review found this phone's876mV AON/DIG and1.312V RFA requests differ
+from Pad minimums. Pinned vendor cnss-peach maps to110e/WCN7860, whose mainline
+support requires major2; no live revision/board/firmware proof yet. One audited
+non-root metadata query matches Android build but all three vendor paths are
+unavailable; no inference of missing firmware and no retry. No binary transfer
+or phone modification. Matching OTA catalog found; official links return2306.
+Next independent work scope and acceptance are in NATIVE-WIRELESS.md.
