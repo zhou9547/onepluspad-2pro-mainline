@@ -35,8 +35,13 @@ def main():
     installer.install(root, kernel, firmware)
     subprocess.run(['chroot', str(root), '/usr/bin/systemd-analyze', 'verify',
                     *sorted(p.name for p in (root/'usr/lib/systemd/system').glob('oneplus13-ram-*'))], check=True)
-    subprocess.run(['chroot', str(root), '/usr/bin/udevadm', 'verify',
-                    '/usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules'], check=True)
+    rule = root/'usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules'
+    if not rule.resolve().is_relative_to(root) or not rule.is_file():
+        raise ValueError('Installed udev rule missing or outside staging root')
+    print('Installed RAM storage rule verified inside staging root', flush=True)
+    # The offline extraction has no /proc mount. Use udevadm's documented root
+    # prefix instead of a chroot whose path chasing depends on /proc/self/fd.
+    subprocess.run(['udevadm', 'verify', '--root='+str(root), rule.name], check=True)
     dest.mkdir()
     for name in ['packages.tsv', 'gnome-version.txt', 'os-release', 'ubuntu-source.json', 'README.md']:
         shutil.copy2(base/name, dest/name)

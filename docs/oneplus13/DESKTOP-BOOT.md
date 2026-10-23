@@ -52,3 +52,11 @@ as the refresh source, instead of waiting for another complete apt build. The
 refresh verifier rechecks every file and actual SquashFS binaries before changes.
 The initial fresh build40004679869 and queued667a490 iteration are superseded;
 cancel them before running the verified-base refresh. No device state is changed.
+
+Refresh40007121215 reached and independently verified the419479552-byte base
+SquashFS (SHA25697611cd24f0bc73c67a7393b9def55cbea3e952d26ca1ecfeb99b1d0b6e5ecef,
+782 ARM64/all packages, GNOME50.1). Module/support installation and systemd unit
+checks passed. The udev verifier failed during offline chroot path resolution;
+that extraction has no /proc mount. Use documented udevadm verify --root with
+the rule basename, and assert the installed path is a regular file inside the
+staging tree before validation. Do not bypass the verifier or execute udev rules.

@@ -18,6 +18,8 @@ def install(root, kernel=None, firmware=None):
 
     def write(name, data, mode=0o644):
         path = root/name
+        if not path.resolve().is_relative_to(root):
+            raise ValueError('Support path escapes staging root')
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(data, newline='\n')
         path.chmod(mode)
@@ -63,6 +65,8 @@ def install(root, kernel=None, firmware=None):
             name = Path(item['output']).name
             path = ('qcom/sm8750/oneplus/dodge/'+name if name.endswith('_zap.mbn') else 'qcom/'+name)
             dest = root/'usr/lib/firmware'/path
+            if not dest.resolve().is_relative_to(root):
+                raise ValueError('Firmware path escapes staging root')
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes((firmware/item['output']).read_bytes())
             dest.chmod(0o644)
