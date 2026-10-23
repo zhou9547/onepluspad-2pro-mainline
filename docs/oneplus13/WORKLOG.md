@@ -54,6 +54,12 @@ instead of guessing a fixed120Hz mapping. Pending Actions compilation and
 sanitizers are not yet marked passed. This remains a prerequisite component,
 not an enabled native display or implementation of REGDMA ownership/recovery.
 
+Actions39948240876 at a27d8b9 failed in the host C harness before ARM64 SPR
+compilation: the Linux errno shim recursively included glibc errno.h, whose
+own Linux include then omitted EINVAL. Windows did not expose that include
+cycle. Corrected only the host shim to explicit Linux EINVAL/EBADMSG values;
+no driver code, compiler warning or check was removed. Failure log retained.
+
 ## 2026-10-22
 
 The user requested offline adaptation and successful Actions artifacts before

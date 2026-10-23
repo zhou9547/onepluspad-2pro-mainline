@@ -40,7 +40,9 @@ def main():
         'bits.h': '#include <stdint.h>\n#define BIT(n) (UINT32_C(1)<<(n))\n'
                   '#define GENMASK(h,l) ((UINT32_MAX>>(31-(h)))&(UINT32_MAX<<(l)))\n',
         'string.h': '#include <string.h>\n',
-        'errno.h': '#include <errno.h>\n#ifndef EBADMSG\n#define EBADMSG 74\n#endif\n',
+        # glibc errno.h includes linux/errno.h; recursively including it from
+        # this shim leaves EINVAL undefined. The shim needs only Linux values.
+        'errno.h': '#define EINVAL 22\n#define EBADMSG 74\n',
         'unaligned.h': '#include <stdint.h>\nstatic inline uint32_t get_unaligned_le32(const void *p) {'
                        'const uint8_t *b=p;return (uint32_t)b[0]|((uint32_t)b[1]<<8)|'
                        '((uint32_t)b[2]<<16)|((uint32_t)b[3]<<24);}\n',
