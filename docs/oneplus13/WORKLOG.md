@@ -60,6 +60,32 @@ own Linux include then omitted EINVAL. Windows did not expose that include
 cycle. Corrected only the host shim to explicit Linux EINVAL/EBADMSG values;
 no driver code, compiler warning or check was removed. Failure log retained.
 
+### Final verified profile/planner build and delivery
+
+Corrected run39948575140 at363b605da6fee4922d995c8beaf5a3fe16528e2f passed
+20 Python tests, all host C sanitizers, the real ARM64 kernel/modules and QEMU
+init/shutdown. The downloaded12499740861 archive is60207655 bytes, SHA256
+af7af14ca63880166846672649a3e207c8bab288781a741d0d70a5b2fb988216.
+CRC,27 manifest files, CI checksums, image sections, module identities/vermagic,
+DSC/clock/panel/DPU/SPR reports all pass. The ARM64 msm ELF contains nonempty
+SPR decoder/planner FUNC symbols452/572 bytes. An initial host inspector
+mistakenly required the magic string as literal data; GCC had compiled it
+into instructions. Replaced that invalid assumption with actual ELF function
+checks, retaining all hashes/source comparisons. No kernel change was needed.
+The first bounded download retained partial ranges after its deadline; a
+suffix-only resume completed and verified the final digest.
+
+Fresh default/touch DTB stock-positive/all6-overlay/15-bank calibration and
+host unsigned v4/RAM-format repack/readback passed again. Current release:
+7.2.0-oneplus13-g7a81d184e309-c6c2e0d66c4eb-p096c27a2bf6a.
+The preceding DPU-only delivery is retained intact as a rollback archive.
+Only one non-root getprop fingerprint query ran on the phone this continuation;
+its reported identifier matches the saved snapshot, but partitions/FDT were
+not rehashed. No file transfer, write, reboot or test boot occurred. No phone
+or build task remains running. Next work is the explicit SPR2 resource/UDC
+and REGDMA execution/recovery contract before enabling any native panel tree.
+All-peripheral adaptation and physical display/touch acceptance remain open.
+
 ## 2026-10-22
 
 The user requested offline adaptation and successful Actions artifacts before

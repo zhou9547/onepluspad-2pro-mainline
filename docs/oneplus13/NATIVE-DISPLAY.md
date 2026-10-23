@@ -1,13 +1,13 @@
 # AA569 native display investigation
 
-## Current work package: DPU native422 and controlled SPR bring-up
+## Current boundary and next work package: runtime SPR integration
 
-Implement the isolated DPU differences against vendor d50b305f and pinned
-kernel7a81d184: native422 container/output-buffer initial-line calculation,
-explicit SM8750 full-ICH precision capability, modern native422 wrapper state
-and PPB FIFO sizing. Keep physical bpp in MSM/DPU. Compile the real changed
-functions with register-write captures, compare vendor calculation/RGB
-controls, then build ARM64 in Actions.
+The isolated DPU container/initial-line, SM8750 full-ICH precision, modern
+native422 wrapper and PPB FIFO corrections are now compiled and verified.
+The private-profile decoder and typed transaction planner are also compiled,
+with no runtime callers or device accesses. See the versioned results below.
+Next implement explicit SPR resources and UDC preflight, bounded REGDMA
+completion/stop and power-loss restore before connecting a native panel tree.
 
 Do not import the community widebus STREAM0_TOTAL doubling: the pinned OnePlus
 dsi_ctrl_hw_cmn_setup_cmd_stream divides compressed line bytes by6 for widebus,
@@ -15,9 +15,9 @@ which matches this mainline host. Its global bpp convention and board-specific
 SPR offsets do not apply here. SPR follows these prerequisites with explicit
 resource ownership, private profile validation and runtime-PM lifecycle checks.
 
-Next isolated SPR component: define a bounded private AA569 profile format,
-decode it in kernel C, reject corrupt/reserved/foreign geometry fields and
-produce a typed relative register plan. Preserve the distinction between
+Completed isolated SPR component: kernel C decodes a bounded private AA569
+profile, rejects corrupt/reserved/foreign geometry fields and produces a
+typed relative register plan. Preserve the distinction between
 direct PBA, SPR_INIT REGDMA and partial-update REGDMA, including UDC bit25.
 Acceptance is independent Python/vendor-plan comparison, malformed-input C
 checks with sanitizers, and a real ARM64 object/module build. This component
@@ -371,3 +371,53 @@ The two DTBs still match the earlier baseline and keep MDSS disabled/panel absen
 Both were freshly recalibrated against stock with all six overlays and15 RAM
 banks, then repacked/read back on the host. SPR2 resource/REGDMA/UDC lifecycle
 and DPU transfer-window scheduling remain prerequisites to enabling AA569.
+
+
+### Runtime integration facts checked against the public vendor source
+
+At the same d50b305f pin, msm/sde/sde_hw_ctl.c maps SDE_DSPP_SPR to bit8
+of CTL_DSPP_n_FLUSH (PCC is4, GC5; bit13 is AI_SCALER, not SPR). This agrees
+with the community reference. Its aggregate DSPP flush bit is separate.
+The SPR v2 helper prepares INIT payload blocks and submits WRITE_IMMEDIATE;
+PBA is a direct write before that kickoff. PU has its own DMA feature.
+A plan preserves these classes but does not establish safe execution timing.
+The pinned upstream has no complete REGDMA engine to consume this plan.
+
+Do not bolt the plan directly onto every color-management atomic_begin:
+that callback can run while a previous frame is active, and a NULL CTM/gamma
+currently stops reserving DSPP. Native SPR must retain its own resources even
+without color properties, reject inherited UDC ownership before any pipe is
+modified, restore after power loss before frames resume, and keep DMA mappings
+until a bounded stop/completion is confirmed. These are missing implementation
+and hardware-verification requirements, not claims made by the profile tests.
+
+
+### Verified SPR2 profile/planner component, 2026-10-23
+
+Actions39948575140 at363b605da6fee4922d995c8beaf5a3fe16528e2f passes20 Python
+checks, all DSC/command-clock/panel/DPU/SPR host C ASan/UBSan checks, the real
+ARM64 object/module build and QEMU init/shutdown. The first SPR run39948240876
+failed only the Linux host errno shim; the corrected shim retains all checks.
+
+Full artifact12499740861 was downloaded,60207655 bytes, SHA256
+af7af14ca63880166846672649a3e207c8bab288781a741d0d70a5b2fb988216.
+CRC,27 manifest entries, CI hashes, image sections and all three modules pass.
+The downloaded msm.ko is1809488 bytes and its ELF FUNC symbols confirm actual
+AArch64 decoder452 bytes/planner572 bytes. A raw magic-string search was not
+used as the final code-presence check: GCC can compile memcmp constants into
+instructions without a literal string. The source and CI report also match.
+Release7.2.0-oneplus13-g7a81d184e309-c6c2e0d66c4eb-p096c27a2bf6a.
+
+Nine synthetic profiles exercise signed extrema, phases, PBA on/off and the
+exact Python/vendor-equivalent relative plan. C rejects176 truncations,
+176 corruptions,34 invalid word masks, five semantic/UDC/PBA cases and oversize;
+four unaligned buffers and unchanged failure outputs pass. Only the host
+checked the owner's private XML/binary against this C planner; CI and public
+artifacts contain no private coefficients. The typed plan distinguishes PBA
+before INIT kickoff from INIT REGDMA and separately owned PU REGDMA.
+
+There are no runtime callers, firmware loads, DSPP reservations or MMIO/DMA
+submissions in this component. Both downloaded diagnostic DTBs are unchanged,
+keep MDSS disabled and have no AA569 node. They passed fresh stock-positive,
+six-overlay and15-bank checks, with host v4/RAM packing and independent readback.
+This is not a working native display, physical touch result or flashable OS.
