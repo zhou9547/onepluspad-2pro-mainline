@@ -20,9 +20,28 @@ from dsc import decode_pps, pack_pps
 spec = importlib.util.spec_from_file_location('phone_stock_collector', TOOLS / 'collect-stock.py')
 collector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collector)
+spec = importlib.util.spec_from_file_location('phone_panel_generator', TOOLS / 'generate-panel.py')
+panel_generator = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(panel_generator)
 
 
 class PhoneFormats(unittest.TestCase):
+    def test_panel_generated_header_matches_public_fixture(self):
+        root = TOOLS.parents[1]
+        fixture = json.loads((root / 'devices/oneplus13/panel-aa569-120hz.json').read_text())
+        header = (root / 'devices/oneplus13/kernel/panel-aa569/aa569-data.h').read_text()
+        self.assertEqual(panel_generator.generate(fixture), header)
+
+    def test_panel_generator_rejects_transport_or_payload_changes(self):
+        root = TOOLS.parents[1]
+        original = (root / 'devices/oneplus13/panel-aa569-120hz.json').read_text()
+        for key, value in [('type', 5), ('channel', 1), ('vendor_flags', 128),
+                           ('last', 1), ('delay_ms', 999), ('payload', 'ff5aa506')]:
+            fixture = json.loads(original)
+            fixture['on_packets'][0][key] = value
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                panel_generator.generate(fixture)
+
     @staticmethod
     def synthetic_spr():
         # Deliberately synthetic coefficients; never embed the owner's XML.

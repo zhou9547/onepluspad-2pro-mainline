@@ -37,8 +37,23 @@ python3 tools/oneplus13/check-display.py --kernel-source "$src" \
   --output "$dest/display-conversion-verification.json" --sanitize
 python3 tools/oneplus13/check-command-clock.py --kernel-source "$src" \
   --output "$dest/command-clock-verification.json" --sanitize
+python3 tools/oneplus13/check-panel.py --kernel-source "$src" \
+  --output "$dest/panel-component-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
+cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
+if ! grep -q DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL "$src/drivers/gpu/drm/panel/Kconfig"; then
+  cat >> "$src/drivers/gpu/drm/panel/Kconfig" <<'KCONFIG'
+
+config DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL
+	tristate "Experimental OnePlus 13 AA569 panel component"
+	depends on DRM_MIPI_DSI && OF && GPIOLIB && EXPERT
+	help
+	  Offline component only. Requires a separate DPU SPR2 implementation
+	  before connecting a board node. No current phone DTB enables it.
+KCONFIG
+  printf '\nobj-$(CONFIG_DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL) += panel-aa569/\n' >> "$src/drivers/gpu/drm/panel/Makefile"
+fi
 if ! grep -q TOUCHSCREEN_DODGE_S3910 "$src/drivers/input/touchscreen/Kconfig"; then
   cat >> "$src/drivers/input/touchscreen/Kconfig" <<'KCONFIG'
 
@@ -55,7 +70,8 @@ grep -q 'sm8750-oneplus-dodge.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
 grep -q 'sm8750-oneplus-dodge-touch.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-touch.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
-git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dts drivers/input/touchscreen/synaptics-dodge
+git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dts \
+  drivers/input/touchscreen/synaptics-dodge drivers/gpu/drm/panel/panel-aa569
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1

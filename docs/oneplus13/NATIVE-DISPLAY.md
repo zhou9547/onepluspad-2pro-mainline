@@ -228,3 +228,35 @@ Primary references:
 - https://github.com/yzddmr6/linux-sm8750-erhai/blob/7a81d184e3098624d4342d8f4eff5e23674bcc9f/arch/arm64/boot/dts/qcom/sm8750-erhai.dts
 - https://github.com/sm8750-mainline/linux/blob/1f2047e8663eda76c8b172fd3e040e3b3fa17950/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dts
 - https://github.com/yzddmr6/linux-sm8750-erhai/blob/7a81d184e3098624d4342d8f4eff5e23674bcc9f/include/drm/drm_mipi_dsi.h
+
+### AA569 component implementation (not connected to a DTB)
+
+The next isolated component lives in devices/oneplus13/kernel/panel-aa569 and
+is compiled as a module only. No current DTS contains its compatible string.
+Its generated public header verifies the original command hashes and exact
+DCS packet types; the full94-byte vendor PPS remains untouched in the payload.
+Prepare sends149 LP packets; enable sends the final display-on packet in LP
+and a fixed starting brightness in HS. Disable/unprepare split the stock off
+sequence at display-off/sleep-in to allow a disable/enable without sleep-in.
+Power order, loads and physical HIGH/LOW/HIGH reset match the custom vendor
+sequence above. Error paths track regulator ownership and stop double-enables
+after a failed disable instead of pretending that power has gone away.
+
+Inspection of the actual oplus_display_bl.c callback at d50b305f confirms that
+bl_inverted_dbv swaps the value before mipi_dsi_dcs_set_display_brightness.
+The latter helper sends low byte first, so the resulting phone wire order is
+MSB-first:DBV1433 is51 05 99. Only that fixed normal-range level is implemented;
+PWM changes, low-DBV, HBM, AOD and adaptive brightness remain pending. No
+backlight UI is exposed by the component. The init LP/off HS states come from
+the production common.dtsi. Vendor0x40 is DMA grouping in dsi_panel.c and
+dsi_ctrl.c; mainline serializes those packets and preserves bytes/type/order/
+delays, but equivalent physical timing is not yet established.
+
+check-panel.py compiles the real component's power/command/lifecycle callbacks
+with host-only mocked I/O. The emitted150 on/3 off packets and LP/HS flags match
+the independent public fixture; power/reset/waits match the stock plan. Every
+one of149 prepare packet positions is fault-injected, short writes are rejected,
+six supply/load/disable controls retain balanced ownership, and all three off
+failure positions plus disable/enable are checked. Nineteen Python tests pass.
+ARM64 module/API and sanitizer checks follow in Actions. None of these checks
+is a live panel test or a substitute for the missing DPU SPR2 pipeline.

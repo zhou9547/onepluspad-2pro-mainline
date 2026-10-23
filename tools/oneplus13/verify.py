@@ -74,6 +74,20 @@ def verify_artifacts(out):
         if (manifest['command_clock_version'] != 1 or
                 any(clock.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C command-clock verification')
+    if 'panel_component_version' in manifest:
+        panel = json.loads((out / 'panel-component-verification.json').read_text())
+        expected = {'scope': 'HOST_C_PANEL_COMPONENT_ONLY', 'hardware_tested': False,
+                    'kernel_commit': manifest['kernel_commit'], 'sanitizers': True,
+                    'public_on_packets_match': 150, 'public_off_packets_match': 3,
+                    'fixed_brightness_dbv': 1433, 'on_lp_off_and_brightness_hs': True,
+                    'power_reset_delays_match': True, 'init_failure_positions_checked': 149,
+                    'short_transfer_rejected': True, 'supply_failure_controls': 6,
+                    'disable_enable_cycle_checked': True,
+                    'off_command_failure_positions_checked': 3,
+                    'enabled_in_any_dtb': False, 'spr2_pipeline_implemented': False}
+        if (manifest['panel_component_version'] != 1 or
+                any(panel.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed C panel component verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':
@@ -99,6 +113,7 @@ def verify_artifacts(out):
         names = [member.name for member in archive.getmembers()]
         config = (out / 'kernel.config').read_text().splitlines()
         for setting, filename in [('CONFIG_TOUCHSCREEN_DODGE_S3910=m', 'dodge-s3910.ko'),
+                                   ('CONFIG_DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL=m', 'panel-oneplus-aa569.ko'),
                                    ('CONFIG_DRM_MSM=m', 'msm.ko')]:
             if setting in config and not any(Path(name).name in
                     {filename, filename + '.xz', filename + '.zst', filename + '.gz'} for name in names):

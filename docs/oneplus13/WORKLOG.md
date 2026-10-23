@@ -246,3 +246,22 @@ six legacy-path controls and ten invalid inputs, plus the existing full PPS
 check; all17 Python tests pass. Initial host harness compilation exposed one
 missing WARN_ON_ONCE shim, which was fixed without changing kernel behavior.
 Full kernel/ASan/UBSan Actions validation follows. No phone command was issued.
+
+Clock build39930688258 at185b5de1af75 passed ARM64 kernel/modules, host sanitizer
+checks and QEMU. It is an intermediate build; its full archive has not yet been
+downloaded/inspected and is not substituted for the last verified delivery.
+
+Added an isolated AA569 panel component, mechanically generated public command/
+DSC header, fixed starting DBV1433 and real-callback host fault checks. Corrected
+the lifecycle split so disable does not send sleep-in before a possible enable.
+GPIO polarity is checked before setting output directions. Failed regulator
+disable keeps ownership and rejects a second power-on until cleanup succeeds.
+No DTS enables the module. SPR2 and full brightness/PWM remain pending.
+
+Local real-C callback tests and19 Python tests pass. Initial C harness failed
+on an unnecessary ssize_t typedef and misleading one-line mock indentation;
+the host shims were corrected while retaining Wall/Wextra/Werror. No suppression
+of driver warnings or hardware result was introduced. All149 init failure
+positions,3 off failures,6 supply controls and short-write recovery pass.
+The owner reports that the phone is currently unreachable and will provide a
+future access method; continue offline only. No ADB command was attempted.
