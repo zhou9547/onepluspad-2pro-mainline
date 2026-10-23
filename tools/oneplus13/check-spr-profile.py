@@ -144,7 +144,7 @@ int main(int argc,char **argv) {
               'semantic_invalid_cases_rejected': 5, 'unaligned_inputs_checked': 4,
               'oversized_input_rejected': True, 'failure_outputs_unchanged': True,
               'udc_bit25_preserved_in_plan': True, 'typed_direct_init_pu_paths': True,
-              'legacy_cfg14_write_absent': True, 'runtime_registered': False,
+              'legacy_cfg14_write_absent': True, 'runtime_exercised_by_this_check': False,
               'mmio_or_dma_submitted': False,
               'core_sha256': hashlib.sha256((component/'dpu_aa569_spr.c').read_bytes()).hexdigest()}
     a.output.parent.mkdir(parents=True, exist_ok=True)

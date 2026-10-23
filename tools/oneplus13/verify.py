@@ -119,10 +119,27 @@ def verify_artifacts(out):
                     'oversized_input_rejected': True, 'failure_outputs_unchanged': True,
                     'udc_bit25_preserved_in_plan': True,
                     'typed_direct_init_pu_paths': True, 'legacy_cfg14_write_absent': True,
-                    'runtime_registered': False, 'mmio_or_dma_submitted': False}
-        if (manifest['spr_profile_version'] != 1 or
+                    'runtime_exercised_by_this_check': False, 'mmio_or_dma_submitted': False}
+        if (manifest['spr_profile_version'] != 2 or
                 any(spr.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C SPR profile verification')
+    if 'spr_runtime_version' in manifest:
+        runtime = json.loads((out / 'spr-runtime-verification.json').read_text())
+        expected = {'scope': 'HOST_C_STATIC_SPR_RUNTIME_ONLY', 'hardware_tested': False,
+                    'kernel_commit': manifest['kernel_commit'], 'sanitizers': True,
+                    'backend': 'QUIESCENT_FIXED_PROFILE_MMIO_NO_DMA',
+                    'all_pipe_udc_preflight_before_any_write': True,
+                    'powered_idle_guards': True,
+                    'physical_spr_addresses': ['0xae6a400', '0xae6b400', '0xae6c400', '0xae6d400'],
+                    'profile_missing_or_invalid_rejected': True, 'optin_absent_noop': True,
+                    'pm_restore_cycles': 3, 'aa569_format_exclusivity_checked': True,
+                    'spr_flush_bit': 8, 'reset_errors_propagated': True,
+                    'restore_before_encoder_restore': True, 'disable_before_clocks_off': True,
+                    'resource_reservation_without_color_properties': True,
+                    'dma_buffers_or_submissions': False}
+        if (manifest['spr_runtime_version'] != 1 or
+                any(runtime.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed C static SPR runtime verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':

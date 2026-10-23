@@ -47,3 +47,14 @@ against an unmodified, attributed vendor initial-line function, checks 96 math
 cases, captures register writes, preserves a legacy RGB control and checks PPB
 replay and runtime-PM call integration. These are host checks, not register
 readback or a physical display test. No SPR or board display node is added.
+
+
+0004 connects the explicit static AA569 SPR backend to probe, atomic resource
+checks/flush and PM restore/disable. It adds SM8750 SPR sub-blocks with correct
+stock-to-upstream base conversion, preserves DSPP without color properties and
+rejects unsupported display formats. All-pipe preflight, idle/clocks guards
+and reset error propagation are tested in real C. CPU writes are restricted
+to quiet probe/PM boundaries; this patch implements no REGDMA or dynamic UDC.
+There is no private profile in Git/Actions. Default/touch DTBs have no opt-in.
+Source/provenance, scope and removal conditions are recorded under spr-aa569
+and docs/oneplus13/TECHNICAL-DEBT.md D10.

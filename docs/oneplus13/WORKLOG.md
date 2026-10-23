@@ -1,5 +1,22 @@
 # Work log
 
+## 2026-10-23 — fixed-profile runtime SPR continuation
+
+Rechecked project status/debt and installed skill. The platform branch remains
+7a81d184e309. Public vendor REGDMA3 and community CPU-write paths were compared;
+this work uses a restricted static startup/PM backend with no DMA allocations.
+Acceptance and alternatives are recorded in NATIVE-DISPLAY; debtD10 records
+limits. Found and documented the0x1000 stock/upstream MDP base difference
+before implementing register access. No phone query or modification this turn.
+
+Real-C runtime checks now pass: all four physical addresses, last-pipe UDC
+conflict with zero writes, clocks/busy/fault/profile/board guards, three PM
+cycles, AA569 atomic format checks, flush bit8/bounds and propagated MDSS reset
+errors. No SPR coefficient writes are added to live atomic_begin. Kernel
+integration reserves DSPP without CTM/gamma and restores before encoders;
+suspend refusal returns before clocks-off. Pending ARM64/ASan build results
+are not hardware tests. Both prior diagnostic/touch DTS files are unchanged.
+
 ## 2026-10-23 — corrected SSH port and DPU/SPR continuation
 
 Owner corrected the private SSH endpoint's port. An independent auditor reviewed

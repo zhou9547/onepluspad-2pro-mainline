@@ -1,10 +1,14 @@
 # AA569 SPR2 profile and transaction planner
 
-This GPL-2.0-only component is compiled into the isolated phone msm module for
-API checking. There are no callers, MMIO, firmware loads, DMA submissions or
-runtime hooks. It cannot enable SPR or the display. The default and touch DTBs
-remain unchanged. Host tests use synthetic coefficients; private profiles are
-generated on the owner's host only and must not be uploaded to Actions/Git.
+This GPL-2.0-only component is compiled into the isolated phone msm module.
+The decoder/planner remains free of hardware access. The optional runtime
+backend requires oneplus,aa569-static-spr on the SM8750 DPU, a OnePlus13 root,
+MDSS reset and a locally supplied private profile. Default/touch DTBs have no
+opt-in and do not access SPR. The restricted runtime uses CPU writes only at
+quiet probe/PM boundaries; no DMA buffers/submission, live profile updates,
+partial update or UDC/fingerprint features are implemented. This is an
+experimental bring-up backend, not hardware-accepted display support (debtD10).
+Host tests use synthetic coefficients. Private profiles must not be uploaded.
 
 The private v1 format is176 bytes, little endian: magic AA569S2 followed by NUL,
 eight u32 header fields (version1, width1440, height3168, refresh120, wordcount34,
@@ -25,8 +29,19 @@ sde_hw_reg_dma_v1_color_proc.c (reg_dmav1_setup_spr_init_cfgv2 and its helpers).
 The original helpers have already been checked independently against private
 Android ARM64 conversion. No vendor binary, XML or private coefficient is here.
 
-Before use, implement DSPP reservation, explicit panel requirement, all-pipe
-preflight, UDC ownership rejection, powered/quiet execution, bounded REGDMA
-completion and mappings retained until DMA stops, flush, disable and runtime
-power-collapse restore. Native422 alone does not establish a panel SPR need.
-Another panel's CPU-write startup path is not a substitute for this contract.
+The runtime reserves DSPP independently of CTM/gamma, checks all four UDC
+bits before writing any pipe, rejects busy/faulted encoders and unpowered
+access, clears SPR before clocks stop and restores before encoder configuration.
+It restricts atomic modes to single DSI0 command120Hz AA569, 2LM/2DSC/1INTF,
+rejecting video/DP/writeback/clone/self-refresh. SPR flush bit8 is re-armed for
+every commit without rewriting live coefficients. The required MDSS reset now
+propagates assert/deassert failures instead of claiming success.
+
+Stock SDE base0xae00000 and upstream MDP base0xae01000 differ. Per-DSPP SPR
+sub-block offsets are15400/14400/13400/12400, relative to upstream DSPP bases
+54000/56000/58000/5a000. Actual physical SPR bases are0xae6a400/0xae6b400/
+0xae6c400/0xae6d400. Another board's offsets or calibration cannot be used.
+The quiet-pipeline CPU approach was inspected in joonhoekim/tb323fu-linux
+at da44c8412fed3baa609a8084a214ae9b5c9f4311 (EYC/kaanapali provenance).
+Register contents are the separately checked AA569 profile, not that panel's.
+Physical power-cycle/clock/scanout behavior still requires device acceptance.

@@ -24,6 +24,30 @@ checks with sanitizers, and a real ARM64 object/module build. This component
 has no MMIO, firmware loader, resource allocation or runtime registration;
 it does not substitute for those missing lifecycle pieces or enable a DTB.
 
+## Work package: fixed-profile SPR startup and PM restore
+
+The same-SoC/community route can program a fixed SPR profile with CPU writes
+while the pipeline is stopped. Implement this explicitly isolated bring-up
+backend rather than guessing REGDMA3 register aliases or inventing a DMA ABI.
+There will be no DMA buffers/submission and no runtime profile/partial-update
+or UDC support. Require the OnePlus13 root, SM8750 DPU, explicit opt-in and the
+MDSS reset; propagate reset errors. Load the owner's checked private profile
+once. Program/disable all four SPR blocks only under clocks, after checking
+all encoders idle and preflighting every UDC bit before the first write.
+Keep resources reserved without CTM/gamma and allow only DSI0 command120Hz,
+2LM/2DSC/1INTF, full-frame AA569 output. Reject writeback/DP/clone/self-refresh.
+Restore before encoder/INTF configuration and re-arm SPR's flush bit8 on every
+commit. Leave both existing diagnostic/touch DTBs unchanged. Add an isolated
+native-display tree only after real-C register/lifecycle checks and ARM64 build.
+
+Important address conversion: stock maps SDE at0xae00000 and DSPP bases55000,
+57000,59000,5b000; upstream maps MDP at0xae01000 and uses54000,56000,58000,
+5a000. SPR relative sub-block offsets15400/14400/13400/12400 stay unchanged.
+Thus upstream MDP offsets69400/6a400/6b400/6c400 address the same physical
+SPR blocks0xae6a400/0xae6b400/0xae6c400/0xae6d400. Do not add stock absolute
+MDP offsets to the upstream base (that would shift every write by0x1000).
+This backend is not hardware-accepted and is tracked as debtD10.
+
 ## Versioned evidence, 2026-10-23
 
 The owner's Android selects AA569 P3 A0019 production at 1440x3168. Stock DSI
