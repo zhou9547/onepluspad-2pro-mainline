@@ -119,3 +119,18 @@ exports bdf_name only in one board_id255 override branch. Empty exported names
 cannot select255. The fourth bounded metadata query obtained no matching CNSS
 capability/BDF download lines; absence in that log prefix establishes no ID.
 Do not copy the Pad/ROCKNIX board2 names or use a fallback to force the ODM pair.
+
+## Rejected IPC-reader route under current authorization
+
+Pinned CNSS debug.h/debug.c sends capability/version/BDF messages to the cnss
+IPC context, so its debugfs log was considered as an alternative to dmesg.
+Reviewed the official phone kernel6028f47faddaa27700f8dd3a1d83906ea8f27170
+[debug reader](https://github.com/OnePlusOSS/android_kernel_oneplus_sm8750/blob/6028f47faddaa27700f8dd3a1d83906ea8f27170/kernel/trace/ipc_logging_debug.c)
+and [extractor](https://github.com/OnePlusOSS/android_kernel_oneplus_sm8750/blob/6028f47faddaa27700f8dd3a1d83906ea8f27170/kernel/trace/ipc_logging.c).
+The non-destructive data reader still advances context-shared nd_read_offset/
+nd_read_page and may reinitialize read_avail. Copy/output failure does not undo
+these changes, and reopening does not provide an independent cursor.
+Independent static audit agrees this is outside the owner's strict no-mutation
+boundary. No IPC file was read, no logging level changed, and no additional
+phone connection was made. The reviewed source is a vendor reference, not proof
+of the exact deployed phone binary. Active QMI/BDF selection remains unknown.

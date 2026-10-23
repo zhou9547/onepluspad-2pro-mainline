@@ -654,3 +654,13 @@ Next gate is the owner's later on-site RAM boot/USB/recovery and isolated native
 display, touch and WLAN acceptance. Do not proceed to combined hardware or
 persistent installation based on these offline results. Current phone remains
 Android with four bounded metadata SSH reads, zero transfers/writes/reboots.
+
+### Final read-only WLAN route audit
+
+After closing the software version, examined whether CNSS's separate IPC context
+could expose capability/active BDF metadata absent from dmesg. Official kernel
+6028f47 source preserves log content but modifies a shared reader cursor and
+read_avail completion. Independent static review confirms that reading this
+debugfs interface would exceed the owner's strict no-mutation scope. Rejected
+the route without connecting, reading IPC or changing log settings. Phone query
+count stays4. This closes the investigated alternative, not the QMI/board-ID gap.
