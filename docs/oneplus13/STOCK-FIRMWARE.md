@@ -41,5 +41,28 @@ The next controlled test uses macOS Actions networking, with an eight-byte
 exact-range TLS preflight before the payload tool. TLS verification remains on;
 there is no longer timeout or unconditional network retry workaround.
 
+Run40002870490 /460bf80ab651 succeeded on macOS Actions. It read2556444044
+payload-range bytes and independently verified the three full partitions.
+Artifact12523302796 is3798677 bytes; SHA256
+1699352b4d2102aedba5287a697449ad64f98a29f48089ce72a6b9c6a7ba0eca.
+Downloaded ZIP CRC, every manifest file, size and SHA256 pass locally.
+All eight owner-pinned inputs match, including the correct signed ZAP.
+
+A subsequent independently reviewed single root query (45-second/2KiB limits)
+observed phy_ucode20.elf290816 bytes, SHA256
+fbe4ea920c38454b12d612f7c16e68a572a714aeca60d65c994abe1b516b24ba;
+it matches the ninth extracted OTA file. Thus all nine generic inputs have
+owner equality evidence. The original artifact manifest still correctly says
+eight hashes were available at extraction time; this later comparison does
+not rewrite that evidence. The pin now requires all nine on future runs.
+
+No CNSS Target capability / BDF download record was found in the queried log
+prefix. This is not proof of a default board ID or ODM active selection.
+Vendor qmi.c at d50b305 selects bdwlan.eNN for nondefault IDs and records the
+exported bdf_name only for one board_id255 override branch. Empty exported
+names cannot establish board_id255. Do not copy the Pad's board2 mapping.
+The remaining radio gate is actual hardware-major/QMI board-ID selection,
+authentication and SAR, not finding matching firmware bytes.
+
 Sources: [OTA client header documentation](https://github.com/0x8008/otapulse-web),
 [pinned extraction tool](https://github.com/xishang0128/payload-dumper-go/tree/4cc6ef94039470d659e4199c67f76d8962280023).

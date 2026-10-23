@@ -593,3 +593,22 @@ is retained. Next scope/acceptance is STOCK-FIRMWARE: Actions-only extraction of
 three selected partitions, independent partition hashes and owner file equality,
 no phone binary transfer and no unrelated partition/image publication. Reuse a
 pinned Go tool with64-bit offsets, not the Python tool's32-bit offset schema.
+
+### Matching OTA firmware verified; RAM desktop implementation
+
+The first Azure ARM extraction failed at CDN TLS, before payload metadata.
+A controlled macOS run40002870490/460bf80ab651 passed exact-range TLS, three
+partition SHA256 checks and eight owner-file equalities. The3798677-byte ZIP
+matches GitHub1699352b4d2102aedba5287a697449ad64f98a29f48089ce72a6b9c6a7ba0eca;
+downloaded CRC and all files pass. A fourth independently reviewed metadata
+SSH query confirms matching UID0/fingerprint and the ninth phy_ucode20 hash.
+No target-capability/BDF record was observed in the bounded log prefix; no
+board-ID or active-BDF inference is made. Phone writes/reboots/transfers remain0.
+
+DESKTOP-BOOT scoped the next version before code. A separate derived initramfs
+preserves284 original entries and replaces only its explicitly selected init;
+the default diagnostic artifact remains untouched. Added bounded chunk fetching,
+SHA/size/memory checks, RAM overlay, PID1 handoff, opt-in runtime USB services,
+physical block guard and an absolute900-second timer. GNOME builds with exactly
+the c2e659a modules. Three host checks pass. cd1c131 Actions40004679869 is building
+the actual rootfs for a full systemd handoff test; no phone boot is performed.

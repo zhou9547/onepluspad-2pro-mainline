@@ -50,8 +50,9 @@ def install(root, kernel=None):
     write('etc/NetworkManager/conf.d/80-oneplus13-ram-usb.conf',
           '[keyfile]\nunmanaged-devices=mac:02:13:00:00:00:01\n')
     write('usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules',
-          'SUBSYSTEM=="block", KERNEL!="loop*|ram*|zram*", '
-          'TEST=="/run/oneplus13/ram-session", ATTR{ro}="1", ENV{UDISKS_IGNORE}="1"\n')
+          'ACTION=="add", SUBSYSTEM=="block", KERNEL!="loop*|ram*|zram*", '
+          'TEST=="/run/oneplus13/ram-session", ENV{UDISKS_IGNORE}="1", '
+          'RUN+="/usr/sbin/blockdev --setro %N"\n')
     unit('oneplus13-ram-guard.service',
          'Description=Protect physical storage during the RAM desktop\n'
          'DefaultDependencies=no\nBefore=sysinit.target systemd-udevd.service systemd-udev-trigger.service\n'

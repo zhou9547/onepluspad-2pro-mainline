@@ -81,7 +81,9 @@
       "partition": "modem",
       "member": "::/image/peach/phy_ucode20.elf",
       "output": "wlan/modem/phy_ucode20.elf",
-      "owner_hash_observed": false
+      "owner_hash_observed": true,
+      "size": 290816,
+      "sha256": "fbe4ea920c38454b12d612f7c16e68a572a714aeca60d65c994abe1b516b24ba"
     }
   ]
 }
