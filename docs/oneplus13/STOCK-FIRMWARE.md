@@ -34,5 +34,12 @@ Matching files do not establish active board ID, SAR correctness, firmware
 authentication or working radio/display. Keep those hardware checks explicit.
 The eventual GNOME handoff and storage/install design remain separate work.
 
+Extraction run40001494126 (c60d1cd) failed before payload metadata: the official
+gate resolved, but CDN TLS handshakes timed out on the Azure westus2 ARM runner.
+No partition or firmware mismatch was observed, and no bundle was produced.
+The next controlled test uses macOS Actions networking, with an eight-byte
+exact-range TLS preflight before the payload tool. TLS verification remains on;
+there is no longer timeout or unconditional network retry workaround.
+
 Sources: [OTA client header documentation](https://github.com/0x8008/otapulse-web),
 [pinned extraction tool](https://github.com/xishang0128/payload-dumper-go/tree/4cc6ef94039470d659e4199c67f76d8962280023).

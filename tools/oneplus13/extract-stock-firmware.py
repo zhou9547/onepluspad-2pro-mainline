@@ -124,7 +124,10 @@ def proxy_handler(source):
                             source.downloaded += len(data)
             except Exception as error:
                 if not started:
-                    self.send_error(502, type(error).__name__)
+                    try:
+                        self.send_error(502, type(error).__name__)
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass  # A disconnected consumer must not expose a traceback.
                 self.close_connection = True
     return Handler
 
@@ -164,6 +167,22 @@ def main():
     if len(releases) != 1:
         raise ValueError('Matching pinned official release not unique')
     source = OfficialRanges(releases[0]['source_url'], pin['archive_size'])
+    # Fail before the external tool's retry loop, naming the earliest layer.
+    # Eight bytes prove both normal and >4GiB offsets, without a full download.
+    try:
+        source.resolve()
+    except Exception as error:
+        raise SystemExit('Official gate preflight failed: '+type(error).__name__) from None
+    print('Official gate preflight passed', flush=True)
+    try:
+        for low, high in [(0, 3), (source.size-4, source.size-1)]:
+            with source.open_range(low, high) as response:
+                data = response.read(5)
+                if len(data) != 4 or (low == 0 and data != b'PK\x03\x04'):
+                    raise ValueError('Unexpected ZIP range')
+    except Exception as error:
+        raise SystemExit('Official CDN TLS/range preflight failed: '+type(error).__name__) from None
+    print('Official CDN TLS and exact ranges preflight passed', flush=True)
     server = ThreadingHTTPServer(('127.0.0.1', 0), proxy_handler(source))
     server.daemon_threads = True
     thread = threading.Thread(target=server.serve_forever, daemon=True)
