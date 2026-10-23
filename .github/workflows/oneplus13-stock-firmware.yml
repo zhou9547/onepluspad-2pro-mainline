@@ -19,7 +19,9 @@ concurrency:
 
 jobs:
   extract:
-    runs-on: ubuntu-24.04-arm
+    # The first Azure westus2 ARM job reached the gate but CDN TLS timed out.
+    # Test a different hosted network; the extractor checks TLS/ranges first.
+    runs-on: macos-15
     timeout-minutes: 95
     steps:
       - uses: actions/checkout@v4
@@ -44,8 +46,7 @@ jobs:
           go build -mod=readonly -trimpath -o ../payload-dumper ./cmd/payload-dumper
       - name: Install read-only filesystem extraction tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends erofs-utils mtools
+          brew install erofs-utils mtools
       - name: Extract and independently verify matching generic firmware
         run: |
           python3 tools/oneplus13/extract-stock-firmware.py \
