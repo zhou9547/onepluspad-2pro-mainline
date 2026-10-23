@@ -524,3 +524,21 @@ resolved CI config: upload-artifact excludes hidden.config by default. Added an
 early nonhidden kernel.config copy for future failure review, without changing
 checks or enabling generic hidden-file upload. Next Actions must check resolved
 module flags, full ARM64 modules and QEMU before promotion.
+
+### WLAN artifact completed and remaining peripheral evidence
+
+39989714579/7a8967831938 succeeds. Actual59776599-byte attachment matches GitHub
+SHA256;33 files, seven actual ARM64 modules/vermagic, resolved modular RF config,
+six WLAN controls, all display checks and QEMU pass. Four fresh calibrations
+pass six overlays and15 RAM-bank exclusions. Private display package uses the
+new release/modules and is independently read back. A host staging filename
+error was corrected before promotion; completed calibration/package inputs were
+hash-checked before resuming the copy. No additional phone query or change.
+
+Offline public audio parsing resolves an AW88461 inner header, not a proven
+hardware ID. Four CRC8/inner checksums and75-register section lengths pass;
+owner firmware version remains unmatched. GPU stock chipid44050001 matches the
+pinned catalog. Pinned render source requires explicit separate_gpu_kms=1 for
+the isolated headless path; no modules load automatically. Next GPU scope and
+acceptance were recorded in NATIVE-GPU before code changes. Audio evidence and
+unresolved firmware/driver/graph choices are in NATIVE-AUDIO.

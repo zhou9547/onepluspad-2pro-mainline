@@ -521,3 +521,15 @@ roundtrips pass. The new private14929920-byte RAM image SHA256 is
 a61d555bddaa6262169cc5a70db675c2125954cbfa591b6bdf8e20547e91f537.
 All original ramdisk entries remain unchanged; derived ramdisk is not QEMU-tested.
 Budget correction does not program a new transfer timer or prove physical output.
+
+### Matched display package after WLAN modular build
+
+Actions39989714579/7a8967831938 retains all display source checks and real ARM64
+functions. The config/release changed to
+7.2.0-oneplus13-g7a81d184e309-c963dc1c909ec-p0894c7325b82, so rebuilt the private
+display candidate with the matching nine-module closure rather than mixing
+modules. Private RAM image14675968 bytes, SHA256
+ad6dab3e8b71b92ec9f8f639cce0b9cd127ced43d3a38556dbb42165119ff29c.
+Stock-positive calibration, all six overlays and15 protected RAM banks pass.
+Original init/recovery remain unchanged; derived ramdisk is not QEMU-tested.
+Display and radio remain separate candidates, with no combined hardware claim.

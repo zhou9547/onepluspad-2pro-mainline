@@ -76,3 +76,17 @@ CI checks six exact rail min/max constraints, GPIO polarity/SID, pin drive/bias,
 PMU graph, RF_CLK1 graph, IOMMU map and isolation from other candidates, with six
 bad-input controls. Reference PHY/RF clock choices remain explicitly unproven.
 Successful compilation must not be reported as link, firmware or radio support.
+
+## Actual artifact verification
+
+Actions39989714579 /7a896783193864d0cce159e49994971ffcc55e80 succeeded.
+Actual artifact12517159870:59776599 bytes, SHA256
+39c7b1c65c3cc673b387a64f89493729f72a6cb730d1369166a2d78fbeec3c8c.
+CRC,33 manifest files, CI hashes, actual resolved modular RF flags, all six
+bad-input controls and seven AArch64/vermagic module inspections pass locally.
+The four WLAN-related modules are ath12k, ath12k_wifi7, pci-pwrctrl-pwrseq and
+pwrseq-qcom-wcn. Default/touch DTBs remain byte-identical to badf9e; native display
+checks and seven controls also pass. All four phone DTBs passed fresh offline
+stock positive control, six overlays and15-bank protected memory checks.
+No wireless firmware, board file, address, SAR value or manual auto-loader was
+added. PCIe/PHY/firmware/radio operation remains untested.
