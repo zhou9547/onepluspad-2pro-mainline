@@ -123,3 +123,24 @@ The block-input recovery test40009535169/0379a3a passes: HANDOFF_OK is followed
 by the shortened120s systemd deadline and kernel restart. The exact a6c8ceb
 rootfs bytes remain unchanged. The HTTP variant uses a180s emulator deadline to
 include the additional full-image transfer; production900s remains unchanged.
+
+### Final complete HTTP path, ef63950
+
+Actions40010305668 passes with the unchanged432734208-byte a6c8ceb rootfs.
+The actual ARM64 initramfs consumes exactly seven HTTP chunks/432734208 bytes,
+checks its size/SHA, mounts the RAM overlay and hands PID1 to systemd. GDM is
+active/running; GNOME50.1 and guard/NetworkManager/D-Bus checks pass. HANDOFF_OK
+is at113.67s, the shortened emulator deadline at180.53s, restart at180.79s.
+This is HTTP over virtio/slirp, not physical NCM or WLAN.
+
+Actual handoff artifact12526077066 is1023996 bytes, SHA256
+86dfd652a62464f97e9ccc10d6c772654e59798c2dceb7be2546ce1a9a8ef198.
+Local downloaded ZIP CRC, manifest/hash checks and all seven-part counters pass.
+Generic initramfs SHA256 is31a94bc3399afd054480917371cae6bba1d940fd25ca0042e0a44c97979c77d2.
+The private packager now requires both HTTP and expiry acceptance.
+Fresh default/native RAM packages are14032896/14680064 bytes respectively:
+6a24fbf939d81f34e59943e2fa89467fe10c01d99e3adcdc0411ec15d0a0a967 and
+cf67cb4cd1b62657e811b4ea53207ecc363ed13a7e0f5e07aa27bf6f4072cd58.
+Their headers/DTB cmdlines, original stock positive control, all six overlays,
+15 protected RAM banks and identical public cpio entries pass offline.
+Private added modules/SPR remain untested as an archive and on the phone.

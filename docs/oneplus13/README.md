@@ -7,9 +7,18 @@
 最新候选：c2e659aaa062 / [Actions39992904871](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39992904871)。
 内核/完整模块、23项Python、主机C ASan/UBSan和QEMU通过，实际附件已下载复验。
 默认、触控、AA569显示、WCN7860无线、Adreno830五棵独立树均已离线校准。
-本机私有显示RAM候选已用本次匹配模块生成；GPU有独立无显示路径，固件和真实渲染仍未验证。
-无线也没有本机板数据/版本/SAR闭环。尚未真机启动，不能作为日常可刷系统。
-最新范围及音频后续工作见STATUS.md、NATIVE-GPU.md、NATIVE-AUDIO.md。
+本机私有显示RAM候选已用本次匹配模块生成；GPU有独立无显示路径，认证和真实渲染仍未验证。
+9份匹配原厂OTA输入已与本机大小/哈希核对，WLAN实际板号/活动BDF/SAR仍未验证。
+尚未真机启动，不能作为日常可刷系统。音频及次要外设推迟。
+
+新增[完整RAM用户态交接](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40007875169)：
+实际Ubuntu GNOME SquashFS在QEMU进入systemd，GDM active/running、GNOME50.1、
+NetworkManager/D-Bus与只读保护通过；[恢复服务实际触发](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40009535169)也通过。
+最终[完整HTTP分块下载、进系统与限时恢复](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40010305668)通过，实际传输7块/432734208字节。
+根文件系统含匹配内核模块和四份图形固件；手机原生显示/触控/WLAN仍需独立真机验收。
+复现工具和证据见[DESKTOP-BOOT.md](DESKTOP-BOOT.md)、[STOCK-FIRMWARE.md](STOCK-FIRMWARE.md)。
+`package-desktop.py`只在主机生成本机校准的独立RAM镜像，不生成持久安装镜像。
+后续现场门槛见[TEST-HANDOFF.md](TEST-HANDOFF.md)，当前不执行这些手机操作。
 以下较早构建记录用于追溯。
 
 2026-10-23 只读取证后的更新候选：
@@ -20,7 +29,7 @@
 - 原厂树对照与全部六个 DTBO 的隔离合并通过，已实现专用内存校准和主机 v4 打包工具。
 - 原生显示仍待 SPR/DSC 实现，触控模块未经过真实手指测试；**不是可刷入日常使用的系统**。
 
-本次只允许 root ADB 读取；没有向手机写文件、重启、试启动、刷写或改设置。
+设备只允许已授权的root只读取证（含后续SSH）；没有向手机写文件、重启、试启动、刷写或改设置。
 具体证据与边界见 STOCK-CALIBRATION.md、NATIVE-INPUT.md、NATIVE-DISPLAY.md。
 
 2026-10-23 离线首版已构建并完成全新主机下载复验：
@@ -86,8 +95,8 @@ RAM 环境设计为 300 秒后重启；kernel panic 为 15 秒。实际硬件死
 ## 功能范围
 
 当前工作：SM8750 平台复用、独立手机设备树与配置、匹配模块、RAM 调试
-用户态、自动构建和产物检查。显示只使用社区固件 framebuffer 线索。
-屏幕原生接管、S3910 触控、GPU 固件、无线、音频、电量/充电、休眠、
+用户态、自动构建和产物检查。默认诊断使用固件framebuffer线索，独立AA569原生
+DSC/SPR候选已编译。屏幕实际输出、S3910物理触控、GPU认证/渲染、无线、音频、电量/充电、休眠、
 传感器、蜂窝、相机与双系统均待独立移植/真机验证；不能由编译成功推断。
 
 S3910 已有独立 LBP 模块和 DTB 编译候选，默认诊断 DTB 不启用它。

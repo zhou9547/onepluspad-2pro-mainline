@@ -36,6 +36,7 @@ def main():
     d = json.loads((a.desktop/'manifest.json').read_text())
     if (m['integration_commit'] != PIN or m['hardware_tested'] is not False or
             d.get('kernel_integration_commit') != PIN or d.get('qemu_handoff_verified') is not True or
+            d.get('qemu_http_chunk_fetch_verified') is not True or d.get('qemu_deadline_expiry_verified') is not True or
             d.get('kernel_release') != m['kernel_release'] or d.get('hardware_tested') is not False):
         raise ValueError('Matching kernel and passed desktop handoff evidence required')
     for name in ['Image.gz', 'initramfs.cpio.gz', 'modules.tar.gz']:
@@ -112,6 +113,7 @@ def main():
               'rootfs_sha256': d['rootfs_sha256'], 'rootfs_bytes': d['rootfs_bytes'],
               'cmdline': cmdline, 'boot_image_sha256': sha256(image), 'boot_image_bytes': image.stat().st_size,
               'qemu_public_control_flow_identical': True, 'qemu_this_private_archive': False,
+              'qemu_public_http_fetch_and_deadline_verified': True,
               'contains_private_spr_profile': bool(a.native_xml), 'native': native_report,
               'archive': archive_report, 'phone_operations': 0, 'partition_writes': 0,
               'actual_abl_load_and_recovery_unverified': True}

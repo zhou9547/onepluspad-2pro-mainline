@@ -631,3 +631,26 @@ header/DTB cmdline and image-section readback checks. The native package retains
 the existing exact module/SPR inputs and identical tested public control flow.
 There is still no phone boot, native scanout/touch/radio acceptance or persistent
 installation. Phone access remains read-only; this packaging makes no connection.
+
+### Complete HTTP client path and recovery acceptance
+
+40009535169/0379a3a exercises the actual systemd recovery service with a120s
+emulator timer. Then40010305668/ef63950 uses the identical already verified
+a6c8ceb rootfs via a loopback-only server and emulator-only virtio link. The real
+ARM64 BusyBox client consumes seven chunks/432734208 bytes, validates size/SHA,
+mounts its RAM overlay and reaches systemd/GDM active/running and GNOME50.1.
+HANDOFF_OK113.67s precedes the180.53s test deadline and180.79s kernel restart.
+Production900s remains unchanged; no real USB controller, display or RF was tested.
+Artifact12526077066/1023996 bytes hashes86dfd652a62464f97e9ccc10d6c772654e59798c2dceb7be2546ce1a9a8ef198
+and is actually downloaded/CRC/manifest checked.
+
+Fresh private default/native images use exactly that public control flow and
+pass stock-positive/six-overlay/15-bank/header/section checks. Sizes remain
+14032896/14680064 bytes; hashes are6a24fbf939d81f34e59943e2fa89467fe10c01d99e3adcdc0411ec15d0a0a967
+andcf67cb4cd1b62657e811b4ea53207ecc363ed13a7e0f5e07aa27bf6f4072cd58.
+The private added module/profile archive has not itself been booted. Public
+desktop/firmware delivery is separate from the original diagnostic version.
+Next gate is the owner's later on-site RAM boot/USB/recovery and isolated native
+display, touch and WLAN acceptance. Do not proceed to combined hardware or
+persistent installation based on these offline results. Current phone remains
+Android with four bounded metadata SSH reads, zero transfers/writes/reboots.

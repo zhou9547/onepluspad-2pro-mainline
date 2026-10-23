@@ -105,3 +105,17 @@ public dodge lineage-23.2 reference5cdea501 also does not match the owner's ODM
 hashes. The Pad/ROCKNIX firmware set is not an owner match either. No binary
 transfer, radio action or device mutation occurred. Resolve source precedence,
 active board/revision and coherent matching files before enabling RF.
+
+## Matching official inputs available
+
+Exact .501 OTA extraction40002870490 succeeds; modem amss20/aux_ucode20/phy_ucode20
+and ODM BDF/regdb now all match independently observed owner sizes/hashes.
+Downloaded ZIP/partition/file evidence is in STOCK-FIRMWARE.md. The raw inputs
+remain outside Linux firmware search paths pending hardware/QMI selection.
+This closes source-byte equality, not radio acceptance.
+
+Pinned vendor qmi.c d50b305 selects bdwlan.eNN when board_id is nondefault, and
+exports bdf_name only in one board_id255 override branch. Empty exported names
+cannot select255. The fourth bounded metadata query obtained no matching CNSS
+capability/BDF download lines; absence in that log prefix establishes no ID.
+Do not copy the Pad/ROCKNIX board2 names or use a fallback to force the ODM pair.

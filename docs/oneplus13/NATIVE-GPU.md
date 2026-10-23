@@ -58,3 +58,13 @@ common reference; signed zap does not. No firmware binary was transferred and
 no device mutation occurred. Do not package the unmatched reference zap.
 Full firmware/authentication/rendering acceptance remains unverified. Prioritize
 display/network/touch; software-rendered GNOME can precede hardware acceleration.
+
+## Correct signed firmware recovered
+
+Exact owner-build .501 OTA extraction40002870490 provides the matching signed
+ZAP12088 bytes, SHA256a694df58b82343e58e52745da31c3b88e569a2eeae5e7755e0d9bf14d93f5046.
+All four graphics files pass independent downloaded/file/owner equality checks.
+firmware.py stages SQE/AQE/GMU under qcom/ and ZAP at the DTB's phone-specific
+qcom/sm8750/oneplus/dodge/ path. The new GNOME rootfs embeds these four exact files.
+The earlier public common ZAP mismatch remains a valid rejected reference.
+No TrustZone authentication, GPU voltage/power or rendering test has occurred.
