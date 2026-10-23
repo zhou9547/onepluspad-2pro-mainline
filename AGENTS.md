@@ -36,3 +36,13 @@ The owner later provided a slow SSH access method. The existing read-only
 device restriction remains in force. Limit any necessary queries to small,
 bounded text output and avoid phone-to-host/host-to-phone file transfers.
 Keep the endpoint and credentials out of Git and public artifacts.
+
+Owner confirmation, 2026-10-24: SSH has root; verify it and perform only the
+bounded firmware metadata reads already described. Review the single command
+independently before connecting. This adds no authorization for binary phone
+transfers, writes, reboot, experimental kernel boot or flashing.
+
+Owner priority, 2026-10-24: first make native display, networking and touchscreen
+usable and complete the path into GNOME. Defer audio and secondary peripherals.
+The desired eventual flashable system does not revoke the phone read-only rule;
+prepare concrete build/test inputs without flashing or repartitioning the phone.

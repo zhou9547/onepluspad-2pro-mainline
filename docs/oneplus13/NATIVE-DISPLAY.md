@@ -533,3 +533,13 @@ ad6dab3e8b71b92ec9f8f639cce0b9cd127ced43d3a38556dbb42165119ff29c.
 Stock-positive calibration, all six overlays and15 protected RAM banks pass.
 Original init/recovery remain unchanged; derived ramdisk is not QEMU-tested.
 Display and radio remain separate candidates, with no combined hardware claim.
+
+### Matched package after isolated GPU build
+
+Actions39992904871/c2e659aaa062 leaves the display DTB byte-identical and retains
+all source/fault/budget checks. Release now ends p92bbf23dc6a6. Private display
+RAM image14675968 bytes has SHA256
+960436c36424ba49e82ff1a427ce224cdbab876d78302dd378ec0dbc051c1131.
+Its matching nine-module closure and every original initramfs entry are checked;
+derived ramdisk remains untested in QEMU and on hardware. No GPU node is enabled
+in this display candidate.

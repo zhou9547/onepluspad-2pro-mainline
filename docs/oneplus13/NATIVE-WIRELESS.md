@@ -90,3 +90,18 @@ checks and seven controls also pass. All four phone DTBs passed fresh offline
 stock positive control, six overlays and15-bank protected memory checks.
 No wireless firmware, board file, address, SAR value or manual auto-loader was
 added. PCIe/PHY/firmware/radio operation remains untested.
+
+## Read-only owner metadata after root confirmation
+
+A separately reviewed bounded query confirms the live Android PCI endpoint is
+17cb:110e, revision01, subsystem17cb:110e. This PCI revision is not proof of the
+ath12k hardware-major2 register value. CNSS reports firmware/regdb/BDF ready and
+PCIe link up; its BDF-name/region-name strings are empty, so the active input
+selection is not established by that attribute alone.
+
+Six file sizes/hashes were read on the phone, with at most16MiB per local read
+and2KiB returned text. ODM peach BDF/regdb differ from modem peach BDF/regdb;
+public dodge lineage-23.2 reference5cdea501 also does not match the owner's ODM
+hashes. The Pad/ROCKNIX firmware set is not an owner match either. No binary
+transfer, radio action or device mutation occurred. Resolve source precedence,
+active board/revision and coherent matching files before enabling RF.

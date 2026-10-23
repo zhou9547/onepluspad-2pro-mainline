@@ -67,3 +67,9 @@ the unique kernel release ending p52f0efb312f3. Downloaded dodge-s3910.ko is
 ELF64/AArch64,115952 bytes, SHA256
 312dd5accaf11399acaf9af1b5732a505a04da67c295b2ab8b3cd874676a31bb.
 Use it only with its matching module tree/kernel. This is still an offline check.
+
+Subsequent matching build c2e659aaa062/Actions39992904871 retains byte-identical
+touch DTB and source, but rebuilds the module for release ending p92bbf23dc6a6.
+Actual115952-byte AArch64 module SHA256 is
+4224b650ba69b265a86e66bdf70fef0b51f7da61b387a0ffceff01045cda451f.
+Use the newest complete matching module tree, not a module from an older build.

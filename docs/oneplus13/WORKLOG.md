@@ -552,3 +552,34 @@ stream graph, speed bin, reservation, OPP presence and isolation, with five
 bad-input controls. CI also checks the pinned catalog and headless-binding
 source identity. No initramfs auto-loader, shared display or authentication
 bypass is added. DebtD12 captures unmeasured clock/power/OPP behavior.
+
+### GPU artifact verification and bounded audio prototype
+
+39992904871/c2e659aaa062 succeeds. Actual59797477-byte artifact matches digest,
+35 manifest files, seven modules, a8xx_hw_init6228-byte function and source hashes.
+Five controls and all prior checks pass; older four DTBs are byte-identical.
+Five fresh stock/overlay/protected-RAM calibrations pass; private display package
+uses the new release and is read back. No additional phone access at this point.
+
+Audio draft remains outside Git until this GPU version is recorded/promoted.
+Its restricted ACF preflight rejects1023 synthetic bad inputs; actual community
+power callbacks pass19 injected I/O failures plus timeout/fault/cancel/default
+attenuation controls. Windows host stubs required explicit timeout errno and
+consuming the sleep arguments; no production driver changes were needed.
+An ineffective all-ffff test mutation and one expected attenuation arithmetic
+typo were corrected, preserving production behavior.18 vendor C comparisons
+pass. CI sanitizer/API compilation remains required before component promotion.
+
+### Owner priority and root metadata
+
+Owner confirmed SSH root and permitted verifying it, then prioritized display,
+networking, touch and entering GNOME. Deferred the audio draft without adding
+its component to the kernel. Two new independently audited single SSH queries
+pass UID0/fingerprint checks,45-second deadlines and2KiB limits. Fixed symlink
+size checks with stat-L, bounded each hash stream, and reject read failures.
+Three GPU firmware files and audio ACF match public references; signed zap does
+not. Live WLAN PCI ID is110e/revision01/subsystem17cb:110e. CNSS reports ready but
+does not expose its selected BDF name here. ODM and modem BDF/regdb hashes differ;
+the public lineage-23.2 ODM pair also mismatches. No binary transfers, phone
+changes, reboot, boot or radio operation. Existing native display packages remain
+diagnostic-only; a complete GNOME handoff is still required before system use.

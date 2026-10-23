@@ -37,3 +37,24 @@ GMU faults/hangcheck. Test real desktop/multiple contexts/video and GTK GL/Vulka
 separately. Current phone read-only permission does not authorize these tests.
 
 Primary source: [pinned GPU catalog](https://github.com/yzddmr6/linux-sm8750-erhai/blob/7a81d184e3098624d4342d8f4eff5e23674bcc9f/drivers/gpu/drm/msm/adreno/a6xx_catalog.c).
+
+## Actual compiled artifact
+
+Actions39992904871/c2e659aaa062647a206c67edcc421f0fa9931f7a succeeded. Actual
+artifact12518803835 is59797477 bytes, SHA256
+230c9b9258b6c8cf69a8d8ff7e1e6e7bdeb2de2da7c44d0ba858557c4f8fdc80.
+CRC,35 manifest files, seven AArch64/vermagic modules, exact source hashes,
+compiled GPU graph/five controls and prior display/WLAN checks pass locally.
+Actual msm.ko contains a6228-byte a8xx_hw_init function. The four previous DTBs
+remain byte-exact. All five trees pass stock positive control, six overlays and
+15 protected RAM banks. This is a compiled graph and driver, not rendering.
+No signed GPU firmware or combined desktop image was added.
+
+## Owner hash metadata after root confirmation
+
+One independently reviewed,45-second/2KiB-capped SSH root query confirms UID0
+and the same saved Android build. AQE/SQE/GMU sizes and SHA256 match the public
+common reference; signed zap does not. No firmware binary was transferred and
+no device mutation occurred. Do not package the unmatched reference zap.
+Full firmware/authentication/rendering acceptance remains unverified. Prioritize
+display/network/touch; software-rendered GNOME can precede hardware acceleration.
