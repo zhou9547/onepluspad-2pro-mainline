@@ -124,3 +124,51 @@ RAM boot image SHA256: 31a042d62726e825946e5cc595de73f872de3f67d8b6db81ff14786c7
 Small independent reports were downloaded, their GitHub ZIP digests and CRCs
 verified locally, and the actual startup/shutdown log inspected. The sole next
 step and hardware evidence blockers are in STATUS.md. No phone was operated.
+
+## 2026-10-23 — owner-authorized read-only calibration
+
+The owner supplied a network ADB target with existing root and explicitly
+prohibited every modification. An independent agent audited the collector before
+device access; it never accessed the phone. The main agent read Android identity,
+runtime FDT, current-slot boot/init_boot/vendor_boot/dtbo/vbmeta, ABL and the
+relevant input/display evidence, saving originals privately on the host. FDT and
+all five startup partition images match separate device-side SHA-256 reads.
+No device file, setting, bootloader state or partition was changed. No reboot,
+input injection, test kernel, mount or peripheral control command was issued.
+
+Established actual PJZ110/24 GiB, current A slot, Android16 build
+PJZ110_16.0.10.501(CN01), AA569 production and active S3910 HBP. The stock chain
+uses Android v4 and capacities96/8/96 MiB. Base DTB2 and DTBO5 reproduce every
+selected panel/touch property with Android libufdt. Root selection metadata is
+verified separately against the selected overlay. The disabled overlay sink
+accepts all six overlays without changing operational mainline nodes. Actual
+15-bank RAM and all stock protected intervals pass the offline exclusion checks.
+
+S3910 candidate reuses attributed TouchCom protocol code, negotiates fixed LBP
+reports in RAM, checks descriptors/frames and uses asynchronous panel-following
+work with explicit IRQ/power cleanup. Actions39888606647 exposed removed strncpy
+in the imported compatibility layer; replaced it with bounded copy/padding.
+Actions39889964952 then passed. The stock electrical audit corrected IRQ/reset
+drive to8 mA, MOSI/CS to4 mA, disabled the invented IRQ pull-up and restored32 ms
+key debounce. Actions39892106624 and39892351557 both passed after these changes.
+
+Final compiled kernel input is d337d2f4bea9fae5e4ed0d87f8d97c2eff9c707b.
+Actions39892351557 includes14 host tests, C ASan/UBSan vectors, module/DTB checks
+and exact-image QEMU. Full artifact12474888299 was actually downloaded on the
+host, ZIP digest b2b8691bd370704f16fc9844b67ea428014ef79e143d9e05520a006c97072237;
+CRC, all20 manifest files, ARM64 module/vermagic and compiled electrical values
+passed. S3910 module SHA256 is beda199198b6701b9fa54b3dcc55805d66f1babf7568f433cf90342310fdbafb.
+Source changes following that build are host-only collector/packager checks and
+documentation; they do not establish any additional hardware support.
+
+The public AA569 on/off commands match runtime exactly (150 on-packets). The
+SPR2/native422 path needs real implementation. Initial configuration-directory
+searches missed the panel SPR XML; a bounded wider search found it in/vendor/etc.
+It and the relevant Android libraries stay private. Offline symbol/disassembly
+inspection identifies parameter conversion routines, but no native display
+driver or working screen is claimed. Missing debugfs was not mounted/enabled.
+
+Host packing produces an unsigned v4 diagnostic triplet and a single-image RAM
+candidate with section readback checks. These are not installed GNOME images.
+Physical boot, USB, touch and recovery tests are outside the current read-only
+authorization. STATUS.md records the sole next hardware gate and device state.

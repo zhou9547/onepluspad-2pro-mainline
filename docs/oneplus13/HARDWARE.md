@@ -13,7 +13,7 @@ parameters, not Linux hardware acceptance.
 | USB | Same phone DTS: eUSB repeater L15B/L5B, HS PHY L2D/L3G, QMP L3G/L2D | Adapt old wrapper labels to the newer flat usb/usb_hsphy node layout; device role only |
 | UFS | Same phone DTS: reset215, L17B VCC, L1D VCCQ, PHY L1J/L3G | Driver built in; RAM init makes each discovered disk read-only and does not mount it |
 | RAM | Owner runtime FDT: 24 GiB class, 15 nonempty RAM banks | Default remains a conservative fallback; private calibration uses exact banks and excludes all stock protected ranges offline; bootloader fixups still untested, D01 |
-| Display | OnePlusOSS d50b305f7da9e14715a25120a4ac7b1a4b8b97c3: dodge display overlay lists AA545, BF262, AA569 EVB/EVT/production | No single panel can be selected for an unidentified phone; inherited framebuffer only, D02 |
+| Display | Owner cmdline/runtime FDT selects AA569 production; public d50b305f on/off commands match exactly | SPR 2.0 / native-422 DSC port remains incomplete; inherited framebuffer only, D02 |
 | Touch | Official source and matching runtime HBP node: S3910, 19 MHz SPI, IRQ162/reset161, L4B and PM8550VS_J GPIO3 | Separate LBP module/DTB; standard report negotiation and physical tests outstanding |
 | Keys | Runtime FDT: PON power116/resin115, PM8550 GPIO6 volume down114, debounce32 ms | Key code/wiring matches reference; debounce corrected from 15 to actual32 ms; physical tests outstanding |
 | DSP / charging | Phone community DTS explicitly notes ADSP startup affects display | DSPs left disabled in diagnostic DTS; do not claim battery/charging support |

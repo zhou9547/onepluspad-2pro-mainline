@@ -17,7 +17,7 @@ import sys
 import tarfile
 import tempfile
 
-from common import make_cpio, read_cpio, sha256
+from common import boot_sections, make_cpio, read_cpio, sha256
 from stock import Fdt, boot_image, bounded
 
 REPO = Path(__file__).resolve().parents[2]
@@ -62,8 +62,12 @@ def main():
     if stock_manifest.get('full_boot_images') is not True:
         raise ValueError('Full current-slot Android images are required; header reads are insufficient')
     capacities = {}
-    sizes_text = (args.stock / 'partition-sizes.txt').read_text().splitlines()
-    observed = dict(zip(sizes_text[::2], map(int, sizes_text[1::2])))
+    observed = stock_manifest.get('partition_sizes')
+    if observed is None:
+        sizes_text = (args.stock / 'partition-sizes.txt').read_text().splitlines()
+        if len(sizes_text) % 2:
+            raise ValueError('Truncated legacy partition capacity record')
+        observed = dict(zip(sizes_text[::2], map(int, sizes_text[1::2])))
     for name in ('boot', 'init_boot', 'vendor_boot'):
         image = args.stock / (name + '.img')
         expected = stock_manifest['files'][image.name]
@@ -125,7 +129,22 @@ def main():
                               '--dtb_offset', str(stock_geometry['dtb_addr']),
                               '--vendor_ramdisk', str(args.artifacts / 'initramfs.cpio.gz'),
                               '--dtb', str(dtb_path), '--vendor_boot', str(out / 'vendor_boot.img')], check=True)
+        # Separate single-image RAM-format candidate. Its actual ABL load and
+        # hypervisor behavior still require an authorized temporary boot test.
+        subprocess.run([sys.executable, str(mkboot), '--header_version', '2',
+                        '--pagesize', '4096', '--base', '0',
+                        '--kernel_offset', str(stock_geometry['kernel_addr']),
+                        '--ramdisk_offset', str(stock_geometry['ramdisk_addr']),
+                        '--tags_offset', str(stock_geometry['tags_addr']),
+                        '--dtb_offset', str(stock_geometry['dtb_addr']),
+                        '--kernel', str(args.artifacts / 'Image.gz'),
+                        '--ramdisk', str(args.artifacts / 'initramfs.cpio.gz'),
+                        '--dtb', str(dtb_path), '--cmdline', cmdline,
+                        '--output', str(out / 'boot-calibrated-ram-experimental.img')], check=True)
     checked = verify_triplet(out, kernel, ramdisk, dtb, capacities)
+    ram_sections = boot_sections((out / 'boot-calibrated-ram-experimental.img').read_bytes())
+    if ram_sections != {'kernel': kernel, 'ramdisk': ramdisk, 'dtb': dtb}:
+        raise ValueError('Calibrated RAM image section roundtrip failed')
     (out / 'DO-NOT-FLASH.txt').write_text(
         'OFFLINE CANDIDATE ONLY. Not booted on the phone. No AVB signature or vbmeta changes.\n'
         'This is a diagnostic RAM environment, not an installed GNOME system.\n'
@@ -135,6 +154,8 @@ def main():
         'hardware_tested': False, 'kernel_integration_commit': manifest['integration_commit'],
         'kernel_release': manifest['kernel_release'], 'cmdline': cmdline,
         'actual_partition_capacities': capacities, 'geometry': checked,
+        'ram_candidate': {'sha256': sha256(out / 'boot-calibrated-ram-experimental.img'),
+                          'header_version': 2, 'actual_abl_load_hypervisor_unverified': True},
         'calibration_sha256': sha256(args.calibration / 'calibration.json'),
         'mkbootimg_sha256': pin['sha256']}, indent=2) + '\n', encoding='utf-8')
     (out / 'SHA256SUMS').write_text(''.join(f'{sha256(p)}  {p.name}\n'

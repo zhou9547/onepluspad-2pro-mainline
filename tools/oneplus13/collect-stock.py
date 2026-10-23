@@ -95,16 +95,25 @@ def main():
                               ('partitions.txt', 'ls -l /dev/block/by-name')]:
         (out / filename).write_bytes(root_read(command))
     partition_map = {}
+    partition_sizes = {}
     exists = lambda name: root_read(f'test -e /dev/block/by-name/{name} && echo yes || echo no').decode().strip() == 'yes'
     for base in ['boot', 'init_boot', 'vendor_boot', 'dtbo', 'vbmeta']:
         name = resolve_partition(base, slot, exists)
         partition_map[base] = name
         assert re.fullmatch(r'[a-z_]+', name)
+        capacity = root_read(f'blockdev --getsize64 /dev/block/by-name/{name}').decode().strip()
+        if not re.fullmatch(r'[0-9]+', capacity) or int(capacity) < 8192:
+            raise SystemExit(f'Invalid read-only partition capacity: {name}')
+        partition_sizes[name] = int(capacity)
         count = '' if args.include_boot_images else ' count=2'
         image = root_read(f'dd if=/dev/block/by-name/{name} bs=4096{count} status=none', timeout=180)
         if not image:
             raise SystemExit(f'Empty partition evidence: {base}')
+        if args.include_boot_images and len(image) != partition_sizes[name]:
+            raise SystemExit(f'Incomplete partition image: {name}')
         (out / (base + ('.img' if args.include_boot_images else '.header.bin'))).write_bytes(image)
+    (out / 'partition-sizes.txt').write_text(''.join(
+        f'{name}\n{size}\n' for name, size in partition_sizes.items()), encoding='utf-8')
     files = {p.name: {'bytes': p.stat().st_size,
                      'sha256': hashlib.sha256(p.read_bytes()).hexdigest()}
              for p in sorted(out.iterdir()) if p.is_file()}
@@ -112,6 +121,7 @@ def main():
         'scope': 'Read-only stock Android evidence; private, not for public upload',
         'full_boot_images': args.include_boot_images,
         'partition_map': partition_map,
+        'partition_sizes': partition_sizes,
         'files': files}, indent=2) + '\n', encoding='utf-8')
     print('Private stock evidence collected. No device partition was written.')
 

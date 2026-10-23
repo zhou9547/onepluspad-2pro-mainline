@@ -4,6 +4,17 @@
 这是针对后续真机测试的开发候选，**没有真机启动或外设可用的结论**。
 仓库原有 Pad 2 Pro 的功能表、固件包、分区脚本和刷机步骤均不适用于手机。
 
+2026-10-23 只读取证后的更新候选：
+
+- [源码 d337d2f4bea9 的编译与 QEMU 检查](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39892351557)
+- [内核、匹配模块和独立触控 DTB](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39892351557/artifacts/12474888299)
+- 本机已确认 PJZ110 / 24 GiB / AA569 量产面板 / S3910 HBP；原厂启动输入只保存在主机私有目录。
+- 原厂树对照与全部六个 DTBO 的隔离合并通过，已实现专用内存校准和主机 v4 打包工具。
+- 原生显示仍待 SPR/DSC 实现，触控模块未经过真实手指测试；**不是可刷入日常使用的系统**。
+
+本次只允许 root ADB 读取；没有向手机写文件、重启、试启动、刷写或改设置。
+具体证据与边界见 STOCK-CALIBRATION.md、NATIVE-INPUT.md、NATIVE-DISPLAY.md。
+
 2026-10-23 离线首版已构建并完成全新主机下载复验：
 
 - [内核、手机 DTB、模块与实验性 RAM 镜像](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39821954442/artifacts/12444478734)
@@ -37,13 +48,14 @@ Ubuntu 26.04.1 + GNOME。基础 tarball 以 Canonical 官方 SHA256 固定，软
 
 当前默认设备树只提供源自社区参考的保守低内存区，避免把未知容量当成
 16/24 GB；bootloader 是否覆盖内存描述仍需验证。板级供电来自被固定版本的
-一加 13 社区设备树，尚未与这台手机的运行时 FDT 对照。
+一加 13 社区设备树。专用主机校准工具现在可以使用本机15个非空RAM区，并保留
+全部原厂保护区；这没有替代真实启动、USB调试和恢复验证。
 
 `boot-oneplus13-ram-experimental.img` 是打包格式候选。**不要刷入任何分区**。
 它没有被证明能通过该手机 ABL 的 DTB 选择、stock DTBO 和 hypervisor 叠加。
 先取得匹配原厂 boot/init_boot/vendor_boot/dtbo/vbmeta、运行时 FDT、型号、
 容量、系统版本和解锁状态，校验恢复文件后再设计唯一一次 RAM 测试。
-本项目没有对设备执行任何命令，也没有提供自动分区或擦除工具。
+本项目只对本机执行了已授权的读取命令；没有提供自动分区或擦除工具。
 
 后续可在保留原厂 Android、已具备 root 且由你操作的电脑上取证：
 
@@ -69,6 +81,12 @@ RAM 环境设计为 300 秒后重启；kernel panic 为 15 秒。实际硬件死
 用户态、自动构建和产物检查。显示只使用社区固件 framebuffer 线索。
 屏幕原生接管、S3910 触控、GPU 固件、无线、音频、电量/充电、休眠、
 传感器、蜂窝、相机与双系统均待独立移植/真机验证；不能由编译成功推断。
+
+S3910 已有独立 LBP 模块和 DTB 编译候选，默认诊断 DTB 不启用它。
+主机校准流程依次运行 collect-stock.py（完整当前槽输入）、calibrate.py
+（需要主机 libufdt/ufdt-apply 和实际编译 DTB）及 package-calibrated.py。
+后者只在主机生成未签名 v4 三件套和实验性 v2 RAM 镜像，不执行任何设备命令。
+原始输入必须保持私有；产物也不能在真实启动验收前当作安装包。
 
 源码、已知差距和下一步见同目录 STATUS.md、TECHNICAL-DEBT.md 和 WORKLOG.md；
 产物中的独立 README 是本说明的副本。

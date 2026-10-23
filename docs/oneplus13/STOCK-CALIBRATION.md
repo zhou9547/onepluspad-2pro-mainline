@@ -57,3 +57,33 @@ accepted as hardware evidence. Debugfs was not mounted or configured.
 
 Only board facts are exported to stock-profile-pjz110-24g.json. Panel serials,
 boot arguments, calibration, FDT originals and images remain private.
+
+## Candidate validation
+
+Actions 39892351557 / d337d2f4bea9fae5e4ed0d87f8d97c2eff9c707b built the
+kernel, both DTBs and S3910 module, and passed QEMU. Both default and touch DTBs
+then passed every one of the six actual stock overlays in the isolated sink;
+the operational mainline nodes were unchanged. The selected stock control checks
+all 764 panel and 34 touch properties in both directions, rejecting extra
+properties as well as missing or different ones.
+
+The owner-only memory profile has 15 nonempty banks. Every protected stock
+interval inside those banks is already covered by the platform reservations;
+no new reservation was needed. Overlapping RAM banks and protected overlaps
+with a reusable pool are rejected. Two separate Python processes with different
+hash seeds produce identical DTBs after sorting the symbol union. Bootloader
+memory fixups and actual RAM usability remain hardware questions.
+
+package-calibrated.py uses the captured full partition capacities and stock
+vendor header addresses, the calibrated DTB, and the verified kernel/initramfs.
+It generates unsigned v4 boot/init_boot/vendor_boot and a v2 RAM-format candidate
+on the host, then independently slices all image sections back. The generic
+ramdisk is an empty valid archive; diagnostic init stays in vendor_boot. No
+Android command line, original image, AVB signing key or vbmeta change is copied.
+Actual ABL loading/relocation and the hypervisor path are still unverified.
+
+The collector now records blockdev --getsize64 results and rejects incomplete
+full reads. Its updated header-only path was exercised read-only on the phone;
+the running FDT and all current-slot header bytes match the first capture.
+The captured Android is rooted: these are backups of the working current
+snapshot, not a claim that every image is a pristine OEM recovery image.
