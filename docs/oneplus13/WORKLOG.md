@@ -172,3 +172,26 @@ Host packing produces an unsigned v4 diagnostic triplet and a single-image RAM
 candidate with section readback checks. These are not installed GNOME images.
 Physical boot, USB, touch and recovery tests are outside the current read-only
 authorization. STATUS.md records the sole next hardware gate and device state.
+
+## 2026-10-23 — SPR semantic translation and complete DSC PPS
+
+Continued offline work without issuing further phone commands. Implemented a
+strict private-XML SPR converter and relative register plan. It matches a bounded
+host ARM64 emulation of the exact stock library's defaults/base/V2 conversion,
+with semantic setter offsets independently inspected. A second host harness
+compiled five unmodified public vendor C functions: seven operations / 33 words
+match, excluding the separate partial-update path. Found and corrected an early
+research assumption that FilterWidth was the filter enum: actual 2DAvg is 4 and
+sets a different SPR2 register bit. That incorrect assumption never entered any
+phone image or published implementation. No original XML/library/cfg is uploaded.
+
+Implemented complete public 94-byte native422 DSC PPS decoding, DRM C initializer
+generation and byte roundtrip, retaining physical 8 bpp separately from encoded
+16 bpp groups. Added a check compiling the exact pinned kernel's real PPS packer
+and structure, including the wrong-bpp negative control and CI ASan/UBSan. This
+does not patch/enable a panel, DSI host native422 path or DPU SPR lifecycle.
+
+Seventeen host tests pass locally, including negative inputs. Further checks and
+Actions results are recorded after execution. Existing compiled kernel remains
+d337d2f4bea9 until a new full build is completed; no extra hardware support is
+inferred from host-tool changes. The original read-only authorization is intact.

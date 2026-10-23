@@ -43,6 +43,17 @@ def verify_artifacts(out):
         path = out / name
         if path.stat().st_size != expected['size'] or sha256(path) != expected['sha256']:
             raise ValueError(f'Artifact hash/size mismatch: {name}')
+    if 'display_support' in manifest:
+        if manifest['display_support'] != 'UNIMPLEMENTED_OFFLINE_PARAMETERS_ONLY':
+            raise ValueError('Unsupported native-display claim')
+        display = json.loads((out / 'display-conversion-verification.json').read_text())
+        expected = {'scope': 'HOST_C_PPS_ONLY', 'hardware_tested': False,
+                    'kernel_commit': manifest['kernel_commit'], 'matched_payload_bytes': 94,
+                    'matched_zero_padding_bytes': 34, 'physical_bpp_q4': 128,
+                    'encoded_bpp_q4': 256, 'wrong_bpp_negative_control_rejected': True,
+                    'sanitizers': True}
+        if any(display.get(k) != v for k, v in expected.items()):
+            raise ValueError('Missing or failed C DSC conversion verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':

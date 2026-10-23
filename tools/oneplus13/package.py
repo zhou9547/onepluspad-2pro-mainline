@@ -134,6 +134,7 @@ def main():
         'boot_scope': 'Experimental fastboot RAM format; ABL acceptance is unverified. Never flash.',
         'stock_overlay_compatibility': 'NOT_VERIFIED_REQUIRES_PHONE_STOCK_DTBO',
         'hardware_tested': False,
+        'display_support': 'UNIMPLEMENTED_OFFLINE_PARAMETERS_ONLY',
         'tools_sha256': {'busybox': bb['sha256'], 'mkbootimg.py': mk['sha256']},
         'phone_inputs_sha256': {
             p.name: sha256(p) for p in sorted((REPO / 'devices/oneplus13').iterdir()) if p.is_file()},

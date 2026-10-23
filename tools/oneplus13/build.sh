@@ -23,6 +23,11 @@ fi
 git -C "$src" fetch --depth 1 origin "${pin[1]}"
 git -C "$src" checkout --detach FETCH_HEAD
 [[ $(git -C "$src" rev-parse HEAD) == "${pin[1]}" ]]
+python3 tools/oneplus13/dsc.py \
+  --panel-json devices/oneplus13/panel-aa569-120hz.json \
+  --output "$dest/aa569-dsc.json" --c-output "$dest/aa569-dsc.h"
+python3 tools/oneplus13/check-display.py --kernel-source "$src" \
+  --output "$dest/display-conversion-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 if ! grep -q TOUCHSCREEN_DODGE_S3910 "$src/drivers/input/touchscreen/Kconfig"; then

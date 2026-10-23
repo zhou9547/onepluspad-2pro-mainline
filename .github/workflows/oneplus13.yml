@@ -69,6 +69,9 @@ jobs:
           path: |
             out/oneplus13-kbuild/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dtb
             out/oneplus13-kbuild/.config
+            out/oneplus13/aa569-dsc.json
+            out/oneplus13/aa569-dsc.h
+            out/oneplus13/display-conversion-verification.json
           if-no-files-found: ignore
           retention-days: 14
       - name: Install QEMU inspection tools

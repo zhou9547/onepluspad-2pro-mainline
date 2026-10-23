@@ -54,7 +54,7 @@ def command_packets(blob):
     return packets
 
 
-def pps_summary(packets):
+def vendor_pps(packets):
     # The 0x81 vendor register carries five prefix bytes followed by a DSC PPS.
     # Later page-local 0x81 writes are unrelated; require the actual DSC version.
     candidates = [bytes.fromhex(p['payload'])[6:] for p in packets
@@ -63,7 +63,11 @@ def pps_summary(packets):
                   and bytes.fromhex(p['payload'])[6] == 0x12]
     if len(candidates) != 1:
         raise ValueError('Missing or ambiguous vendor DSC PPS')
-    pps = candidates[0]
+    return candidates[0]
+
+
+def pps_summary(packets):
+    pps = vendor_pps(packets)
     word = lambda off: int.from_bytes(pps[off:off+2], 'big')
     if len(pps) < 89:
         raise ValueError('Vendor PPS lacks native chroma flags')

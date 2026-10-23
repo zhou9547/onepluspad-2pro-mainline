@@ -59,11 +59,77 @@ The earlier lack-of-file observation applies only to the first two directories.
 Further offline inspection locates SPRDriverIntfImpl::PrepareSPRInitCfg,
 SPRDriverIntfImplV2::PrepareSPRInitCfg and floatToU1_10 in libsdmextension.so.
 These convert semantic XML parameters and panel packing into the opaque kernel
-cfg fields. This conversion and its REGDMA/lifecycle integration are still to
-be implemented and independently checked; the mere existence of the XML does
-not make the original Android driver usable in mainline.
+cfg fields. The semantic conversion is now implemented and checked offline as
+described below. REGDMA/lifecycle integration is still unimplemented; the mere
+existence of the XML does not make the Android driver usable in mainline.
 
 The actual stock SPR version is 2.0 and the register span is 0x200 bytes. Stock
 SPR offsets are 0x15400/0x14400/0x13400/0x12400 relative to their DSPP blocks;
 the DSPP bases are 0x55000/0x57000/0x59000/0x5b000. Keep DSPP/SPR selection
 consistent with the two-mixer topology. No register access was performed.
+
+## Implemented offline conversion, 2026-10-23
+
+`tools/oneplus13/spr.py` strictly parses the private XML, supports only the
+investigated PenTile / 2DAvg / YYGM profile and emits a private cfg payload plus
+a relative register plan. It has no ADB, networking, MMIO or execution interface.
+Unknown profiles, duplicate fields, out-of-range values, discarded fourth-colour
+phase entries and nonzero uninvestigated legacy fields fail closed.
+
+The original Android library was not loaded into the host process. A bounded
+Unicorn ARM64 emulator mapped its ELF bytes into simulated memory and ran only
+the parser's InitializeToDefaults and the base/V2 PrepareSPRInitCfg routines.
+Immutable map initializers were reconstructed from that exact ELF. Semantic
+fields were supplied at offsets established by exported setter/getter routines;
+the entire XML parser and a live Android commit were not emulated. The prepared
+payload matches the independent Python conversion. This checks translation,
+not the actual Android feature-enable state or live register contents.
+
+An independent host C harness compiled five unmodified packing functions from
+the pinned public vendor source d50b305f7da9. Its seven operations / 33 words
+match the generated relative register plan, excluding the separately owned
+partial-update operation. Four XML modes produce the same payload. Originals,
+emulator scripts, proprietary libraries and generated cfg data stay private.
+
+Important details established by this check:
+
+- 2DAvg maps to enum 4; SPR2 moves bit 2 of that enum to config bit 15. The
+  legacy XML FilterWidth=0 must not replace the enum. YYGM maps to enum 0.
+- Signed phase coefficients use five-bit fields; the last word keeps only ten
+  bits. Filter coefficients use signed eleven-bit fields.
+- PBA first three values retain their magnitude; trailing polarity values are
+  remapped by the Android layer and again by the kernel packer.
+- The pinned SPR2 common path does not write cfg14 / offset 0x54. No write is
+  invented for it. The config update preserves bit 25 (UDC), so a native driver
+  still needs explicit UDC ownership/handover rather than blindly copying it.
+- PBA uses a direct write before the queued REGDMA kickoff. A flat list of
+  guessed CPU MMIO writes is not an equivalent lifecycle implementation.
+
+`tools/oneplus13/dsc.py` decodes every meaningful byte of the public 94-byte PPS
+into a DRM configuration and round-trips it with 34 trailing zero bytes. It
+retains physical bpp=128 in Q4 and produces PPS group bpp=256 only at packing.
+It preserves stock RC ranges/delays/offsets instead of recomputing 444 defaults.
+`check-display.py` compiles the pinned kernel's actual DRM DSC structure and PPS
+packer, checks all 128 bytes and requires an incorrect-bpp negative control to
+fail. Actions runs that C check with ASan/UBSan; public result files accompany
+future compiled candidates. The source of the exact kernel blob is verified.
+
+Local host tests now include enum/PBA/signed packing, unknown/unsafe XML and PPS
+reserved-bit/profile/truncation checks (17 tests total). No kernel native-display
+driver has been enabled by these host-tool changes.
+
+## Remaining integration work
+
+1. Carry the validated precomputed native422 DSC fields through the DSI host
+   without its unconditional RGB/444 recomputation, retaining physical-pixel bpp
+   for bandwidth and doubled group bpp only where required by the PPS/hardware.
+2. Add phone-specific SPR2 capability offsets and reserve DSPPs for SPR even
+   without a user CTM/gamma LUT. The current CRTC requests DSPPs only for those
+   user colour properties; setting SPR registers alone would miss ownership.
+3. Implement SPR/UDC takeover, runtime-PM/clocks, REGDMA programming/disable and
+   full-frame origin handling before the first frame. No lifecycle shortcut has
+   been validated from the available live state.
+4. Add the AA569 panel with public exact commands, actual supplies/GPIO range,
+   TE and one 120 Hz mode, then connect the panel-following touch candidate.
+5. Verify transport/recovery in a bounded RAM boot before physical native-display
+   tests. These operations remain outside the read-only device authorization.
