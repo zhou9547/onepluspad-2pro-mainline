@@ -35,6 +35,8 @@ python3 tools/oneplus13/dsc.py \
   --output "$dest/aa569-dsc.json" --c-output "$dest/aa569-dsc.h"
 python3 tools/oneplus13/check-display.py --kernel-source "$src" \
   --output "$dest/display-conversion-verification.json" --sanitize
+python3 tools/oneplus13/check-command-clock.py --kernel-source "$src" \
+  --output "$dest/command-clock-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 if ! grep -q TOUCHSCREEN_DODGE_S3910 "$src/drivers/input/touchscreen/Kconfig"; then

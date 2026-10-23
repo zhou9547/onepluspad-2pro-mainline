@@ -230,3 +230,19 @@ real128-byte kernel assertion stays enabled, and Linux ARM64 sanitizer CI passes
 Remaining: command-mode transfer/lane-rate handling, DSPP ownership/SPR/UDC
 lifecycle, AA569 panel/brightness integration and actual physical acceptance.
 Current minimal diagnostic DTBs do not enable MDSS. No working-display claim.
+
+## 2026-10-23 — command-clock continuation and reuse-first instruction
+
+Owner requests that future problems first be checked against the original
+project and public solutions. Rechecked upstream integration88fd48f85dee,
+kernel7a81d184e309, dodge WIP1f2047e8663e and prior Pagani reference. Their
+different panel paths provide reusable framework code but no matching AA569
+SPR2/native422 implementation. Recorded the exact distinction in NATIVE-DISPLAY.
+
+Implemented isolated native422 CMD HS-ceiling selection with shared byte/pixel/
+PHY requests, conservative full-frame packet budget validation and mode_valid
+error propagation. No defaults/DTBs enable it. Real-function local C checks pass
+six legacy-path controls and ten invalid inputs, plus the existing full PPS
+check; all17 Python tests pass. Initial host harness compilation exposed one
+missing WARN_ON_ONCE shim, which was fixed without changing kernel behavior.
+Full kernel/ASan/UBSan Actions validation follows. No phone command was issued.

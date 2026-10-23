@@ -62,6 +62,18 @@ def verify_artifacts(out):
             raise ValueError('Unknown display-conversion evidence version')
         if any(display.get(k) != v for k, v in expected.items()):
             raise ValueError('Missing or failed C DSC conversion verification')
+    if 'command_clock_version' in manifest:
+        clock = json.loads((out / 'command-clock-verification.json').read_text())
+        expected = {'scope': 'HOST_C_DSI_COMMAND_CLOCK_ONLY', 'hardware_tested': False,
+                    'kernel_commit': manifest['kernel_commit'], 'sanitizers': True,
+                    'lane_bit_rate': 1363200000, 'byte_clk_rate': 170400000,
+                    'pixel_clk_rate': 181760000, 'phy_request_matches_byte_clock': True,
+                    'legacy_baseline_controls': 6, 'invalid_controls_rejected': 10,
+                    'non_byte_aligned_ceiling_rounded_down': True,
+                    'dpu_transfer_window_programmed': False, 'pll_rounding_verified': False}
+        if (manifest['command_clock_version'] != 1 or
+                any(clock.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed C command-clock verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':

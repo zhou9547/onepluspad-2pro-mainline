@@ -21,3 +21,11 @@ native422 inputs. CI uses ASan/UBSan and builds the real ARM64 module afterward.
 The patch modifies GPL-2.0-only Linux MSM DSI code from the pinned kernel;
 original copyright and licensing remain with that file. Authorship of this
 adaptation is Codex; there is no hardware Tested-by claim.
+
+0002 uses an explicit panel HS ceiling for native422 command bursts on one
+D-PHY link. Byte, pixel and PHY requests share the same source; rates round
+down to whole byte clocks and over-budget modes are rejected in mode_valid.
+Six legacy/video/C-PHY/bonded/RGB/uncompressed controls retain their original
+results. check-command-clock.py compiles the real functions, including the PHY
+request, and rejects ten invalid inputs. This is a clock request correction,
+not a complete implementation of the vendor DPU transfer window or SPR.

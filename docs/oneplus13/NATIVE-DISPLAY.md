@@ -33,6 +33,16 @@ Regulator values and sequencing must follow stock phone data.
 
 ## Implementation boundary
 
+Current offline work package: use an explicitly advertised, characterized
+`mipi_dsi_device.hs_rate` ceiling for native422 command transfers on a single
+D-PHY link. Derive byte/pixel/PHY requests from that same ceiling, reject a
+packet budget that cannot fit the nominal refresh period, and keep legacy,
+video, C-PHY and bonded calculations unchanged. Acceptance is compilation of
+the real changed functions with positive/negative and baseline controls plus
+an ARM64 kernel build. This does not program the vendor's 6800-us DPU transfer
+window, prove PLL rounding or establish usable display support. Panel/SPR
+integration remains a separate work package.
+
 Native display remains 有源码线索. No placeholder panel driver was enabled to
 make the feature table look complete. The diagnostic tree retains its unverified
 inherited framebuffer; msm is a module for future controlled takeover.
@@ -179,3 +189,42 @@ mode (htotal1562, vtotal3200, RGB101010, four D-PHY lanes) in its existing DSC
 clock formula produces1457280000 bit/s/lane instead. CMD porches represent
 transport overhead in that formula, as the host's own comment explains. Do not
 claim physical transfer timing is solved by the now-matching DSC PPS.
+
+### Reuse check and command-clock implementation
+
+The source project was checked again before this implementation, per the
+owner's instruction to consult it first. Integration upstream main is
+88fd48f85dee54c482a98e55319b11d1739e8852 and its kernel erhai/v0.2 remains
+7a81d184e3098624d4342d8f4eff5e23674bcc9f. Its NT36536 display is dual-DSI video
+mode with external KTZ8868 backlights; it does not implement this phone's
+AA569 SPR2/native422 command pipeline. Its platform/TE/resource helpers are
+already reused in the pinned kernel. The current sm8750-mainline OnePlus-13-WIP
+branch remains 1f2047e8663eda76c8b172fd3e040e3b3fa17950 and selects NT37801 plus
+different touch parameters. Pagani reference c49d202f6c16 uses AA594 RGB DSC;
+its explicit comments still list slice-per-packet as a TODO. Those sequences
+must not replace the measured AA569 production profile.
+
+Patch0002 chooses the explicit, characterized HS ceiling only on a native422
+command-mode single D-PHY link. This use respects hs_rate as an upper bound;
+it rounds down to whole byte clocks rather than interpreting the field as a
+universal fixed rate. The phone profile requests1363200000bit/s/lane,
+170400000Hz byte clock and181760000Hz pixel clock from the same source.
+The PHY request consumes that exact byte clock. Missing rates and the video,
+C-PHY, bonded, RGB and uncompressed paths retain their previous calculation.
+Impossible geometry, packet grouping and payload budgets return errors;
+mode_valid rejects a zero/error byte-clock request.
+
+check-command-clock.py compiles those actual functions and the unchanged
+baseline, including the PHY request. Local Windows checks pass: six baseline
+controls, ten invalid controls, non-byte-aligned ceiling rounding, and the
+existing full PPS check. ARM64/sanitizer Actions is still required before a
+compiled result is claimed. The packet-only full-frame lower bound is6726us
+(two slices/packet), below the stock6800us budget; PHY transitions, actual PLL
+rounding, DPU fetch/bandwidth scheduling and scan/TE behavior remain unverified.
+This patch is not a6800us DPU scheduler or an enabled panel.
+
+Primary references:
+- https://github.com/yzddmr6/onepluspad-2pro-mainline/tree/88fd48f85dee54c482a98e55319b11d1739e8852
+- https://github.com/yzddmr6/linux-sm8750-erhai/blob/7a81d184e3098624d4342d8f4eff5e23674bcc9f/arch/arm64/boot/dts/qcom/sm8750-erhai.dts
+- https://github.com/sm8750-mainline/linux/blob/1f2047e8663eda76c8b172fd3e040e3b3fa17950/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dts
+- https://github.com/yzddmr6/linux-sm8750-erhai/blob/7a81d184e3098624d4342d8f4eff5e23674bcc9f/include/drm/drm_mipi_dsi.h
