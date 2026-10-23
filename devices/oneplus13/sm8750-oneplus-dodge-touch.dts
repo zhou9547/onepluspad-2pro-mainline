@@ -9,6 +9,7 @@
 
 &spi4 {
 	status = "okay";
+	pinctrl-0 = <&dodge_spi4_miso_clk>, <&dodge_spi4_mosi_cs>;
 	touchscreen@0 {
 		compatible = "oneplus,dodge-s3910-lbp";
 		reg = <0>;
@@ -29,13 +30,26 @@
 		pins = "gpio162";
 		function = "gpio";
 		input-enable;
-		bias-pull-up;
-		drive-strength = <6>;
+		bias-disable;
+		drive-strength = <8>;
 	};
 	touch_reset_default: touch-reset-default-state {
 		pins = "gpio161";
 		function = "gpio";
 		bias-disable;
+		drive-strength = <8>;
+		output-low;
+	};
+	dodge_spi4_miso_clk: dodge-spi4-miso-clk-state {
+		pins = "gpio48", "gpio50";
+		function = "qup1_se4";
 		drive-strength = <6>;
+		bias-disable;
+	};
+	dodge_spi4_mosi_cs: dodge-spi4-mosi-cs-state {
+		pins = "gpio49", "gpio51";
+		function = "qup1_se4";
+		drive-strength = <4>;
+		bias-disable;
 	};
 };

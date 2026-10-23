@@ -46,3 +46,24 @@ control write, register poke, display-memory read or test boot was used to bypas
 that restriction. Ordinary display configuration searches did not yield a usable
 SPR payload. Actual runtime evidence or a validated open configuration is still
 required; guessed coefficients are not an acceptable replacement.
+
+### Later finding: stock SPR configuration is available
+
+A bounded read-only search of /vendor/etc found the panel-specific spr_cfg XML
+outside the display/displayconfig directories searched earlier. It is 3234 bytes,
+SHA-256 e258d5612a7c03f56d8cb8cebfd95105749eb9fae087eacd80d14fb88b77232d.
+It has four modes with the same filter/phase settings. The original and the
+display libraries are kept privately on the host, not uploaded or bundled.
+The earlier lack-of-file observation applies only to the first two directories.
+
+Further offline inspection locates SPRDriverIntfImpl::PrepareSPRInitCfg,
+SPRDriverIntfImplV2::PrepareSPRInitCfg and floatToU1_10 in libsdmextension.so.
+These convert semantic XML parameters and panel packing into the opaque kernel
+cfg fields. This conversion and its REGDMA/lifecycle integration are still to
+be implemented and independently checked; the mere existence of the XML does
+not make the original Android driver usable in mainline.
+
+The actual stock SPR version is 2.0 and the register span is 0x200 bytes. Stock
+SPR offsets are 0x15400/0x14400/0x13400/0x12400 relative to their DSPP blocks;
+the DSPP bases are 0x55000/0x57000/0x59000/0x5b000. Keep DSPP/SPR selection
+consistent with the two-mixer topology. No register access was performed.

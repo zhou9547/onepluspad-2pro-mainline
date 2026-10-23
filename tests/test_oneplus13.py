@@ -13,7 +13,7 @@ sys.path.insert(0, str(TOOLS))
 from common import boot_sections, make_cpio, read_cpio
 from verify import check_config, REQUIRED
 from stock import Fdt, boot_image, split_dtbs
-from calibrate import boot_index, selected_panel, prepare_sink, calibrate_memory
+from calibrate import boot_index, selected_panel, prepare_sink, calibrate_memory, compare_subtree
 from panel import command_packets, pps_summary
 spec = importlib.util.spec_from_file_location('phone_stock_collector', TOOLS / 'collect-stock.py')
 collector = importlib.util.module_from_spec(spec)
@@ -50,9 +50,20 @@ class PhoneFormats(unittest.TestCase):
         report = calibrate_memory(original, runtime)
         self.assertEqual(report['additional_no_map_ranges'], [[0x80002000, 0x1000]])
         self.assertTrue(report['stock_reserved_ranges_all_excluded'])
+        original.nodes['/reserved-memory/test0']['reusable'] = b''
+        with self.assertRaisesRegex(ValueError, 'reusable'):
+            calibrate_memory(original, runtime)
+        del original.nodes['/reserved-memory/test0']['reusable']
         runtime.nodes['/memory@80000000']['reg'] *= 2
         with self.assertRaisesRegex(ValueError, 'Overlapping'):
             calibrate_memory(original, runtime)
+
+    def test_stock_control_rejects_extra_control_properties(self):
+        actual, control = Fdt.__new__(Fdt), Fdt.__new__(Fdt)
+        actual.nodes = {'/panel': {'model': b'synthetic\0'}}
+        control.nodes = {'/panel': {'model': b'synthetic\0', 'extra-property': b''}}
+        with self.assertRaisesRegex(ValueError, 'extra-property'):
+            compare_subtree(actual, control, '/panel')
 
     def test_stock_boot_v4_geometry_and_truncation(self):
         blob = bytearray(12288)

@@ -88,8 +88,8 @@ def compare_subtree(actual, control, root):
         raise ValueError('Expected stock control subtree is absent')
     failures = []
     for path in paths:
-        for key, value in actual.nodes[path].items():
-            if control.nodes.get(path, {}).get(key) != value:
+        for key in actual.nodes[path].keys() | control.nodes.get(path, {}).keys():
+            if control.nodes.get(path, {}).get(key) != actual.nodes[path].get(key):
                 failures.append(path + ':' + key)
     for path in control.nodes:
         if (path == root or path.startswith(root + '/')) and path not in actual.nodes:
@@ -124,7 +124,7 @@ def prepare_sink(mainline, bases, entries, identity):
                             'linux,phandle': struct.pack('>I', phandle)}
     symbols = mainline.nodes.setdefault('/__symbols__', {})
     # Stock names must all resolve to the inert sink, never real mainline devices.
-    for name in union:
+    for name in sorted(union):
         symbols[name] = sink.encode() + b'\0'
     return mainline.to_blob(), len(union)
 
@@ -163,6 +163,13 @@ def calibrate_memory(mainline, runtime):
     mainline.nodes[paths[0]]['reg'] = b''.join(struct.pack('>QQ', *bank) for bank in banks)
     existing = [(start, start + size) for p in mainline.nodes
                 if p.startswith('/reserved-memory/') and 'reg' in mainline.nodes[p]
+                and mainline.nodes[p].get('status') != b'disabled\0'
+                and 'reusable' not in mainline.nodes[p]
+                for start, size in mainline.ranges(p) if size]
+    existing += [(start, start + size) for start, size in mainline.reservations if size]
+    reusable = [(start, start + size) for p in mainline.nodes
+                if p.startswith('/reserved-memory/') and 'reg' in mainline.nodes[p]
+                and 'reusable' in mainline.nodes[p]
                 for start, size in mainline.ranges(p) if size]
     protected = [(start, start + size) for p in runtime.nodes
                  if p.startswith('/reserved-memory/') and 'reg' in runtime.nodes[p]
@@ -174,6 +181,8 @@ def calibrate_memory(mainline, runtime):
     for left, right in protected:
         if right <= left or right > 1 << 64:
             raise ValueError('Invalid protected memory interval')
+        if any(left < end and right > start for start, end in reusable):
+            raise ValueError('A reusable mainline pool overlaps protected stock memory')
         intersections = [(max(left, start), min(right, start + size))
                          for start, size in banks if left < start + size and right > start]
         for start, end in subtract_ranges(intersections, existing):

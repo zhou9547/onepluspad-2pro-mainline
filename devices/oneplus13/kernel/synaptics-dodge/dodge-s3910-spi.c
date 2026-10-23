@@ -41,12 +41,17 @@ static int dodge_read(struct syna_hw_interface *hw, unsigned char *data, unsigne
 {
 	struct dodge_touch *t = container_of(hw, struct dodge_touch, hw);
 	struct spi_transfer xfer = { .rx_buf = data, .len = len };
+	struct spi_message message;
 	int ret;
 	if (!len || len > spi_max_transfer_size(t->spi) || len > 65536)
 		return -EMSGSIZE;
 	/* Vendor transfers drive MOSI high during reads; RX-only sends zeros. */
 	xfer.tx_buf = t->read_dummy;
-	ret = spi_sync_transfer(t->spi, &xfer, 1);
+	spi_message_init(&message);
+	spi_message_add_tail(&xfer, &message);
+	ret = spi_sync(t->spi, &message);
+	if (!ret && message.actual_length != len)
+		return -EIO;
 	return ret ?: len;
 }
 
@@ -54,10 +59,15 @@ static int dodge_write(struct syna_hw_interface *hw, unsigned char *data, unsign
 {
 	struct dodge_touch *t = container_of(hw, struct dodge_touch, hw);
 	struct spi_transfer xfer = { .tx_buf = data, .len = len };
+	struct spi_message message;
 	int ret;
 	if (!len || len > spi_max_transfer_size(t->spi) || len > 65536)
 		return -EMSGSIZE;
-	ret = spi_sync_transfer(t->spi, &xfer, 1);
+	spi_message_init(&message);
+	spi_message_add_tail(&xfer, &message);
+	ret = spi_sync(t->spi, &message);
+	if (!ret && message.actual_length != len)
+		return -EIO;
 	return ret ?: len;
 }
 

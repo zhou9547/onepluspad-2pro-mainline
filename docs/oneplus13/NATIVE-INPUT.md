@@ -24,6 +24,16 @@ Use stock 200 ms power settling and 10/80 ms reset timings. The legacy vendor
 GPIO property marks AVDD active-low but its driver deliberately uses raw GPIO
 physical HIGH for power on; the new binding explicitly describes active-high.
 
+The deeper runtime pinctrl children, cross-checked against the official dodge
+overlay, specify 8 mA/bias-disabled IRQ and reset (reset starts physically low),
+6 mA MISO/clock and 4 mA MOSI/chip-select. The initial compiled candidate used
+generic 6 mA settings and an IRQ pull-up; those were rejected in the evidence
+review and corrected before the final candidate. The stock runtime SPI configs
+contain both inherited pull-down and overlay bias-disable properties; the new
+tree uses the official phone overlay's intended bias-disable setting and still
+requires physical electrical validation. Short SPI transfers return EIO rather
+than pretending that all requested bytes were transferred.
+
 Negotiate a fixed byte-aligned all-object report in RAM and read the descriptor
 back before parsing any frames. Validate payload length, unique bounded slots,
 coordinate bounds and classification. Report only fingers/gloves as fingers;
