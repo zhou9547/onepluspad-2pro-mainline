@@ -8,7 +8,11 @@ on:
     inputs:
       rootfs-run-id:
         description: Verified base desktop rootfs run (missing artifact builds fresh)
-        default: '40004679869'
+        default: '39809729390'
+        required: false
+      rootfs-artifact-name:
+        description: Exact verified base rootfs artifact name
+        default: oneplus13-ubuntu-26.04.1-gnome-a0ca88ee403a719be4333502bae78997066a2b6f
         required: false
 
 permissions:
@@ -55,9 +59,8 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v4
         with:
-          pattern: oneplus13-desktop-rootfs-*
-          merge-multiple: true
-          run-id: ${{ inputs.rootfs-run-id || '40004679869' }}
+          name: ${{ inputs.rootfs-artifact-name || 'oneplus13-ubuntu-26.04.1-gnome-a0ca88ee403a719be4333502bae78997066a2b6f' }}
+          run-id: ${{ inputs.rootfs-run-id || '39809729390' }}
           github-token: ${{ github.token }}
           path: out/oneplus13-desktop-base
       - name: Refresh phone support in verified GNOME base
