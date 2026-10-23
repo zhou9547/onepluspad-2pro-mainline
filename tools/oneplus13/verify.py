@@ -106,6 +106,23 @@ def verify_artifacts(out):
         if (manifest['dpu_buffer_version'] != 1 or
                 any(dpu.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C DPU buffer verification')
+    if 'spr_profile_version' in manifest:
+        spr = json.loads((out / 'spr-profile-verification.json').read_text())
+        expected = {'scope': 'HOST_C_SPR_PROFILE_AND_TRANSACTION_PLAN_ONLY',
+                    'hardware_tested': False, 'sanitizers': True,
+                    'synthetic_profiles': 9, 'private_profile_checked': False,
+                    'profile_size': 176, 'truncated_lengths_rejected': 176,
+                    'single_byte_corruptions_rejected': 176,
+                    'reserved_word_cases_rejected': 34,
+                    'semantic_invalid_cases_rejected': 5,
+                    'unaligned_inputs_checked': 4,
+                    'oversized_input_rejected': True, 'failure_outputs_unchanged': True,
+                    'udc_bit25_preserved_in_plan': True,
+                    'typed_direct_init_pu_paths': True, 'legacy_cfg14_write_absent': True,
+                    'runtime_registered': False, 'mmio_or_dma_submitted': False}
+        if (manifest['spr_profile_version'] != 1 or
+                any(spr.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed C SPR profile verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':

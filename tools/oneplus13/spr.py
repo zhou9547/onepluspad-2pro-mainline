@@ -10,7 +10,9 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import struct
 import xml.etree.ElementTree as ET
+import zlib
 
 SOURCE_PIN = 'd50b305f7da9e14715a25120a4ac7b1a4b8b97c3'
 TAGS = {'AdaptiveMode', 'FilterType', 'FilterCoeffs', 'PhaseInc', 'PhaseRepeat',
@@ -130,11 +132,30 @@ def register_plan(cfg, mixers=2):
     return operations
 
 
+def encode_profile(blob):
+    """Private v1 planner input; no arbitrary offsets or executable firmware."""
+    default, modes = parse_xml(blob)
+    if any(cfg != modes[default] for cfg in modes.values()):
+        raise ValueError('A fixed 120Hz profile requires identical stock modes')
+    values = {}
+    for op in register_plan(modes[default]):
+        for i, word in enumerate(op['values']):
+            values[op['relative_offset'] + i*4] = word
+    offsets = [*range(0x24, 0x34, 4), *range(0x34, 0x54, 4),
+               0x70, 0x74, *range(0xa0, 0xe0, 4), 0x7c, 4, 8, 0x20]
+    words = [values.get(off, 0) if off == 0x7c else values[off] for off in offsets]
+    payload = struct.pack('<34I', *words)
+    return b'AA569S2\0' + struct.pack('<8I', 1, 1440, 3168, 120, 34,
+                                    zlib.crc32(payload), 0, 0) + payload
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--xml', required=True, type=Path)
     p.add_argument('--output', required=True, type=Path)
     p.add_argument('--oracle', type=Path, help='Private optional host-emulated payload for comparison')
+    p.add_argument('--firmware-output', type=Path,
+                   help='Private host-only planner input; never upload to Git/Actions')
     a = p.parse_args()
     blob = a.xml.read_bytes()
     default, modes = parse_xml(blob)
@@ -150,8 +171,12 @@ def main():
                         for i, cfg in modes.items()},
               'remaining': ['independent live register comparison', 'DPU/REGDMA lifecycle and UDC ownership',
                             'native422 DSC and panel integration', 'physical display acceptance']}
+    firmware = encode_profile(blob) if a.firmware_output else None
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(report, indent=2)+'\n', encoding='utf-8')
+    if a.firmware_output:
+        a.firmware_output.parent.mkdir(parents=True, exist_ok=True)
+        a.firmware_output.write_bytes(firmware)
     print(f'Checked {len(modes)} private SPR modes; no device/register access.')
 
 

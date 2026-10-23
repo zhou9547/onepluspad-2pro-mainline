@@ -38,6 +38,22 @@ changes, reboot or test boot. Next: explicit SPR2 ownership/update/recovery
 and DPU transfer window, then an isolated display tree. Native display,
 physical touch and a normally flashable system are not completed.
 
+### Next isolated component: SPR2 private profile and plan
+
+Added a fixed176-byte private input decoder and typed transaction planner,
+compiled as uncalled code in the phone's msm module. There are no MMIO,
+REGDMA submission, firmware loading, resource reservation or runtime hooks.
+CI uses nine synthetic profiles only. The owner's four identical XML modes
+were also checked privately against the actual C output and the previously
+validated vendor packing; the binary remains under private on the host.
+
+C checks reject176 truncations, oversize,176 single-byte corruptions,34 invalid
+reserved-word cases, five semantic/UDC/PBA errors; four unaligned addresses
+and unchanged failure outputs pass. Python rejects differing stock modes
+instead of guessing a fixed120Hz mapping. Pending Actions compilation and
+sanitizers are not yet marked passed. This remains a prerequisite component,
+not an enabled native display or implementation of REGDMA ownership/recovery.
+
 ## 2026-10-22
 
 The user requested offline adaptation and successful Actions artifacts before

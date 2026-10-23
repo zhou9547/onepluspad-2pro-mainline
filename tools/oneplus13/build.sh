@@ -41,9 +41,15 @@ python3 tools/oneplus13/check-panel.py --kernel-source "$src" \
   --output "$dest/panel-component-verification.json" --sanitize
 python3 tools/oneplus13/check-dpu.py --kernel-source "$src" \
   --output "$dest/dpu-buffer-verification.json" --sanitize
+python3 tools/oneplus13/check-spr-profile.py \
+  --output "$dest/spr-profile-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
+cp devices/oneplus13/kernel/spr-aa569/dpu_aa569_spr.[ch] "$src/drivers/gpu/drm/msm/disp/dpu1/"
+if ! grep -q 'disp/dpu1/dpu_aa569_spr.o' "$src/drivers/gpu/drm/msm/Makefile"; then
+  printf '\nmsm-display-$(CONFIG_DRM_MSM_DPU) += disp/dpu1/dpu_aa569_spr.o\n' >> "$src/drivers/gpu/drm/msm/Makefile"
+fi
 if ! grep -q DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL "$src/drivers/gpu/drm/panel/Kconfig"; then
   cat >> "$src/drivers/gpu/drm/panel/Kconfig" <<'KCONFIG'
 
@@ -73,7 +79,8 @@ grep -q 'sm8750-oneplus-dodge.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
 grep -q 'sm8750-oneplus-dodge-touch.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-touch.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
 git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dts \
-  drivers/input/touchscreen/synaptics-dodge drivers/gpu/drm/panel/panel-aa569
+  drivers/input/touchscreen/synaptics-dodge drivers/gpu/drm/panel/panel-aa569 \
+  drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr.[ch]
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1
@@ -95,7 +102,8 @@ make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/d
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-touch.dtb 2>&1 | tee "$kout/touch-dtb.log"
 # Fail API compilation of the isolated components before the full kernel build.
 make "${args[@]}" -j"$(nproc)" drivers/gpu/drm/panel/panel-aa569/ \
-  drivers/input/touchscreen/synaptics-dodge/ 2>&1 | tee "$kout/component-api.log"
+  drivers/input/touchscreen/synaptics-dodge/ \
+  drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr.o 2>&1 | tee "$kout/component-api.log"
 time make "${args[@]}" -j"$(nproc)" Image Image.gz modules 2>&1 | tee "$kout/build.log"
 make "${args[@]}" -j"$(nproc)" modules_install INSTALL_MOD_PATH="$dest/modules" INSTALL_MOD_STRIP=1 \
   2>&1 | tee "$kout/modules.log"

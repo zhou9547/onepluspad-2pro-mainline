@@ -15,6 +15,15 @@ which matches this mainline host. Its global bpp convention and board-specific
 SPR offsets do not apply here. SPR follows these prerequisites with explicit
 resource ownership, private profile validation and runtime-PM lifecycle checks.
 
+Next isolated SPR component: define a bounded private AA569 profile format,
+decode it in kernel C, reject corrupt/reserved/foreign geometry fields and
+produce a typed relative register plan. Preserve the distinction between
+direct PBA, SPR_INIT REGDMA and partial-update REGDMA, including UDC bit25.
+Acceptance is independent Python/vendor-plan comparison, malformed-input C
+checks with sanitizers, and a real ARM64 object/module build. This component
+has no MMIO, firmware loader, resource allocation or runtime registration;
+it does not substitute for those missing lifecycle pieces or enable a DTB.
+
 ## Versioned evidence, 2026-10-23
 
 The owner's Android selects AA569 P3 A0019 production at 1440x3168. Stock DSI

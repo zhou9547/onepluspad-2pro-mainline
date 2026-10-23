@@ -15,7 +15,7 @@ from verify import check_config, REQUIRED
 from stock import Fdt, boot_image, split_dtbs
 from calibrate import boot_index, selected_panel, prepare_sink, calibrate_memory, compare_subtree
 from panel import command_packets, pps_summary, vendor_pps
-from spr import parse_xml as parse_spr, register_plan as spr_plan
+from spr import parse_xml as parse_spr, register_plan as spr_plan, encode_profile
 from dsc import decode_pps, pack_pps
 spec = importlib.util.spec_from_file_location('phone_stock_collector', TOOLS / 'collect-stock.py')
 collector = importlib.util.module_from_spec(spec)
@@ -91,6 +91,20 @@ class PhoneFormats(unittest.TestCase):
         for bad in cases:
             with self.subTest(bad=bad[:100]), self.assertRaises(ValueError):
                 parse_spr(bad)
+
+    def test_fixed_spr_profile_rejects_ambiguous_mode_mapping(self):
+        xml = self.synthetic_spr()
+        mode = xml[xml.index(b'<Mode '):xml.index(b'</Mode>')+7]
+        two = xml.replace(b'NumModes="1"', b'NumModes="2"').replace(
+            b'</SprConfig>', mode.replace(b'ModeID="0"', b'ModeID="1"')+b'</SprConfig>')
+        self.assertEqual(encode_profile(xml), encode_profile(two))
+        # A fixed120Hz blob cannot guess how differing stock modes map to Hz.
+        different = two
+        location = different.index(b'ModeID="1"')
+        different = different[:location] + different[location:].replace(
+            b'<PhaseInc>7', b'<PhaseInc>15', 1)
+        with self.assertRaises(ValueError):
+            encode_profile(different)
 
     def test_native_panel_pps_uses_422_group_bpp_not_rgb(self):
         fixture = json.loads((TOOLS.parents[1] / 'devices/oneplus13/panel-aa569-120hz.json').read_text())
