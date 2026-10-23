@@ -55,7 +55,8 @@ def inspect(blob):
     wlan = cells(tree.nodes[pmu]['wlan-enable-gpios'])
     bt = cells(tree.nodes[pmu]['bt-enable-gpios'])
     tlmm, pmic = tree.phandles[wlan[0]], tree.phandles[bt[0]]
-    if wlan[1:] != [16, 0] or bt[1:] != [3, 0] or not tlmm.endswith('@f000000'):
+    if (wlan[1:] != [16, 0] or bt[1:] != [3, 0] or b'qcom,sm8750-tlmm' not in
+            tree.nodes[tlmm].get('compatible', b'').split(b'\0')):
         raise ValueError('Wrong WLAN/BT enable')
     if cells(tree.nodes[pmic.rsplit('/', 1)[0]]['reg'])[0] != 5:
         raise ValueError('BT enable must be on F PMIC SID5')
@@ -119,7 +120,8 @@ def main():
     wifi = next(p for p, v in original.nodes.items() if v.get('compatible') == b'pci17cb,110e\0')
     dig = original.phandles[cells(original.nodes[pmu]['vdddig-supply'])[0]]
     io = original.phandles[cells(original.nodes[pmu]['vddio-supply'])[0]]
-    pin = next(p for p, v in original.nodes.items() if v.get('pins') == b'gpio16\0')
+    pin = next(original.phandles[h] for h in cells(original.nodes[pmu]['pinctrl-0'])
+               if original.nodes[original.phandles[h]].get('pins') == b'gpio16\0')
     port = wifi.rsplit('/', 1)[0]
     controls = [(dig, 'regulator-min-microvolt', struct.pack('>I', 852000)),
                 (wifi, 'compatible', b'pci17cb,1107\0'),

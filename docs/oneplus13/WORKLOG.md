@@ -509,3 +509,18 @@ USB/init/recovery and the older DTBs remain unchanged. No WLAN firmware, BDF,
 address, SAR limit or auto-loader is fabricated. Source review is in
 NATIVE-WIRELESS, fixed-load/reference-PHY debt is D11. CI compilation and actual
 artifact inspection are required next. No further phone query or retry.
+
+### WLAN checker correction from actual CI DTB
+
+39988586068/de616a5 compiled all four DTBs and passed preceding host C checks,
+then failed a checker-only vendor-address assumption: pinned mainline TLMM is
+pinctrl@f100000, while stock labels it@f000000. Check the actual SM8750 compatible
+and GPIO references instead. The downloaded87230-byte review ZIP matches SHA256
+1aec2e327d4f71471a7aa3fdeba10acdbd37b2d89f97eed42bc60af8838755a9.
+Local actual-DTB review also found the bad-drive control selected an unrelated
+SoC gpio16 state; target the PMU-referenced state instead. All six controls now
+reject correctly. Local module flags used the source fragment, not an actual
+resolved CI config: upload-artifact excludes hidden.config by default. Added an
+early nonhidden kernel.config copy for future failure review, without changing
+checks or enabling generic hidden-file upload. Next Actions must check resolved
+module flags, full ARM64 modules and QEMU before promotion.

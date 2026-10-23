@@ -98,6 +98,7 @@ make "${args[@]}" defconfig > "$kout/configure.log" 2>&1
   "$repo/devices/oneplus13/oneplus13.config" >> "$kout/configure.log" 2>&1
 make "${args[@]}" olddefconfig >> "$kout/configure.log" 2>&1
 python3 tools/oneplus13/verify.py --config "$kout/.config"
+cp "$kout/.config" "$dest/kernel.config"
 config_id=$(sha256sum "$kout/.config" | cut -c1-12)
 phone_id=$(sha256sum "$dest/phone-kernel.patch" | cut -c1-12)
 args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id-p$phone_id")
