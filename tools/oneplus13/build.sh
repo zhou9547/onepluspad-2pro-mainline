@@ -91,6 +91,9 @@ args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id-p$phone_id")
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference-dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-touch.dtb 2>&1 | tee "$kout/touch-dtb.log"
+# Fail API compilation of the isolated components before the full kernel build.
+make "${args[@]}" -j"$(nproc)" drivers/gpu/drm/panel/panel-aa569/ \
+  drivers/input/touchscreen/synaptics-dodge/ 2>&1 | tee "$kout/component-api.log"
 time make "${args[@]}" -j"$(nproc)" Image Image.gz modules 2>&1 | tee "$kout/build.log"
 make "${args[@]}" -j"$(nproc)" modules_install INSTALL_MOD_PATH="$dest/modules" INSTALL_MOD_STRIP=1 \
   2>&1 | tee "$kout/modules.log"

@@ -306,9 +306,10 @@ static int aa569_probe(struct mipi_dsi_device *dsi)
 	struct aa569 *ctx;
 	int ret;
 
-	ctx = devm_kzalloc(dev, sizeof(*ctx), GFP_KERNEL);
-	if (!ctx)
-		return -ENOMEM;
+	ctx = devm_drm_panel_alloc(dev, struct aa569, panel, &aa569_funcs,
+				   DRM_MODE_CONNECTOR_DSI);
+	if (IS_ERR(ctx))
+		return PTR_ERR(ctx);
 	ctx->dsi = dsi;
 	mutex_init(&ctx->lock);
 	if (!of_find_property(dev->of_node, "vddio-supply", NULL) ||
@@ -341,7 +342,6 @@ static int aa569_probe(struct mipi_dsi_device *dsi)
 	ret = gpiod_direction_output(ctx->vddr, 0);
 	if (ret)
 		return dev_err_probe(dev, ret, "VDDR direction\n");
-	drm_panel_init(&ctx->panel, dev, &aa569_funcs, DRM_MODE_CONNECTOR_DSI);
 	ctx->panel.prepare_prev_first = true;
 	ctx->dsc = aa569_dsc;
 	dsi->dsc = &ctx->dsc;

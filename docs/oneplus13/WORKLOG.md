@@ -273,3 +273,12 @@ return errors. Added off_sent state, brightness-enable retry and the framework-
 state error control. Explicit supply phandles, supported voltages and exact
 voltage requests prevent dummy supplies or the old community1.8V VCI constraint
 from silently passing. Expanded supply controls from6 to8; all checks pass.
+
+Actions39940988458 at19120b5235ab failed the real panel build: this pinned
+kernel has removed drm_panel_init. Its actual NT36536 driver uses the refcounted
+devm_drm_panel_alloc API. Converted AA569 to that exact allocation/lifetime API;
+did not add a compatibility stub or suppress the compiler error. The downloaded
+failure archive is retained as panel-19120-failure.zip. Added a component-only
+API compilation step before the full kernel to catch future errors sooner.
+The superseded2e79723 build has the same obsolete call and must not be treated
+as a usable result. Rebuild and actual artifact inspection follow.
