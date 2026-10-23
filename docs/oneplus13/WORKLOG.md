@@ -464,3 +464,14 @@ the incomplete calibration directory as failure evidence. No device access.
 Added helper-input hash binding to the private packer; existing artifact's helper
 hash matches. Next isolated work package is the static-mode burst performance
 budget, as scoped in NATIVE-DISPLAY.
+
+### Fixed AA569 command-burst resource budget
+
+Implemented the scoped125/102 ceiling budget on existing plane/prefill votes,
+only when the explicit static SPR path is enabled. Real C arithmetic/check/ICC
+functions pass261 independent integer vectors, five overflow/limit controls,
+new-state bandwidth and OPP rejection with empty old aggregate, two ICC failure
+positions and three baseline performance-mode comparisons. Fixed current-state
+limit checking rather than relying on generic aggregation of the previous state.
+No clock maximum is raised, no TE/timer register is changed, and no phone command
+is executed. ASan/ARM64/actual artifact checks are pending the next Actions run.

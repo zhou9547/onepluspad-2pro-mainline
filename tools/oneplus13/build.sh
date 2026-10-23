@@ -45,6 +45,8 @@ python3 tools/oneplus13/check-spr-profile.py \
   --output "$dest/spr-profile-verification.json" --sanitize
 python3 tools/oneplus13/check-spr-runtime.py --kernel-source "$src" \
   --output "$dest/spr-runtime-verification.json" --sanitize
+python3 tools/oneplus13/check-command-budget.py --kernel-source "$src" \
+  --output "$dest/command-budget-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"

@@ -78,6 +78,22 @@ def verify_artifacts(out):
         if (manifest['command_clock_version'] != 1 or
                 any(clock.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C command-clock verification')
+    if 'command_budget_version' in manifest:
+        budget = json.loads((out / 'command-budget-verification.json').read_text())
+        expected = {'scope': 'HOST_C_DPU_COMMAND_BUDGET_ONLY', 'hardware_tested': False,
+                    'kernel_commit': manifest['kernel_commit'], 'sanitizers': True,
+                    'nominal_refresh_hz': 120, 'stock_budget_us': 6800,
+                    'ceiling_multiplier': [125, 102], 'arithmetic_vectors': 261,
+                    'overflow_peak_opp_zero_limit_rejected': 5,
+                    'fresh_enable_new_state_limits_checked': True,
+                    'baseline_underbudget_rejected': True,
+                    'nonoptin_legacy_modes_unchanged': 3, 'icc_error_positions': 2,
+                    'icc_per_path_average_ceiling': True, 'missing_icc_path_rejected': True,
+                    'te_timing_changed': False, 'hardware_transfer_timer_programmed': False,
+                    'exact_vendor_hal_algorithm': False}
+        if (manifest['command_budget_version'] != 1 or
+                any(budget.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed C DPU command-budget verification')
     if 'panel_component_version' in manifest:
         panel = json.loads((out / 'panel-component-verification.json').read_text())
         expected = {'scope': 'HOST_C_PANEL_COMPONENT_ONLY', 'hardware_tested': False,

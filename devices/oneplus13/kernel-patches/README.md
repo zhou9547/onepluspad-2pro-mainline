@@ -65,3 +65,16 @@ This follows the pinned driver's SM8250 and X1E client pattern; it does not
 change the separate prefetch table (which already contains SM8750). GPL-2.0-only
 pinned arm-smmu-qcom.c licensing remains intact. The native DTB is opt-in only;
 default/touch DTBs keep MDSS disabled. Handoff is not hardware tested.
+
+0006 conservatively budgets the isolated static AA569120Hz path for the stock
+6800us burst instead of the whole frame interval. Existing plane/prefill votes
+are multiplied by125/102 with ceiling rounding. New-state bandwidth and maximum
+OPP are checked before generic old-state aggregation; overflowing requests fail.
+Per-path ICC average rounds up, peak covers the aggregate average, missing paths
+and ICC failures propagate. Non-opt-in results are compared with the original
+three performance modes. The ratio comes from the pinned public AA569 mode and
+vendor dsi_panel.c forwarding semantics, not an exact proprietary HAL formula.
+TE/timer registers are unchanged and actual burst completion remains untested.
+check-command-budget.py executes actual C arithmetic/check/ICC functions with
+261 independently generated integer expectations, five overflow/limit controls,
+fresh-enable negative baseline, two ICC failure positions and legacy controls.

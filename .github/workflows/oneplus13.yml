@@ -73,6 +73,7 @@ jobs:
             out/oneplus13/aa569-dsc.h
             out/oneplus13/display-conversion-verification.json
             out/oneplus13/command-clock-verification.json
+            out/oneplus13/command-budget-verification.json
             out/oneplus13/panel-component-verification.json
             out/oneplus13/dpu-buffer-verification.json
             out/oneplus13/spr-profile-verification.json
