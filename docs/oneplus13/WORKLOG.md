@@ -282,3 +282,44 @@ failure archive is retained as panel-19120-failure.zip. Added a component-only
 API compilation step before the full kernel to catch future errors sooner.
 The superseded2e79723 build has the same obsolete call and must not be treated
 as a usable result. Rebuild and actual artifact inspection follow.
+
+### Verified component build and actual local delivery
+
+Actions39941841474 at2972866edf7d795160759a6ceb06ebcbd9cb8403 passed all19 Python
+checks, real-C DSC/command-clock/panel ASan/UBSan, ARM64 kernel/full modules and
+QEMU init/shutdown. Intermediate39930688258 succeeded;39940988458 failed the
+obsolete panel API;39941420786 was explicitly cancelled after it was superseded.
+The final refcounted allocation uses the pinned kernel's real NT36536 pattern.
+
+Full artifact12496259085 was downloaded:60205125 bytes, SHA256
+ef4229485c863f27080981d461882028c01451c80d539c6f77c7ba4ad7b7db18. Local ZIP CRC,
+25 manifest files, CI checksums, Image/gzip/Android sections, public DSC header,
+all3 relevant modules' AArch64 identity/vermagic and reports pass. Panel module
+is18184 bytes, SHA256c975b95c5deb897cf305e21e7bb91a80c3403468b04b0180c5da4695741819b8.
+Kernelrelease7.2.0-oneplus13-g7a81d184e309-c6c2e0d66c4eb-p0e592c9c3dcb includes
+the actual phone patch hash. BothDTBs matchbadf9e and keepMDSS disabled; noAA569
+node is present. Both underwent fresh stock-positive/all6-overlay/15-bank-memory
+calibration. Unsignedv4/RAM-format diagnostic images were generated and read back
+on the host only.
+
+Node streaming downloads suffered host REPL resets, retaining partial ranges
+on disk. A bounded independent host Python downloader finished only the missing
+suffixes and verified the final GitHub digest. No signed URL or credential was
+saved in a checkpoint. Failed/intermediate logs and archives are retained.
+
+Reuse research found joonhoekim/tb323fu-linux atda44c8412fed with community SPR/
+native422 work. Compared its actual patches and the pinned OnePlus vendor DCE
+function offline; Erhai gives3 initial lines where the native422 vendor helper
+gives4 (RGB control3/3), and10bpc FULL_ICH_PREC handling is absent in the current
+mainline function. These are explicitly pending before any native panel node
+can be enabled. Different panel coefficients/bpp/catalog offsets are not copied.
+
+The user supplied a new slow SSH endpoint and prohibited bulk phone/host file
+transfers. An independent reviewer checked a single build-fingerprint query,
+no root, explicit endpoint, isolated host known-hosts, no config/forwarding/local
+commands, hidden password prompt and45-second host deadline. The one attempt
+returned connection-refused during SSH banner exchange, before authentication.
+No password was submitted, no remote command ran, no file moved and no retry
+was made. Existing stock evidence remains version-scoped; current phone firmware
+is unconfirmed. No device task remains active. Next work is the DPU native422
+differences and then SPR2 ownership/lifecycle, as in STATUS and NATIVE-DISPLAY.

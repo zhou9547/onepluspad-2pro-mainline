@@ -217,8 +217,8 @@ mode_valid rejects a zero/error byte-clock request.
 check-command-clock.py compiles those actual functions and the unchanged
 baseline, including the PHY request. Local Windows checks pass: six baseline
 controls, ten invalid controls, non-byte-aligned ceiling rounding, and the
-existing full PPS check. ARM64/sanitizer Actions is still required before a
-compiled result is claimed. The packet-only full-frame lower bound is6726us
+existing full PPS check. ARM64/sanitizer Actions39941841474 subsequently passed
+the check and complete kernel/modules build. The packet-only frame lower bound is6726us
 (two slices/packet), below the stock6800us budget; PHY transitions, actual PLL
 rounding, DPU fetch/bandwidth scheduling and scan/TE behavior remain unverified.
 This patch is not a6800us DPU scheduler or an enabled panel.
@@ -258,7 +258,7 @@ the independent public fixture; power/reset/waits match the stock plan. Every
 one of149 prepare packet positions is fault-injected, short writes are rejected,
 eight supply/voltage/load/disable controls retain balanced ownership, and all three off
 failure positions plus disable/enable are checked. Nineteen Python tests pass.
-ARM64 module/API and sanitizer checks follow in Actions. None of these checks
+Actions39941841474 also passed the real ARM64 module/API and sanitizer checks. None of these checks
 is a live panel test or a substitute for the missing DPU SPR2 pipeline.
 
 Teardown review against the pinned drm_panel.c found that returning an old DSI
@@ -269,3 +269,51 @@ with ownership retained. Fixed-brightness failures can be retried by enable;
 an off_sent flag still makes subsequent cleanup send display-off as needed.
 Explicit supply phandles and supported voltage ranges are required;1.8V/3.0V
 requests precede regulator enables. No dummy-supply fallback is accepted.
+
+### Additional open-source SPR/DSC reference found during the continuation
+
+The owner's reuse-first instruction led to the public
+[tb323fu-linux tree](https://github.com/joonhoekim/tb323fu-linux/tree/da44c8412fed3baa609a8084a214ae9b5c9f4311),
+pin da44c8412fed3baa609a8084a214ae9b5c9f4311. Its patch0008 provides real
+native422/SPR work for a different DPU13/SM8850 board, with attribution in its
+PROVENANCE.md to kaanapali-mainline and EYC. This is a useful implementation
+reference, not proof that the OnePlus13/SM8750 pipeline works.
+
+Reusable areas to evaluate next are DSPP reservation independent of CTM/gamma,
+SPR sub-block flush masks, initial DSC container/line latency, PPB FIFO sizing,
+and extended-DSC-wrapper merge state. Important differences prevent a direct
+cherry-pick:
+
+- That tree uses globally doubled native422 bpp. This project deliberately
+  retains physical-pixel bpp in MSM/DPU and doubles only the appropriate RC/PPS
+  view; copying its no-double DPU hunk would break our convention.
+- Its SPR setup uses another panel's static calibration, CPU register writes
+  and a different relative offset. AA569 needs its own privately checked cfg3,
+  OPR/PBA contents and the SM8750 per-DSPP offsets already recorded above.
+- Its simple native422-implies-SPR predicate is a board assumption, not a
+  general DRM format guarantee. Panel requirement, resource ownership and
+  atomic/runtime-PM timing need an explicit reviewed contract here.
+- Its pre-7.3 rebases and DSC packing flag are not the pinned7.2 API.
+- Neither its physical tests nor a CPU-write implementation validates our
+  REGDMA/UDC takeover or the phone's actual6800us bandwidth window.
+
+The pinned Erhai kernel already has a DSC1.2 initial-line helper; its encoder
+does not contain this reference's setup_ppb_fifo_size calls. Compare the whole
+platform implementation before importing replacements. Preserve its
+working RGB/Pad paths and the full byte-exact AA569 RC/PPS controls. No code or
+foreign calibration from this reference has been enabled in the current build.
+
+An additional host C comparison compiled the unmodified OnePlus
+_dce_dsc_initial_line_calc and the pinned Erhai1.2 helper for the actual
+AA569720x22/8physical-bpp/split+multiplex/one-slice-per-encoder setup. The
+current mainline helper produces3 initial lines; the vendor helper produces4.
+With native422 cleared as a geometry control, both produce3. Native422's
+half-width container, four-component output-buffer width and doubled group
+rate explain the difference. This is an offline source comparison, not a
+measurement of the phone's registers. Also, the public vendor catalog enables
+FULL_ICH_PREC on DPU>=10 and its DSC driver sets ENC_DF_CTRL bit12 for10bpc;
+the pinned mainline function lacks that handling. These issues must be
+resolved alongside SPR before connecting the panel; the current compiled
+component-only delivery deliberately does not enable a native display path.
+Primary vendor files at d50b305f are msm/sde/sde_encoder_dce.c,
+msm/sde/sde_hw_dsc_1_2.c and msm/sde/sde_hw_catalog.c in display-drivers.

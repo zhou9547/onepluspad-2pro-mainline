@@ -27,3 +27,12 @@ Signed-off-by or Tested-by. Compilation is only OFFLINE_BUILD_ONLY.
 
 Before changing code read docs/oneplus13/STATUS.md and TECHNICAL-DEBT.md.
 Update status, evidence and the next step before handing off.
+
+Owner instruction, 2026-10-23: before writing a workaround, first inspect the
+original Pad project and public/community/vendor solutions. Reuse appropriate
+implementations after checking SoC generation, panel identity, bpp conventions,
+kernel APIs and license/provenance; do not copy another board's calibration.
+The owner later provided a slow SSH access method. The existing read-only
+device restriction remains in force. Limit any necessary queries to small,
+bounded text output and avoid phone-to-host/host-to-phone file transfers.
+Keep the endpoint and credentials out of Git and public artifacts.
