@@ -189,6 +189,19 @@ def verify_artifacts(out):
                 manifest.get('spr_runtime_version') != 1 or
                 any(native.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed native DTB verification')
+    if 'wlan_wiring_version' in manifest:
+        wlan = json.loads((out / 'wlan-dtb-verification.json').read_text())
+        expected = {'scope': 'COMPILED_WLAN_WIRING_ONLY', 'hardware_tested': False,
+                    'dtb_sha256': sha256(out / 'sm8750-oneplus-dodge-wlan.dtb'),
+                    'phone_six_rail_constraints': True, 'enable_pmic_gpio_and_pcie0_checked': True,
+                    'pmu_output_graph_checked': True, 'display_touch_bluetooth_absent': True,
+                    'wlan_pin16_16ma_pullup': True, 'firmware_board_revision_sar_verified': False,
+                    'phy_rails_and_rf_clock_reference_only': True,
+                    'contains_owner_address_or_calibration': False,
+                    'negative_controls_rejected': 6, 'rf_stack_modular': True}
+        if (manifest['wlan_wiring_version'] != 1 or
+                any(wlan.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed WLAN wiring verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':
@@ -215,7 +228,11 @@ def verify_artifacts(out):
         config = (out / 'kernel.config').read_text().splitlines()
         for setting, filename in [('CONFIG_TOUCHSCREEN_DODGE_S3910=m', 'dodge-s3910.ko'),
                                    ('CONFIG_DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL=m', 'panel-oneplus-aa569.ko'),
-                                   ('CONFIG_DRM_MSM=m', 'msm.ko')]:
+                                   ('CONFIG_DRM_MSM=m', 'msm.ko'),
+                                   ('CONFIG_ATH12K=m', 'ath12k.ko'),
+                                   ('CONFIG_ATH12K=m', 'ath12k_wifi7.ko'),
+                                   ('CONFIG_PCI_PWRCTRL_PWRSEQ=m', 'pci-pwrctrl-pwrseq.ko'),
+                                   ('CONFIG_POWER_SEQUENCING_QCOM_WCN=m', 'pwrseq-qcom-wcn.ko')]:
             if setting in config and not any(Path(name).name in
                     {filename, filename + '.xz', filename + '.zst', filename + '.gz'} for name in names):
                 raise ValueError('Configured candidate module is missing: ' + filename)

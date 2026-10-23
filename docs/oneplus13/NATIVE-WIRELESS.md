@@ -59,3 +59,20 @@ Acceptance is actual PCIe/MHI/firmware-board logs, valid scan/association/DHCP/D
 2.4/5GHz80MHz traffic, reconnect and stable owner address. Compilation alone is
 not Wi-Fi support. Bluetooth needs a separate UART/firmware/address and real
 peripheral/reconnect test. No radio operation is authorized in this read-only phase.
+
+## Compiled candidate scope
+
+sm8750-oneplus-dodge-wlan.dts is independent of native display/touch. PMU graph
+retains the pinned Erwin BSD-3-Clause attribution. It uses phone consumer minimums,
+30mA IO system-load/HPM (debtD11), WLAN16 at16mA/pull-up, stock2mA PCIe pins and
+F/SID5 BT-enable3 power-source1. Unlike the active stock pin state, pinctrl does
+not assert output-high: the upstream sequencer owns output level. Its inherited
+GPIOD_ASIS behavior preserves the boot value; no assumption that RF is off follows.
+ATH12K, PCI power sequencing and the WCN sequencer are modules. No new initramfs
+loader or WLAN firmware is included. The original diagnostics do not auto-load
+these modules. PCIe host/PHY still probe early in this standalone DTB.
+
+CI checks six exact rail min/max constraints, GPIO polarity/SID, pin drive/bias,
+PMU graph, RF_CLK1 graph, IOMMU map and isolation from other candidates, with six
+bad-input controls. Reference PHY/RF clock choices remain explicitly unproven.
+Successful compilation must not be reported as link, firmware or radio support.

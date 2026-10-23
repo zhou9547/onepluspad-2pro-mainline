@@ -498,3 +498,14 @@ non-root metadata query matches Android build but all three vendor paths are
 unavailable; no inference of missing firmware and no retry. No binary transfer
 or phone modification. Matching OTA catalog found; official links return2306.
 Next independent work scope and acceptance are in NATIVE-WIRELESS.md.
+
+### Independent WLAN wiring candidate
+
+Added phone-only WCN7860 tree and source/config gates. Stock pin review found
+WLAN16 uses16mA/pull-up rather than the Pad8mA/pull-down; PCIe102/103/104 use2mA,
+and F/SID5 BT-enable3 uses power-source1. Six phone consumer voltage constraints
+and IO30mA/HPM are isolated to this tree. ATH12K/WCN/pwrctrl become modules;
+USB/init/recovery and the older DTBs remain unchanged. No WLAN firmware, BDF,
+address, SAR limit or auto-loader is fabricated. Source review is in
+NATIVE-WIRELESS, fixed-load/reference-PHY debt is D11. CI compilation and actual
+artifact inspection are required next. No further phone query or retry.

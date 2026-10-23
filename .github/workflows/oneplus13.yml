@@ -79,6 +79,7 @@ jobs:
             out/oneplus13/spr-profile-verification.json
             out/oneplus13/spr-runtime-verification.json
             out/oneplus13/native-dtb-verification.json
+            out/oneplus13/wlan-dtb-verification.json
           if-no-files-found: ignore
           retention-days: 14
       - name: Install QEMU inspection tools
