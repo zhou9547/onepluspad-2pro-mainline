@@ -12,7 +12,7 @@ CONDITION = ('ConditionKernelCommandLine=oneplus13.desktop=1\n'
              'ConditionPathExists=/run/oneplus13/ram-session\n')
 
 
-def install(root, kernel=None):
+def install(root, kernel=None, firmware=None):
     if not root.is_relative_to((REPO/'out').resolve()) or not (root/'etc/os-release').is_file():
         raise ValueError('Expected a fresh phone rootfs staging tree under repository out/')
 
@@ -26,7 +26,13 @@ def install(root, kernel=None):
         write('usr/lib/systemd/system/'+name, '[Unit]\n'+CONDITION+body)
         link = root/('etc/systemd/system/'+target+'.wants/'+name)
         link.parent.mkdir(parents=True, exist_ok=True)
-        link.symlink_to('/usr/lib/systemd/system/'+name)
+        target = '/usr/lib/systemd/system/'+name
+        if link.is_symlink() and str(link.readlink()) == target:
+            pass  # Refreshing only this package's files in a verified base.
+        elif link.exists() or link.is_symlink():
+            raise ValueError('Unexpected preexisting unit link')
+        else:
+            link.symlink_to(target)
 
     for name in ['runtime-guard', 'runtime-usb', 'runtime-evidence', 'runtime-serial']:
         write('usr/libexec/oneplus13-'+name,
@@ -47,6 +53,22 @@ def install(root, kernel=None):
                     raise ValueError('Unexpected module member')
             source.extractall(root, filter='data')
         write('usr/lib/oneplus13-desktop/kernel-release', manifest['kernel_release']+'\n')
+    if firmware:
+        from firmware import verify
+        pin = verify(firmware)
+        files = {}
+        for item in pin['files']:
+            if item['partition'] != 'vendor':
+                continue
+            name = Path(item['output']).name
+            path = ('qcom/sm8750/oneplus/dodge/'+name if name.endswith('_zap.mbn') else 'qcom/'+name)
+            dest = root/'usr/lib/firmware'/path
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes((firmware/item['output']).read_bytes())
+            dest.chmod(0o644)
+            files[path] = {'bytes': item['size'], 'sha256': item['sha256']}
+        write('usr/lib/oneplus13-desktop/graphics-firmware.json',
+              json.dumps({'hardware_tested': False, 'version': pin['version'], 'files': files}, indent=2)+'\n')
     write('etc/NetworkManager/conf.d/80-oneplus13-ram-usb.conf',
           '[keyfile]\nunmanaged-devices=mac:02:13:00:00:00:01\n')
     write('usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules',
@@ -91,5 +113,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('root', type=Path)
     p.add_argument('--kernel', type=Path)
+    p.add_argument('--firmware', type=Path)
     a = p.parse_args()
-    install(a.root.resolve(), a.kernel.resolve() if a.kernel else None)
+    install(a.root.resolve(), a.kernel.resolve() if a.kernel else None,
+            a.firmware.resolve() if a.firmware else None)

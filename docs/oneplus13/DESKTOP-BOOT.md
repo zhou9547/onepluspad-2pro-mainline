@@ -31,3 +31,17 @@ tests are still required before combining hardware. Matching generic OTA files
 are inputs, not firmware authentication/SAR or working radio evidence. A future
 phone test requires the owner's later hands-on recovery window; current access
 is read-only and this work performs no phone command.
+
+Implementation review: use blockdev's BLKROSET ioctl for new physical devices;
+the block ro sysfs attribute is read-only. The package's udev rule invokes the
+short blockdev command only on add, and a separate early service continuously
+checks protection. It suppresses desktop automount presentation only during an
+explicit RAM session. The inherited diagnostics retain their existing guard.
+
+Keep a verified GNOME artifact before running the handoff experiment so later
+fixes do not repeat the apt/base build. A refresh must first verify the complete
+base manifest/SHA256 and ARM64 executables, extract into a fresh Actions staging
+tree, replace only this phone package's support files, recheck units/udev, and
+repack with provenance linking the base image hash. Include exactly matching
+modules and the four verified graphics firmware files. Do not install pending
+WLAN inputs into any firmware search path before board selection is known.

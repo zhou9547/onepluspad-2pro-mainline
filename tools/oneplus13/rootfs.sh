@@ -83,12 +83,16 @@ desktop_args=("$root")
 if [[ -n ${ONEPLUS13_KERNEL_ARTIFACT:-} ]]; then
   desktop_args+=(--kernel "$ONEPLUS13_KERNEL_ARTIFACT")
 fi
+if [[ -n ${ONEPLUS13_STOCK_FIRMWARE:-} ]]; then
+  desktop_args+=(--firmware "$ONEPLUS13_STOCK_FIRMWARE")
+fi
 python3 tools/oneplus13/install-desktop.py "${desktop_args[@]}"
 chroot "$root" /usr/bin/systemd-analyze verify \
   oneplus13-ram-guard.service oneplus13-ram-deadline.timer \
   oneplus13-ram-evidence.service oneplus13-ram-usb.service \
   oneplus13-ram-dhcp.service oneplus13-ram-http.service \
   oneplus13-ram-shell.service oneplus13-ram-serial.service
+chroot "$root" /usr/bin/udevadm verify /usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules
 chroot "$root" dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' > "$dest/packages.tsv"
 chroot "$root" /usr/bin/gnome-shell --version > "$dest/gnome-version.txt"
 chroot "$root" /usr/bin/env bash -n /etc/profile
