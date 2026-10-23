@@ -1,0 +1,36 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# Install a test observer only after the emulator's DT identity has been checked.
+set -eu
+tr '\000' '\n' < /sys/firmware/devicetree/base/compatible | grep -qx linux,dummy-virt
+[ "${1:-}" = /newroot ]
+cat > /newroot/run/oneplus13/qemu-check <<'EOF'
+#!/bin/sh
+set -eu
+trap 'echo ONEPLUS13_QEMU_OBSERVER_EXIT; sleep 2; /usr/bin/busybox poweroff -f -n' EXIT
+echo ONEPLUS13_QEMU_SYSTEMD_CHECK_STARTED
+[ "$(cat /proc/1/comm)" = systemd ]
+[ "$(findmnt -n -o FSTYPE /)" = overlay ]
+[ "$(blockdev --getro /dev/vda)" = 1 ]
+[ "$(cat /usr/lib/oneplus13-desktop/kernel-release)" = "$(uname -r)" ]
+systemctl is-active oneplus13-ram-guard.service oneplus13-ram-deadline.timer NetworkManager.service dbus.service
+test -f /run/evidence/systemd-alive.txt
+awk -F: '$1 == "root" {if ($2 !~ /^[!*]/) exit 1; found=1} END {if (!found) exit 1}' /etc/shadow
+/usr/bin/gnome-shell --version
+systemctl show gdm3.service -p ActiveState -p SubState
+echo ONEPLUS13_DESKTOP_HANDOFF_OK
+EOF
+chmod 755 /newroot/run/oneplus13/qemu-check
+mkdir -p /newroot/run/systemd/system/multi-user.target.wants
+cat > /newroot/run/systemd/system/oneplus13-qemu-check.service <<'EOF'
+[Unit]
+Description=Observe the actual GNOME rootfs handoff in QEMU only
+Wants=NetworkManager.service dbus.service oneplus13-ram-evidence.service
+After=NetworkManager.service dbus.service oneplus13-ram-evidence.service
+[Service]
+Type=oneshot
+ExecStart=/run/oneplus13/qemu-check
+StandardOutput=journal+console
+StandardError=journal+console
+EOF
+ln -s ../oneplus13-qemu-check.service /newroot/run/systemd/system/multi-user.target.wants/oneplus13-qemu-check.service

@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-only
+"""Derive a separate desktop initramfs; preserve the diagnostic build untouched."""
+import argparse
+import gzip
+import hashlib
+import json
+from pathlib import Path
+import stat
+import subprocess
+from common import make_cpio, read_cpio, sha256
+
+REPO = Path(__file__).resolve().parents[2]
+PIN = 'c2e659aaa062647a206c67edcc421f0fa9931f7a'
+
+
+def derive(original):
+    entries = read_cpio(gzip.decompress(original))
+    before = entries['init']['data']
+    if before != (REPO/'devices/oneplus13/init').read_bytes().replace(b'\r\n', b'\n'):
+        raise ValueError('Expected the unchanged pinned diagnostic init')
+    text = before.decode()
+
+    def replace(old, new):
+        nonlocal text
+        if text.count(old) != 1:
+            raise ValueError('Unexpected diagnostic anchor: '+old[:40])
+        text = text.replace(old, new)
+
+    replace("(\n  sleep 300\n  echo 'RAM diagnostic deadline reached; rebooting to the installed OS'\n  reboot -f\n) &",
+            "( timer_pid=\n  trap 'kill \"$timer_pid\" 2>/dev/null; wait \"$timer_pid\" 2>/dev/null; exit 0' TERM\n"
+            "  sleep 900 &\n  timer_pid=$!\n  wait \"$timer_pid\"\n  reboot -f -n\n) &\nwatchdog_pid=$!")
+    replace(') &\nuname -a', ') &\nstorage_pid=$!\nuname -a')
+    replace('# Composite USB NCM',
+            '. /bin/oneplus13-ram-launch\n'
+            'case " $(cat /proc/cmdline) " in\n'
+            "  *' oneplus13.desktop.qemu=1 '*) desktop_main ;;\n"
+            'esac\n# Composite USB NCM')
+    replace('  udhcpd /run/udhcpd.conf', '  setsid udhcpd -f /run/udhcpd.conf &\n  dhcp_pid=$!')
+    replace('  httpd -p 8080 -h /run/evidence',
+            '  setsid httpd -f -p 172.16.13.1:8080 -h /run/evidence &\n  http_pid=$!')
+    replace('  telnetd -b 172.16.13.1:23 -l /bin/sh',
+            '  setsid telnetd -F -b 172.16.13.1:23 -l /bin/sh &\n  telnet_pid=$!')
+    # The runtime serial service takes over after handoff. Do not leave an
+    # initramfs session leader or its child shell using the deleted old root.
+    replace('  (while :; do setsid cttyhack sh < /dev/ttyGS0 > /dev/ttyGS0 2>&1; sleep 1; done) &\n', '')
+    replace('while :; do\n  dmesg',
+            'case " $(cat /proc/cmdline) " in\n'
+            "  *' oneplus13.desktop=1 '*) [ -n \"$udc\" ] && desktop_main ;;\n"
+            'esac\nwhile :; do\n  dmesg')
+    entries['init']['data'] = text.encode()
+    for source, target in [('prepare', 'ram-prepare'), ('launch', 'ram-launch'),
+                           ('physical-platform', 'physical-platform'), ('qemu-install', 'qemu-install')]:
+        name = 'bin/oneplus13-'+target
+        if name in entries:
+            raise ValueError('Desktop helper already exists')
+        entries[name] = {'mode': stat.S_IFREG|0o755, 'major': 0, 'minor': 0,
+                         'data': (REPO/'devices/oneplus13/desktop'/source).read_bytes().replace(b'\r\n', b'\n')}
+    packed = gzip.compress(make_cpio([(n, p['mode'], p['data'], p['major'], p['minor'])
+                                     for n, p in sorted(entries.items())]), mtime=0)
+    check = read_cpio(gzip.decompress(packed))
+    original_entries = read_cpio(gzip.decompress(original))
+    if any(check[n] != v for n, v in original_entries.items() if n != 'init'):
+        raise ValueError('Desktop derivation changed an unrelated diagnostic entry')
+    return packed, {'original_entries_preserved_except_explicit_init': len(original_entries)-1,
+                    'original_init_sha256': hashlib.sha256(before).hexdigest(),
+                    'desktop_init_sha256': hashlib.sha256(check['init']['data']).hexdigest()}
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--kernel', required=True, type=Path)
+    p.add_argument('--rootfs', required=True, type=Path)
+    p.add_argument('--output', required=True, type=Path)
+    p.add_argument('--qemu', action='store_true')
+    a = p.parse_args()
+    kernel, rootfs, out = a.kernel.resolve(), a.rootfs.resolve(), a.output.resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    manifest = json.loads((kernel/'manifest.json').read_text())
+    if manifest['integration_commit'] != PIN or manifest['hardware_tested'] is not False:
+        raise ValueError('Wrong pinned kernel integration')
+    for name in ['Image', 'initramfs.cpio.gz']:
+        if sha256(kernel/name) != manifest['files'][name]['sha256']:
+            raise ValueError('Kernel input hash mismatch: '+name)
+    packed, report = derive((kernel/'initramfs.cpio.gz').read_bytes())
+    ramdisk = out/'initramfs-desktop.cpio.gz'
+    ramdisk.write_bytes(packed)
+    cmdline = ('rdinit=/init panic=15 oneplus13.desktop=1 oneplus13.rootfs.sha256='+sha256(rootfs)+
+               ' oneplus13.rootfs.bytes='+str(rootfs.stat().st_size))
+    (out/'desktop-cmdline.txt').write_text(cmdline+'\n')
+    report.update(scope='RAM_DESKTOP_INITRAMFS_NOT_DEVICE_TESTED', hardware_tested=False,
+                  kernel_integration_commit=PIN, kernel_release=manifest['kernel_release'],
+                  integration_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+                  rootfs_sha256=sha256(rootfs), rootfs_bytes=rootfs.stat().st_size,
+                  initramfs_sha256=sha256(ramdisk), absolute_boot_deadline_seconds=900,
+                  default_diagnostic_artifact_modified=False, qemu_handoff_verified=False)
+    if a.qemu:
+        command = ['qemu-system-aarch64', '-machine', 'virt', '-cpu', 'cortex-a76',
+                   '-m', '6144', '-smp', '2', '-nographic', '-no-reboot', '-nic', 'none',
+                   '-kernel', str(kernel/'Image'), '-initrd', str(ramdisk),
+                   '-drive', 'file='+str(rootfs)+',format=raw,if=none,readonly=on,id=rootfs',
+                   '-device', 'virtio-blk-device,drive=rootfs',
+                   '-append', 'console=ttyAMA0 '+cmdline+' oneplus13.desktop.qemu=1']
+        proc = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                              text=True, timeout=300)
+        (out/'qemu-desktop.log').write_text(proc.stdout)
+        if proc.returncode or 'ONEPLUS13_DESKTOP_HANDOFF_OK' not in proc.stdout:
+            print(proc.stdout[-12000:])
+            raise SystemExit('Actual GNOME rootfs QEMU handoff failed')
+        report['qemu_handoff_verified'] = True
+        report['qemu_scope'] = 'systemd, actual GNOME userspace binary, storage guard, NetworkManager and D-Bus; no display/input/radio emulation'
+    (out/'manifest.json').write_text(json.dumps(report, indent=2)+'\n')
+    (out/'SHA256SUMS').write_text(''.join(f'{sha256(f)}  {f.name}\n' for f in sorted(out.iterdir())
+                                        if f.is_file() and f.name != 'SHA256SUMS'))
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == '__main__':
+    main()

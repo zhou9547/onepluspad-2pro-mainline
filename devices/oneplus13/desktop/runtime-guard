@@ -1,0 +1,22 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+set -eu
+protect() {
+    for disk in /sys/class/block/*; do
+        [ -e "$disk" ] || continue
+        name=${disk##*/}
+        case "$name" in loop*|ram*|zram*) continue ;; esac
+        [ -b "/dev/$name" ] || continue
+        blockdev --setro "/dev/$name" || return 1
+        [ "$(blockdev --getro "/dev/$name")" = 1 ] || return 1
+    done
+}
+if [ "${1:-}" = --once ]; then protect; exit; fi
+while :; do
+    if ! protect; then
+        echo 'ONEPLUS13_STORAGE_GUARD_FAILED' > /dev/kmsg
+        /usr/bin/busybox reboot -f -n
+        exit 1
+    fi
+    sleep 1
+done
