@@ -135,13 +135,14 @@ geometry/format, its computed complete128-byte PPS matches the original AA569
 packet. The unmodified DSI baseline fails this same packet comparison; its RGB
 path remains byte-identical after the patch. Four malformed native422 profiles
 are rejected. This provides more evidence than copying precomputed PPS fields,
-but still does not exercise hardware. A new Actions build validates the patch
-in the real ARM64 msm module; diagnostic DTBs still leave MDSS disabled.
+but still does not exercise hardware. Actions39910147687 validates the patch in the real ARM64 msm module; the
+actual downloaded artifact and C ASan/UBSan report also passed. Diagnostic
+DTBs still leave MDSS disabled.
 
 ## Remaining integration work
 
-1. Complete ARM64 verification of the native422 DSI patch, then ensure the panel
-   passes physical-pixel bpp and sends the exact vendor PPS bytes.
+1. Handle command transfer timing/lane rate explicitly and ensure the panel sends the exact
+   vendor PPS bytes with physical-pixel bpp in its shared configuration.
 2. Add phone-specific SPR2 capability offsets and reserve DSPPs for SPR even
    without a user CTM/gamma LUT. The current CRTC requests DSPPs only for those
    user colour properties; setting SPR registers alone would miss ownership.
@@ -171,3 +172,10 @@ callback overrides the generic fallback; inspect that active implementation
 before selecting a mainline brightness helper. Vendor command flag0x40 is
 passed to msg.flags by dsi_panel.c; a native sender must account for its batch
 transport semantics separately from the preserved panel payload bytes.
+
+The stock command-mode transfer is6800 us at1363200000 bit/s/lane. The current
+DSI host has no hs_rate handling. Using the stock porches as a naive120 Hz DRM
+mode (htotal1562, vtotal3200, RGB101010, four D-PHY lanes) in its existing DSC
+clock formula produces1457280000 bit/s/lane instead. CMD porches represent
+transport overhead in that formula, as the host's own comment explains. Do not
+claim physical transfer timing is solved by the now-matching DSC PPS.

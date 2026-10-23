@@ -60,3 +60,10 @@ The native panel remains separate work; only after its power lifecycle works
 can the follower path and repeated display cycles be hardware accepted.
 
 No hardware experiment is authorized in the current read-only session.
+
+Latest compiled integration is badf9ea99bec / Actions39910147687. The touch
+implementation and DTB bytes are unchanged from d337; modules were rebuilt for
+the unique kernel release ending p52f0efb312f3. Downloaded dodge-s3910.ko is
+ELF64/AArch64,115952 bytes, SHA256
+312dd5accaf11399acaf9af1b5732a505a04da67c295b2ab8b3cd874676a31bb.
+Use it only with its matching module tree/kernel. This is still an offline check.

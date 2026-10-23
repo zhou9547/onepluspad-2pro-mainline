@@ -206,3 +206,27 @@ helpers from minimal panel geometry: all128 PPS bytes match. The original
 DSI baseline fails the same native422 control, its RGB packet stays identical,
 and four malformed native422 inputs return EINVAL. Full ARM64 Actions is next.
 No panel or SPR/UDC lifecycle is enabled; the phone was not accessed this turn.
+
+### Verified native422 build
+
+Actions39910147687, integration badf9ea99becb61b5e3b25fa9e6f5be2abd3c913, passed
+all17 tests, real-C DSI/DRM ASan/UBSan controls, ARM64 msm/touch modules and QEMU.
+Full artifact12482367366 (60188703 bytes) was actually downloaded with resumable
+ranges and SHA2565dc070b4c0df13b544550cc2e69cf1b8575ef81fcb7be01a7d1239c660b27c59.
+ZIP CRC/all23 manifest files, exact boot sections, matching ARM64 module release
+and C reports pass locally. Both DTBs match d337 bytes; fresh owner-specific
+libufdt controls, all6 overlays and15-bank protected-memory checks pass again.
+Kernelrelease7.2.0-oneplus13-g7a81d184e309-c8c417595c712-p52f0efb312f3 now carries
+the real phone patch digest. A new unsigned v4 triplet/RAM candidate was packed
+and independently read back on the host. No device command was issued this turn.
+
+The intermediate7dcfe7 build39908683996 also passed. Its small report was checked;
+two whole-download strategies timed out before final archive validation and
+were superseded, not represented as verified full downloads. The final badf9e
+artifact used persistent range checkpoints and downloaded/verified completely.
+Windows MinGW needed -mno-ms-bitfields to retain Linux packed PPS ABI; the
+real128-byte kernel assertion stays enabled, and Linux ARM64 sanitizer CI passes.
+
+Remaining: command-mode transfer/lane-rate handling, DSPP ownership/SPR/UDC
+lifecycle, AA569 panel/brightness integration and actual physical acceptance.
+Current minimal diagnostic DTBs do not enable MDSS. No working-display claim.
