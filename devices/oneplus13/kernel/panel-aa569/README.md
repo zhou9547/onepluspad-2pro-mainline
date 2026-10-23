@@ -17,6 +17,9 @@ Prepare follows the phone's custom supply/reset sequence and LP command state.
 The final display-on packet is deferred to enable. Disable sends display-off;
 unprepare sends sleep-in and then the ordered rail teardown. Failed regulator
 disable retains its enable ownership and blocks a second power-on until cleanup.
+The final rail result controls unprepare's return value, so an earlier logged
+DSI error cannot leave DRM's prepared state stale after successful power-off.
+Supply phandles are mandatory and exact voltages are requested before enables.
 
 The component uses fixed DBV1433 (`51 05 99`) in HS mode. This matches the active
 Oplus callback's inverted-DBV byte order without exposing unimplemented PWM,

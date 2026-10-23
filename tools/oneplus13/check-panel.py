@@ -66,8 +66,8 @@ struct gpio_desc {int id,value;};
 struct mutex {int held;};
 static void mutex_lock(struct mutex *m) {if(m->held)abort();m->held=1;}
 static void mutex_unlock(struct mutex *m) {if(!m->held)abort();m->held=0;}
-static int verbose,op,fail_op,tx,fail_tx,short_tx,fail_disable_id;
-#define dev_warn(dev,...) do {(void)(dev);} while(0)
+static int verbose,op,fail_op,tx,fail_tx,short_tx,fail_disable_id,warnings;
+#define dev_warn(dev,...) do {(void)(dev);warnings++;} while(0)
 #define dev_err(dev,...) do {(void)(dev);} while(0)
 static void msleep(unsigned int ms) {if(verbose)printf("W %u\n",ms);}
 static int regulator_set_load(struct regulator *r,int load) {
@@ -80,6 +80,11 @@ static int regulator_enable(struct regulator *r) {
  if(++op==fail_op)return -EIO;
  if(r->on)abort();
  r->on=1;return 0;
+}
+static int regulator_set_voltage(struct regulator *r,int low,int high) {
+ if(verbose)printf("V %d %d\n",r->id,low);
+ if(low!=high)abort();
+ return ++op==fail_op?-EIO:0;
 }
 static int regulator_disable(struct regulator *r) {
  if(verbose)printf("D %d\n",r->id);
@@ -110,7 +115,7 @@ static void fresh(struct aa569 *c) {
  memset(c,0,sizeof(*c));io.on=ci.on=io.load=ci.load=0;rst.value=1;dr.value=0;
  c->dsc=aa569_dsc;
  dsi.mode_flags=0x10;c->dsi=&dsi;c->vddio=&io;c->vci=&ci;c->reset=&rst;c->vddr=&dr;
- op=tx=fail_op=fail_tx=short_tx=fail_disable_id=0;
+ op=tx=fail_op=fail_tx=short_tx=fail_disable_id=warnings=0;
 }
 static bool off(const struct aa569 *c) {
  return !c->vci_on&&!c->vddr_on&&!c->vddio_on&&!io.on&&!ci.on&&!dr.value&&rst.value==1;
@@ -132,12 +137,14 @@ int main(void) {
  for(int i=150;i<=151;i++) {
    fresh(&c);CHECK(!aa569_prepare(&c.panel));fail_tx=i;
    CHECK(aa569_enable(&c.panel)==-EIO);
+   /* A later enable must retry the failed starting brightness. */
+   CHECK(!aa569_enable(&c.panel)&&c.enabled);
    CHECK(!aa569_unprepare(&c.panel)&&off(&c)&&!c.prepared);
  }
  fresh(&c);short_tx=75;
  CHECK(aa569_prepare(&c.panel)==-EIO&&tx==75&&off(&c)&&dsi.mode_flags==0x10);
  /* Each load/enable failure before reset restores balanced supply ownership. */
- for(int i=1;i<=4;i++) {
+ for(int i=1;i<=6;i++) {
    fresh(&c);fail_op=i;
    CHECK(aa569_prepare(&c.panel)==-EIO&&off(&c)&&!c.prepared);
  }
@@ -157,7 +164,7 @@ int main(void) {
  for(int i=152;i<=154;i++) {
    fresh(&c);CHECK(!aa569_prepare(&c.panel));CHECK(!aa569_enable(&c.panel));
    fail_tx=i;int first=aa569_disable(&c.panel);int last=aa569_unprepare(&c.panel);
-   CHECK((first==-EIO||last==-EIO)&&off(&c)&&!c.prepared);
+   CHECK(!first&&!last&&warnings>0&&off(&c)&&!c.prepared&&!c.enabled);
    CHECK(!aa569_unprepare(&c.panel)&&off(&c));
  }
  puts("OK real AA569 callbacks and fault recovery; no hardware I/O");return 0;
@@ -179,9 +186,9 @@ int main(void) {
     expected += [('0','510599')]+[('0',v['payload']) for v in fixture['off_packets']]
     if [(x[1],x[2]) for x in packets] != expected:
         raise ValueError('Actual C sender differs from public packet payload/order/LP-HS')
-    power = [line for line in output if line[0] in 'WLEDG']
-    expected_power = ['W 1','L 1 220000','E 1','W 3','G 4 1','W 3',
-                      'L 2 10000','E 2','W 10','G 3 0','W 10','G 3 1','W 5','G 3 0','W 30',
+    power = [line for line in output if line[0] in 'WLEDGV']
+    expected_power = ['W 1','L 1 220000','V 1 1800000','E 1','W 3','G 4 1','W 3',
+                      'L 2 10000','V 2 3000000','E 2','W 10','G 3 0','W 10','G 3 1','W 5','G 3 0','W 30',
                       'W 120','W 20','W 120','G 3 1','W 1','D 2','L 2 300','W 3',
                       'G 4 0','W 3','D 1','L 1 8000','W 1']
     if power != expected_power or not output[-1].startswith('OK '):
@@ -193,8 +200,9 @@ int main(void) {
               'public_off_packets_match': 3, 'fixed_brightness_dbv': 1433,
               'on_lp_off_and_brightness_hs': True, 'power_reset_delays_match': True,
               'init_failure_positions_checked': 149, 'short_transfer_rejected': True,
-              'supply_failure_controls': 6, 'disable_enable_cycle_checked': True,
+              'supply_failure_controls': 8, 'disable_enable_cycle_checked': True,
               'off_command_failure_positions_checked': 3,
+              'off_command_errors_do_not_wedge_framework_state': True,
               'enabled_in_any_dtb': False, 'spr2_pipeline_implemented': False}
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(result, indent=2)+'\n', encoding='utf-8')

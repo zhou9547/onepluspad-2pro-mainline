@@ -256,7 +256,16 @@ check-panel.py compiles the real component's power/command/lifecycle callbacks
 with host-only mocked I/O. The emitted150 on/3 off packets and LP/HS flags match
 the independent public fixture; power/reset/waits match the stock plan. Every
 one of149 prepare packet positions is fault-injected, short writes are rejected,
-six supply/load/disable controls retain balanced ownership, and all three off
+eight supply/voltage/load/disable controls retain balanced ownership, and all three off
 failure positions plus disable/enable are checked. Nineteen Python tests pass.
 ARM64 module/API and sanitizer checks follow in Actions. None of these checks
 is a live panel test or a substitute for the missing DPU SPR2 pipeline.
+
+Teardown review against the pinned drm_panel.c found that returning an old DSI
+error after successful power-off would leave the core's prepared flag set.
+The component therefore logs failed off commands, retries them at unprepare,
+and returns the final rail-teardown result. Failed rail disables remain errors
+with ownership retained. Fixed-brightness failures can be retried by enable;
+an off_sent flag still makes subsequent cleanup send display-off as needed.
+Explicit supply phandles and supported voltage ranges are required;1.8V/3.0V
+requests precede regulator enables. No dummy-supply fallback is accepted.

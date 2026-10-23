@@ -265,3 +265,11 @@ of driver warnings or hardware result was introduced. All149 init failure
 positions,3 off failures,6 supply controls and short-write recovery pass.
 The owner reports that the phone is currently unreachable and will provide a
 future access method; continue offline only. No ADB command was attempted.
+
+Follow-up review found the DRM core keeps prepared/enabled state after a failed
+callback. Fixed teardown to report successful physical rail shutdown after
+logging old DSI errors, while failed rail disables still retain ownership and
+return errors. Added off_sent state, brightness-enable retry and the framework-
+state error control. Explicit supply phandles, supported voltages and exact
+voltage requests prevent dummy supplies or the old community1.8V VCI constraint
+from silently passing. Expanded supply controls from6 to8; all checks pass.

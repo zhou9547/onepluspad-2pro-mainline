@@ -26,7 +26,7 @@ struct aa569 {
 	struct gpio_desc *reset, *vddr;
 	struct mutex lock;
 	struct drm_dsc_config dsc;
-	bool vddio_on, vci_on, vddr_on, prepared, enabled;
+	bool vddio_on, vci_on, vddr_on, prepared, enabled, off_sent;
 };
 
 static struct aa569 *to_aa569(struct drm_panel *panel)
@@ -108,6 +108,9 @@ static int aa569_power_on(struct aa569 *ctx)
 	ret = regulator_set_load(ctx->vddio, 220000);
 	if (ret < 0)
 		return ret;
+	ret = regulator_set_voltage(ctx->vddio, 1800000, 1800000);
+	if (ret)
+		goto fail;
 	ret = regulator_enable(ctx->vddio);
 	if (ret)
 		goto fail;
@@ -118,6 +121,9 @@ static int aa569_power_on(struct aa569 *ctx)
 	msleep(3);
 	ret = regulator_set_load(ctx->vci, 10000);
 	if (ret < 0)
+		goto fail;
+	ret = regulator_set_voltage(ctx->vci, 3000000, 3000000);
+	if (ret)
 		goto fail;
 	ret = regulator_enable(ctx->vci);
 	if (ret)
@@ -167,6 +173,7 @@ static int aa569_prepare(struct drm_panel *panel)
 		goto out;
 	}
 	ctx->prepared = true;
+	ctx->off_sent = false;
 out:
 	mutex_unlock(&ctx->lock);
 	return ret;
@@ -195,12 +202,10 @@ static int aa569_enable(struct drm_panel *panel)
 			 aa569_on_bytes, 1, true);
 	if (ret)
 		goto out;
+	ctx->off_sent = false;
 	ret = aa569_send(ctx, &bright_cmd, brightness, 1, false);
-	if (ret) {
-		/* The display-on packet succeeded. Disable must still send sleep-in. */
-		ctx->enabled = true;
+	if (ret)
 		goto out;
-	}
 	ctx->enabled = true;
 out:
 	mutex_unlock(&ctx->lock);
@@ -211,12 +216,14 @@ static int aa569_disable_locked(struct aa569 *ctx)
 {
 	int ret;
 
-	if (!ctx->prepared || !ctx->enabled)
+	if (!ctx->prepared || ctx->off_sent)
 		return 0;
 	/* Leave the panel awake for a possible disable/enable without unprepare. */
 	ret = aa569_send(ctx, aa569_off, aa569_off_bytes, ARRAY_SIZE(aa569_off) - 1, false);
-	if (!ret)
+	if (!ret) {
 		ctx->enabled = false;
+		ctx->off_sent = true;
+	}
 	return ret;
 }
 
@@ -227,8 +234,14 @@ static int aa569_disable(struct drm_panel *panel)
 
 	mutex_lock(&ctx->lock);
 	ret = aa569_disable_locked(ctx);
+	if (ret)
+		dev_warn(&ctx->dsi->dev, "display-off failed, retrying at unprepare: %d\n", ret);
+	/* DRM must progress to unprepare even when the link has stopped working.
+	 * off_sent remains false after an error, so teardown retries the command.
+	 */
+	ctx->enabled = false;
 	mutex_unlock(&ctx->lock);
-	return ret;
+	return 0;
 }
 
 static int aa569_unprepare(struct drm_panel *panel)
@@ -237,7 +250,7 @@ static int aa569_unprepare(struct drm_panel *panel)
 	int ret, first = 0;
 
 	mutex_lock(&ctx->lock);
-	if (ctx->enabled)
+	if (ctx->prepared && !ctx->off_sent)
 		first = aa569_disable_locked(ctx);
 	if (ctx->prepared) {
 		ret = aa569_send(ctx, aa569_off + ARRAY_SIZE(aa569_off) - 1,
@@ -249,9 +262,15 @@ static int aa569_unprepare(struct drm_panel *panel)
 	if (!ret) {
 		ctx->prepared = false;
 		ctx->enabled = false;
+		ctx->off_sent = true;
 	}
+	if (first)
+		dev_warn(&ctx->dsi->dev, "off command failed before rail teardown: %d\n", first);
 	mutex_unlock(&ctx->lock);
-	return first ?: ret;
+	/* Successful rail teardown is the final state even after a DSI error.
+	 * Returning that old error would leave DRM's prepared state stuck true.
+	 */
+	return ret;
 }
 
 static const struct drm_display_mode aa569_mode = {
@@ -292,13 +311,22 @@ static int aa569_probe(struct mipi_dsi_device *dsi)
 		return -ENOMEM;
 	ctx->dsi = dsi;
 	mutex_init(&ctx->lock);
+	if (!of_find_property(dev->of_node, "vddio-supply", NULL) ||
+	    !of_find_property(dev->of_node, "vci-supply", NULL))
+		return dev_err_probe(dev, -EINVAL, "Explicit panel supplies required\n");
 	ctx->vddio = devm_regulator_get(dev, "vddio");
 	if (IS_ERR(ctx->vddio))
 		return dev_err_probe(dev, PTR_ERR(ctx->vddio), "VDDIO supply\n");
 	ctx->vci = devm_regulator_get(dev, "vci");
 	if (IS_ERR(ctx->vci))
 		return dev_err_probe(dev, PTR_ERR(ctx->vci), "VCI supply\n");
-	/* DTS must constrain VDDIO to1.8V and VCI to3.0V. */
+	ret = regulator_is_supported_voltage(ctx->vddio, 1800000, 1800000);
+	if (ret <= 0)
+		return dev_err_probe(dev, ret < 0 ? ret : -EINVAL, "VDDIO must support1.8V\n");
+	ret = regulator_is_supported_voltage(ctx->vci, 3000000, 3000000);
+	if (ret <= 0)
+		return dev_err_probe(dev, ret < 0 ? ret : -EINVAL, "VCI must support3.0V\n");
+	/* Voltage constraints are also requested explicitly before each power-on. */
 	ctx->reset = devm_gpiod_get(dev, "reset", GPIOD_ASIS);
 	if (IS_ERR(ctx->reset))
 		return dev_err_probe(dev, PTR_ERR(ctx->reset), "RESET GPIO\n");

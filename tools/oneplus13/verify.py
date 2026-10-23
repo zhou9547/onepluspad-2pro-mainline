@@ -81,9 +81,10 @@ def verify_artifacts(out):
                     'public_on_packets_match': 150, 'public_off_packets_match': 3,
                     'fixed_brightness_dbv': 1433, 'on_lp_off_and_brightness_hs': True,
                     'power_reset_delays_match': True, 'init_failure_positions_checked': 149,
-                    'short_transfer_rejected': True, 'supply_failure_controls': 6,
+                    'short_transfer_rejected': True, 'supply_failure_controls': 8,
                     'disable_enable_cycle_checked': True,
                     'off_command_failure_positions_checked': 3,
+                    'off_command_errors_do_not_wedge_framework_state': True,
                     'enabled_in_any_dtb': False, 'spr2_pipeline_implemented': False}
         if (manifest['panel_component_version'] != 1 or
                 any(panel.get(k) != v for k, v in expected.items())):
