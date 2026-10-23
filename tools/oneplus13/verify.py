@@ -202,6 +202,21 @@ def verify_artifacts(out):
         if (manifest['wlan_wiring_version'] != 1 or
                 any(wlan.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed WLAN wiring verification')
+    if 'gpu_graph_version' in manifest:
+        gpu = json.loads((out / 'gpu-dtb-verification.json').read_text())
+        expected = {'scope': 'COMPILED_GPU_GRAPH_ONLY', 'hardware_tested': False,
+                    'dtb_sha256': sha256(out / 'sm8750-oneplus-dodge-gpu.dtb'),
+                    'chip_id': '0x44050001', 'gpu_gmu_smmu_graph_checked': True,
+                    'stock_microcode_reservation_checked': True,
+                    'speed_bin_and_platform_opps_retained': True, 'display_touch_radio_absent': True,
+                    'phone_specific_zap_path': 'qcom/sm8750/oneplus/dodge/gen80000_zap.mbn',
+                    'contains_firmware': False, 'owner_firmware_matched': False,
+                    'physical_renderer_verified': False,
+                    'platform_clock_power_opp_electrically_verified': False,
+                    'headless_requires_explicit_msm_separate_gpu_kms': True,
+                    'negative_controls_rejected': 5, 'render_driver_modular': True}
+        if manifest['gpu_graph_version'] != 1 or any(gpu.get(k) != v for k, v in expected.items()):
+            raise ValueError('Missing or failed isolated GPU graph verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':

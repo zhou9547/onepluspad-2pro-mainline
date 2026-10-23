@@ -144,6 +144,7 @@ def main():
         'spr_runtime_version': 1,
         'native_display_candidate_version': 1,
         'wlan_wiring_version': 1,
+        'gpu_graph_version': 1,
         'tools_sha256': {'busybox': bb['sha256'], 'mkbootimg.py': mk['sha256']},
         'phone_inputs_sha256': {
             p.name: sha256(p) for p in sorted((REPO / 'devices/oneplus13').iterdir()) if p.is_file()},

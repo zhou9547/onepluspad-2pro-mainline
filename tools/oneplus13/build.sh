@@ -83,6 +83,8 @@ grep -q 'sm8750-oneplus-dodge-native.dtb' "$src/arch/arm64/boot/dts/qcom/Makefil
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-native.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
 grep -q 'sm8750-oneplus-dodge-wlan.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-wlan.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
+grep -q 'sm8750-oneplus-dodge-gpu.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
+  printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-gpu.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
 git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dts \
   drivers/input/touchscreen/synaptics-dodge drivers/gpu/drm/panel/panel-aa569 \
   drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr*.[ch]
@@ -114,6 +116,10 @@ make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-wlan.dtb 2>&1 | tee "$k
 python3 tools/oneplus13/check-wlan-dtb.py \
   --dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-wlan.dtb" \
   --config "$kout/.config" --output "$dest/wlan-dtb-verification.json"
+make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-gpu.dtb 2>&1 | tee "$kout/gpu-dtb.log"
+python3 tools/oneplus13/check-gpu-dtb.py \
+  --dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-gpu.dtb" \
+  --config "$kout/.config" --kernel-source "$src" --output "$dest/gpu-dtb-verification.json"
 # Fail API compilation of the isolated components before the full kernel build.
 make "${args[@]}" -j"$(nproc)" drivers/gpu/drm/panel/panel-aa569/ \
   drivers/input/touchscreen/synaptics-dodge/ \
@@ -132,6 +138,7 @@ cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb" "$dest/"
 cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-touch.dtb" "$dest/"
 cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-native.dtb" "$dest/"
 cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-wlan.dtb" "$dest/"
+cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-gpu.dtb" "$dest/"
 cp "$kout/.config" "$dest/kernel.config"
 cp "$kout/include/config/kernel.release" "$dest/kernel.release"
 cp "$kout/System.map" "$dest/"

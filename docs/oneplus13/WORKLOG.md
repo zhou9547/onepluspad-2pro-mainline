@@ -542,3 +542,13 @@ pinned catalog. Pinned render source requires explicit separate_gpu_kms=1 for
 the isolated headless path; no modules load automatically. Next GPU scope and
 acceptance were recorded in NATIVE-GPU before code changes. Audio evidence and
 unresolved firmware/driver/graph choices are in NATIVE-AUDIO.
+
+### Isolated GPU graph implementation
+
+After completing/promoting WLAN artifacts, added a fifth render-only DTB with
+the phone-specific zap path and no firmware payload. Stock microcode reserved
+memory matches9b09a000/2000. A checker validates exact44050001 ID, GMU/SMMU
+stream graph, speed bin, reservation, OPP presence and isolation, with five
+bad-input controls. CI also checks the pinned catalog and headless-binding
+source identity. No initramfs auto-loader, shared display or authentication
+bypass is added. DebtD12 captures unmeasured clock/power/OPP behavior.
