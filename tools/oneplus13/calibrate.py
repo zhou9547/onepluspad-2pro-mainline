@@ -282,6 +282,7 @@ def main():
             merged_hashes.append(digest(test.blob))
         (out / 'sm8750-oneplus-dodge-abl.dtb').write_bytes(candidate)
         report['candidate'] = {'sha256': digest(candidate), 'symbols': count,
+                               'mainline_input_sha256': digest(args.mainline_dtb.read_bytes()),
                                'all_overlay_merged_sha256': merged_hashes,
                                'sink': '/oneplus13-abl/overlay-sink', 'requires_hardware_validation': True}
     (out / 'calibration.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')

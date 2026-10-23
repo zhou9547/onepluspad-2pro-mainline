@@ -439,3 +439,14 @@ No password was submitted, no remote command ran, no file moved and no retry
 was made. Existing stock evidence remains version-scoped; current phone firmware
 is unconfirmed. No device task remains active. Next work is the DPU native422
 differences and then SPR2 ownership/lifecycle, as in STATUS and NATIVE-DISPLAY.
+
+### Static SPR runtime passed; native candidate work package
+
+Actions39953880347/bbbc3fe passed the full build after two diagnosed integration
+failures (Kbuild header dependency ordering, then a shared catalog scalar).
+No phone command or transfer was executed during this continuation.
+Next scope: independent AA569 DTB, identity-domain client entry, seven negative
+DTB controls and private module/profile initramfs packing. Twenty-three Python
+checks now pass locally, including dependency cycles/traversal, wrong module
+identity and byte-exact diagnostic recovery preservation. Full CI and downloaded
+artifact inspection must pass before promoting any new local delivery.

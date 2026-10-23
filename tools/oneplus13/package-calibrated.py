@@ -53,6 +53,8 @@ def main():
     parser.add_argument('--calibration', required=True, type=Path)
     parser.add_argument('--artifacts', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
+    parser.add_argument('--native-xml', type=Path,
+                        help='PRIVATE AA569 XML: derive a separate manual-load native RAM candidate')
     args = parser.parse_args()
     spec = importlib.util.spec_from_file_location('collector', Path(__file__).with_name('collect-stock.py'))
     collector = importlib.util.module_from_spec(spec)
@@ -102,12 +104,35 @@ def main():
         raise ValueError('Missing diagnostic init/console')
     dtb = dtb_path.read_bytes()
     Fdt(dtb)
+    native_report = None
+    if args.native_xml:
+        from native import build_initramfs
+        spec = importlib.util.spec_from_file_location('native_dtb_check', Path(__file__).with_name('check-native-dtb.py'))
+        check = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(check)
+        native_tree_report = check.inspect(dtb)
+        if manifest.get('native_display_candidate_version') != 1 or manifest.get('spr_runtime_version') != 1:
+            raise ValueError('Native candidate requires the corresponding compiled runtime/DTB build')
+        if report['candidate'].get('mainline_input_sha256') != manifest['files']['sm8750-oneplus-dodge-native.dtb']['sha256']:
+            raise ValueError('Native calibration must originate from this build\'s native DTB')
+        module_archive = args.artifacts / 'modules.tar.gz'
+        if sha256(module_archive) != manifest['files']['modules.tar.gz']['sha256']:
+            raise ValueError('Native module archive hash mismatch')
+        ramdisk, native_report = build_initramfs(ramdisk, module_archive.read_bytes(),
+            manifest['kernel_release'], args.native_xml.read_bytes(),
+            (REPO/'devices/oneplus13/start-native-display').read_bytes())
+        native_report['dtb_checks'] = native_tree_report
     stock_geometry = boot_image((args.stock / 'vendor_boot.img').read_bytes())
     pin = json.loads((REPO / 'kernel/source.json').read_text())['tool_inputs']['mkbootimg.py']
     archive = REPO / pin['bundled_archive']
     if sha256(archive) != pin['archive_sha256']:
         raise ValueError('mkbootimg archive differs from the pinned tool')
     out.mkdir(parents=True, exist_ok=True)
+    ramdisk_path = args.artifacts / 'initramfs.cpio.gz'
+    if native_report:
+        ramdisk_path = out / 'initramfs.cpio.gz'
+        ramdisk_path.write_bytes(ramdisk)
+        (out/'native-initramfs-verification.json').write_text(json.dumps(native_report, indent=2)+'\n')
     cmdline = 'rdinit=/init panic=15 oneplus13.watchdog=300'
     with tempfile.TemporaryDirectory(prefix='oneplus13-pack-') as temp:
         tmp = Path(temp)
@@ -127,7 +152,7 @@ def main():
                               '--ramdisk_offset', str(stock_geometry['ramdisk_addr']),
                               '--tags_offset', str(stock_geometry['tags_addr']),
                               '--dtb_offset', str(stock_geometry['dtb_addr']),
-                              '--vendor_ramdisk', str(args.artifacts / 'initramfs.cpio.gz'),
+                              '--vendor_ramdisk', str(ramdisk_path),
                               '--dtb', str(dtb_path), '--vendor_boot', str(out / 'vendor_boot.img')], check=True)
         # Separate single-image RAM-format candidate. Its actual ABL load and
         # hypervisor behavior still require an authorized temporary boot test.
@@ -138,7 +163,7 @@ def main():
                         '--tags_offset', str(stock_geometry['tags_addr']),
                         '--dtb_offset', str(stock_geometry['dtb_addr']),
                         '--kernel', str(args.artifacts / 'Image.gz'),
-                        '--ramdisk', str(args.artifacts / 'initramfs.cpio.gz'),
+                        '--ramdisk', str(ramdisk_path),
                         '--dtb', str(dtb_path), '--cmdline', cmdline,
                         '--output', str(out / 'boot-calibrated-ram-experimental.img')], check=True)
     checked = verify_triplet(out, kernel, ramdisk, dtb, capacities)
@@ -152,6 +177,8 @@ def main():
     (out / 'manifest.json').write_text(json.dumps({
         'status': 'UNSIGNED_V4_DIAGNOSTIC_CANDIDATE_NOT_HARDWARE_TESTED',
         'hardware_tested': False, 'kernel_integration_commit': manifest['integration_commit'],
+        'native_display_candidate': bool(native_report),
+        'contains_private_calibration': bool(native_report),
         'kernel_release': manifest['kernel_release'], 'cmdline': cmdline,
         'actual_partition_capacities': capacities, 'geometry': checked,
         'ram_candidate': {'sha256': sha256(out / 'boot-calibrated-ram-experimental.img'),

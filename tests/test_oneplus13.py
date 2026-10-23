@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib.util
+import gzip
+from io import BytesIO
 import json
 import pathlib
 import stat
 import struct
 import sys
 import tempfile
+import tarfile
 import unittest
 
 TOOLS = pathlib.Path(__file__).resolve().parents[1] / 'tools/oneplus13'
@@ -17,6 +20,7 @@ from calibrate import boot_index, selected_panel, prepare_sink, calibrate_memory
 from panel import command_packets, pps_summary, vendor_pps
 from spr import parse_xml as parse_spr, register_plan as spr_plan, encode_profile
 from dsc import decode_pps, pack_pps
+from native import module_closure, build_initramfs
 spec = importlib.util.spec_from_file_location('phone_stock_collector', TOOLS / 'collect-stock.py')
 collector = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(collector)
@@ -26,6 +30,64 @@ spec.loader.exec_module(panel_generator)
 
 
 class PhoneFormats(unittest.TestCase):
+    @staticmethod
+    def native_modules(overrides=None, link=None):
+        prefix = 'lib/modules/test-release/'
+        def elf():
+            data = bytearray(64)
+            data[:6] = b'\x7fELF\x02\x01'
+            data[18:20] = (183).to_bytes(2, 'little')
+            return bytes(data)+b'vermagic=test-release SMP\0'
+        files = {'modules.dep': b'kernel/msm.ko: kernel/dep.ko\nkernel/dep.ko:\nkernel/panel-oneplus-aa569.ko: kernel/dep.ko\nkernel/unrelated.ko:\n',
+                 **{f'kernel/{name}.ko': elf() for name in ['msm', 'dep', 'panel-oneplus-aa569', 'unrelated']}}
+        files.update(overrides or {})
+        stream = BytesIO()
+        with tarfile.open(fileobj=stream, mode='w:gz') as archive:
+            for name, data in files.items():
+                entry = tarfile.TarInfo(prefix+name)
+                entry.size = len(data)
+                if name == link:
+                    entry.type, entry.linkname, entry.size = tarfile.SYMTYPE, 'unrelated.ko', 0
+                archive.addfile(entry, BytesIO(data))
+        return stream.getvalue()
+
+    def test_native_module_dependency_closure(self):
+        files, modules = module_closure(self.native_modules(), 'test-release')
+        self.assertEqual(modules, ['kernel/dep.ko', 'kernel/msm.ko', 'kernel/panel-oneplus-aa569.ko'])
+        self.assertFalse(any('unrelated' in p for p in files))
+        for blob in [self.native_modules({'kernel/msm.ko': b'not an ELF'}),
+                     self.native_modules(link='kernel/dep.ko')]:
+            with self.assertRaises(ValueError):
+                module_closure(blob, 'test-release')
+        with self.assertRaises(ValueError):
+            module_closure(self.native_modules(), 'other-release')
+
+    def test_native_dependencies_reject_cycles_and_traversal(self):
+        for dep in [b'kernel/msm.ko: kernel/dep.ko\nkernel/dep.ko: kernel/msm.ko\nkernel/panel-oneplus-aa569.ko:\n',
+                    b'kernel/msm.ko: ../escape.ko\nkernel/panel-oneplus-aa569.ko:\n',
+                    b'kernel/msm.ko: missing.ko\nkernel/panel-oneplus-aa569.ko:\n']:
+            with self.subTest(dep=dep), self.assertRaises(ValueError):
+                module_closure(self.native_modules({'modules.dep': dep}), 'test-release')
+
+    def test_native_ramdisk_preserves_original_recovery(self):
+        original = gzip.compress(make_cpio([
+            ('init', stat.S_IFREG|0o755, b'#!/bin/sh\nprotect_storage\nsleep 300\n', 0, 0),
+            ('bin', stat.S_IFDIR|0o755, b'', 0, 0),
+            ('bin/modprobe', stat.S_IFLNK|0o777, b'busybox', 0, 0),
+            ('dev/console', stat.S_IFCHR|0o600, b'', 5, 1)]), mtime=0)
+        helper = (TOOLS.parents[1]/'devices/oneplus13/start-native-display').read_bytes()
+        packed, report = build_initramfs(original, self.native_modules(), 'test-release', self.synthetic_spr(), helper)
+        check = read_cpio(gzip.decompress(packed))
+        for name, props in read_cpio(gzip.decompress(original)).items():
+            self.assertEqual(check[name], props)
+        self.assertEqual(check['lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin']['data'], encode_profile(self.synthetic_spr()))
+        self.assertIn(b'test-release', check['sbin/start-native-display']['data'])
+        self.assertFalse(report['hardware_tested'])
+        self.assertFalse(report['qemu_this_derived_image'])
+        self.assertEqual(packed, build_initramfs(original, self.native_modules(), 'test-release', self.synthetic_spr(), helper)[0])
+        with self.assertRaises(ValueError):
+            build_initramfs(packed, self.native_modules(), 'test-release', self.synthetic_spr(), helper)
+
     def test_panel_generated_header_matches_public_fixture(self):
         root = TOOLS.parents[1]
         fixture = json.loads((root / 'devices/oneplus13/panel-aa569-120hz.json').read_text())

@@ -445,3 +445,36 @@ submissions in this component. Both downloaded diagnostic DTBs are unchanged,
 keep MDSS disabled and have no AA569 node. They passed fresh stock-positive,
 six-overlay and15-bank checks, with host v4/RAM packing and independent readback.
 This is not a working native display, physical touch result or flashable OS.
+
+### Static runtime and isolated native candidate, 2026-10-23
+
+The later runtime integration supersedes the component-only limitation above.
+Actions39953880347 atbbbc3fe2133493beb8277195daac533d3ef57ec5 passed all host
+C sanitizers, complete ARM64 modules and QEMU. Its artifact12502360125 is
+60221376 bytes, GitHub digest450b10f06d243d0448039f0329aa69d7b7b99c49601212e26bc56495c84b5d06;
+this intermediate archive has not been downloaded locally. Earlier failures
+39952445486 and39953182467 retain their logs: corrected Kbuild generated-header
+ordering and preserved the scalar DSPP sub-block shared by other SoCs.
+
+The next bounded work package is an AA569-only native DTB, separate from both
+default diagnostics and touch. Acceptance is compilation plus seven deliberately
+bad wiring/opt-in controls, actual downloaded module/DTB checks and private
+host-only ramdisk/image roundtrips. No physical output claim follows.
+Patch0005 adds SM8750 MDSS to the existing Qualcomm identity-domain client list,
+following the existing SM8250/X1E display approach. This preserves the inherited
+firmware framebuffer before explicit MSM takeover; actual handoff is untested.
+
+The separate DTB uses stock L12B1.8V/L13B3V, DSI L3G1.2V, PHY L3I0.88V,
+reset98 active-low, TE86 mdp_vsync and PM8550VE_F/SID5 GPIO7 VDDR active-high.
+It corrects that controller's range to eight pins. DSI1/touch remain absent.
+The pinned PHY is 3nm atae95000. No foreign board calibration is copied.
+
+Private host packing adds only the dependency closure of msm/panel modules,
+a strict176-byte profile derived from the owner's XML and a manual helper.
+The original init, storage protection and300-second recovery remain byte-exact.
+The helper requires matching kernel, native marker, USB configured and protected
+non-RAM block devices before loading the two explicit modules. Nothing invokes
+it automatically. The derived ramdisk is not covered by the original QEMU run.
+All coefficients stay outside Git/Actions/public outputs. Static SPR has no DMA,
+live profile updates, UDC/fingerprint or partial-update support. The6800-us DPU
+window, PLL rounding, real power/USB recovery and scanout remain unverified.

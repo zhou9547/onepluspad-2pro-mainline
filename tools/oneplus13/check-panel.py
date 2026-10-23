@@ -203,7 +203,9 @@ int main(void) {
               'supply_failure_controls': 8, 'disable_enable_cycle_checked': True,
               'off_command_failure_positions_checked': 3,
               'off_command_errors_do_not_wedge_framework_state': True,
-              'enabled_in_any_dtb': False, 'spr2_pipeline_implemented': False}
+              'separate_native_dtb_source_present': (repo/'devices/oneplus13/sm8750-oneplus-dodge-native.dts').exists(),
+              'board_node_exercised_by_this_check': False,
+              'spr_runtime_exercised_by_this_check': False}
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(result, indent=2)+'\n', encoding='utf-8')
     print('Real AA569 C callbacks: packets, power, reset, LP/HS and fault controls passed.')

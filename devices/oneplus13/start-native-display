@@ -1,0 +1,25 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+# Runs only inside the separately derived RAM candidate, after USB works.
+# This script is packaged for a future owner-operated test; never run on Android.
+set -eu
+export PATH=/bin:/sbin
+[ "$(uname -r)" = '@KERNEL_RELEASE@' ] || { echo 'Wrong kernel'; exit 1; }
+[ -r /etc/oneplus13-native-candidate ] || { echo 'Not the native RAM candidate'; exit 1; }
+tr '\000' '\n' < /sys/firmware/devicetree/base/compatible | grep -qx oneplus,dodge || exit 1
+[ -r /lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin ] || exit 1
+configured=0
+for state in /sys/class/udc/*/state; do
+  [ -r "$state" ] || continue
+  [ "$(cat "$state")" = configured ] && configured=1
+done
+[ "$configured" = 1 ] || { echo 'Establish the diagnostic USB connection first'; exit 1; }
+for disk in /sys/class/block/*; do
+  [ -r "$disk/ro" ] || continue
+  case "${disk##*/}" in loop*|ram*|zram*) continue ;; esac
+  [ "$(cat "$disk/ro")" = 1 ] || { echo 'Storage is not protected'; exit 1; }
+done
+echo 'Starting experimental AA569 display; existing RAM recovery deadline remains armed'
+modprobe panel-oneplus-aa569
+modprobe msm
+echo 'Module load returned; verify actual scanout and error logs before judging display support'

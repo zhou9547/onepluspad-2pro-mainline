@@ -58,3 +58,10 @@ to quiet probe/PM boundaries; this patch implements no REGDMA or dynamic UDC.
 There is no private profile in Git/Actions. Default/touch DTBs have no opt-in.
 Source/provenance, scope and removal conditions are recorded under spr-aa569
 and docs/oneplus13/TECHNICAL-DEBT.md D10.
+
+0005 adds qcom,sm8750-mdss to qcom_smmu_client_of_match's existing display
+identity-domain list, preserving firmware scanout until explicit MSM takeover.
+This follows the pinned driver's SM8250 and X1E client pattern; it does not
+change the separate prefetch table (which already contains SM8750). GPL-2.0-only
+pinned arm-smmu-qcom.c licensing remains intact. The native DTB is opt-in only;
+default/touch DTBs keep MDSS disabled. Handoff is not hardware tested.

@@ -44,8 +44,12 @@ def verify_artifacts(out):
         if path.stat().st_size != expected['size'] or sha256(path) != expected['sha256']:
             raise ValueError(f'Artifact hash/size mismatch: {name}')
     if 'display_support' in manifest:
-        if manifest['display_support'] != 'UNIMPLEMENTED_OFFLINE_PARAMETERS_ONLY':
+        if manifest['display_support'] not in {'UNIMPLEMENTED_OFFLINE_PARAMETERS_ONLY',
+                'EXPERIMENTAL_NATIVE_STATIC_SPR_NOT_DEVICE_TESTED'}:
             raise ValueError('Unsupported native-display claim')
+        if (manifest['display_support'] == 'EXPERIMENTAL_NATIVE_STATIC_SPR_NOT_DEVICE_TESTED' and
+                manifest.get('native_display_candidate_version') != 1):
+            raise ValueError('Missing separate native candidate evidence')
         display = json.loads((out / 'display-conversion-verification.json').read_text())
         expected = {'scope': 'HOST_C_PPS_ONLY', 'hardware_tested': False,
                     'kernel_commit': manifest['kernel_commit'], 'matched_payload_bytes': 94,
@@ -84,9 +88,16 @@ def verify_artifacts(out):
                     'short_transfer_rejected': True, 'supply_failure_controls': 8,
                     'disable_enable_cycle_checked': True,
                     'off_command_failure_positions_checked': 3,
-                    'off_command_errors_do_not_wedge_framework_state': True,
-                    'enabled_in_any_dtb': False, 'spr2_pipeline_implemented': False}
-        if (manifest['panel_component_version'] != 1 or
+                    'off_command_errors_do_not_wedge_framework_state': True}
+        if manifest['panel_component_version'] == 1:
+            expected.update(enabled_in_any_dtb=False, spr2_pipeline_implemented=False)
+        elif manifest['panel_component_version'] == 2:
+            expected.update(separate_native_dtb_source_present=True,
+                            board_node_exercised_by_this_check=False,
+                            spr_runtime_exercised_by_this_check=False)
+        else:
+            raise ValueError('Unknown panel component evidence version')
+        if (
                 any(panel.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C panel component verification')
     if 'dpu_buffer_version' in manifest:
@@ -119,8 +130,14 @@ def verify_artifacts(out):
                     'oversized_input_rejected': True, 'failure_outputs_unchanged': True,
                     'udc_bit25_preserved_in_plan': True,
                     'typed_direct_init_pu_paths': True, 'legacy_cfg14_write_absent': True,
-                    'runtime_exercised_by_this_check': False, 'mmio_or_dma_submitted': False}
-        if (manifest['spr_profile_version'] != 2 or
+                    'mmio_or_dma_submitted': False}
+        if manifest['spr_profile_version'] == 1:
+            expected['runtime_registered'] = False
+        elif manifest['spr_profile_version'] == 2:
+            expected['runtime_exercised_by_this_check'] = False
+        else:
+            raise ValueError('Unknown SPR profile evidence version')
+        if (
                 any(spr.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C SPR profile verification')
     if 'spr_runtime_version' in manifest:
@@ -140,6 +157,18 @@ def verify_artifacts(out):
         if (manifest['spr_runtime_version'] != 1 or
                 any(runtime.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C static SPR runtime verification')
+    if 'native_display_candidate_version' in manifest:
+        native = json.loads((out / 'native-dtb-verification.json').read_text())
+        expected = {'scope': 'COMPILED_NATIVE_DTB_ONLY', 'hardware_tested': False,
+                    'dtb_sha256': sha256(out / 'sm8750-oneplus-dodge-native.dtb'),
+                    'mdss_reset_and_static_spr_optin': True, 'single_dsi0_aa569': True,
+                    'supplies_gpio_te_and_endpoints_checked': True,
+                    'vddr_gpio7_sid5_range8': True, 'display_only_touch_absent': True,
+                    'private_spr_profile_in_dtb': False, 'negative_controls_rejected': 7}
+        if (manifest['native_display_candidate_version'] != 1 or
+                manifest.get('spr_runtime_version') != 1 or
+                any(native.get(k) != v for k, v in expected.items())):
+            raise ValueError('Missing or failed native DTB verification')
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':
