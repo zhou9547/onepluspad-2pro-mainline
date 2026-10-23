@@ -23,6 +23,13 @@ fi
 git -C "$src" fetch --depth 1 origin "${pin[1]}"
 git -C "$src" checkout --detach FETCH_HEAD
 [[ $(git -C "$src" rev-parse HEAD) == "${pin[1]}" ]]
+for patch in "$repo"/devices/oneplus13/kernel-patches/*.patch; do
+  if git -C "$src" apply --reverse --check "$patch" 2>/dev/null; then
+    continue # an identical rerun in this disposable build tree
+  fi
+  git -C "$src" apply --check "$patch"
+  git -C "$src" apply "$patch"
+done
 python3 tools/oneplus13/dsc.py \
   --panel-json devices/oneplus13/panel-aa569-120hz.json \
   --output "$dest/aa569-dsc.json" --c-output "$dest/aa569-dsc.h"
@@ -60,7 +67,8 @@ make "${args[@]}" defconfig > "$kout/configure.log" 2>&1
 make "${args[@]}" olddefconfig >> "$kout/configure.log" 2>&1
 python3 tools/oneplus13/verify.py --config "$kout/.config"
 config_id=$(sha256sum "$kout/.config" | cut -c1-12)
-args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id")
+phone_id=$(sha256sum "$dest/phone-kernel.patch" | cut -c1-12)
+args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id-p$phone_id")
 # DTB first: reject unresolved phandles before the expensive kernel build.
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference-dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"

@@ -12,7 +12,8 @@
 | Ubuntu 26.04.1 GNOME | 离线通过 | 构建 39809729390；下载复验 39812509439；GNOME Shell 50.1，782 个软件包 |
 | USB NCM / ACM | 有源码线索 | 驱动及 RAM 配置已编译；真实枚举、网络和恢复期限待验证 |
 | SPR / DSC 参数转换 | 离线通过 | 私有 SPR 四模式与主机 ARM64 仿真一致，7组/33字与公开厂商C一致；完整 PPS 已解码回读；17项本地主机检查通过 |
-| 显示接管 | 有源码线索 | AA569 DSC1.2 native422 / AP SPR 已确认；DSI预计算参数、DSPP资源预留、SPR/UDC生命周期与面板驱动尚待接入 |
+| DSI native422 RC补丁 | 本地主机C通过，待Actions | 从最小几何参数重算完整PPS一致；原版负对照失败，RGB对照一致，4类非法配置拒绝 |
+| 显示接管 | 有源码线索 | AA569 DSC1.2 native422 / AP SPR 已确认；DSPP资源预留、SPR/UDC生命周期与面板驱动尚待接入 |
 | S3910 LBP 候选模块 / DTB | 离线通过 | 14 项主机检查、C解析器 ASan/UBSan、实际ARM64模块/版本核验；GPIO/SPI电气配置对照；物理触控未验证 |
 | GPU | 有源码线索 | SoC 驱动存在；手机固件及实际渲染未建立验证闭环 |
 | Wi-Fi / Bluetooth | 有源码线索 | 手机布线、固件和校准需要独立确认 |
@@ -24,7 +25,7 @@
 
 最新构建为 [39892351557](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39892351557)，全部编译、14项主机检查、C解析器 ASan/UBSan 和 QEMU 通过。完整附件在主机下载后再次检查 ZIP CRC、20个清单文件、ARM64触控模块、vermagic和实际DTB电气参数。QEMU只验证ARM64用户态，不验证手机。
 
-下一步开发：把已核对的 native422 DSC 参数接入 DSI，并实现 SPR 的 DSPP资源预留/REGDMA生命周期，再接面板。下一步真机门槛仍是由用户后续安排一次有现场恢复条件的限时 RAM 引导，先验证真实 USB 调试、内存与恢复期限；当前只读授权禁止执行它。不能把当前候选用于日常安装。
+下一步开发：完成native422 DSI补丁的ARM64编译复验，并实现 SPR 的 DSPP资源预留/REGDMA生命周期，再接面板。下一步真机门槛仍是由用户后续安排一次有现场恢复条件的限时 RAM 引导，先验证真实 USB 调试、内存与恢复期限；当前只读授权禁止执行它。不能把当前候选用于日常安装。
 
 已确认：PJZ110、24 GiB、SM8750、Android 16 / PJZ110_16.0.10.501(CN01)、当前 A 槽、已解锁；boot/init_boot/vendor_boot/dtbo/vbmeta 与 FDT 两端 SHA-256 一致。原始备份只保留在私有主机目录，不上传。显示 SPR、真实调试通道、内核启动与物理触控仍未验证，不能开始分区安装或声称硬件可用。见 STOCK-CALIBRATION.md 和 NATIVE-INPUT.md。
 

@@ -17,7 +17,8 @@ PPS has convert_rgb=false and chunk_bytes=720. Its encoded group rate is 256 in
 Q4 units (16 bits per two-pixel group), while DT specifies eight compressed bits
 per physical pixel. Blindly passing either 8 or 16 through the entire upstream
 pipeline changes PPS or lane rate. The baseline host overwrites convert_rgb=1
-and selects 444 RC tables. A compatible string and enabled nodes are insufficient.
+and selects 444 RC tables. The isolated patch below fixes native422 arithmetic;
+a compatible string and enabled nodes are insufficient.
 
 Stock topology index 1 is two mixers, two DSC encoders and one DSI interface.
 Initialization selects application-processor SPR (panel page 0x14, register
@@ -36,8 +37,8 @@ Native display remains 有源码线索. No placeholder panel driver was enabled 
 make the feature table look complete. The diagnostic tree retains its unverified
 inherited framebuffer; msm is a module for future controlled takeover.
 
-Next: implement SPR configuration/lifecycle and native-422 DSC arithmetic,
-compare generated PPS/topology with stock, then add the panel driver preserving
+Next: implement SPR configuration/lifecycle, verify the native422 DSC patch and
+topology, then add the panel driver preserving
 command bytes and supply order. Test one 120 Hz mode first. Actual takeover and
 power cycles require a separately authorized RAM test after transport/recovery.
 
@@ -115,14 +116,32 @@ fail. Actions runs that C check with ASan/UBSan; public result files accompany
 future compiled candidates. The source of the exact kernel blob is verified.
 
 Local host tests now include enum/PBA/signed packing, unknown/unsafe XML and PPS
-reserved-bit/profile/truncation checks (17 tests total). No kernel native-display
-driver has been enabled by these host-tool changes.
+reserved-bit/profile/truncation checks (17 tests total). The panel and SPR are
+not enabled by these changes.
+
+### DSI native422 calculation patch
+
+The existing DRM DSC1.2 422 table has the phone's RC ranges and initial values.
+`kernel-patches/0001-dsi-native422-rc.patch` selects that table and keeps
+convert_rgb=false. It computes RC in a temporary two-pixel-group configuration,
+then restores physical-pixel bpp in the shared MSM/DPU configuration. The DPU
+already doubles its native422 hardware field. Native420 is not added here.
+Invalid version, odd/zero slice width, slice height below2 and simultaneous
+native420/native422 are rejected before arithmetic.
+
+The expanded C check compiles the actual patched DSI functions, original DRM RC
+tables/arithmetic and original PPS packer. Starting with only the minimal panel
+geometry/format, its computed complete128-byte PPS matches the original AA569
+packet. The unmodified DSI baseline fails this same packet comparison; its RGB
+path remains byte-identical after the patch. Four malformed native422 profiles
+are rejected. This provides more evidence than copying precomputed PPS fields,
+but still does not exercise hardware. A new Actions build validates the patch
+in the real ARM64 msm module; diagnostic DTBs still leave MDSS disabled.
 
 ## Remaining integration work
 
-1. Carry the validated precomputed native422 DSC fields through the DSI host
-   without its unconditional RGB/444 recomputation, retaining physical-pixel bpp
-   for bandwidth and doubled group bpp only where required by the PPS/hardware.
+1. Complete ARM64 verification of the native422 DSI patch, then ensure the panel
+   passes physical-pixel bpp and sends the exact vendor PPS bytes.
 2. Add phone-specific SPR2 capability offsets and reserve DSPPs for SPR even
    without a user CTM/gamma LUT. The current CRTC requests DSPPs only for those
    user colour properties; setting SPR registers alone would miss ownership.
@@ -133,3 +152,22 @@ driver has been enabled by these host-tool changes.
    TE and one 120 Hz mode, then connect the panel-following touch candidate.
 5. Verify transport/recovery in a bounded RAM boot before physical native-display
    tests. These operations remain outside the read-only device authorization.
+
+### Panel sequencing details for the next implementation
+
+The production overlay selects Oplus custom power control, not the generic
+DSI regulator loop. `oplus_display_power.c` at d50b305f7da9 uses the panel's
+explicit string sequence and does not add the generic regulator-entry sleep
+fields to it. The actual sequence is: wait 1 ms, VDDIO on, wait 3 ms, physical
+GPIO7 high (VDDR), wait 3 ms, VCI on, wait 10 ms. Shutdown waits 1 ms, disables
+VCI, waits 3 ms, lowers GPIO7, waits 3 ms, disables VDDIO, waits 1 ms. VDDIO is
+1.8 V/load220000 uA, VCI 3.0 V/load10000 uA; off loads are8000/300 uA.
+Reset position2 defers the physical high10ms/low5ms/high30ms sequence until
+panel prepare. Preserve that ordering instead of bulk-enabling both supplies.
+
+The stock ordinary-brightness range is1..4094 with normal maximum3515 and
+default1433, HS DCS and inverted-DBV byte-order handling. The Oplus backlight
+callback overrides the generic fallback; inspect that active implementation
+before selecting a mainline brightness helper. Vendor command flag0x40 is
+passed to msg.flags by dsi_panel.c; a native sender must account for its batch
+transport semantics separately from the preserved panel payload bytes.

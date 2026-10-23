@@ -195,3 +195,14 @@ Seventeen host tests pass locally, including negative inputs. Further checks and
 Actions results are recorded after execution. Existing compiled kernel remains
 d337d2f4bea9 until a new full build is completed; no extra hardware support is
 inferred from host-tool changes. The original read-only authorization is intact.
+
+### Native422 DSI calculation integration
+
+The existing DRM1.2 422 RC table reproduces the AA569 ranges. Added an isolated
+MSM DSI patch selecting it, disabling RGB conversion, using doubled bpp in a
+temporary RC calculation and restoring physical bpp before bandwidth/DPU use.
+The expanded real-C host check builds the patched functions and original DRM
+helpers from minimal panel geometry: all128 PPS bytes match. The original
+DSI baseline fails the same native422 control, its RGB packet stays identical,
+and four malformed native422 inputs return EINVAL. Full ARM64 Actions is next.
+No panel or SPR/UDC lifecycle is enabled; the phone was not accessed this turn.

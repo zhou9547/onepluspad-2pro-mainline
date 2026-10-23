@@ -52,6 +52,14 @@ def verify_artifacts(out):
                     'matched_zero_padding_bytes': 34, 'physical_bpp_q4': 128,
                     'encoded_bpp_q4': 256, 'wrong_bpp_negative_control_rejected': True,
                     'sanitizers': True}
+        if manifest.get('display_conversion_version', 1) == 2:
+            expected.update(scope='HOST_C_PPS_AND_DSI_RC_ONLY',
+                            native422_from_minimal_panel_matches_all_pps_bytes=True,
+                            baseline_native422_negative_control_rejected=True,
+                            rgb_baseline_control_match=True,
+                            invalid_native422_profiles_rejected=4)
+        elif manifest.get('display_conversion_version', 1) != 1:
+            raise ValueError('Unknown display-conversion evidence version')
         if any(display.get(k) != v for k, v in expected.items()):
             raise ValueError('Missing or failed C DSC conversion verification')
     check_config(out / 'kernel.config')

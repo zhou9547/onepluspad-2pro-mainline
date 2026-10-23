@@ -135,6 +135,7 @@ def main():
         'stock_overlay_compatibility': 'NOT_VERIFIED_REQUIRES_PHONE_STOCK_DTBO',
         'hardware_tested': False,
         'display_support': 'UNIMPLEMENTED_OFFLINE_PARAMETERS_ONLY',
+        'display_conversion_version': 2,
         'tools_sha256': {'busybox': bb['sha256'], 'mkbootimg.py': mk['sha256']},
         'phone_inputs_sha256': {
             p.name: sha256(p) for p in sorted((REPO / 'devices/oneplus13').iterdir()) if p.is_file()},
