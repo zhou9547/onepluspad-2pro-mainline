@@ -4,8 +4,13 @@
 
 已追通厂商 V7.2 从生产 DTS 到寄存器的十四值提交路径，新增第九补丁，
 仅对严格匹配的实验 AA569/SM8750/DSI0 固定速率选择生产时序，并同步
-host shared timing。本地十项 C 与 53 项工具检查通过；ARM64 构建待验证。
-后续继续时钟树/TE/资源接管，手机未操作。详见 [FIXED-PHY.md](FIXED-PHY.md)。
+host shared timing，并修复原 host PM/OPP 失败清理。十项 C 的 ARM64
+ASan/UBSan 与内核构建40065006440通过；独立时钟/TE与61项ARM64测试
+40065992683通过；匹配GNOME/rootfs最终QEMU40066356160通过。
+已实现手动RAM预检/一次激活入口，无自动服务；QEMU只检查接口和拒绝公开
+无私有参数的环境，未加载真实显示模块。默认native打包继续关闭，显式离线
+证据门槛只允许主机组装私有候选，不授权试机。手机未操作；物理显示、触控、
+WLAN/GPU和最终组合仍待验收。详见 [FIXED-PHY.md](FIXED-PHY.md)。
 
 ## 2026-10-24 PLL/PHY 离线审查
 

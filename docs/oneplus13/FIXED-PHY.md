@@ -2,12 +2,15 @@
 
 本轮继续离线移植，不操作手机。前轮发现通用 D-PHY v4 计算与 AA569
 生产配置的六项差异，本轮完成厂商提交路径审查并实现严格限定的候选。
-本地十项实际 C 检查和 53 项工具检查通过，ARM64 构建与组合验证待完成。
+十项实际 C 检查的 ARM64 ASan/UBSan、完整内核/模块构建以及匹配的
+GNOME/QEMU 交接已通过。独立 ARM64 工具套件 61 项通过，无跳过。
 
 进一步复核发现原 DSI host power_on 忽略 PM 获取失败，时钟失败路径还可能
 留下 PM/OPP 引用。第十补丁改用 resume_and_get，严格按取得的资源逐项回收。
-实际上电函数新增 rail/PM/九个时钟操作/引脚选择失败注入。此前只含第九补丁
-的 ARM64 构建40064399817已通过，最终需以含第十补丁的构建为准。
+实际上电函数新增 rail/PM/九个时钟操作/引脚选择失败注入。最终内核提交
+`33db9f38935f5cbdebbd00612c9360d1a7c99e80` 的
+[Actions40065006440](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40065006440)
+包含第九、第十补丁，已通过并下载校验。
 
 ## 厂商与平台依据
 
@@ -40,8 +43,51 @@ check-fixed-phy.py 编译实际选择器、原 D-PHY 时序计算及原寄存器
 可任意速率复用的通用 PHY 标定；本功能仅为隔离 native DTB 的实验候选。
 不会改变 default/touch DTB 或原 Pad 面板行为。物理输出未验证。
 
-## 持续工作
+## 共同的时钟树与资源接管
 
-继续验证共同 pixel/byte 时钟树、TE/MDP 调度和显示资源接管，再实现显式
-原生桌面激活。原生桌面打包尚未开放，不能由编译通过推断可安全试机。
-触控、无线和 GPU 仍需完成组合及最终硬件验收；音频等次要外设继续推迟。
+`check-clock-tree.py` 编译固定源码中的 divider 和 pixel RCG 回调，使用明确的
+回调图夹具，不模拟完整 CCF 或真实硬件。两种 PLL mux 路径都能保留
+1.3632 GHz lane / 170.4 MHz byte，并精确生成 181.76 MHz pixel：直接 bitclk
+经 PHY /5、RCG 2/3；半速 bitclk 经 PHY /1、RCG 4/15。底层 pixel divider
+未设置 SET_RATE_PARENT，不能据此把物理 PLL 已锁定视为已验证。
+
+同一检查执行原 command TE 配置函数，覆盖 interface/pingpong、缺少时钟和
+不支持 pingpong 的拒绝路径。夹具以 19.2 MHz、120 Hz、3200 行得到 count=50、
+start=3168、rdptr=3169、height=6400；这些是寄存器计算，尚未测量物理 TE。
+[Actions40065992683](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40065992683)
+通过 66 组 PLL 对照、CCF/TE ASan/UBSan 和 61 项 ARM64 工具测试；下载附件
+中的十一份公开固定源文件及本地/ARM64 结果已复核。
+
+固定平台 `msm_drm_kms_init` 在 kms_init/hw_init 之前调用
+`aperture_remove_all_conflicting_devices`。原生路径沿用此资源接管流程；
+没有添加 ignore_unused、猜测电源依赖或跨驱动保活。此源码顺序不能证明
+真机 ABL framebuffer 已成功交接，也不能诊断历史默认 framebuffer 黑屏。
+
+## 显式 RAM 桌面入口与验证界限
+
+新增 `/usr/libexec/oneplus13-native-display --check/--activate`，没有自动服务。
+入口核对候选/内核/根文件系统版本、私有交接清单和 SPR CRC、手机身份、
+RAM overlay、块设备只读、诊断 USB、保护服务、实际 timer D-Bus 截止时间、
+模块版本及全局加载阻断。剩余恢复时间必须超过 60 秒，截止不得超过启动后
+900 秒。显式激活持有 flock，先保留一次尝试标记，再依序加载 panel/msm；
+失败不自动卸载、重试或修改恢复期限。旧暂存助手仍是不可执行数据。
+
+ARM64 测试覆盖真实 flock 和模拟加载失败后的禁止重试，不加载实际显示模块。
+匹配 rootfs 的最终
+[Actions40066356160](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40066356160)
+验证 QEMU 中真实 systemd/busctl/kmod 接口、实际安装助手哈希、公开根文件系统
+缺少私有参数时拒绝入口、数据交接及 180 秒恢复。VM 没有手机 USB，故 USB
+active 响应使用夹具；观察时钟固定为零以检查接口，生产剩余时间判定另有
+单元测试。前轮 VM 因运行过慢、剩余不足 60 秒而正确拒绝，生产阈值未放宽。
+QEMU 未执行真实模块激活，手机的 900 秒恢复本轮未测试。
+
+默认 native 打包仍在读取输入前拒绝。新增显式 `--prepare-native-offline`，只在
+提供匹配内核、rootfs、助手及已下载复核的离线证据后组装私有 RAM 候选；
+不是试机或刷写授权。私有参数不发布，实际加载/PLL/TE/DSC/SPR/物理画面
+仍待授权后的独立验收。触控、WLAN 的板号/BDF/SAR/认证和真实收发、GPU
+认证与渲染也未验收；独立项通过后才组合。音频等次要外设继续推迟。
+
+匹配的新 rootfs 已下载逐项复核：458252288 字节，SHA256
+`18126c23eff6004a45a8ab4d5c8cb120890c2c7cfab9c7d34f8e3dfad9e577cf`。
+私有 RAM 候选已在 Git 之外组装，八项文件校验和 boot 各段独立回读通过，
+公开 QEMU 控制流程逐项一致。私有镜像未启动、未刷写，不随公开证据打包。

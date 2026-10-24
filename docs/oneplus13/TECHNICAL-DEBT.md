@@ -3,9 +3,18 @@
 Fixed-PHY increment: vendor V7.2 timing_val/enable/commit path confirms direct
 14-register production values. Patch0009 selects them only for the attached
 AA569/SM8750/DSI0 fixed-rate candidate and synchronizes shared host timing.
-Ten local real C checks and 53 tooling tests pass; ARM64 build pending.
-Clock-tree/TE/resource ownership and explicit activation remain open. No phone
-operations; see FIXED-PHY.md. Do not infer hardware acceptance.
+Patch0010 fixes ignored runtime-PM failures and PM/OPP cleanup on clock failure.
+Ten real C ARM64 ASan/UBSan checks and kernel build40065006440 pass. Actual
+CCF/TE callback fixtures and 61 ARM64 tooling tests pass in40065992683; matching
+GNOME/QEMU40066356160 passes. These verify source calculations and guarded
+interfaces, not physical clocks, TE, framebuffer takeover or panel output.
+An explicit RAM-only one-shot preflight/loader is implemented, without an auto
+service. Actual module loading is untested. QEMU mocks USB active and uses a
+fixture observation clock; real deadline threshold tests remain independent.
+Default native packaging remains closed; an explicit reviewed-evidence gate
+permits host-only private candidate preparation. No phone operations or hardware
+authorization; physical display/touch/WLAN/GPU acceptance still blocks a usable
+combined port. See FIXED-PHY.md for the exact evidence and remaining gates.
 
 2026-10-24 PLL/PHY audit: nominal 1.3632 GHz and valid 2x/3x VCO values are
 exact in the 18-bit fractional arithmetic, but six of fourteen generic D-PHY
