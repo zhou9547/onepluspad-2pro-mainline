@@ -3,6 +3,12 @@
 2026-10-24。本轮仅增加公开源码审查、C 检查及独立 Actions，不改运行内核、
 DTB、面板时序或镜像，不操作手机。不能作为硬件试启动放行。
 
+[Actions40062728159](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40062728159)
+已通过 ARM64 ASan/UBSan；66 组平台/厂商 PLL 用例与 PHY 检查通过。
+125171 字节附件已下载，GitHub SHA256/ZIP CRC、九个公开源文件和全部
+本地/ARM64 C 结果（除 sanitizer 开关）一致，内核构建任务确认跳过。
+审查代码提交为 `64416d687c32895f79babdedebf53e72c1b626c6`。
+
 参考原 Pad 平台固定内核 `7a81d184e3098624d4342d8f4eff5e23674bcc9f`
 的 dsi_phy_7nm.c/dsi_phy.c，以及 OnePlusOSS 固定提交
 `d50b305f7da9e14715a25120a4ac7b1a4b8b97c3` 的 dsi_pll_3nm.c、

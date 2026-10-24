@@ -3,7 +3,9 @@
 2026-10-24 PLL/PHY audit: nominal 1.3632 GHz and valid 2x/3x VCO values are
 exact in the 18-bit fractional arithmetic, but six of fourteen generic D-PHY
 timing fields differ from the final AA569 production DTS override. Actual C
-platform/vendor arithmetic checks added; ARM64 sanitizer audit pending.
+platform/vendor arithmetic checks added; ARM64 sanitizer audit40062728159 passed
+66 PLL cases plus PHY checks. Downloaded artifact, nine public source blobs and
+local/ARM64 C results match. Kernel job skipped; runtime artifacts unchanged.
 Do not promote this to physical frequency/timing equivalence or patch the generic
 PHY with board bytes. Trace vendor V7.2 timing commit/overrides and shared CCF
 pixel/byte selection next. See PLL-PHY-AUDIT.md. No phone/kernel/image changes.
