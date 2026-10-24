@@ -104,22 +104,40 @@ def verify_artifacts(out):
                     'kernel_commit': manifest['kernel_commit'], 'sanitizers': True,
                     'public_on_packets_match': 150, 'public_off_packets_match': 3,
                     'fixed_brightness_dbv': 1433, 'on_lp_off_and_brightness_hs': True,
-                    'power_reset_delays_match': True, 'init_failure_positions_checked': 149,
-                    'short_transfer_rejected': True, 'supply_failure_controls': 8,
+                    'power_reset_delays_match': True, 'supply_failure_controls': 8,
                     'disable_enable_cycle_checked': True,
                     'off_command_failure_positions_checked': 3,
                     'off_command_errors_do_not_wedge_framework_state': True}
         if manifest['panel_component_version'] == 1:
             expected.update(enabled_in_any_dtb=False, spr2_pipeline_implemented=False)
-        elif manifest['panel_component_version'] == 2:
+        elif manifest['panel_component_version'] in (2, 3):
             expected.update(separate_native_dtb_source_present=True,
                             board_node_exercised_by_this_check=False,
                             spr_runtime_exercised_by_this_check=False)
         else:
             raise ValueError('Unknown panel component evidence version')
+        if manifest['panel_component_version'] < 3:
+            expected.update(init_failure_positions_checked=149, short_transfer_rejected=True)
+        else:
+            expected.update(init_dma_failure_groups_checked=12, on_vendor_groups_match=13,
+                            allocation_and_split_group_controls=True)
+            if manifest.get('dsi_batch_version') != 1:
+                raise ValueError('Grouped panel requires DSI batch evidence')
         if (
                 any(panel.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C panel component verification')
+    if 'dsi_batch_version' in manifest:
+        batch = json.loads((out / 'dsi-batch-verification.json').read_text())
+        expected = {'scope':'HOST_C_DSI_BATCH_ONLY', 'hardware_tested':False,
+                    'sanitizers':True, 'kernel_commit':manifest['kernel_commit'],
+                    'on_vendor_groups_match':13, 'on_packets':150, 'max_group_bytes':312,
+                    'invalid_groups_fail_before_mapping_or_pm':True,
+                    'pm_parent_rate_and_enable_failures_balanced':True,
+                    'one_lock_mapping_resource_lifetime_and_kickoff_per_group':True,
+                    'dma_timeout_reset_before_restore':True, 'no_queued_state_after_return':True,
+                    'ordinary_packing_dispatch_and_manager_trigger_unchanged':True}
+        if manifest['dsi_batch_version'] != 1 or any(batch.get(k) != v for k,v in expected.items()):
+            raise ValueError('Missing or failed C DSI batch verification')
     if 'dpu_buffer_version' in manifest:
         dpu = json.loads((out / 'dpu-buffer-verification.json').read_text())
         expected = {'scope': 'HOST_C_DPU_BUFFER_AND_REGISTER_ONLY',

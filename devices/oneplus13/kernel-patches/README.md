@@ -86,3 +86,12 @@ using the original unchanged plane BW/clock helpers, then apply existing catalog
 inefficiency and burst factors. The wrapper rejects invalid/unassigned visible
 geometry. Non-opt-in calculation remains unchanged. Host C executes both split
 pipe math and the real check/ICC paths with differing old/new inputs.
+
+0008 preserves the AA569 vendor embedded command groups through an optional
+whole-group MIPI host operation. Only SM8750/AA569 single DSI0 command mode
+accepts it. No queued state survives calls and unsupported hosts cannot silently
+send packets individually. The complete bounded buffer is validated/packed
+before one resource lifetime and kickoff; timeout resets before restoration.
+The unchanged single-message packing/dispatch/trigger are checked against the pin.
+Parent clock errors propagate instead of being swallowed. See DSI-BATCH.md for
+actual C fault-injection scope and the still-open physical timing gates.

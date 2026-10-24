@@ -76,6 +76,7 @@ jobs:
             out/oneplus13/command-clock-verification.json
             out/oneplus13/command-budget-verification.json
             out/oneplus13/panel-component-verification.json
+            out/oneplus13/dsi-batch-verification.json
             out/oneplus13/dpu-buffer-verification.json
             out/oneplus13/spr-profile-verification.json
             out/oneplus13/spr-runtime-verification.json

@@ -1,8 +1,8 @@
 # AA569 offline panel component
 
-This module is compiled for API/ABI checking, but **no phone DTB instantiates
-it**. The remaining DPU SPR2/resource/UDC/REGDMA integration must precede a
-connected native-display candidate. Loading a module is not display acceptance.
+This module is compiled for API/ABI checking and instantiated only by the separate
+experimental native DTB. Default/touch DTBs keep MDSS disabled. The guarded
+static SPR candidate is not physical display acceptance.
 
 The generated header is the exact public OnePlusOSS production WQHD120 sequence,
 not AA594, an EVB/EVT variant or a private calibration dump. Regenerate with
@@ -23,10 +23,10 @@ Supply phandles are mandatory and exact voltages are requested before enables.
 
 The component uses fixed DBV1433 (`51 05 99`) in HS mode. This matches the active
 Oplus callback's inverted-DBV byte order without exposing unimplemented PWM,
-low-DBV, HBM, AOD, temperature compensation or brightness-control UI. Mainline
-sends the original batched commands synchronously one at a time; wire bytes,
-packet types and explicit delays are preserved, but physical timing equivalence
-is untested. See technical debtD07.
+low-DBV, HBM, AOD, temperature compensation or brightness-control UI. Patch0008
+submits explicit complete vendor groups with one lock/resource lifetime. Wire
+bytes, packet types, boundaries and delays pass host C checks; physical timing
+equivalence is untested. See docs/oneplus13/DSI-BATCH.md and technical debtD07.
 
 Future board wiring requires L12B fixed1.8V VDDIO, L13B fixed3.0V VCI, TLMM98
 active-low reset, PM8550VE_F GPIO7 active-high VDDR, eight GPIOs on that PMIC,

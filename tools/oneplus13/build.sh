@@ -39,6 +39,8 @@ python3 tools/oneplus13/check-command-clock.py --kernel-source "$src" \
   --output "$dest/command-clock-verification.json" --sanitize
 python3 tools/oneplus13/check-panel.py --kernel-source "$src" \
   --output "$dest/panel-component-verification.json" --sanitize
+python3 tools/oneplus13/check-dsi-batch.py --kernel-source "$src" \
+  --output "$dest/dsi-batch-verification.json" --sanitize
 python3 tools/oneplus13/check-dpu.py --kernel-source "$src" \
   --output "$dest/dpu-buffer-verification.json" --sanitize
 python3 tools/oneplus13/check-spr-profile.py \

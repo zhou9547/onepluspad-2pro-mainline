@@ -1,5 +1,12 @@
 # Technical debt (single register for the phone)
 
+2026-10-24 D07 increment: explicit bounded whole-group DSI API and the AA569
+13-group sender are implemented, with actual C packing/resource/failure tests.
+No cross-call queue and no silent serial fallback. Local C checks and 53 tooling
+tests pass; ARM64 sanitizer/build and refreshed matching rootfs/QEMU remain pending.
+Physical PLL/TE/burst timing, takeover and D16 activation are still open.
+See DSI-BATCH.md. Zero phone operations; native desktop packaging stays disabled.
+
 2026-10-24 follow-up: the private payload now has a versioned release/profile/
 helper hash manifest and a data-only stage across switch_root. Old or partial
 payloads fail closed, merged-/usr is handled explicitly, and the helper remains
