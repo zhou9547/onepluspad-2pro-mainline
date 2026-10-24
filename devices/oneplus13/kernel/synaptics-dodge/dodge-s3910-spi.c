@@ -50,8 +50,10 @@ static int dodge_read(struct syna_hw_interface *hw, unsigned char *data, unsigne
 	spi_message_init(&message);
 	spi_message_add_tail(&xfer, &message);
 	ret = spi_sync(t->spi, &message);
-	if (!ret && message.actual_length != len)
-		return -EIO;
+	if (ret < 0)
+		dev_err(&t->spi->dev, "read spi_sync %d (len %u)\n", ret, len);
+	/* spi-geni-qcom on this kernel never sets actual_length; response
+	 * integrity is validated by the protocol core, not by length. */
 	return ret ?: len;
 }
 
@@ -66,8 +68,10 @@ static int dodge_write(struct syna_hw_interface *hw, unsigned char *data, unsign
 	spi_message_init(&message);
 	spi_message_add_tail(&xfer, &message);
 	ret = spi_sync(t->spi, &message);
-	if (!ret && message.actual_length != len)
-		return -EIO;
+	if (ret < 0)
+		dev_err(&t->spi->dev, "write spi_sync %d (len %u)\n", ret, len);
+	/* spi-geni-qcom on this kernel never sets actual_length; response
+	 * integrity is validated by the protocol core, not by length. */
 	return ret ?: len;
 }
 
