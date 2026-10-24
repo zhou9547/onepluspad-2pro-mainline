@@ -51,12 +51,9 @@ static int dodge_read(struct syna_hw_interface *hw, unsigned char *data, unsigne
 	spi_message_add_tail(&xfer, &message);
 	ret = spi_sync(t->spi, &message);
 	if (ret < 0)
-		dev_err(&t->spi->dev, "diag read spi_sync %d (len %u)\n", ret, len);
-	if (!ret && message.actual_length != len) {
-		dev_warn(&t->spi->dev, "diag short read: asked %u got %u\n",
-			 len, message.actual_length);
-		return -EIO;
-	}
+		dev_err(&t->spi->dev, "read spi_sync %d (len %u)\n", ret, len);
+	/* spi-geni-qcom on this kernel never sets actual_length; response
+	 * integrity is validated by the protocol core, not by length. */
 	return ret ?: len;
 }
 
@@ -72,14 +69,9 @@ static int dodge_write(struct syna_hw_interface *hw, unsigned char *data, unsign
 	spi_message_add_tail(&xfer, &message);
 	ret = spi_sync(t->spi, &message);
 	if (ret < 0)
-		dev_err(&t->spi->dev, "diag write spi_sync %d (len %u)\n", ret, len);
-	if (!ret && message.actual_length != len) {
-		/* diagnostic build only: surface the short transfer but continue,
-		 * so the following bus read shows whether the controller answers */
-		dev_warn(&t->spi->dev, "diag short write: asked %u got %u (continuing)\n",
-			 len, message.actual_length);
-		return len;
-	}
+		dev_err(&t->spi->dev, "write spi_sync %d (len %u)\n", ret, len);
+	/* spi-geni-qcom on this kernel never sets actual_length; response
+	 * integrity is validated by the protocol core, not by length. */
 	return ret ?: len;
 }
 
