@@ -1,0 +1,21 @@
+From: OnePlus 13 mainline port
+Subject: [PATCH] firmware: qcom_scm: Add OnePlus 13 to QSEECOM allowlist
+
+Add oneplus,dodge to the QSEECOM machine allowlist to enable
+PAS authentication for the ADSP on OnePlus 13 (SM8750).
+
+Signed-off-by: OnePlus 13 mainline port
+---
+ drivers/firmware/qcom/qcom_scm.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+--- a/drivers/firmware/qcom/qcom_scm.c
++++ b/drivers/firmware/qcom/qcom_scm.c
+@@ -2287,6 +2287,7 @@
+  + any potential issues with this, only allow validated machines for now.
+  */
+ static const struct of_device_id qcom_scm_qseecom_allowlist[] __maybe_unused = {
++	{ .compatible = "oneplus,dodge" },
+ 	{ .compatible = "asus,vivobook-s15" },
+ 	{ .compatible = "asus,vivobook-s15-x1p4" },
+ 	{ .compatible = "asus,zenbook-a14-ux3407qa" },
