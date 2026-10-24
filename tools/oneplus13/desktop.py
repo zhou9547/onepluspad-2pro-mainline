@@ -138,7 +138,8 @@ def main():
                 server.server_close()
                 thread.join()
         (out/'qemu-desktop.log').write_text(proc.stdout)
-        markers = ['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED', 'ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK',
+        markers = ['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED', 'ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK',
+                   'ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK',
                    'ONEPLUS13_DESKTOP_HANDOFF_OK',
                    'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
         if (proc.returncode or any(m not in proc.stdout for m in markers) or
@@ -148,6 +149,7 @@ def main():
             raise SystemExit('Actual GNOME rootfs QEMU handoff failed')
         report['qemu_handoff_verified'] = True
         report['qemu_display_module_policy_verified'] = True
+        report['qemu_native_preflight_rejects_public_root_verified'] = True
         report['qemu_native_payload_data_handoff_verified'] = True
         report['native_display_activated'] = False
         report['qemu_deadline_expiry_verified'] = True

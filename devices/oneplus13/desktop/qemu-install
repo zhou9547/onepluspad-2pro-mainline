@@ -40,6 +40,13 @@ modprobe -b 'of:Ndisplay-controllerT(null)Cqcom,sm8750-dpu' || :
 [ ! -d /sys/module/panel_oneplus_aa569 ]
 [ ! -d /sys/module/msm ]
 echo ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED
+# Reject absent private payload in the actual public QEMU root, without loading.
+if /usr/libexec/oneplus13-native-display --check; then
+    echo 'Native preflight unexpectedly accepted the public QEMU root'; exit 1
+fi
+[ ! -d /sys/module/panel_oneplus_aa569 ]
+[ ! -d /sys/module/msm ]
+echo ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK
 /run/oneplus13/native-handoff-selftest
 echo ONEPLUS13_DESKTOP_HANDOFF_OK
 trap - EXIT

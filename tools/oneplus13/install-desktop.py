@@ -41,6 +41,8 @@ def install(root, kernel=None, firmware=None):
         write('usr/libexec/oneplus13-'+name,
               (REPO/'devices/oneplus13/desktop'/name).read_text(), 0o755)
     write('usr/lib/oneplus13-desktop/version', '1\n')
+    write('usr/libexec/oneplus13-native-display',
+          (REPO/'devices/oneplus13/native-desktop.py').read_text(), 0o755)
     # kmod blacklist only suppresses aliases. The install rules also reject
     # ordinary explicit/dependency loads. Native desktop packaging stays
     # disabled until this policy is exercised with the actual ARM64 rootfs.
