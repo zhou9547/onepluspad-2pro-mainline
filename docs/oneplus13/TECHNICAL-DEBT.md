@@ -3,8 +3,13 @@
 2026-10-24 follow-up: the private payload now has a versioned release/profile/
 helper hash manifest and a data-only stage across switch_root. Old or partial
 payloads fail closed, merged-/usr is handled explicitly, and the helper remains
-non-executable in /run. Host suite: 53 passed; the new QEMU observer must verify
-copy/permissions/failure controls after switch_root. See NATIVE-HANDOFF.md.
+non-executable in /run. Host and ARM64 Actions suites: 53 passed. The new QEMU
+observer in 40056382745 verified copy/permissions/failure controls after
+switch_root, handoff and 180-second expiry/reboot; downloaded evidence matches.
+See NATIVE-HANDOFF.md. Additional pinned vendor review confirms deferred
+kickoff/resource cleanup in FETCH_MEMORY, FIFO/non-embedded overrides and the
+broadcast early-flush exception. Nominal single-link groups peak at 312 bytes;
+wire timing equivalence and actual PLL behavior remain unproven.
 D16 activation and D07/D10/D17 physical timing/resource work remain open;
 native desktop packaging is still disabled. No hardware operations this round.
 
