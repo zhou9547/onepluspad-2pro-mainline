@@ -1,15 +1,14 @@
 From: OnePlus 13 mainline port
-Subject: [PATCH] remoteproc: qcom: pas: Add SM8750 ADSP support
+Subject: [PATCH] remoteproc: qcom: pas: SM8750 ADSP with auto_boot=false
 
-Add the SM8750 ADSP PAS resource descriptor and compatible string.
+The ADSP on SM8750 is already booted by the Gunyah hypervisor.
+Setting auto_boot=false prevents the PAS boot attempt that fails
+with -61 (ENODATA). The remoteproc registers but doesn't auto-boot.
 
 Signed-off-by: OnePlus 13 mainline port
 ---
- drivers/remoteproc/qcom_q6v5_pas.c | 20 ++++++++++++++++++++
- 1 file changed, 20 insertions(+)
-
---- a/drivers/remoteproc/qcom_q6v5_pas.c
-+++ b/drivers/remoteproc/qcom_q6v5_pas.c
+--- a/drivers/remoteproc/qcom_q6v5_pas.c	2026-10-24 23:37:04.372131200 +0800
++++ b/drivers/remoteproc/qcom_q6v5_pas.c	2026-10-25 01:31:15.399934400 +0800
 @@ -1571,6 +1571,25 @@
  	.region_assign_count = 2,
  	.region_assign_vmid = QCOM_SCM_VMID_MSS_MSA,
@@ -21,7 +20,7 @@ Signed-off-by: OnePlus 13 mainline port
 +	.pas_id = 1,
 +	.dtb_pas_id = 0x24,
 +	.minidump_id = 5,
-+	.auto_boot = true,
++	.auto_boot = false,
 +	.decrypt_shutdown = true,
 +	.proxy_pd_names = (char*[]){
 +		"cx",
