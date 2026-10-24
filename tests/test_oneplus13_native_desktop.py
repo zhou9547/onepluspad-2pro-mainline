@@ -2,6 +2,7 @@
 """Synthetic roots and injected commands only; never access a connected phone."""
 import hashlib
 import importlib.util
+import os
 from pathlib import Path
 import struct
 import tempfile
@@ -106,3 +107,24 @@ class NativeDesktopTests(unittest.TestCase):
                 if len(calls)==fail:raise OSError('synthetic failure')
             with self.subTest(fail=fail),self.assertRaises(OSError):native.load_modules(run=run)
             self.assertEqual(len(calls),fail)
+
+    @unittest.skipUnless(os.name=='posix','Exercise real flock on the ARM64 Linux runner')
+    def test_one_shot_lock_and_failure_marker_use_only_synthetic_root(self):
+        for fail in [False,True]:
+            with self.subTest(fail=fail),tempfile.TemporaryDirectory() as temp:
+                root=Path(temp);self.fixture(root);loads=[]
+                def run(args):
+                    if 'is-active' in args:return 'active'
+                    if 'get-property' in args:return 't 900000000'
+                    if '-c' in args:return '\n'.join('install '+m+' /bin/false' for m in native.MODULES)
+                    if '-F' in args:return 'test-release SMP'
+                    loads.append(args)
+                    if fail:raise OSError('synthetic module failure')
+                    return ''
+                if fail:
+                    with self.assertRaises(OSError):native.activate(root,'test-release',run=run,now=lambda:100)
+                else:native.activate(root,'test-release',run=run,now=lambda:100)
+                self.assertTrue((root/'run/oneplus13/native/activation-attempted').is_file())
+                count=len(loads)
+                with self.assertRaises(ValueError):native.activate(root,'test-release',run=run,now=lambda:100)
+                self.assertEqual(len(loads),count)

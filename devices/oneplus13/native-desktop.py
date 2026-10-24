@@ -113,6 +113,25 @@ def load_modules(run=command):
         run(['/usr/sbin/modprobe','--ignore-install',module])
 
 
+def activate(root,release,run=command,now=time.monotonic):
+    root=Path(root)
+    if run is command and root!=Path('/'):
+        raise ValueError('Real module loading requires the actual RAM root')
+    import fcntl
+    validate_files(root,release);runtime_checks(release,run=run,now=now)
+    lock=root/'run/oneplus13/native/activation.lock'
+    descriptor=os.open(lock,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
+    with os.fdopen(descriptor,'a') as stream:
+        fcntl.flock(stream,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        attempted=lock.with_name('activation-attempted')
+        if attempted.exists():raise ValueError('Native activation already attempted; keep recovery armed')
+        # Check again under the lock, then retain the attempt marker even if a
+        # driver errors. Do not unload/retry or alter the recovery timer.
+        validate_files(root,release);runtime_checks(release,run=run,now=now)
+        with attempted.open('x'):pass
+        load_modules(run=run)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     group=parser.add_mutually_exclusive_group(required=True)
@@ -125,18 +144,7 @@ def main():
     runtime_checks(release)
     if args.check:
         print('ONEPLUS13_NATIVE_PREFLIGHT_OK_NOT_ACTIVATED');return
-    import fcntl
-    lock=Path('/run/oneplus13/native/activation.lock')
-    descriptor=os.open(lock,os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW,0o600)
-    with os.fdopen(descriptor,'a') as stream:
-        fcntl.flock(stream,fcntl.LOCK_EX|fcntl.LOCK_NB)
-        attempted=lock.with_name('activation-attempted')
-        if attempted.exists():raise ValueError('Native activation already attempted; keep recovery armed')
-        # Check again under the lock, then retain the attempt marker even if a
-        # driver errors. Do not unload/retry or alter the recovery timer.
-        validate_files(Path('/'),release);runtime_checks(release)
-        with attempted.open('x'):pass
-        load_modules()
+    activate(Path('/'),release)
     print('ONEPLUS13_NATIVE_LOAD_RETURNED_PHYSICAL_DISPLAY_UNVERIFIED')
 
 
