@@ -43,7 +43,7 @@ jobs:
         timeout-minutes: 70
         run: |
           python3 tools/build-mesa.py --source-archive mesa-26.2.3.tar.xz \
-            --profile desktop --output out/mesa-desktop --jobs "$(nproc)"
+            --profile desktop --output out/mesa-desktop --jobs "$(nproc)" --ndebug
           python3 tools/package-mesa.py --build-output out/mesa-desktop \
             --output out/mesa-debs
       - uses: actions/upload-artifact@v4
