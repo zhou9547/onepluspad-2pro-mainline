@@ -1,5 +1,13 @@
 # Technical debt (single register for the phone)
 
+2026-10-24 PLL/PHY audit: nominal 1.3632 GHz and valid 2x/3x VCO values are
+exact in the 18-bit fractional arithmetic, but six of fourteen generic D-PHY
+timing fields differ from the final AA569 production DTS override. Actual C
+platform/vendor arithmetic checks added; ARM64 sanitizer audit pending.
+Do not promote this to physical frequency/timing equivalence or patch the generic
+PHY with board bytes. Trace vendor V7.2 timing commit/overrides and shared CCF
+pixel/byte selection next. See PLL-PHY-AUDIT.md. No phone/kernel/image changes.
+
 2026-10-24 D07 increment: explicit bounded whole-group DSI API and the AA569
 13-group sender are implemented, with actual C packing/resource/failure tests.
 No cross-call queue and no silent serial fallback. Nine local/ARM64 C checks
