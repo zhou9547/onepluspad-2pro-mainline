@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 import tarfile
 from common import sha256
+from desktop import PIN
 
 REPO = Path(__file__).resolve().parents[2]
 CONDITION = ('ConditionKernelCommandLine=oneplus13.desktop=1\n'
@@ -49,7 +50,7 @@ def install(root, kernel=None, firmware=None):
           'blacklist msm\ninstall msm /bin/false\n')
     if kernel:
         manifest = json.loads((kernel/'manifest.json').read_text())
-        if (manifest['integration_commit'] != 'c2e659aaa062647a206c67edcc421f0fa9931f7a' or
+        if (manifest['integration_commit'] != PIN or
                 manifest['device'] != 'oneplus,dodge' or manifest['hardware_tested'] is not False):
             raise ValueError('Desktop requires the pinned verified phone kernel artifact')
         archive = kernel/'modules.tar.gz'

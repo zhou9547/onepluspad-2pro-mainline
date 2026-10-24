@@ -46,8 +46,8 @@ jobs:
           bash -n tools/oneplus13/rootfs.sh
       - uses: actions/download-artifact@v4
         with:
-          name: oneplus13-offline-c2e659aaa062647a206c67edcc421f0fa9931f7a
-          run-id: 39992904871
+          name: oneplus13-offline-d624154c9548304f92712ea7e1f716fd98fe1150
+          run-id: 40051765091
           github-token: ${{ github.token }}
           path: out/oneplus13-desktop-kernel
       - name: Independently verify the pinned kernel artifact

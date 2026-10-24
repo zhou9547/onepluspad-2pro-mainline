@@ -13,7 +13,7 @@ import threading
 from common import make_cpio, read_cpio, sha256
 
 REPO = Path(__file__).resolve().parents[2]
-PIN = 'c2e659aaa062647a206c67edcc421f0fa9931f7a'
+PIN = 'd624154c9548304f92712ea7e1f716fd98fe1150'
 
 
 def derive(original):

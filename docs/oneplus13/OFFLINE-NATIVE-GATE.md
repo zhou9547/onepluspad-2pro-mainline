@@ -4,6 +4,14 @@
 ADB/Fastboot 查询、重启、RAM 启动或分区操作。以下修复属于源码和主机验证，
 不是新内核已经在手机工作，也不是不会变砖的保证。
 
+用户随后明确批准独立分支上传和 Actions 离线构建。源码提交
+`d624154c9548304f92712ea7e1f716fd98fe1150` 已上传；
+[第一轮 GNOME/QEMU](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40051767501)
+成功，验证新增 kmod 策略、完整 HTTP 分块交接和恢复计时器。
+这一轮使用原 c2e659 内核与新 rootfs，不能冒充新内核组合的结果。
+[新 ARM64 构建](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40051765091)
+完成后，桌面流程将固定该新附件，再运行一轮组合验证。
+
 ## 当前判断
 
 上次默认 RAM 桌面已进入 systemd/GDM/GNOME，但用户观察仍黑屏。默认 DTB
@@ -57,7 +65,7 @@ Oplus 电源控制及 SPR packing 源码。生产面板重新提取的 150 个�
 
 | 检查 | 本轮结果 | 范围 |
 | --- | --- | --- |
-| Python / 实际 shell 测试 | 见交付报告的最新测试数 | 主机执行；包含13个 native 身份用例 |
+| Python / 实际 shell 测试 | 48项通过 | 主机执行；包含13个 native 身份用例 |
 | native 身份实际 C | 13个用例通过，OF引用收放平衡 | 真实 guard + OF fixture，无寄存器访问 |
 | 面板 C | 150开屏包、3关屏包、149初始化故障点及8供电故障控制通过 | 替代 GPIO/供电/DSI I/O |
 | DSC C | 128字节、错误 bpp/原始基线负例和 RGB 控制通过 | 固定内核真实函数 |
@@ -66,12 +74,22 @@ Oplus 电源控制及 SPR packing 源码。生产面板重新提取的 150 个�
 | 命令预算 C | 261组预算、新状态/OPP/ICC/溢出控制通过 | 不测真实传输完成时刻 |
 | SPR profile/runtime C | 解码、所有管线UDC预检、地址、3轮PM、格式/flush/reset控制通过 | 替代 MMIO，非硬件PM循环 |
 | 新 ARM64 内核/模块构建 | 待执行 | 旧构建不覆盖本轮 SPR 源码 |
-| 新 rootfs + kmod + QEMU 完整交接/恢复 | 待执行 | 已接入检查，不算通过 |
+| 新 rootfs + kmod + QEMU 完整交接/恢复 | 第一轮通过 | 原固定内核；新内核组合待运行 |
 | DSI 批处理、PLL取整、继承显示接管与物理输出 | 未闭环 | 不得从主机测试推断 |
 
 主机 C 本轮使用 Zig 0.14.1 提供的 Clang Windows 工具链，启用
 `-Wall -Wextra -Werror`；没有 ASan/UBSan，JSON如实记录 false。
 GitHub Actions 中的新检查保留 GCC + ASan/UBSan 和完整 ARM64 构建要求。
+
+## 继承显示的另一项待核查问题
+
+归档真机日志中 simpledrm 在约0.079秒注册，约0.198秒发生未使用时钟和电源域
+清理。当前 simple-framebuffer 节点没有 clocks、power-domains 或供电引用。
+固定内核的
+[simpledrm 源码](https://github.com/yzddmr6/linux-sm8750-erhai/blob/7a81d184e3098624d4342d8f4eff5e23674bcc9f/drivers/gpu/drm/sysfb/simpledrm.c)
+依据节点中的这些资源保持固件显示链路。缺少引用是一个资源生命周期缺口，
+但日志没有证明具体哪条显示资源被关闭，不能据此断言它就是黑屏根因。
+暂不添加全局 ignore_unused 参数，也不猜测面板供电以反复试机。
 
 ## 下一步及真机门槛
 

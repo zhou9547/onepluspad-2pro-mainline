@@ -8,6 +8,17 @@ Native desktop packaging remains disabled until rebuilt policy, handoff and
 explicit activation are validated. D07/D10 timing and physical acceptance stay
 open; these new findings are not a proven cause of the default desktop black screen.
 
+D17: the default simple-framebuffer node has no clock/power-domain/supply
+references. Archived phone logs show simpledrm registration before unused
+clock/domain cleanup. Review the pinned sysfb driver and actual display resource
+ownership; this is a lifecycle gap and a black-screen hypothesis, not a proven
+diagnosis. No blanket ignore-unused boot flags or speculative hardware trial.
+
+Actions40051767501 validates the new kmod policy with the original pinned
+kernel and refreshed rootfs. D16's explicit activation/cross-root path remains
+open and native packaging remains disabled. Repeat the combined check with the
+rebuilt identity-fixed kernel before updating the candidate gate.
+
 | ID | Temporary choice / location | Reason and impact | Removal criterion |
 | --- | --- | --- | --- |
 | D01 | Community low-memory fallback in the default DTS | The owner-specific calibrated candidate now uses actual 15-bank runtime RAM and excludes every stock protected interval offline, but bootloader fixups and actual RAM use are untested | Verify memory/fixups through a bounded RAM boot before promoting the private calibration to the default board profile |
