@@ -20,7 +20,8 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 def check_native_offline_evidence(kernel,desktop,evidence,helper_sha):
-    if (kernel.get('fixed_phy_version') != 1 or kernel.get('host_power_resources_version') != 1 or
+    if (kernel.get('command_budget_version') != 3 or
+            kernel.get('fixed_phy_version') != 1 or kernel.get('host_power_resources_version') != 1 or
             kernel.get('dsi_batch_version') != 1 or
             desktop.get('qemu_native_preflight_rejects_public_root_verified') is not True or
             desktop.get('qemu_native_preflight_runtime_guards_verified') is not True or
@@ -33,7 +34,7 @@ def check_native_offline_evidence(kernel,desktop,evidence,helper_sha):
             evidence.get('native_desktop_helper_sha256') != helper_sha or
             any(evidence.get(key) is not True for key in ['kernel_download_verified',
                 'clock_te_asan_ubsan_verified','native_preflight_arm64_tests_verified',
-                'desktop_download_verified'])):
+                'desktop_download_verified','actual_dtb_opp_budget_verified'])):
         raise ValueError('Matching reviewed native offline evidence required')
 
 

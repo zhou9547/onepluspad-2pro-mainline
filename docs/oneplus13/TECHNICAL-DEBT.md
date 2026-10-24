@@ -1,5 +1,14 @@
 # Technical debt (single register for the phone)
 
+New offline increment: patch0011 derives the clock floor from the actual two-LM
+reservation and splits pipes against the inverse burst/inefficiency budget of
+the real OPP before assignment. Aggregate bandwidth is unchanged. Actual compiled
+DTB is mandatory, budget evidence version3 binds its hash, and private packaging
+rejects older evidence. Ten local C checks and61 tooling tests pass (one Windows
+flock skip); ARM64 sanitizers/full build and matching refreshed rootfs/QEMU are
+pending. Source fixtures are not physical allocator/SSPP acceptance. See DPU-OPP.md.
+No new phone operations; previous single-test authorization remains consumed.
+
 Latest separate authorization: one native RAM boot and one explicit activation
 completed. Real preflight passed; module load returned, but DPU atomic performance
 check rejected with -7. Host requested early recovery and Android returned at

@@ -107,3 +107,10 @@ See FIXED-PHY.md for vendor call-path evidence and physical-validation limits.
 propagates, and failed parent/rate/clock setup releases the acquired PM/OPP
 references before regulators. The ordinary successful sequence is unchanged.
 Actual power-on functions run under fault injection in check-dsi-batch.py.
+
+0011 uses the required AA569 two-LM topology for the mixer clock floor and
+splits pipes before assignment against the real OPP after both ceiling-rounded
+budget factors. It preserves aggregate bandwidth, OPP tables and legacy paths.
+The checker reads the compiled native DTB, replays the old rejection, executes
+the real split and verifies rounding boundaries. See DPU-OPP.md for fixture and
+physical-validation limits.

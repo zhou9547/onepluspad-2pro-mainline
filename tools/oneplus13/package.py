@@ -137,7 +137,7 @@ def main():
         'display_support': 'EXPERIMENTAL_NATIVE_STATIC_SPR_NOT_DEVICE_TESTED',
         'display_conversion_version': 2,
         'command_clock_version': 1,
-        'command_budget_version': 2,
+        'command_budget_version': 3,
         'panel_component_version': 3,
         'dsi_batch_version': 1,
         'fixed_phy_version': 1,

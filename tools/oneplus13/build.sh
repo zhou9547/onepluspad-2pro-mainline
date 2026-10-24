@@ -51,8 +51,6 @@ python3 tools/oneplus13/check-native-identity.py \
   --output "$dest/native-identity-verification.json" --sanitize
 python3 tools/oneplus13/check-spr-runtime.py --kernel-source "$src" \
   --output "$dest/spr-runtime-verification.json" --sanitize
-python3 tools/oneplus13/check-command-budget.py --kernel-source "$src" \
-  --output "$dest/command-budget-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
@@ -115,6 +113,9 @@ make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-touch.dtb 2>&1 | tee "$kout/touch-dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-native.dtb 2>&1 | tee "$kout/native-dtb.log"
+python3 tools/oneplus13/check-command-budget.py --kernel-source "$src" \
+  --native-dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-native.dtb" \
+  --output "$dest/command-budget-verification.json" --sanitize
 python3 tools/oneplus13/check-native-dtb.py \
   --dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-native.dtb" \
   --output "$dest/native-dtb-verification.json" --negative-controls

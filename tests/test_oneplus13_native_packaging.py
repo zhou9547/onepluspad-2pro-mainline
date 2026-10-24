@@ -10,7 +10,7 @@ module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 
 class NativePackagingEvidenceTests(unittest.TestCase):
     def test_requires_the_exact_reviewed_kernel_rootfs_and_helper(self):
-        kernel={'fixed_phy_version':1,'host_power_resources_version':1,'dsi_batch_version':1,
+        kernel={'fixed_phy_version':1,'host_power_resources_version':1,'dsi_batch_version':1,'command_budget_version':3,
                 'integration_commit':'kernel'}
         desktop={'qemu_native_preflight_rejects_public_root_verified':True,
                  'qemu_native_preflight_runtime_guards_verified':True,
@@ -19,7 +19,7 @@ class NativePackagingEvidenceTests(unittest.TestCase):
                   'kernel_commit':'kernel','desktop_commit':'desktop','rootfs_sha256':'rootfs',
                   'native_desktop_helper_sha256':'helper','kernel_download_verified':True,
                   'clock_te_asan_ubsan_verified':True,'native_preflight_arm64_tests_verified':True,
-                  'desktop_download_verified':True}
+                  'desktop_download_verified':True,'actual_dtb_opp_budget_verified':True}
         module.check_native_offline_evidence(kernel,desktop,evidence,'helper')
         for target in [kernel,desktop,evidence]:
             for key in target:

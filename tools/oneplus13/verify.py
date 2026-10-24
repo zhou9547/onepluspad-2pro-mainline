@@ -91,10 +91,17 @@ def verify_artifacts(out):
                     'icc_per_path_average_ceiling': True, 'missing_icc_path_rejected': True,
                     'te_timing_changed': False, 'hardware_transfer_timer_programmed': False,
                     'exact_vendor_hal_algorithm': False}
-        if manifest['command_budget_version'] == 2:
+        if manifest['command_budget_version'] in [2, 3]:
             expected.update(new_atomic_plane_geometry_checked=True, original_plane_math_unchanged=True)
         elif manifest['command_budget_version'] != 1:
             raise ValueError('Unknown command-budget evidence version')
+        if manifest['command_budget_version'] == 3:
+            expected.update(actual_native_dtb_sha256=manifest['files']['sm8750-oneplus-dodge-native.dtb']['sha256'],
+                            actual_mdp_opp_max_hz=575000000,actual_dtb_opp_mode_eligible=True,
+                            fixed_two_mixer_clock_hz=355764706,full_width_old_budget_rejected=True,
+                            actual_plane_split_executed=True,pipe_limit_rounding_boundaries=3417,
+                            native_dtb_negative_controls=6,
+                            plane_geometry_fixture='NO_ROTATION_SCALING_OR_CLIPPING')
         if (
                 any(budget.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C DPU command-budget verification')
