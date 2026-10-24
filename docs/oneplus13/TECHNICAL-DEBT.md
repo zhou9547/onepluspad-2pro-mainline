@@ -2,8 +2,10 @@
 
 2026-10-24 D07 increment: explicit bounded whole-group DSI API and the AA569
 13-group sender are implemented, with actual C packing/resource/failure tests.
-No cross-call queue and no silent serial fallback. Local C checks and 53 tooling
-tests pass; ARM64 sanitizer/build and refreshed matching rootfs/QEMU remain pending.
+No cross-call queue and no silent serial fallback. Nine local/ARM64 C checks
+(Actions ASan/UBSan) and 53 tooling tests pass. Kernel/module build40058811743
+and refreshed matching GNOME/rootfs/QEMU40059533734 pass; all artifacts have
+been downloaded and checked against manifests, module release and group hashes.
 Physical PLL/TE/burst timing, takeover and D16 activation are still open.
 See DSI-BATCH.md. Zero phone operations; native desktop packaging stays disabled.
 
@@ -50,7 +52,7 @@ not physical display acceptance or explicit native activation across switch_root
 | D04 | Sleep targets masked in GNOME staging rootfs | Avoid entering untested phone suspend/resume paths; ordinary standby is unavailable | Cold-boot and repeated suspend/resume tests on the phone with independent recovery |
 | D05 | Phone-only MSM DSI native422 RC glue in kernel-patches/0001 | Selects existing 422 tables and adapts the DRM group-bpp arithmetic to MSM physical-bpp consumers; complete PPS/RGB controls pass offline, actual pipeline remains untested | Replace when upstream has equivalent format/rate semantics, preserving the byte-exact PPS and real-device regression results |
 | D06 | Native422 command HS-ceiling selection0002 and fixed AA569 burst-budget patch0006 | Replaces synthetic CMD-porch clock selection only for an explicit characterized ceiling on a single D-PHY link; validates packet budget and conservatively scales DPU performance votes for6800us with new-state/OPP/ICC rejection; does not program a hardware transfer timer or prove PLL rounding; peak votes intentionally overestimate until measured | Replace with equivalent upstream command-transfer timing support and validate bandwidth, actual clocks, frame completion and power-cycle regression on hardware |
-| D07 | AA569 component with fixed DBV1433 and synchronous individual init writes | Allows compiling and fault-checking exact production packet/power/lifecycle code independently of the missing SPR2 pipeline; only a separate experimental native DTB has a board node; no brightness UI is enabled, vendor DMA grouping timing is unverified | Implement/verify SPR2 and transfer scheduling, validate physical init/power cycles, then add validated PWM/brightness behavior and remove component-only restrictions |
+| D07 | AA569 fixed DBV1433 with bounded synchronous vendor-group submission in patch0008 | Exact production bytes, group boundaries, resource lifetime and error controls pass host C checks; only the experimental native DTB enables the component, no brightness UI is enabled; physical group/TE timing remains unverified | Validate actual PLL/SPR/transfer scheduling and physical init/power cycles, then add validated PWM/brightness behavior |
 | D08 | SM8750 native422 DPU corrections in phone-only kernel patch0003 | Bridges vendor container/initial-line, full-ICH precision, modern-wrapper and PPB requirements while preserving physical-bpp semantics; actual output remains untested | Replace with equivalent upstream changes and preserve vendor/register-capture controls plus real-device regression |
 | D09 | Private AA569 fixed-profile format in kernel/spr-aa569 and spr.py | Separates private coefficients from public sources and bounds the decoder/transaction planner before runtime integration; not a standard firmware ABI and not a working SPR pipeline | Replace with an upstream panel/DRM configuration interface when available; retain strict field checks, private-data isolation and vendor-equivalent packing |
 | D10 | Opt-in fixed-profile SPR CPU startup/PM backend | Reuses community quiet-pipeline approach with private AA569 data, all-pipe UDC preflight, idle/clocks/reset guards and explicit display exclusivity; no DMA, live profiles, partial update or fingerprint/UDC functionality | Replace with reviewed upstream SPR/REGDMA integration after hardware timing/ownership/power-cycle validation; retain strict profile/geometry and no-private-data-in-Git controls |
