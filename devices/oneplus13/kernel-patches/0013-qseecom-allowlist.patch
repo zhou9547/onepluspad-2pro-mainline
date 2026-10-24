@@ -1,28 +1,19 @@
 From: OnePlus 13 mainline port
-Subject: [PATCH] firmware: qcom_scm: disable QSEECOM machine check for SM8750
+Subject: [PATCH] firmware: qcom_scm: disable QSEECOM machine check
 
-The ABL bootloader overwrites the root compatible property, so the
-QSEECOM machine allowlist never matches. Disable the check for
-development. This enables PAS authentication for ADSP.
+ABL overwrites the root compatible, so the allowlist never matches.
+Disable for development. Enables PAS/ADSP.
 
 Signed-off-by: OnePlus 13 mainline port
 ---
---- a/drivers/firmware/qcom/qcom_scm.c
-+++ b/drivers/firmware/qcom/qcom_scm.c
-@@ -2354,9 +2354,7 @@
+--- a/drivers/firmware/qcom/qcom_scm.c	2026-10-25 00:35:24.047589700 +0800
++++ b/drivers/firmware/qcom/qcom_scm.c	2026-10-25 01:02:26.328747200 +0800
+@@ -2354,7 +2354,7 @@
  
  	dev_info(scm->dev, "qseecom: found qseecom with version 0x%x\n", version);
  
 -	if (!of_machine_device_match(qcom_scm_qseecom_allowlist)) {
--		dev_info(scm->dev, "qseecom: untested machine, skipping\n");
--		return 0;
-+	/* QSEECOM machine check disabled for SM8750 development: ABL overwrites
-	 * the root compatible so the allowlist match fails. */
-	if (false) { // !of_machine_device_match(qcom_scm_qseecom_allowlist)) {
-		dev_info(scm->dev, "qseecom: untested machine, skipping
-");
-		return 0;
-	}
++	if (false) { /* QSEECOM: disabled for SM8750 development: ABL overwrites root compatible */
+ 		dev_info(scm->dev, "qseecom: untested machine, skipping\n");
+ 		return 0;
  	}
- 
- 	/*
