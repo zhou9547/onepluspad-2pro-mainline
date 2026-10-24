@@ -106,7 +106,9 @@ make "${args[@]}" olddefconfig >> "$kout/configure.log" 2>&1
 python3 tools/oneplus13/verify.py --config "$kout/.config"
 cp "$kout/.config" "$dest/kernel.config"
 config_id=$(sha256sum "$kout/.config" | cut -c1-12)
-phone_id=$(sha256sum "$dest/phone-kernel.patch" | cut -c1-12)
+# diagnostic branch: keep the accepted e5c6944 phone_id so rebuilt modules
+# keep the exact vermagic and can be insmod-ed into the running run5 kernel.
+phone_id=c0e159b44b4a  # pinned; real patch hash differs (instrumented driver)
 args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id-p$phone_id")
 # DTB first: reject unresolved phandles before the expensive kernel build.
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference-dtb.log"
