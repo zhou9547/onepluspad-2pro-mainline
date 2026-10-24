@@ -18,6 +18,12 @@ jobs:
         run: |
           python3 tools/oneplus13/check-pll-timing.py --sources out/pll-sources \
             --output out/pll-timing-verification.json --sanitize
+      - name: Fetch and verify display timing and clock topology sources
+        run: python3 tools/oneplus13/fetch-display-path.py --output out/display-path
+      - name: Execute actual CCF pixel divider and command TE callbacks
+        run: |
+          python3 tools/oneplus13/check-clock-tree.py --sources out/display-path \
+            --output out/clock-tree-verification.json --sanitize
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -25,5 +31,7 @@ jobs:
           path: |
             out/pll-sources/
             out/pll-timing-verification.json
+            out/display-path/
+            out/clock-tree-verification.json
           if-no-files-found: error
           retention-days: 14
