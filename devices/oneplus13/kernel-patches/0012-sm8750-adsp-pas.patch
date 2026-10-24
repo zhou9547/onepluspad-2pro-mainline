@@ -1,42 +1,42 @@
 From: OnePlus 13 mainline port
 Subject: [PATCH] remoteproc: qcom: pas: Add SM8750 ADSP support
 
-Add the SM8750 ADSP PAS resource descriptor and compatible string
-so the ADSP remoteproc can register and attempt firmware load.
+Add the SM8750 ADSP PAS resource descriptor and compatible string.
 
 Signed-off-by: OnePlus 13 mainline port
 ---
- drivers/remoteproc/qcom_q6v5_pas.c | 23 ++++++++++++++++++++++
- 1 file changed, 23 insertions(+)
+ drivers/remoteproc/qcom_q6v5_pas.c | 20 ++++++++++++++++++++
+ 1 file changed, 20 insertions(+)
 
 --- a/drivers/remoteproc/qcom_q6v5_pas.c
 +++ b/drivers/remoteproc/qcom_q6v5_pas.c
-@@ -1572,6 +1572,7 @@
+@@ -1571,6 +1571,25 @@
+ 	.region_assign_count = 2,
  	.region_assign_vmid = QCOM_SCM_VMID_MSS_MSA,
  };
- 
 +static const struct qcom_pas_data sm8750_adsp_resource = {
-	.crash_reason_smem = 423,
-	.firmware_name = "adsp.mdt",
-	.dtb_firmware_name = "adsp_dtb.mdt",
-	.pas_id = 1,
-	.dtb_pas_id = 0x24,
-	.minidump_id = 5,
-	.auto_boot = true,
-	.decrypt_shutdown = true,
-	.proxy_pd_names = (char*[]){
-		"cx",
-		NULL
-	},
-	.load_state = "adsp",
-	.ssr_name = "lpass",
-	.sysmon_name = "adsp",
-	.ssctl_id = 0x14,
-};
++	.crash_reason_smem = 423,
++	.firmware_name = "adsp.mdt",
++	.dtb_firmware_name = "adsp_dtb.mdt",
++	.pas_id = 1,
++	.dtb_pas_id = 0x24,
++	.minidump_id = 5,
++	.auto_boot = true,
++	.decrypt_shutdown = true,
++	.proxy_pd_names = (char*[]){
++		"cx",
++		NULL
++	},
++	.load_state = "adsp",
++	.ssr_name = "lpass",
++	.sysmon_name = "adsp",
++	.ssctl_id = 0x14,
++};
++
+ 
  static const struct of_device_id qcom_pas_of_match[] = {
  	{ .compatible = "qcom,eliza-adsp-pas", .data = &sm8550_adsp_resource },
- 	{ .compatible = "qcom,milos-adsp-pas", .data = &sm8550_adsp_resource },
-@@ -1647,6 +1648,7 @@
+@@ -1647,6 +1666,7 @@
  	{ .compatible = "qcom,sm8650-cdsp-pas", .data = &sm8650_cdsp_resource },
  	{ .compatible = "qcom,sm8650-mpss-pas", .data = &sm8650_mpss_resource },
  	{ .compatible = "qcom,sm8750-mpss-pas", .data = &sm8750_mpss_resource },
@@ -44,4 +44,3 @@ Signed-off-by: OnePlus 13 mainline port
  	{ .compatible = "qcom,x1e80100-adsp-pas", .data = &x1e80100_adsp_resource },
  	{ .compatible = "qcom,x1e80100-cdsp-pas", .data = &x1e80100_cdsp_resource },
  	{ },
-
