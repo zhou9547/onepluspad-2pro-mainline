@@ -42,6 +42,19 @@ modprobe -b 'of:Ndisplay-controllerT(null)Cqcom,sm8750-dpu' || :
 [ ! -d /sys/module/msm ]
 echo ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED
 [ "$(sha256sum /usr/libexec/oneplus13-native-display | cut -d' ' -f1)" = "$(cat /run/oneplus13/native-display-sha256)" ]
+# Exercise real systemd timer D-Bus and matching kmod reads. QEMU has no phone
+# gadget, so only that already-checked service response is a fixture here.
+/usr/bin/python3 - <<'PY'
+import runpy
+ns=runpy.run_path('/usr/libexec/oneplus13-native-display')
+real=ns['command']
+def run(args):
+    if args[:2]==['/usr/bin/systemctl','is-active'] and args[-1]=='oneplus13-ram-usb.service':
+        return 'active'
+    return real(args)
+ns['runtime_checks'](__import__('os').uname().release,run=run)
+PY
+echo ONEPLUS13_NATIVE_RUNTIME_GUARDS_OFFLINE_OK
 # Reject absent private payload in the actual public QEMU root, without loading.
 if /usr/libexec/oneplus13-native-display --check; then
     echo 'Native preflight unexpectedly accepted the public QEMU root'; exit 1

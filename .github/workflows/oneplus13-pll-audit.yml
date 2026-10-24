@@ -14,6 +14,8 @@ jobs:
           persist-credentials: false
       - name: Fetch and verify immutable public source blobs
         run: python3 tools/oneplus13/fetch-pll-sources.py --output out/pll-sources
+      - name: Check current phone tooling and isolated native activation fixtures
+        run: python3 -m unittest discover -s tests -p 'test_oneplus13*.py' -v
       - name: Execute actual platform and vendor C with sanitizers
         run: |
           python3 tools/oneplus13/check-pll-timing.py --sources out/pll-sources \
