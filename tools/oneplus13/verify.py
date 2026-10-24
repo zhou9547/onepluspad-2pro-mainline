@@ -139,6 +139,16 @@ def verify_artifacts(out):
                     'ordinary_packing_dispatch_and_manager_trigger_unchanged':True}
         if manifest['dsi_batch_version'] != 1 or any(batch.get(k) != v for k,v in expected.items()):
             raise ValueError('Missing or failed C DSI batch verification')
+    if 'fixed_phy_version' in manifest:
+        phy = json.loads((out / 'fixed-phy-verification.json').read_text())
+        expected = {'scope':'HOST_C_FIXED_AA569_PHY_ONLY','hardware_tested':False,
+                    'sanitizers':True,'kernel_commit':manifest['kernel_commit'],
+                    'production_timing_bytes':[0,44,12,12,29,26,12,12,11,2,4,0,36,17],
+                    'real_mmio_writers_match_public_profile':True,'rejected_profiles_before_mmio':7,
+                    'legacy_profiles_unchanged':33,'shared_host_timing_updated':True,
+                    'all_rejection_outputs_unchanged':True,'selector_called_before_any_phy_mmio':True}
+        if manifest['fixed_phy_version'] != 1 or any(phy.get(k) != v for k,v in expected.items()):
+            raise ValueError('Missing or failed fixed AA569 PHY verification')
     if 'dpu_buffer_version' in manifest:
         dpu = json.loads((out / 'dpu-buffer-verification.json').read_text())
         expected = {'scope': 'HOST_C_DPU_BUFFER_AND_REGISTER_ONLY',

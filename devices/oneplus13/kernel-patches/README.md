@@ -95,3 +95,10 @@ before one resource lifetime and kickoff; timeout resets before restoration.
 The unchanged single-message packing/dispatch/trigger are checked against the pin.
 Parent clock errors propagate instead of being swallowed. See DSI-BATCH.md for
 actual C fault-injection scope and the still-open physical timing gates.
+
+0009 selects the public AA569 production V7.2 fourteen-register timing only
+for the attached SM8750/DSI0 four-lane command D-PHY native422 fixed-rate
+candidate. Unsupported fixed requests fail before MMIO; ordinary timings stay
+unchanged. Shared host clk_pre/post are updated in the same enable operation.
+The host request is cleared before rate calculation to avoid stale stack data.
+See FIXED-PHY.md for vendor call-path evidence and physical-validation limits.

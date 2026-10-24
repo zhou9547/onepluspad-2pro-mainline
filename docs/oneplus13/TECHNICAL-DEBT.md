@@ -1,5 +1,12 @@
 # Technical debt (single register for the phone)
 
+Fixed-PHY increment: vendor V7.2 timing_val/enable/commit path confirms direct
+14-register production values. Patch0009 selects them only for the attached
+AA569/SM8750/DSI0 fixed-rate candidate and synchronizes shared host timing.
+Ten local real C checks and 53 tooling tests pass; ARM64 build pending.
+Clock-tree/TE/resource ownership and explicit activation remain open. No phone
+operations; see FIXED-PHY.md. Do not infer hardware acceptance.
+
 2026-10-24 PLL/PHY audit: nominal 1.3632 GHz and valid 2x/3x VCO values are
 exact in the 18-bit fractional arithmetic, but six of fourteen generic D-PHY
 timing fields differ from the final AA569 production DTS override. Actual C

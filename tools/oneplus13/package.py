@@ -140,6 +140,7 @@ def main():
         'command_budget_version': 2,
         'panel_component_version': 3,
         'dsi_batch_version': 1,
+        'fixed_phy_version': 1,
         'dpu_buffer_version': 1,
         'spr_profile_version': 2,
         'spr_runtime_version': 1,
