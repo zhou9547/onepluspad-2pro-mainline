@@ -10,6 +10,11 @@ on:
       - tests/test_oneplus13.py
       - tests/s3910_report_test.c
   workflow_dispatch:
+    inputs:
+      pll-audit-only:
+        description: Run only the immutable PLL/PHY source audit
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -19,7 +24,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  pll-audit:
+    if: ${{ inputs.pll-audit-only == true }}
+    uses: ./.github/workflows/oneplus13-pll-audit.yml
   kernel:
+    if: ${{ inputs.pll-audit-only != true }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 150
     steps:

@@ -1,6 +1,7 @@
 name: OnePlus 13 pinned PLL and PHY audit
 on:
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
