@@ -36,6 +36,8 @@ def main():
     parser.add_argument('--configure-only', action='store_true',
                         help='prepare the verified source and Ninja rules without compiling')
     parser.add_argument('--profile', choices=('probe', 'desktop', 'gpu-2404'), default='probe')
+    parser.add_argument('--ndebug', action='store_true',
+                    help='Compile with NDEBUG (asserts off) for usability builds')
     args = parser.parse_args()
     if platform.machine() not in ('aarch64', 'arm64'):
         parser.error('this recipe currently requires a native arm64 build environment')
@@ -57,7 +59,7 @@ def main():
         libdir = 'lib/aarch64-linux-gnu' if content else 'lib'
         drivers = 'freedreno,softpipe' if content else 'freedreno'
         flags = [f'--prefix={prefix}', f'--libdir={libdir}', '--buildtype=release',
-                 '--wrap-mode=nofallback', '-Db_ndebug=false',
+                 '--wrap-mode=nofallback', '-Db_ndebug=true' if args.ndebug else '-Db_ndebug=false',
                  f'-Dgallium-drivers={drivers}', '-Degl=enabled',
                  '-Dgbm=enabled', '-Dgles1=disabled', '-Dgles2=enabled',
                  '-Dllvm=disabled', '-Dgallium-va=disabled', '-Dvideo-codecs=[]',
