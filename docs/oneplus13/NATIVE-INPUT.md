@@ -73,3 +73,14 @@ touch DTB and source, but rebuilds the module for release ending p92bbf23dc6a6.
 Actual115952-byte AArch64 module SHA256 is
 4224b650ba69b265a86e66bdf70fef0b51f7da61b387a0ffceff01045cda451f.
 Use the newest complete matching module tree, not a module from an older build.
+
+## Hardware acceptance, 2026-10-24
+
+RAM runs 5-7 on the physical host closed the loop: the merged native+touch
+DTB boots with zero display regression; the first-write EIO was an accounting
+artifact (spi-geni-qcom never sets actual_length), fixed by trusting spi_sync;
+the controller answered with bare data a5 10 1c 00 in application firmware,
+registered "OnePlus 13 Synaptics S3910 LBP" (event3) and finger input worked
+in GNOME during the observation window. Raw multitouch/corner mapping
+quantification is still open, as is any electrical validation beyond the
+stock-matched DT settings.
