@@ -12,6 +12,7 @@
 #include <linux/of.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
+#include <video/mipi_display.h>
 #include <drm/display/drm_dsc.h>
 #include <drm/drm_connector.h>
 #include <drm/drm_mipi_dsi.h>
