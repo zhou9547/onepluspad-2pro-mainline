@@ -6,7 +6,24 @@ set -eu
 export PATH=/bin:/sbin
 [ "$(uname -r)" = '@KERNEL_RELEASE@' ] || { echo 'Wrong kernel'; exit 1; }
 [ -r /etc/oneplus13-native-candidate ] || { echo 'Not the native RAM candidate'; exit 1; }
-tr '\000' '\n' < /sys/firmware/devicetree/base/compatible | grep -qx oneplus,dodge || exit 1
+# ABL rewrites root model/compatible. Use the exact model + chassis approach
+# from erhai-physical-platform, with phone-specific identities and SoC checks.
+check_native_identity() {
+  base=$1
+  [ "$(tr '\000' '\n' < "$base/chassis-type")" = handset ] || return 1
+  case "$(tr '\000' '\n' < "$base/model")" in
+    'OnePlus 13 (AA569 native display experimental candidate)')
+      tr '\000' '\n' < "$base/compatible" | grep -qx oneplus,dodge || return 1
+      tr '\000' '\n' < "$base/compatible" | grep -qx qcom,sm8750 ;;
+    'Qualcomm Technologies, Inc. Sun MTP,dodge')
+      tr '\000' '\n' < "$base/compatible" | grep -qx qcom,sun ;;
+    *) return 1 ;;
+  esac
+}
+check_native_identity /sys/firmware/devicetree/base || { echo 'Wrong native phone identity'; exit 1; }
+# Native desktop handoff is disabled until its udev/manual-loading policy has
+# been rebuilt and verified. This helper currently supports diagnostics only.
+[ ! -e /run/oneplus13/ram-session ] || { echo 'Native desktop activation is not validated'; exit 1; }
 [ -r /lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin ] || exit 1
 configured=0
 for state in /sys/class/udc/*/state; do

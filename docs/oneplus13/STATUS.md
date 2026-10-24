@@ -1,5 +1,26 @@
 # 一加13适配状态
 
+## 2026-10-24 原生显示离线修复
+
+按用户最新要求暂停真机调试，本轮设备操作为零。已修复 native helper/内核
+SPR/桌面 helper 对 ABL 身份的误判，补上 rootfs 显示加载阻断及 QEMU 实测项，
+临时关闭 native 桌面打包。八项主机 C 检查及身份正反例通过；新 ARM64 编译、
+rootfs/QEMU 与物理显示仍待验证。详细范围、证据和下一步见
+[原生显示离线门槛](OFFLINE-NATIVE-GATE.md)，下方历史构建不覆盖本轮源码。
+
+## 2026-10-24 真机接手后的本地增量
+
+本段描述本次接手会话，下面保留的历史快照不代表当前测试结论。
+
+- 默认300秒RAM诊断已在PJZ110真机启动，USB NCM/HTTP/Telnet可用，145项UFS设备及分区软件只读，未挂载Android；随后返回原Android。
+- 首次RAM桌面测试完成7块432734208字节下载、完整SHA、只读SquashFS及RAM overlay挂载，但compatible门槛误拒绝ABL运行时身份，未进入systemd。
+- 已参考原项目erhai-physical-platform和init-ncm修复model＋chassis边界，保留Gunyah/VMID/驱动检查，16项离线测试通过。
+- 修复后真机重测已确认PID1为systemd，GDM/NetworkManager/D-Bus/存储保护运行，GNOME Shell 50.1初始设置会话运行；屏幕仍黑，原生显示/触控/WLAN未验收。
+- systemd平台检测为none，PID1 Virtualization为空。保留900秒截止，约930.26秒后确认返回原Android，元数据一致；主机未发送重启命令。
+
+## 历史归档快照
+
+
 截至2026-10-24，c2e659aaa062内核、a6c8ceb根文件系统与ef63950完整HTTP交接/恢复版本均已下载复验；两份本机校准RAM桌面候选已生成。**没有在手机启动实验内核，完整硬件适配尚未完成，不能称为可正常刷入使用的系统。**
 
 | 组件 | 状态与证据 |

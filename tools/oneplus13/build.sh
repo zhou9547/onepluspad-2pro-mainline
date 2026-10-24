@@ -43,6 +43,8 @@ python3 tools/oneplus13/check-dpu.py --kernel-source "$src" \
   --output "$dest/dpu-buffer-verification.json" --sanitize
 python3 tools/oneplus13/check-spr-profile.py \
   --output "$dest/spr-profile-verification.json" --sanitize
+python3 tools/oneplus13/check-native-identity.py \
+  --output "$dest/native-identity-verification.json" --sanitize
 python3 tools/oneplus13/check-spr-runtime.py --kernel-source "$src" \
   --output "$dest/spr-runtime-verification.json" --sanitize
 python3 tools/oneplus13/check-command-budget.py --kernel-source "$src" \

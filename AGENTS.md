@@ -1,5 +1,14 @@
 # OnePlus 13 adaptation
 
+Current owner instruction, 2026-10-24 (takes precedence over historical records):
+continue porting OFFLINE. Inspect the original project and vendor references,
+complete theoretical checks and record passed/blocked evidence before proposing
+another hardware test. Do not use the phone for exploratory debugging. This
+phase authorizes no ADB/Fastboot operations, reboot, RAM boot or flashing.
+The owner explicitly approved uploading the reviewed public-source changes to
+an isolated branch of zhou9547/onepluspad-2pro-mainline and using GitHub Actions
+for ARM64/QEMU offline builds. This does not authorize hardware testing.
+
 Target: OnePlus 13 (dodge / SM8750), not OnePlus 13R/13T/13s or the Pad.
 
 User authorization, 2026-10-22: implement in the user's fork, push an isolated

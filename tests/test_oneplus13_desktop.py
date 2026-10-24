@@ -4,7 +4,9 @@ import importlib.util
 from pathlib import Path
 import stat
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 TOOLS = Path(__file__).resolve().parents[1]/'tools/oneplus13'
 sys.path.insert(0, str(TOOLS))
@@ -46,3 +48,19 @@ class DesktopTests(unittest.TestCase):
     def test_cannot_install_support_into_host_root(self):
         with self.assertRaises(ValueError):
             installer.install(Path('/').resolve())
+
+    def test_installer_blocks_display_alias_and_ordinary_explicit_loads(self):
+        out = TOOLS.parents[1]/'out'
+        out.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=out) as temporary:
+            root = Path(temporary).resolve()
+            (root/'etc').mkdir()
+            (root/'etc/os-release').write_text('ID=ubuntu\n')
+            # Windows needs privileges for Linux absolute symlinks. Unit files
+            # are still written; this test exercises the actual policy writer.
+            with patch.object(Path,'symlink_to'):
+                installer.install(root)
+            policy = (root/'etc/modprobe.d/90-oneplus13-display-manual.conf').read_text()
+            for module in ['panel_oneplus_aa569','msm']:
+                self.assertIn('blacklist '+module+'\n',policy)
+                self.assertIn('install '+module+' /bin/false\n',policy)

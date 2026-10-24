@@ -61,7 +61,9 @@ typedef uint64_t u64;typedef uint32_t u32;
 #define EINVAL 22
 #define E2BIG 7
 #define ENODEV 19
+#ifndef EOVERFLOW
 #define EOVERFLOW 75
+#endif
 #define check_mul_overflow(a,b,out) __builtin_mul_overflow(a,b,out)
 #define check_add_overflow(a,b,out) __builtin_add_overflow(a,b,out)
 #define mult_frac(x,n,d) ((u64)(x)*(n)/(d))

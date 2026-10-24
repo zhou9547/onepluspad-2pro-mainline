@@ -1,5 +1,12 @@
 # AA569 native display investigation
 
+Current restriction, 2026-10-24: native desktop packaging is temporarily disabled.
+See [the current offline gate](OFFLINE-NATIVE-GATE.md). Source fixes and host C
+checks do not update old images. The original SPR identity check rejects the
+observed ABL-rewritten phone; full desktop aliases bypass the diagnostic-only
+manual gate. Rebuild and verify before proposing another hardware test.
+Historical build results below do not cover these changes or authorize testing.
+
 ## Current boundary
 
 The fixed static SPR runtime and independent native DTB have passed full ARM64

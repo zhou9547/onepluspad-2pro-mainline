@@ -1,5 +1,10 @@
 # RAM GNOME boot handoff
 
+Current restriction, 2026-10-24: native desktop packaging is disabled pending
+the [offline gate](OFFLINE-NATIVE-GATE.md). The new QEMU observer requires an
+actual kmod display-loading-policy check; older passed handoff reports do not
+cover it. No further hardware experiment is authorized by this document.
+
 Scope, 2026-10-24: turn the separately built GNOME userspace into a bounded RAM
 desktop candidate. Reuse the Pad init-ncm SquashFS/OverlayFS/switch_root design,
 chunked NCM transfer and early physical-platform correction, with phone-owned

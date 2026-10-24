@@ -9,6 +9,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/platform_device.h>
+#include <linux/string.h>
 #include <drm/drm_crtc.h>
 #include <drm/drm_managed.h>
 
@@ -116,6 +117,33 @@ int dpu_aa569_spr_suspend(struct dpu_kms *kms)
 	return aa569_spr_apply(kms, false);
 }
 
+/* Match both the compiled board and the exact ABL-rewritten physical phone.
+ * Generic Sun compatibility alone does not identify this panel or board.
+ * The independent DPU opt-in, compatible, reset and catalog gates remain.
+ */
+static bool aa569_spr_machine(void)
+{
+	struct device_node *root;
+	const char *model, *chassis;
+	bool match = false;
+
+	root = of_find_node_by_path("/");
+	if (!root)
+		return false;
+	if (of_property_read_string(root, "model", &model) ||
+	    of_property_read_string(root, "chassis-type", &chassis) ||
+	    strcmp(chassis, "handset"))
+		goto out;
+	if (!strcmp(model, "OnePlus 13 (AA569 native display experimental candidate)"))
+		match = of_device_is_compatible(root, "oneplus,dodge") &&
+			of_device_is_compatible(root, "qcom,sm8750");
+	else if (!strcmp(model, "Qualcomm Technologies, Inc. Sun MTP,dodge"))
+		match = of_device_is_compatible(root, "qcom,sun");
+out:
+	of_node_put(root);
+	return match;
+}
+
 int dpu_aa569_spr_load(struct dpu_kms *kms)
 {
 	struct device *dev = &kms->pdev->dev;
@@ -126,7 +154,7 @@ int dpu_aa569_spr_load(struct dpu_kms *kms)
 
 	if (!of_property_read_bool(dev->of_node, "oneplus,aa569-static-spr"))
 		return 0;
-	if (!of_machine_is_compatible("oneplus,dodge") ||
+	if (!aa569_spr_machine() ||
 	    !of_device_is_compatible(dev->of_node, "qcom,sm8750-dpu") ||
 	    !dev->parent || !dev->parent->of_node ||
 	    !of_property_read_bool(dev->parent->of_node, "resets"))

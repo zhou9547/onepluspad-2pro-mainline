@@ -20,6 +20,23 @@ test -f /run/evidence/systemd-alive.txt
 awk -F: '$1 == "root" {if ($2 !~ /^[!*]/) exit 1; found=1} END {if (!found) exit 1}' /etc/shadow
 /usr/bin/gnome-shell --version
 systemctl show gdm3.service -p ActiveState -p SubState
+# Exercise the actual rootfs kmod and full indexes only in dummy-virt.
+# Missing modules must not masquerade as a loading-policy success.
+for module in panel_oneplus_aa569 msm; do
+    modinfo "$module" > /dev/null
+    modprobe -c | grep -qx "install $module /bin/false"
+    modprobe -n -v "$module" > /run/oneplus13/display-load-plan
+    grep -q '^install /bin/false' /run/oneplus13/display-load-plan
+    if modprobe "$module"; then
+        echo "Display policy unexpectedly allowed $module"; exit 1
+    fi
+    [ ! -d "/sys/module/$module" ]
+done
+modprobe -b 'of:NpanelT(null)Coneplus,dodge-aa569' || :
+modprobe -b 'of:Ndisplay-controllerT(null)Cqcom,sm8750-dpu' || :
+[ ! -d /sys/module/panel_oneplus_aa569 ]
+[ ! -d /sys/module/msm ]
+echo ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED
 echo ONEPLUS13_DESKTOP_HANDOFF_OK
 trap - EXIT
 EOF

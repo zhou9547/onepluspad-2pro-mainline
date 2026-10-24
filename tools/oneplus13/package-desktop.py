@@ -28,6 +28,11 @@ def main():
     p.add_argument('--output', required=True, type=Path)
     p.add_argument('--native-xml', type=Path)
     a = p.parse_args()
+    if a.native_xml:
+        p.error('Native desktop packaging is disabled: full-rootfs display modaliases '
+                'can bypass the diagnostic manual-load gate. Rebuild and validate '
+                'the desktop module policy and the updated SPR kernel first; '
+                'existing native desktop images are not eligible for testing.')
     spec = importlib.util.spec_from_file_location('collector', REPO/'tools/oneplus13/collect-stock.py')
     collector = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(collector)

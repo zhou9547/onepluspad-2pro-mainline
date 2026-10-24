@@ -40,7 +40,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio
       - name: Check phone tooling
         run: |
-          python3 -m unittest discover -s tests -p test_oneplus13.py -v
+          python3 -m unittest discover -s tests -p 'test_oneplus13*.py' -v
           gcc -Wall -Wextra -Werror -fsanitize=address,undefined tests/s3910_report_test.c -o /tmp/s3910-report-test
           /tmp/s3910-report-test
       - name: Restore compiler cache
@@ -80,6 +80,7 @@ jobs:
             out/oneplus13/spr-profile-verification.json
             out/oneplus13/spr-runtime-verification.json
             out/oneplus13/native-dtb-verification.json
+            out/oneplus13/native-identity-verification.json
             out/oneplus13/wlan-dtb-verification.json
             out/oneplus13/gpu-dtb-verification.json
           if-no-files-found: ignore

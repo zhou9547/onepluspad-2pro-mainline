@@ -1,5 +1,13 @@
 # Technical debt (single register for the phone)
 
+Current offline gate, 2026-10-24: see OFFLINE-NATIVE-GATE.md. No hardware work
+in this phase. D15: native helper/SPR identity source fixed and host-checked,
+new ARM64 build still required. D16: full rootfs aliases bypassed diagnostic
+manual loading; install a fail-closed kmod policy and require a real QEMU check.
+Native desktop packaging remains disabled until rebuilt policy, handoff and
+explicit activation are validated. D07/D10 timing and physical acceptance stay
+open; these new findings are not a proven cause of the default desktop black screen.
+
 | ID | Temporary choice / location | Reason and impact | Removal criterion |
 | --- | --- | --- | --- |
 | D01 | Community low-memory fallback in the default DTS | The owner-specific calibrated candidate now uses actual 15-bank runtime RAM and excludes every stock protected interval offline, but bootloader fixups and actual RAM use are untested | Verify memory/fixups through a bounded RAM boot before promoting the private calibration to the default board profile |
@@ -18,3 +26,7 @@
 
 
 Unimplemented peripherals are tracked in STATUS.md, not represented as working.
+
+## 2026-10-24 本地真机补充
+
+D14：ABL改写根model/compatible，导致手机physical-platform误拒绝。已按原项目model＋chassis方式修复并通过正反例，真机已越过切根门槛并进入systemd/GDM。继续保留VMID3、Gunyah及无绑定驱动条件。保持900秒截止的真机会话已返回原Android，单次交接与返回验证完成；物理显示、触控、GPU及WLAN仍独立待验收。

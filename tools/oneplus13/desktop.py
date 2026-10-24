@@ -136,12 +136,15 @@ def main():
                 server.server_close()
                 thread.join()
         (out/'qemu-desktop.log').write_text(proc.stdout)
-        markers = ['ONEPLUS13_DESKTOP_HANDOFF_OK', 'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
+        markers = ['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED', 'ONEPLUS13_DESKTOP_HANDOFF_OK',
+                   'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
         if (proc.returncode or any(m not in proc.stdout for m in markers) or
-                not proc.stdout.index(markers[0]) < proc.stdout.index(markers[1]) < proc.stdout.index(markers[2])):
+                not all(proc.stdout.index(left) < proc.stdout.index(right)
+                        for left,right in zip(markers,markers[1:]))):
             print(proc.stdout[-12000:])
             raise SystemExit('Actual GNOME rootfs QEMU handoff failed')
         report['qemu_handoff_verified'] = True
+        report['qemu_display_module_policy_verified'] = True
         report['qemu_deadline_expiry_verified'] = True
         report['qemu_deadline_test_seconds'] = 180 if a.qemu_http else 120
         report['physical_deadline_exercised'] = False
