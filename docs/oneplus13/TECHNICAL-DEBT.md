@@ -1,5 +1,17 @@
 # Technical debt (single register for the phone)
 
+Latest separate authorization: one native RAM boot and one explicit activation
+completed. Real preflight passed; module load returned, but DPU atomic performance
+check rejected with -7. Host requested early recovery and Android returned at
+135.4s with sampled metadata matching. No flash/partition changes. The one-test
+authorization is consumed; further phone operations require a new authorization.
+The 1GHz success fixture missed the actual 575MHz MDP OPP, while the present
+full-width budget requires 711529412Hz. Current candidate is ineligible for retry.
+Bind compiled-DTB OPP, actual topology/plane splitting and performance checks;
+review vendor/original processing before correcting the votes, never raise the
+OPP just to suppress rejection. Physical display and all other acceptance gates
+remain open. See FIXED-PHY.md for the separate hardware evidence.
+
 Fixed-PHY increment: vendor V7.2 timing_val/enable/commit path confirms direct
 14-register production values. Patch0009 selects them only for the attached
 AA569/SM8750/DSI0 fixed-rate candidate and synchronizes shared host timing.
