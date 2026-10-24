@@ -4,6 +4,9 @@
 set -eu
 tr '\000' '\n' < /sys/firmware/devicetree/base/compatible | grep -qx linux,dummy-virt
 [ "${1:-}" = /newroot ]
+cp /bin/oneplus13-native-handoff /newroot/run/oneplus13/native-handoff-lib
+cp /bin/oneplus13-native-handoff-selftest /newroot/run/oneplus13/native-handoff-selftest
+chmod 700 /newroot/run/oneplus13/native-handoff-selftest
 deadline=120
 case " $(cat /proc/cmdline) " in *' oneplus13.desktop.qemu-http=1 '*) deadline=180 ;; esac
 cat > /newroot/run/oneplus13/qemu-check <<'EOF'
@@ -37,6 +40,7 @@ modprobe -b 'of:Ndisplay-controllerT(null)Cqcom,sm8750-dpu' || :
 [ ! -d /sys/module/panel_oneplus_aa569 ]
 [ ! -d /sys/module/msm ]
 echo ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED
+/run/oneplus13/native-handoff-selftest
 echo ONEPLUS13_DESKTOP_HANDOFF_OK
 trap - EXIT
 EOF

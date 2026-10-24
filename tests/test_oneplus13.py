@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib.util
 import gzip
+import hashlib
 from io import BytesIO
 import json
 import pathlib
@@ -82,6 +83,10 @@ class PhoneFormats(unittest.TestCase):
             self.assertEqual(check[name], props)
         self.assertEqual(check['lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin']['data'], encode_profile(self.synthetic_spr()))
         self.assertIn(b'test-release', check['sbin/start-native-display']['data'])
+        marker=check['etc/oneplus13-native-handoff']['data'].decode().splitlines()
+        self.assertEqual(marker[:2],['ONEPLUS13_NATIVE_HANDOFF_V1','test-release'])
+        self.assertEqual(marker[2],hashlib.sha256(check['lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin']['data']).hexdigest())
+        self.assertEqual(marker[3],hashlib.sha256(check['sbin/start-native-display']['data']).hexdigest())
         self.assertFalse(report['hardware_tested'])
         self.assertFalse(report['qemu_this_derived_image'])
         self.assertEqual(packed, build_initramfs(original, self.native_modules(), 'test-release', self.synthetic_spr(), helper)[0])

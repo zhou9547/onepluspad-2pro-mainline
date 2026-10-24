@@ -29,7 +29,16 @@ class Source:
 class ProxyTests(unittest.TestCase):
     def setUp(self):
         self.source = Source()
-        self.server = module.ThreadingHTTPServer(('127.0.0.1', 0), module.proxy_handler(self.source))
+        self.finished = threading.Event()
+        finished = self.finished
+        handler = module.proxy_handler(self.source)
+        class ObservedHandler(handler):
+            def do_GET(self):
+                try:
+                    super().do_GET()
+                finally:
+                    finished.set()
+        self.server = module.ThreadingHTTPServer(('127.0.0.1', 0), ObservedHandler)
         self.server.daemon_threads = True
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -51,6 +60,8 @@ class ProxyTests(unittest.TestCase):
             self.assertEqual(response.status, 206)
             self.assertEqual(response.headers['Content-Range'], 'bytes 5-9/100')
             self.assertEqual(response.read(), bytes([5, 6, 7, 8, 9]))
+        # The socket consumer can finish before the handler updates accounting.
+        self.assertTrue(self.finished.wait(2), 'Proxy handler did not finish')
         self.assertEqual(self.source.downloaded, 5)
 
     def test_full_and_out_of_bounds_reads_rejected(self):

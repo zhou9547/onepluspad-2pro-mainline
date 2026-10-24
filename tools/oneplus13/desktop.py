@@ -52,7 +52,9 @@ def derive(original):
             'esac\nwhile :; do\n  dmesg')
     entries['init']['data'] = text.encode()
     for source, target in [('prepare', 'ram-prepare'), ('launch', 'ram-launch'),
-                           ('physical-platform', 'physical-platform'), ('qemu-install', 'qemu-install')]:
+                           ('physical-platform', 'physical-platform'), ('qemu-install', 'qemu-install'),
+                           ('native-handoff', 'native-handoff'),
+                           ('native-handoff-selftest', 'native-handoff-selftest')]:
         name = 'bin/oneplus13-'+target
         if name in entries:
             raise ValueError('Desktop helper already exists')
@@ -136,7 +138,8 @@ def main():
                 server.server_close()
                 thread.join()
         (out/'qemu-desktop.log').write_text(proc.stdout)
-        markers = ['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED', 'ONEPLUS13_DESKTOP_HANDOFF_OK',
+        markers = ['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED', 'ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK',
+                   'ONEPLUS13_DESKTOP_HANDOFF_OK',
                    'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
         if (proc.returncode or any(m not in proc.stdout for m in markers) or
                 not all(proc.stdout.index(left) < proc.stdout.index(right)
@@ -145,6 +148,8 @@ def main():
             raise SystemExit('Actual GNOME rootfs QEMU handoff failed')
         report['qemu_handoff_verified'] = True
         report['qemu_display_module_policy_verified'] = True
+        report['qemu_native_payload_data_handoff_verified'] = True
+        report['native_display_activated'] = False
         report['qemu_deadline_expiry_verified'] = True
         report['qemu_deadline_test_seconds'] = 180 if a.qemu_http else 120
         report['physical_deadline_exercised'] = False

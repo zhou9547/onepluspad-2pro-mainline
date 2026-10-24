@@ -1,5 +1,13 @@
 # Technical debt (single register for the phone)
 
+2026-10-24 follow-up: the private payload now has a versioned release/profile/
+helper hash manifest and a data-only stage across switch_root. Old or partial
+payloads fail closed, merged-/usr is handled explicitly, and the helper remains
+non-executable in /run. Host suite: 53 passed; the new QEMU observer must verify
+copy/permissions/failure controls after switch_root. See NATIVE-HANDOFF.md.
+D16 activation and D07/D10/D17 physical timing/resource work remain open;
+native desktop packaging is still disabled. No hardware operations this round.
+
 Current offline gate, 2026-10-24: see OFFLINE-NATIVE-GATE.md. No hardware work
 in this phase. D15: native helper/SPR identity source fixed and host-checked,
 new ARM64 build 40051765091 and eight C ASan/UBSan checks passed. D16: full
