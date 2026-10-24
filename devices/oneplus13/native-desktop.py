@@ -21,9 +21,12 @@ def regular(root,name,limit):
     for parent in [path,*path.parents]:
         if parent==root:break
         if parent.is_symlink():raise ValueError('Native input traverses a symbolic link')
-    if not path.is_file() or path.stat().st_size>limit:
+    if not path.is_file():
         raise ValueError('Native input missing or oversized')
-    return path.read_bytes()
+    # sysfs/configfs attributes may report PAGE_SIZE regardless of content.
+    with path.open('rb') as stream:data=stream.read(limit+1)
+    if len(data)>limit:raise ValueError('Native input missing or oversized')
+    return data
 
 
 def validate_files(root,release):
