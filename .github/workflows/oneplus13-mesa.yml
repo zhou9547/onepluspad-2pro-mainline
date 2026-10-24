@@ -30,6 +30,10 @@ jobs:
             libxcb-randr0-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-glx0-dev \\
             libxcb-shm0-dev libxshmfence-dev libxxf86vm-dev libxrandr-dev \\
             libglvnd-dev glslang-tools python3-packaging libvulkan-dev vulkan-tools
+      - name: Upgrade meson (mesa 26.2.3 needs >= 1.4; distro has 1.3.2)
+        run: |
+          sudo pip3 install --break-system-packages --upgrade meson
+          meson --version
       - name: Fetch pinned Mesa source
         timeout-minutes: 10
         run: |
