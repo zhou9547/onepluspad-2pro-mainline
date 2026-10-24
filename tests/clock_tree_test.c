@@ -14,7 +14,8 @@ typedef uint8_t u8;typedef uint32_t u32;typedef uint64_t u64;
 #define CLK_SET_RATE_PARENT BIT(4)
 #define DIV_ROUND_UP_ULL(n,d) (((n)+(d)-1)/(d))
 #define min(a,b) ((a)<(b)?(a):(b))
-#define abs(n) ((n)<0?-(n):(n))
+static uint64_t host_abs(uint64_t n) {int64_t value=(int64_t)n;return value<0?(uint64_t)(-(value+1))+1:(uint64_t)value;}
+#define abs(n) host_abs(n)
 #define CHECK(c) do {if(!(c)){fprintf(stderr,"line %d\n",__LINE__);abort();}}while(0)
 static unsigned int __roundup_pow_of_two(unsigned int n) {unsigned int p=1;while(p<n)p<<=1;return p;}
 static unsigned int __rounddown_pow_of_two(unsigned int n) {unsigned int p=1;while((p<<1)<=n)p<<=1;return p;}
