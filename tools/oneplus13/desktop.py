@@ -60,6 +60,9 @@ def derive(original):
             raise ValueError('Desktop helper already exists')
         entries[name] = {'mode': stat.S_IFREG|0o755, 'major': 0, 'minor': 0,
                          'data': (REPO/'devices/oneplus13/desktop'/source).read_bytes().replace(b'\r\n', b'\n')}
+    native_sha = hashlib.sha256((REPO/'devices/oneplus13/native-desktop.py').read_bytes().replace(b'\r\n', b'\n')).hexdigest()
+    entries['bin/oneplus13-native-display-sha256'] = {
+        'mode': stat.S_IFREG|0o600, 'major':0, 'minor':0, 'data':(native_sha+'\n').encode()}
     packed = gzip.compress(make_cpio([(n, p['mode'], p['data'], p['major'], p['minor'])
                                      for n, p in sorted(entries.items())]), mtime=0)
     check = read_cpio(gzip.decompress(packed))
@@ -67,6 +70,7 @@ def derive(original):
     if any(check[n] != v for n, v in original_entries.items() if n != 'init'):
         raise ValueError('Desktop derivation changed an unrelated diagnostic entry')
     return packed, {'original_entries_preserved_except_explicit_init': len(original_entries)-1,
+                    'native_desktop_helper_sha256':native_sha,
                     'original_init_sha256': hashlib.sha256(before).hexdigest(),
                     'desktop_init_sha256': hashlib.sha256(check['init']['data']).hexdigest()}
 

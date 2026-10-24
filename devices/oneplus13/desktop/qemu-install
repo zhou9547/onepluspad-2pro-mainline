@@ -6,6 +6,7 @@ tr '\000' '\n' < /sys/firmware/devicetree/base/compatible | grep -qx linux,dummy
 [ "${1:-}" = /newroot ]
 cp /bin/oneplus13-native-handoff /newroot/run/oneplus13/native-handoff-lib
 cp /bin/oneplus13-native-handoff-selftest /newroot/run/oneplus13/native-handoff-selftest
+cp /bin/oneplus13-native-display-sha256 /newroot/run/oneplus13/native-display-sha256
 chmod 700 /newroot/run/oneplus13/native-handoff-selftest
 deadline=120
 case " $(cat /proc/cmdline) " in *' oneplus13.desktop.qemu-http=1 '*) deadline=180 ;; esac
@@ -40,6 +41,7 @@ modprobe -b 'of:Ndisplay-controllerT(null)Cqcom,sm8750-dpu' || :
 [ ! -d /sys/module/panel_oneplus_aa569 ]
 [ ! -d /sys/module/msm ]
 echo ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED
+[ "$(sha256sum /usr/libexec/oneplus13-native-display | cut -d' ' -f1)" = "$(cat /run/oneplus13/native-display-sha256)" ]
 # Reject absent private payload in the actual public QEMU root, without loading.
 if /usr/libexec/oneplus13-native-display --check; then
     echo 'Native preflight unexpectedly accepted the public QEMU root'; exit 1
