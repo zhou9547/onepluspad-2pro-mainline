@@ -102,3 +102,8 @@ candidate. Unsupported fixed requests fail before MMIO; ordinary timings stay
 unchanged. Shared host clk_pre/post are updated in the same enable operation.
 The host request is cleared before rate calculation to avoid stale stack data.
 See FIXED-PHY.md for vendor call-path evidence and physical-validation limits.
+
+0010 repairs the existing host power-on error paths: runtime resume failure
+propagates, and failed parent/rate/clock setup releases the acquired PM/OPP
+references before regulators. The ordinary successful sequence is unchanged.
+Actual power-on functions run under fault injection in check-dsi-batch.py.

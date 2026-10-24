@@ -25,7 +25,9 @@ struct device {int of_node;};
 struct mipi_dsi_device {struct mipi_dsi_host *host;bool attached;unsigned int channel,lanes,format,dsc_slice_per_pkt;unsigned long mode_flags,hs_rate;void *dsc;struct device dev;};
 struct platform_device {struct device dev;};
 struct clk {bool on;};
-struct mutex {bool held;};
+struct mutex {bool held,dev;};
+struct msm_dsi_phy {int unused;};
+struct msm_dsi_phy_shared_timings {bool byte_intf_clk_div_2;};
 struct msm_dsi_host;
 struct test_ops {
  void *(*tx_buf_get)(struct msm_dsi_host *);
@@ -35,9 +37,11 @@ struct test_ops {
  int (*link_clk_enable)(struct msm_dsi_host *);
  void (*link_clk_disable)(struct msm_dsi_host *);
 };
-struct msm_dsi_cfg_handler {const struct test_ops *ops;};
+struct test_cfg {int num_regulators;};
+static const struct test_cfg test_cfg={1};
+struct msm_dsi_cfg_handler {const struct test_ops *ops;const struct test_cfg *cfg;};
 struct msm_dsi_host {
- struct mipi_dsi_host base;struct mutex cmd_mutex;
+ struct mipi_dsi_host base;struct mutex cmd_mutex,dev_mutex;void *supplies;
  const struct msm_dsi_cfg_handler *cfg_hnd;struct platform_device *pdev;
  int id,tx_size,dma_comp;bool aa569_batch,power_on,cphy_mode;
  unsigned int channel,lanes,format,dsc_slice_per_pkt,num_data_lanes;void *dsc;unsigned long hs_rate;
@@ -81,9 +85,9 @@ static u8 dma[4098];
 static u32 regs[3];
 static int pm,pm_gets,pm_puts,maps,unmaps,mapped,steps,fail_step,fail_pm,fail_map,fail_iova;
 static int kicks,wait_result,reset_count,irq_on,hs_on,lock_count,unlock_count,legacy_calls,opp_vote;
-static int packed_size,attach_error,attach_calls;
+static int packed_size,attach_error,attach_calls,regulators,fail_regulator,fail_pinctrl;
 static void mutex_lock(struct mutex *m) {ASSERT(!m->held);m->held=true;lock_count++;}
-static void mutex_unlock(struct mutex *m) {ASSERT(m->held&&!pm&&!mapped&&!irq_on&&!hs_on);m->held=false;unlock_count++;}
+static void mutex_unlock(struct mutex *m) {ASSERT(m->held&&!mapped&&!irq_on&&!hs_on);if(!m->dev)ASSERT(!pm);m->held=false;unlock_count++;}
 static int pm_runtime_resume_and_get(struct device *d) {(void)d;pm_gets++;if(fail_pm)return -EIO;ASSERT(!pm);pm++;return 0;}
 static void pm_runtime_put(struct device *d) {(void)d;ASSERT(pm==1);pm--;pm_puts++;}
 static int clock_op(void) {ASSERT(pm==1);return ++steps==fail_step?-EIO:0;}
@@ -107,13 +111,19 @@ static int msecs_to_jiffies(int ms) {return ms;}
 static void msleep(int ms) {(void)ms;ASSERT(pm==1);}
 static void wmb(void) {}
 static int msm_dsi_manager_cmd_xfer(int id,const struct mipi_dsi_msg *msg) {(void)id;legacy_calls++;return msg->tx_len;}
+static int regulator_bulk_enable(int n,void *supplies) {(void)n;(void)supplies;if(fail_regulator)return -EIO;ASSERT(!regulators);regulators=1;return 0;}
+static void regulator_bulk_disable(int n,void *supplies) {(void)n;(void)supplies;ASSERT(regulators==1);regulators=0;}
+static void msm_dsi_sfpb_config(struct msm_dsi_host *host,bool enable) {(void)host;(void)enable;}
+static int pinctrl_pm_select_default_state(struct device *d) {(void)d;return fail_pinctrl?-EIO:0;}
+static void dsi_timing_setup(struct msm_dsi_host *h,bool bonded) {(void)h;(void)bonded;ASSERT(pm==1);}
+static void dsi_ctrl_enable(struct msm_dsi_host *h,struct msm_dsi_phy_shared_timings *t,struct msm_dsi_phy *p) {(void)h;(void)t;(void)p;ASSERT(pm==1);}
 void msm_dsi_host_xfer_restore(struct mipi_dsi_host *,const struct mipi_dsi_msg *);
 /* REAL_FUNCTIONS */
 /* VECTORS */
 static struct clk clocks[8];
 static struct platform_device pdev;
 static const struct test_ops ops={buf_get,buf_put,base_get,dsi_link_clk_set_rate_6g_v2_9,dsi_link_clk_enable_6g,dsi_link_clk_disable_6g};
-static const struct msm_dsi_cfg_handler cfg={&ops};
+static const struct msm_dsi_cfg_handler cfg={&ops,&test_cfg};
 static const struct mipi_dsi_host_ops host_ops={.attach=dsi_host_attach,.transfer=dsi_host_transfer,.transfer_batch=dsi_host_transfer_batch};
 static struct msm_dsi_host h;
 static struct msm_dsi d;
@@ -123,7 +133,7 @@ static void fresh(void) {
  memset(dma,0xa5,sizeof(dma));regs[0]=0x101;regs[1]=regs[2]=0;
  pm=pm_gets=pm_puts=maps=unmaps=mapped=steps=fail_step=fail_pm=fail_map=fail_iova=0;
  kicks=reset_count=irq_on=hs_on=lock_count=unlock_count=legacy_calls=packed_size=0;wait_result=1;
- opp_vote=attach_error=attach_calls=0;h.base.ops=&host_ops;h.cfg_hnd=&cfg;h.pdev=&pdev;h.tx_size=4096;h.aa569_batch=h.power_on=true;
+ regulators=fail_regulator=fail_pinctrl=0;opp_vote=attach_error=attach_calls=0;h.base.ops=&host_ops;h.cfg_hnd=&cfg;h.pdev=&pdev;h.tx_size=4096;h.aa569_batch=h.power_on=true;h.dev_mutex.dev=true;
  h.num_data_lanes=4;pdev.dev.of_node=1;
  h.byte_clk_rate=100;h.pixel_clk_rate=200;h.byte_intf_clk_rate=50;
  h.esc_clk=&clocks[0];h.byte_clk=&clocks[1];h.pixel_clk=&clocks[2];h.byte_intf_clk=&clocks[3];
@@ -218,5 +228,18 @@ int main(void) {
  fresh();peripheral.attached=false;peripheral.dev.of_node=1;attach_error=-EIO;
  CHECK(dsi_host_attach(&h.base,&peripheral)==-EIO&&!h.aa569_batch&&kicks==1);balanced();
  fresh();peripheral.dev.of_node=0;CHECK(!dsi_host_attach(&h.base,&peripheral)&&!h.aa569_batch&&!kicks);balanced();
+ /* Execute real host power-on failure paths; no leaked PM/OPP/rails. */
+ struct msm_dsi_phy_shared_timings shared={true};
+ fresh();h.power_on=false;fail_regulator=1;
+ CHECK(msm_dsi_host_power_on(&h.base,&shared,false,NULL)==-EIO&&!regulators&&!pm_gets);balanced();
+ fresh();h.power_on=false;fail_pm=1;
+ CHECK(msm_dsi_host_power_on(&h.base,&shared,false,NULL)==-EIO&&!regulators&&!pm_puts);balanced();
+ for(int i=1;i<=9;i++) {
+   fresh();h.power_on=false;fail_step=i;
+   CHECK(msm_dsi_host_power_on(&h.base,&shared,false,NULL)==-EIO&&!h.power_on&&!regulators);
+   CHECK(pm_gets==1&&pm_puts==1);balanced();
+ }
+ fresh();h.power_on=false;fail_pinctrl=1;
+ CHECK(msm_dsi_host_power_on(&h.base,&shared,false,NULL)==-EIO&&!h.power_on&&!regulators);balanced();
  puts("OK real DSI batches, resources, fault cleanup and legacy controls");return 0;
 }

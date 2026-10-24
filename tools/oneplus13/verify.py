@@ -149,6 +149,11 @@ def verify_artifacts(out):
                     'all_rejection_outputs_unchanged':True,'selector_called_before_any_phy_mmio':True}
         if manifest['fixed_phy_version'] != 1 or any(phy.get(k) != v for k,v in expected.items()):
             raise ValueError('Missing or failed fixed AA569 PHY verification')
+    if 'host_power_resources_version' in manifest:
+        batch = json.loads((out / 'dsi-batch-verification.json').read_text())
+        if (manifest['host_power_resources_version'] != 1 or batch.get('sanitizers') is not True or
+                batch.get('host_power_pm_clock_and_pinctrl_failures_balanced') is not True):
+            raise ValueError('Missing host power-on resource failure verification')
     if 'dpu_buffer_version' in manifest:
         dpu = json.loads((out / 'dpu-buffer-verification.json').read_text())
         expected = {'scope': 'HOST_C_DPU_BUFFER_AND_REGISTER_ONLY',

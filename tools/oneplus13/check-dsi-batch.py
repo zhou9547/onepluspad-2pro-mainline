@@ -42,6 +42,7 @@ def main():
                   'static int dsi_batch_size(', 'static int dsi_batch_pack(',
                   'static int dsi_batch_prepare(', 'static int dsi_host_transfer_batch(',
                   'static int dsi_host_attach(',
+                  'int msm_dsi_host_power_on(',
                   'void msm_dsi_host_xfer_restore(']
     # No changes to ordinary single-message packing/dispatch/trigger are allowed.
     for sig in ['static int dsi_cmd_dma_add(', 'static ssize_t dsi_host_transfer(']:
@@ -100,6 +101,7 @@ def main():
         'one_lock_mapping_resource_lifetime_and_kickoff_per_group':True,
         'dma_timeout_reset_before_restore':True, 'no_queued_state_after_return':True,
         'synchronous_component_attach_and_failure_cleanup_checked':True,
+        'host_power_pm_clock_and_pinctrl_failures_balanced':True,
         'ordinary_packing_dispatch_and_manager_trigger_unchanged':True,
         'actual_c_source_sha256':{path:hashlib.sha256(text.encode()).hexdigest()
                                  for path,text in zip(paths,[header,core,host,manager])}}
