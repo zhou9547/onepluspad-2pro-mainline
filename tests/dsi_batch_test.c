@@ -21,8 +21,8 @@ struct mipi_dsi_host;
 struct mipi_dsi_device;
 /* MIPI_TYPES */
 struct mipi_dsi_host {const struct mipi_dsi_host_ops *ops;};
-struct mipi_dsi_device {struct mipi_dsi_host *host;bool attached;unsigned int channel;};
-struct device {int unused;};
+struct device {int of_node;};
+struct mipi_dsi_device {struct mipi_dsi_host *host;bool attached;unsigned int channel,lanes,format,dsc_slice_per_pkt;unsigned long mode_flags,hs_rate;void *dsc;struct device dev;};
 struct platform_device {struct device dev;};
 struct clk {bool on;};
 struct mutex {bool held;};
@@ -40,6 +40,7 @@ struct msm_dsi_host {
  struct mipi_dsi_host base;struct mutex cmd_mutex;
  const struct msm_dsi_cfg_handler *cfg_hnd;struct platform_device *pdev;
  int id,tx_size,dma_comp;bool aa569_batch,power_on,cphy_mode;
+ unsigned int channel,lanes,format,dsc_slice_per_pkt,num_data_lanes;void *dsc;unsigned long hs_rate;
  unsigned long mode_flags,byte_clk_rate,pixel_clk_rate,byte_intf_clk_rate;
  struct clk *byte_src_clk,*pixel_src_clk,*dsi_pll_byte_clk,*dsi_pll_pixel_clk;
  struct clk *esc_clk,*byte_clk,*pixel_clk,*byte_intf_clk;
@@ -55,6 +56,15 @@ static struct msm_dsi_host *to_msm_dsi_host(struct mipi_dsi_host *h) {return (st
 #define DBG(...) do {} while(0)
 #define pr_err(...) do {} while(0)
 #define dev_err(dev,...) do {(void)(dev);} while(0)
+#define dev_warn(dev,...) do {(void)(dev);} while(0)
+#define DRM_DEV_ERROR(dev,...) do {(void)(dev);} while(0)
+#define MIPI_DSI_FMT_RGB101010 30
+#define MSM_DSI_VER_MAJOR_6G 6
+#define MSM_DSI_6G_VER_MINOR_V2_1_0 1
+static bool msm_dsi_host_version_geq(struct msm_dsi_host *h,int a,int b) {(void)h;(void)a;(void)b;return true;}
+static bool msm_dsi_host_is_wide_bus_enabled(struct mipi_dsi_host *h) {(void)h;return true;}
+static bool of_device_is_compatible(int node,const char *name) {(void)name;return node==1;}
+static int dsi_dev_attach(struct platform_device *);
 #define IS_ERR(p) ((uintptr_t)(p)>=(uintptr_t)-4095)
 #define PTR_ERR(p) ((int)(intptr_t)(p))
 #define ASSERT(c) do {if(!(c)){fprintf(stderr,"assert line %d\n",__LINE__);abort();}}while(0)
@@ -71,7 +81,7 @@ static u8 dma[4098];
 static u32 regs[3];
 static int pm,pm_gets,pm_puts,maps,unmaps,mapped,steps,fail_step,fail_pm,fail_map,fail_iova;
 static int kicks,wait_result,reset_count,irq_on,hs_on,lock_count,unlock_count,legacy_calls,opp_vote;
-static int packed_size;
+static int packed_size,attach_error,attach_calls;
 static void mutex_lock(struct mutex *m) {ASSERT(!m->held);m->held=true;lock_count++;}
 static void mutex_unlock(struct mutex *m) {ASSERT(m->held&&!pm&&!mapped&&!irq_on&&!hs_on);m->held=false;unlock_count++;}
 static int pm_runtime_resume_and_get(struct device *d) {(void)d;pm_gets++;if(fail_pm)return -EIO;ASSERT(!pm);pm++;return 0;}
@@ -104,7 +114,7 @@ static struct clk clocks[8];
 static struct platform_device pdev;
 static const struct test_ops ops={buf_get,buf_put,base_get,dsi_link_clk_set_rate_6g_v2_9,dsi_link_clk_enable_6g,dsi_link_clk_disable_6g};
 static const struct msm_dsi_cfg_handler cfg={&ops};
-static const struct mipi_dsi_host_ops host_ops={.transfer=dsi_host_transfer,.transfer_batch=dsi_host_transfer_batch};
+static const struct mipi_dsi_host_ops host_ops={.attach=dsi_host_attach,.transfer=dsi_host_transfer,.transfer_batch=dsi_host_transfer_batch};
 static struct msm_dsi_host h;
 static struct msm_dsi d;
 static struct mipi_dsi_device peripheral;
@@ -113,7 +123,8 @@ static void fresh(void) {
  memset(dma,0xa5,sizeof(dma));regs[0]=0x101;regs[1]=regs[2]=0;
  pm=pm_gets=pm_puts=maps=unmaps=mapped=steps=fail_step=fail_pm=fail_map=fail_iova=0;
  kicks=reset_count=irq_on=hs_on=lock_count=unlock_count=legacy_calls=packed_size=0;wait_result=1;
- opp_vote=0;h.base.ops=&host_ops;h.cfg_hnd=&cfg;h.pdev=&pdev;h.tx_size=4096;h.aa569_batch=h.power_on=true;
+ opp_vote=attach_error=attach_calls=0;h.base.ops=&host_ops;h.cfg_hnd=&cfg;h.pdev=&pdev;h.tx_size=4096;h.aa569_batch=h.power_on=true;
+ h.num_data_lanes=4;pdev.dev.of_node=1;
  h.byte_clk_rate=100;h.pixel_clk_rate=200;h.byte_intf_clk_rate=50;
  h.esc_clk=&clocks[0];h.byte_clk=&clocks[1];h.pixel_clk=&clocks[2];h.byte_intf_clk=&clocks[3];
  h.byte_src_clk=&clocks[4];h.pixel_src_clk=&clocks[5];h.dsi_pll_byte_clk=&clocks[6];h.dsi_pll_pixel_clk=&clocks[7];
@@ -127,6 +138,14 @@ static void balanced(void) {
 static void invalid(struct mipi_dsi_msg *m,size_t n,int error) {
  CHECK(mipi_dsi_transfer_batch(&peripheral,m,n)==error);balanced();
  CHECK(!maps&&!pm_gets&&!kicks);
+}
+static int dsi_dev_attach(struct platform_device *p) {
+ (void)p;attach_calls++;
+ if(h.aa569_batch) {
+   CHECK(!peripheral.attached);
+   CHECK(!mipi_dsi_transfer_batch(&peripheral,messages,1));
+ }
+ return attach_error;
 }
 int main(void) {
  size_t first=0;
@@ -166,12 +185,17 @@ int main(void) {
  }
  m[1]=messages[0];
  for(int c=0;c<7;c++) {
-   fresh();if(c==0)h.aa569_batch=false;if(c==1)h.power_on=false;
-   if(c==2)h.cphy_mode=true;if(c==3)h.mode_flags=MIPI_DSI_MODE_VIDEO;
-   if(c==4)manager.bonded=true;if(c==5)manager.sync=true;if(c==6)h.id=1;
+   fresh();
+   if(c==0)h.aa569_batch=false;
+   if(c==1)h.power_on=false;
+   if(c==2)h.cphy_mode=true;
+   if(c==3)h.mode_flags=MIPI_DSI_MODE_VIDEO;
+   if(c==4)manager.bonded=true;
+   if(c==5)manager.sync=true;
+   if(c==6)h.id=1;
    invalid(m,1,-EOPNOTSUPP);
  }
- fresh();peripheral.attached=false;invalid(m,1,-EINVAL);
+ fresh();peripheral.attached=false;CHECK(!mipi_dsi_transfer_batch(&peripheral,m,1));balanced();
  fresh();struct mipi_dsi_host_ops absent={0};h.base.ops=&absent;invalid(m,1,-EOPNOTSUPP);
  /* Mapping and PM/parent/rate/each enable failure must stop before kickoff. */
  fresh();fail_map=1;CHECK(mipi_dsi_transfer_batch(&peripheral,m,2)==-ENOMEM);CHECK(maps==1&&!unmaps&&!pm_gets);balanced();
@@ -188,5 +212,11 @@ int main(void) {
  CHECK(!mipi_dsi_transfer_batch(&peripheral,m,2));balanced();
  /* Existing public single-message host callback still uses the manager. */
  fresh();CHECK(dsi_host_transfer(&h.base,&m[0])==(ssize_t)m[0].tx_len);CHECK(legacy_calls==1);balanced();
+ /* Exercise actual attachment: component_add may synchronously start DRM. */
+ fresh();h.aa569_batch=false;peripheral.attached=false;peripheral.dev.of_node=1;peripheral.lanes=4;
+ CHECK(!dsi_host_attach(&h.base,&peripheral)&&h.aa569_batch&&attach_calls==1&&kicks==1);balanced();
+ fresh();peripheral.attached=false;peripheral.dev.of_node=1;attach_error=-EIO;
+ CHECK(dsi_host_attach(&h.base,&peripheral)==-EIO&&!h.aa569_batch&&kicks==1);balanced();
+ fresh();peripheral.dev.of_node=0;CHECK(!dsi_host_attach(&h.base,&peripheral)&&!h.aa569_batch&&!kicks);balanced();
  puts("OK real DSI batches, resources, fault cleanup and legacy controls");return 0;
 }

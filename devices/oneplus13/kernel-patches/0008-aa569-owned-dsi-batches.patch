@@ -36,7 +36,7 @@ diff --git a/include/drm/drm_mipi_dsi.h b/include/drm/drm_mipi_dsi.h
 diff --git a/drivers/gpu/drm/drm_mipi_dsi.c b/drivers/gpu/drm/drm_mipi_dsi.c
 --- a/drivers/gpu/drm/drm_mipi_dsi.c
 +++ b/drivers/gpu/drm/drm_mipi_dsi.c
-@@ -584,6 +584,38 @@
+@@ -584,6 +584,41 @@
  EXPORT_SYMBOL(mipi_dsi_create_packet);
  
  /**
@@ -60,7 +60,10 @@ diff --git a/drivers/gpu/drm/drm_mipi_dsi.c b/drivers/gpu/drm/drm_mipi_dsi.c
 +{
 +	size_t i;
 +
-+	if (!dsi || !dsi->attached || !dsi->host || !msgs || !count)
++	/* Like ordinary transfers, permit synchronous component binding during
++	 * host->attach(), before the core sets dsi->attached. Host owns readiness.
++	 */
++	if (!dsi || !dsi->host || !msgs || !count)
 +		return -EINVAL;
 +	for (i = 0; i < count; i++)
 +		if (msgs[i].channel != dsi->channel)
@@ -133,18 +136,25 @@ diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_ho
  
  	return dsi_link_clk_set_rate_6g(msm_host);
  }
-@@ -1829,6 +1834,10 @@
- 	ret = dsi_dev_attach(msm_host->pdev);
- 	if (ret)
- 		return ret;
+@@ -1826,9 +1831,16 @@
+ 		}
+ 	}
+ 
 +	msm_host->aa569_batch =
 +		of_device_is_compatible(dsi->dev.of_node, "oneplus,dodge-aa569") &&
 +		of_device_is_compatible(msm_host->pdev->dev.of_node,
 +					"qcom,sm8750-dsi-ctrl");
++	/* component_add() can synchronously bind/start DRM before returning. */
+ 	ret = dsi_dev_attach(msm_host->pdev);
+-	if (ret)
++	if (ret) {
++		msm_host->aa569_batch = false;
+ 		return ret;
++	}
  
  	DBG("id=%d", msm_host->id);
  
-@@ -1841,6 +1850,7 @@
+@@ -1841,6 +1853,7 @@
  	struct msm_dsi_host *msm_host = to_msm_dsi_host(host);
  
  	dsi_dev_detach(msm_host->pdev);
@@ -152,7 +162,7 @@ diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_ho
  
  	DBG("id=%d", msm_host->id);
  
-@@ -1860,6 +1870,141 @@
+@@ -1860,6 +1873,141 @@
  	ret = msm_dsi_manager_cmd_xfer(msm_host->id, msg);
  	mutex_unlock(&msm_host->cmd_mutex);
  
@@ -294,7 +304,7 @@ diff --git a/drivers/gpu/drm/msm/dsi/dsi_host.c b/drivers/gpu/drm/msm/dsi/dsi_ho
  	return ret;
  }
  
-@@ -1867,6 +2012,7 @@
+@@ -1867,6 +2015,7 @@
  	.attach = dsi_host_attach,
  	.detach = dsi_host_detach,
  	.transfer = dsi_host_transfer,

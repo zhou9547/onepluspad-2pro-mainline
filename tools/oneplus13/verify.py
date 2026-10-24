@@ -135,6 +135,7 @@ def verify_artifacts(out):
                     'pm_parent_rate_and_enable_failures_balanced':True,
                     'one_lock_mapping_resource_lifetime_and_kickoff_per_group':True,
                     'dma_timeout_reset_before_restore':True, 'no_queued_state_after_return':True,
+                    'synchronous_component_attach_and_failure_cleanup_checked':True,
                     'ordinary_packing_dispatch_and_manager_trigger_unchanged':True}
         if manifest['dsi_batch_version'] != 1 or any(batch.get(k) != v for k,v in expected.items()):
             raise ValueError('Missing or failed C DSI batch verification')
