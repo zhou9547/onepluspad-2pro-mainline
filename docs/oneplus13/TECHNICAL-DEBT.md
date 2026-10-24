@@ -2,8 +2,9 @@
 
 Current offline gate, 2026-10-24: see OFFLINE-NATIVE-GATE.md. No hardware work
 in this phase. D15: native helper/SPR identity source fixed and host-checked,
-new ARM64 build still required. D16: full rootfs aliases bypassed diagnostic
-manual loading; install a fail-closed kmod policy and require a real QEMU check.
+new ARM64 build 40051765091 and eight C ASan/UBSan checks passed. D16: full
+rootfs aliases bypassed diagnostic manual loading; the fail-closed kmod policy
+now passes actual QEMU loading controls with the rebuilt kernel in 40054456226.
 Native desktop packaging remains disabled until rebuilt policy, handoff and
 explicit activation are validated. D07/D10 timing and physical acceptance stay
 open; these new findings are not a proven cause of the default desktop black screen.
@@ -16,8 +17,10 @@ diagnosis. No blanket ignore-unused boot flags or speculative hardware trial.
 
 Actions40051767501 validates the new kmod policy with the original pinned
 kernel and refreshed rootfs. D16's explicit activation/cross-root path remains
-open and native packaging remains disabled. Repeat the combined check with the
-rebuilt identity-fixed kernel before updating the candidate gate.
+open and native packaging remains disabled. The rebuilt identity-fixed kernel
+combination 40054456226 passed independently using integration 2957513a and
+kernel artifact d624154c. This closes the offline build/kmod/handoff portion,
+not physical display acceptance or explicit native activation across switch_root.
 
 | ID | Temporary choice / location | Reason and impact | Removal criterion |
 | --- | --- | --- | --- |

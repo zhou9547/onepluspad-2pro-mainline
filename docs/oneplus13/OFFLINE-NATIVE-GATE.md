@@ -10,7 +10,10 @@ ADB/Fastboot 查询、重启、RAM 启动或分区操作。以下修复属于源
 成功，验证新增 kmod 策略、完整 HTTP 分块交接和恢复计时器。
 这一轮使用原 c2e659 内核与新 rootfs，不能冒充新内核组合的结果。
 [新 ARM64 构建](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40051765091)
-完成后，桌面流程将固定该新附件，再运行一轮组合验证。
+已经通过，包含内核、模块、设备树和八项 C ASan/UBSan 检查。
+桌面工具及工作流在提交 `2957513a3ae1437cdc99ec1e2a9b525ef22d2ec6`
+固定新内核附件；[新内核 GNOME/QEMU 组合验证](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40054456226)
+也已通过。两轮的源码与产物来源分别记录，不能相互替代。
 
 ## 当前判断
 
@@ -33,13 +36,14 @@ ADB/Fastboot 查询、重启、RAM 启动或分区操作。以下修复属于源
    新 rootfs 安装 blacklist + install `/bin/false` 策略，阻止常规别名、显式和
    依赖加载。blacklist 单独不足以阻止显式加载，依据是
    [kmod 原始手册](https://github.com/kmod-project/kmod/blob/master/man/modprobe.d.5.scd)。
-   这不是阻止 root 直接 insmod 的安全边界，也不声称已验证当前 ARM64 rootfs。
+   这不是阻止 root 直接 insmod 的安全边界。该策略已在新 ARM64 rootfs 的
+   QEMU 会话中实际验证，仍不代表物理显示启动通过。
 4. `package-desktop.py --native-xml` 现在在读取输入前拒绝打包；诊断 helper
    也拒绝在桌面 RAM session 中启动。原生桌面暂时关闭，不能把旧镜像当作
    符合手动启动要求的新候选。
 5. QEMU 观察器新增实际 kmod 检查：先确认模块存在，再验证普通显式加载及
    两条 OF 别名没有加载显示模块；成功标记成为交接验收的必要条件。
-   新流程尚未运行，旧 QEMU 结果不能继承为这一检查的通过证据。
+   新流程已在上述两轮 QEMU 通过；新内核组合单独验证，不继承旧结果。
 
 ## 原项目与厂商对照
 
@@ -73,13 +77,29 @@ Oplus 电源控制及 SPR packing 源码。生产面板重新提取的 150 个�
 | DPU C | 96组厂商/RGB数学、寄存器和 PPB 重放通过 | 替代 MMIO |
 | 命令预算 C | 261组预算、新状态/OPP/ICC/溢出控制通过 | 不测真实传输完成时刻 |
 | SPR profile/runtime C | 解码、所有管线UDC预检、地址、3轮PM、格式/flush/reset控制通过 | 替代 MMIO，非硬件PM循环 |
-| 新 ARM64 内核/模块构建 | 待执行 | 旧构建不覆盖本轮 SPR 源码 |
-| 新 rootfs + kmod + QEMU 完整交接/恢复 | 第一轮通过 | 原固定内核；新内核组合待运行 |
+| 新 ARM64 内核/模块构建 | Actions40051765091通过 | 本轮 SPR 源码、8项 C ASan/UBSan；下载后复核36个清单文件 |
+| 新 rootfs + kmod + QEMU 完整交接/恢复 | Actions40054456226通过 | 固定 d624154c 新内核；HTTP分块、实际kmod、systemd/GDM、180秒截止及重启 |
 | DSI 批处理、PLL取整、继承显示接管与物理输出 | 未闭环 | 不得从主机测试推断 |
 
 主机 C 本轮使用 Zig 0.14.1 提供的 Clang Windows 工具链，启用
 `-Wall -Wextra -Werror`；没有 ASan/UBSan，JSON如实记录 false。
-GitHub Actions 中的新检查保留 GCC + ASan/UBSan 和完整 ARM64 构建要求。
+GitHub Actions 的八项 C 检查已使用 GCC + ASan/UBSan 通过，完整 ARM64
+内核/模块构建通过。Windows 本地报告与 Actions 报告分开保留。
+
+新内核 release 为 `7.2.0-oneplus13-g7a81d184e309-c963dc1c909ec-pcd4948652e86`。
+下载复核覆盖 native 身份 guard 哈希、默认 initramfs 不含私有 SPR、九个显示
+依赖模块的 AArch64/vermagic、native DTB 七个反例。组合 QEMU 验证的恢复期限
+为180秒；手机候选的900秒绝对期限保持不变。QEMU virt 不模拟SM8750显示硬件。
+
+## 命令调度差异仍需审查
+
+生产开屏序列有150包，其中137包 flags 为0x40、13包为0，形成13个批组。
+厂商 `dsi_panel_create_cmd_packets()` 根据 `MIPI_DSI_MSG_BATCH_COMMAND`
+设置 `last_command`，再经 `dsi_host_transfer_sub()` 提交。当前 AA569 驱动逐条
+调用 `mipi_dsi_dcs_write_buffer()`；固定内核 `dsi_host.c` 的发送路径每次
+添加一条命令后触发 DMA，并等待该次完成。相同 payload、顺序和显式延时
+不证明两者的总线间隔、批组边界和接管行为等价。
+这项检查只确认调度差异，没有测量物理时序，也没有据此修改面板命令。
 
 ## 继承显示的另一项待核查问题
 
@@ -93,10 +113,10 @@ GitHub Actions 中的新检查保留 GCC + ASan/UBSan 和完整 ARM64 构建要�
 
 ## 下一步及真机门槛
 
-先运行新源码的完整离线内核构建和 ASan/UBSan，取得新 release/模块/DTB，
-再重新固定下游工具的来源和哈希；不得覆盖旧 manifest 冒充新构建。
-然后刷新 rootfs，在 QEMU 中实测新增 kmod 策略、交接及恢复，审查原生手动
-启动路径的跨 switch_root 交接，闭环命令批处理和接管时序后再解除打包封锁。
+新源码 ARM64 构建、ASan/UBSan、下游来源固定、刷新 rootfs 和新内核 QEMU
+组合检查已经通过。继续参考厂商和原项目，审查原生手动启动路径的跨
+switch_root 交接，闭环命令批处理、PLL取整及显示资源接管后再解除打包封锁。
+离线构建成功不关闭物理显示、触控、WLAN、GPU的验收项。
 
 不得把旧 native 镜像用于新实验，也不得直接从 GNOME 黑屏跳到修改面板参数
 后反复试机。下一次真机测试必须先有具体、已复核的候选和未决风险清单。
