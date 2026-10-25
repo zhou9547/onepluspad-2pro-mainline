@@ -5,9 +5,11 @@
 No firmware, user accounts, per-unit registry or persistent installer is added.
 Run only in a disposable native ARM64 CI VM with root permissions.
 """
-import argparse,hashlib,json,os,shutil,subprocess,tarfile,tempfile
+import argparse,hashlib,importlib.util,json,os,shutil,subprocess,tarfile,tempfile
 from pathlib import Path
 from common import sha256
+spec=importlib.util.spec_from_file_location('ram_module_policy',Path(__file__).with_name('ram-module-policy.py'))
+policy_module=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy_module)
 
 BASE_SHA='f9140e5c98d70bca6a04b8934dc9b1937bbf28b1eb0218411eaa0a9939a6cced'
 BASE_BYTES=426221568
@@ -42,6 +44,7 @@ def main():
         assert (root/'lib').is_symlink() and os.readlink(root/'lib')=='usr/lib'
         pin=root/'usr/lib/oneplus13-desktop/kernel-release';assert not pin.exists()
         with tarfile.open(archive) as tf:
+            blocked=policy_module.blocked_modules(tf.getnames(),RELEASE)
             for item in tf.getmembers():
                 name=item.name.removeprefix('./')
                 assert name in ('.','lib','lib/modules','lib/modules/'+RELEASE) or name.startswith('lib/modules/'+RELEASE+'/')
@@ -54,6 +57,19 @@ def main():
             members=[x for x in tf.getmembers() if not x.issym()]
             tf.extractall(modules,members=members,filter='data')
         shutil.copytree(modules/'lib/modules',root/'usr/lib/modules',dirs_exist_ok=True)
+        # Preinstalling modules changes coldplug behavior. Keep unreviewed
+        # peripheral aliases, explicit loads and dependency loads closed.
+        assert {'ath12k','ath12k_wifi7','pwrseq_qcom_wcn','pci_pwrctrl_pwrseq',
+                'snd_soc_sc8280xp','fastrpc','qcom_iris'}.issubset(blocked)
+        module_policy=root/'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf'
+        module_policy.write_text(policy_module.configuration(blocked))
+        module_policy_sha=sha256(module_policy)
+        for module in blocked:
+            result=subprocess.run(['chroot',str(root),'/usr/sbin/modprobe','-S',RELEASE,module],
+                stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=5)
+            assert result.returncode!=0,'Unreviewed peripheral load was not denied: '+module
+            assert 'Error running install command' in result.stdout or 'install' in result.stdout,module
+        logs['unreviewed-module-loads-rejected']=len(blocked)
         pin.write_text(RELEASE+'\n')
         deadline=root/'usr/lib/systemd/system/oneplus13-ram-deadline.timer'
         policy=deadline.read_text()
@@ -95,6 +111,8 @@ def main():
         'mesa_sha256':MESA_SHA,'rootfs_sha256':sha256(image),'rootfs_bytes':image.stat().st_size,
         'runtime_absolute_deadline_seconds':600,
         'rootfs_matching_modules_preinstalled':True,'merged_usr_preserved':True,
+        'unreviewed_peripheral_module_policy_sha256':module_policy_sha,
+        'unreviewed_peripheral_modules_denied':blocked,'builtin_driver_dt_review_required':True,
         'mesa_dependencies_resolved':True,'locked_root_no_default_account':True,
         'bluetooth_address_generated':False,'private_firmware_or_calibration_included':False,
         'phone_operations':0,'hardware_tested':False,'installer_included':False}
