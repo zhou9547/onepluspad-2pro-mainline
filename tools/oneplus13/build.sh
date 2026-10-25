@@ -87,6 +87,8 @@ grep -q 'sm8750-oneplus-dodge-native.dtb' "$src/arch/arm64/boot/dts/qcom/Makefil
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-native.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
 grep -q 'sm8750-oneplus-dodge-wlan.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-wlan.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
+grep -q 'sm8750-oneplus-dodge-sound.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
+  printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-sound.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
 grep -q 'sm8750-oneplus-dodge-gpu.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" || \
   printf '\ndtb-$(CONFIG_ARCH_QCOM) += sm8750-oneplus-dodge-gpu.dtb\n' >> "$src/arch/arm64/boot/dts/qcom/Makefile"
 git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dts \
