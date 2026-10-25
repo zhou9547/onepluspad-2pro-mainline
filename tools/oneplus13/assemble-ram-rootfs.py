@@ -45,6 +45,8 @@ def main():
         pin=root/'usr/lib/oneplus13-desktop/kernel-release';assert not pin.exists()
         with tarfile.open(archive) as tf:
             blocked=policy_module.blocked_modules(tf.getnames(),RELEASE)
+            deps=next(x for x in tf.getmembers() if x.name.endswith('/modules.dep'))
+            blocked=policy_module.dependency_closure(blocked,tf.extractfile(deps).read().decode())
             for item in tf.getmembers():
                 name=item.name.removeprefix('./')
                 assert name in ('.','lib','lib/modules','lib/modules/'+RELEASE) or name.startswith('lib/modules/'+RELEASE+'/')
@@ -61,14 +63,18 @@ def main():
         # peripheral aliases, explicit loads and dependency loads closed.
         assert {'ath12k','ath12k_wifi7','pwrseq_qcom_wcn','pci_pwrctrl_pwrseq',
                 'snd_soc_sc8280xp','fastrpc','qcom_iris'}.issubset(blocked)
+        assert not {'qcom_cpucp_mbox','socinfo','dodge_s3910','msm','panel_oneplus_aa569',
+                    'libcomposite','usb_f_ncm','u_ether','dwc3'}.intersection(blocked)
         module_policy=root/'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf'
         module_policy.write_text(policy_module.configuration(blocked))
         module_policy_sha=sha256(module_policy)
         for module in blocked:
+            dry=run(['chroot',root,'/usr/sbin/modprobe','-S',RELEASE,'--show-depends',module])
+            assert dry.strip() and all(line=='install /bin/false' for line in dry.splitlines()),(module,dry[:1800])
             result=subprocess.run(['chroot',str(root),'/usr/sbin/modprobe','-S',RELEASE,module],
                 stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=5)
             assert result.returncode!=0,'Unreviewed peripheral load was not denied: '+module
-            assert 'Error running install command' in result.stdout or 'install' in result.stdout,module
+            assert 'Error running install command' in result.stdout or 'install' in result.stdout,(module,result.stdout[:1800])
         logs['unreviewed-module-loads-rejected']=len(blocked)
         pin.write_text(RELEASE+'\n')
         deadline=root/'usr/lib/systemd/system/oneplus13-ram-deadline.timer'

@@ -31,5 +31,11 @@ class ModulePolicy(unittest.TestCase):
     def test_rejects_shell_tokens(self):
         for names in [[],['a','a'],['x;true'],['a\nb']]:
             with self.subTest(names=names),self.assertRaises(ValueError):policy.configuration(names)
+    def test_dependencies_are_denied_before_any_insertion(self):
+        deps='kernel/ath12k.ko: kernel/mhi.ko\nkernel/mhi.ko: kernel/shared_bus.ko\nkernel/shared_bus.ko:\nkernel/usb.ko:\n'
+        self.assertEqual(policy.dependency_closure(['ath12k'],deps),['ath12k','mhi','shared_bus'])
+    def test_missing_or_unsafe_dependency_is_rejected(self):
+        for deps in ['kernel/a.ko: kernel/missing.ko\n','kernel/a.ko: ../outside.ko\n','kernel/a.ko:\nkernel/a.ko:\n']:
+            with self.subTest(deps=deps),self.assertRaises(ValueError):policy.dependency_closure(['a'],deps)
 
 if __name__=='__main__':unittest.main()

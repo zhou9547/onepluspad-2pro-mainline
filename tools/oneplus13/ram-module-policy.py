@@ -46,3 +46,25 @@ def configuration(modules):
             raise ValueError('Invalid module name')
         lines.extend(['blacklist '+module,'install '+module+' /bin/false'])
     return '\n'.join(lines)+'\n'
+
+def dependency_closure(selected,depfile):
+    graph={}
+    for line in depfile.splitlines():
+        if not line:continue
+        if line.count(':')!=1:raise ValueError('Malformed module dependency line')
+        path,deps=line.split(':')
+        paths=[path,*deps.split()]
+        for name in paths:
+            p=PurePosixPath(name)
+            if p.is_absolute() or '..' in p.parts or not name.startswith('kernel/') or not name.endswith('.ko'):
+                raise ValueError('Unsafe module dependency path')
+        name=PurePosixPath(path).stem.replace('-','_')
+        if name in graph:raise ValueError('Duplicate normalized module name')
+        graph[name]={PurePosixPath(x).stem.replace('-','_') for x in deps.split()}
+    pending=list(selected);result=set()
+    while pending:
+        name=pending.pop()
+        if name in result:continue
+        if name not in graph:raise ValueError('Incomplete module dependency graph')
+        result.add(name);pending.extend(graph[name]-result)
+    return sorted(result)
