@@ -1,15 +1,19 @@
 From: OnePlus 13 mainline port
-Subject: [PATCH] remoteproc: qcom: pas: SM8750 ADSP with auto_boot=false
+Subject: [PATCH] remoteproc: qcom: pas: SM8750 ADSP via lcx/lmx domains
 
-The ADSP on SM8750 is already booted by the Gunyah hypervisor.
-Setting auto_boot=false prevents the PAS boot attempt that fails
-with -61 (ENODATA). The remoteproc registers but doesn't auto-boot.
+The previous sm8750-adsp-pas descriptor requested the "cx" proxy power
+domain, but the SM8750 device tree names the ADSP domains "lcx" and "lmx".
+dev_pm_domain_attach_by_name() then returns NULL and the probe fails with
+-61 (ENODATA) before any PAS call is made - this was the real cause of the
+earlier failure, not Gunyah. Match the reference erhai project (same SoC)
+by mirroring the sm8550_adsp_resource fields: auto_boot=true with the
+lcx/lmx proxy domains, loading adsp.mdt + adsp_dtb.mdt.
 
 Signed-off-by: OnePlus 13 mainline port
 ---
 --- a/drivers/remoteproc/qcom_q6v5_pas.c	2026-10-24 23:37:04.372131200 +0800
-+++ b/drivers/remoteproc/qcom_q6v5_pas.c	2026-10-25 01:31:15.399934400 +0800
-@@ -1571,6 +1571,25 @@
++++ b/drivers/remoteproc/qcom_q6v5_pas.c	2026-10-25 09:30:00.000000000 +0800
+@@ -1571,6 +1571,24 @@
  	.region_assign_count = 2,
  	.region_assign_vmid = QCOM_SCM_VMID_MSS_MSA,
  };
@@ -20,10 +24,10 @@ Signed-off-by: OnePlus 13 mainline port
 +	.pas_id = 1,
 +	.dtb_pas_id = 0x24,
 +	.minidump_id = 5,
-+	.auto_boot = false,
-+	.decrypt_shutdown = true,
++	.auto_boot = true,
 +	.proxy_pd_names = (char*[]){
-+		"cx",
++		"lcx",
++		"lmx",
 +		NULL
 +	},
 +	.load_state = "adsp",
@@ -31,11 +35,10 @@ Signed-off-by: OnePlus 13 mainline port
 +	.sysmon_name = "adsp",
 +	.ssctl_id = 0x14,
 +};
-+
- 
+
  static const struct of_device_id qcom_pas_of_match[] = {
  	{ .compatible = "qcom,eliza-adsp-pas", .data = &sm8550_adsp_resource },
-@@ -1647,6 +1666,7 @@
+@@ -1647,6 +1665,7 @@
  	{ .compatible = "qcom,sm8650-cdsp-pas", .data = &sm8650_cdsp_resource },
  	{ .compatible = "qcom,sm8650-mpss-pas", .data = &sm8650_mpss_resource },
  	{ .compatible = "qcom,sm8750-mpss-pas", .data = &sm8750_mpss_resource },
