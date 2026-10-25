@@ -1,5 +1,12 @@
 # Phone audio and sensor offline increment, 2026-10-25
 
+Superseding 2026-10-26 finding: the saved stock runtime FDT disables every
+WSA884x/WSA883x speaker directly or by ancestry, including the WSA macro. Both
+AWINIC smartpa nodes are enabled. The run42 candidate's WSA route is therefore
+not justified by stock enablement. Its image is held against hardware reuse;
+the six controls below describe that experimental route only, not the phone's
+stock speaker route. No further WSA streams are justified by this review.
+
 No phone operations are authorized or performed by this increment. The four
 previous RAM grants are consumed. New hardware work requires a new owner grant.
 

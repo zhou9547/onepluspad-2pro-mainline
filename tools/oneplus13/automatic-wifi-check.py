@@ -5,8 +5,10 @@ This file is safe to publish; the separate credentials JSON is private.
 """
 import argparse
 import json
+import math
 import os
 import re
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -14,12 +16,46 @@ import time
 import uuid
 
 
+HTTPS_WRITE_OUT = ('dns_s=%{time_namelookup}\ntcp_s=%{time_connect}\n'
+                   'tls_s=%{time_appconnect}\nfirst_byte_s=%{time_starttransfer}\n'
+                   'total_s=%{time_total}\nhttp_code=%{http_code}\nssl_verify_result=%{ssl_verify_result}\n')
+
+
+def https_metrics(output):
+    """Keep numeric timings only; never publish resolver/peer/error strings."""
+    result = {}
+    for line in output.splitlines():
+        key, sep, value = line.partition('=')
+        if not sep:
+            continue
+        if key == 'http_code' and re.fullmatch(r'[0-9]{3}', value):
+            result[key] = int(value)
+        elif key == 'ssl_verify_result' and re.fullmatch(r'[0-9]{1,4}', value):
+            result[key] = int(value)
+        elif key in {'dns_s', 'tcp_s', 'tls_s', 'first_byte_s', 'total_s'}:
+            try:
+                seconds = float(value)
+            except ValueError:
+                continue
+            if math.isfinite(seconds) and 0 <= seconds <= 60:
+                result[key] = seconds
+    return result
+
+
 def run(argv, seconds=6):
     try:
         p = subprocess.run(argv, capture_output=True, text=True, timeout=seconds)
+        if argv[0] == 'curl' and '--write-out' in argv:
+            # --silent and --output /dev/null leave only our numeric write-out
+            # on stdout, even on failure. Discard raw stderr from this probe.
+            return p.returncode, p.stdout[:4096]
         return p.returncode, p.stdout if p.returncode==0 else p.stderr[:4096]
     except subprocess.TimeoutExpired:
         return 124, ''
+    except FileNotFoundError:
+        return 127, 'executable missing'
+    except OSError:
+        return 126, 'executable unavailable'
 
 
 def check(credentials, iface, execute=run, runtime=Path('/run')):
@@ -39,6 +75,10 @@ def check(credentials, iface, execute=run, runtime=Path('/run')):
             # Store only a fixed error category; raw diagnostics may name SSIDs.
             low=output.lower()
             result[label + '_error_class'] = (
+                'executable_missing' if rc==127 else
+                'executable_unavailable' if rc==126 else
+                'transfer_timeout' if label=='https' and rc==28 else
+                'certificate_verification_failed' if label=='https' and rc==60 else
                 'device_unavailable' if 'unavailable' in low else
                 'permission_denied' if 'not authorized' in low or 'permission denied' in low else
                 'secrets_required' if 'secrets were required' in low else
@@ -104,11 +144,18 @@ def check(credentials, iface, execute=run, runtime=Path('/run')):
         result['dhcp_pass'] = False
     if not result['dhcp_pass']:
         return result
-    command('gateway', ['ping', '-I', iface, '-c', '2', '-W', '2', defaults[0]['gateway']], 6)
-    command('dns', ['getent', 'ahostsv4', 'example.com'], 5)
-    rc, _ = command('https', ['curl', '--noproxy', '*', '--interface', iface, '--connect-timeout', '4',
+    # These are diagnostics, not prerequisites: curl resolves the hostname and
+    # proves traffic on the selected WiFi interface even in a minimal rootfs.
+    rc, _ = command('gateway', ['ping', '-I', iface, '-c', '2', '-W', '2', defaults[0]['gateway']], 6)
+    result['gateway_probe_skipped'] = rc in (126, 127)
+    rc, _ = command('dns', ['getent', 'ahostsv4', 'example.com'], 5)
+    result['dns_probe_skipped'] = rc in (126, 127)
+    rc, output = command('https', ['curl', '--ipv4', '--noproxy', '*', '--interface', iface, '--connect-timeout', '4',
                              '--max-time', '7', '--fail', '--silent', '--output', '/dev/null',
+                             '--write-out', HTTPS_WRITE_OUT,
                              'https://example.com/'], 9)
+    result['https_address_family'] = 'IPv4'
+    result['https_metrics'] = https_metrics(output)
     result['https_pass'] = rc == 0
     return result
 
@@ -121,9 +168,13 @@ def main():
         raise SystemExit('Refusing WiFi credential staging outside RAM overlay')
     credentials = json.loads(args.credentials.read_text())
     args.credentials.unlink()  # Remove transport copy before invoking any subprocess.
+    required=['nmcli','busctl','ip','curl']
+    missing=[name for name in required if shutil.which(name) is None]
     interfaces = [p.name for p in Path('/sys/class/net').iterdir()
                   if (p/'phy80211').exists() or (p/'wireless').is_dir()]
-    if len(interfaces) != 1:
+    if missing:
+        result={'missing_required_commands':missing,'automatic_acceptance_pass':False}
+    elif len(interfaces) != 1:
         result = {'interface_found': False, 'interface_count': len(interfaces)}
     else:
         result = check(credentials, interfaces[0])
