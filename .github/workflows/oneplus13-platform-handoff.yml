@@ -1,0 +1,52 @@
+name: OnePlus 13 platform gates and exact rootfs handoff
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  gates:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run phone offline checks on native ARM64
+        run: |
+          python3 -m unittest discover -s tests -p 'test_oneplus13*.py' -v
+          bash -n tools/oneplus13/ram-platform-prerequisites.sh
+          gcc -Wall -Wextra -Werror -fsanitize=address,undefined tools/oneplus13/audio-draft/profile-file-test.c -o /tmp/acf-file-test
+          if /tmp/acf-file-test /dev/null; then exit 1; fi
+  handoff:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install emulator tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends squashfs-tools qemu-system-arm
+      - uses: actions/download-artifact@v4
+        with:
+          name: oneplus13-offline-1f5c1128d42a62244bef9974e58cfe07adf29f7d
+          run-id: 40146822835
+          github-token: ${{ github.token }}
+          path: out/exact-kernel
+      - uses: actions/download-artifact@v4
+        with:
+          name: oneplus13-ubuntu-26.04.1-gnome-03ecbd66a3a55c11edaa78daab4bb8d4702d9e11
+          run-id: 40212524437
+          github-token: ${{ github.token }}
+          path: out/exact-rootfs
+      - name: Boot exact SquashFS through HTTP, guard and automatic deadline
+        run: python3 tools/oneplus13/qemu-exact-rootfs.py --kernel out/exact-kernel --rootfs out/exact-rootfs/rootfs.squashfs --output out/exact-handoff
+      - uses: actions/upload-artifact@v4
+        if: always() && !cancelled()
+        with:
+          name: oneplus13-exact-rootfs-handoff-${{ github.sha }}
+          path: out/exact-handoff/
+          retention-days: 7

@@ -4,6 +4,7 @@
 import argparse
 import json
 from pathlib import Path
+import re
 
 def text(path):
     try:
@@ -18,6 +19,19 @@ def number(path):
 def children(path,pattern='*',limit=64):
     try:return sorted(path.glob(pattern))[:limit]
     except OSError:return []
+
+def bindings(root,bus,pattern):
+    """Read existing driver links only; never bind, probe or request firmware."""
+    result=[]
+    base=root/'sys/bus'/bus/'devices'
+    try: selected=sorted(p for p in base.iterdir() if re.search(pattern,p.name))[:64]
+    except OSError: return result
+    for device in selected:
+        try: driver=(device/'driver').readlink().name
+        except OSError: driver=None
+        result.append({'device':device.name,'driver':driver,
+                       'modalias':text(device/'modalias')})
+    return result
 
 def collect(root):
     thermal=[]
@@ -54,6 +68,11 @@ def collect(root):
             'hardware_block_devices_observed':len(block),'all_observed_block_devices_read_only':bool(block) and all(v==1 for v in block),
             'writable_block_devices_observed':sum(v==0 for v in block),
             'available_sleep_states':text(root/'sys/power/state'),
+            'existing_driver_bindings':{
+                'scmi':bindings(root,'scmi_protocol',r'.'),
+                'platform':bindings(root,'platform',r'(?i)scmi|cpucp|16430000|17830000|pmic.glink|ucsi|usbss'),
+                'auxiliary':bindings(root,'auxiliary',r'(?i)pmic|glink|ucsi'),
+                'rpmsg':bindings(root,'rpmsg',r'(?i)pmic|glink')},
             'suspend_executed':False,'rtc_write_requested':False,'audio_or_sensor_stream_started':False}
 
 def main():

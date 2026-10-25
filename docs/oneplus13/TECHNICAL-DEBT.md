@@ -1,5 +1,26 @@
 # Technical debt (single register for the phone)
 
+Current run66: two SCMI schedutil policies and CPU cooling devices register after
+bounded, exact-hash loading of the already delivered CPUCP/socinfo modules. Full
+ordinary-user desktop/GPU/replacement-network HTTPS/BT components/input/battery
+regression passes; Android returns in148.6s with seven matching samples. Run64
+identified the unbound mailbox and separate UCSI deferred-role issue; run65
+refused before module loading on pending ADSP battery temperature, recovered
+in73.4s with matching samples. Five actual-shell thermal gate tests now retain
+strict CPU sensor requirements without requiring early ADSP battery telemetry.
+No stress/voltage/frequency override, role switching, audio or sensor stream.
+SCMI bus name is scmi_protocol; the former empty scmi inventory was inconclusive.
+See PLATFORM-MODULES-20261026.md. Frequency transition accuracy, thermal policy
+under load, power/PD, Type-C and sustained stability remain open.
+
+Saved owner ACF length/hash independently match the existing reference bytes,
+and actual-file host ASan/UBSan preflight passes. This supersedes the old false
+content-match flag only. Exact amplifier PID, independent calibration, dynamic
+protection and MI2S route still block audio. The current draft's probe writes
+profiles and is not a passive identification tool. See OWNER-ACF-BINDING-20261026.md.
+Fresh rootfs03ecbd66 remains separate pending same-kernel QEMU handoff/deadline
+verification; all-feature adaptation remains incomplete. Older snapshots follow.
+
 Current run62: quarantined WSA branch, new-network scan/authentication/IPv4/route/
 certificate-verified HTTPS and ordinary-user desktop with three bound HTTPS
 samples jointly pass. Android returns in141.8s, seven baseline samples match.

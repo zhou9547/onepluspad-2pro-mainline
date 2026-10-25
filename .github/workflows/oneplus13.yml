@@ -1,8 +1,9 @@
-name: OnePlus 13 isolated complete feature gates
+name: OnePlus 13 isolated platform and exact rootfs gates
 on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 jobs:
-  gates:
-    uses: ./.github/workflows/oneplus13-complete-gates.yml
+  platform:
+    uses: ./.github/workflows/oneplus13-platform-handoff.yml

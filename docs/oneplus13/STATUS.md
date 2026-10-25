@@ -1,5 +1,13 @@
 # 一加13适配状态
 
+## 2026-10-26 run66：SCMI 调频策略及 CPU 散热设备出现
+
+run66 在 148.6 秒自动返回 Android，七项基线一致。原交付包中的 CPUCP mailbox 与 socinfo 模块经过实际 archive/ELF/vermagic/依赖/哈希核对后限时加载；出现两组 schedutil SCMI policy 和对应 CPU cooling devices。同轮桌面/GPU/新网络 HTTPS/蓝牙组件/输入/电池联合回归通过，无刷写，无人工恢复。run64 的同镜像只读定位及联合回归在 151.6 秒恢复；run65 因过早要求 ADSP 电池温度而在模块加载前拒绝，73.4 秒恢复且基线一致，实际温度门禁已补五种离线场景。详见 PLATFORM-MODULES-20261026.md；不代表压力温控、频率切换、长期功耗或 USB role 已验收。
+
+run63 的被动清单已实际执行：48 个温度区可读，56 个硬件块设备全部只读，按键能力存在，RTC 原始计数无当前日期偏移证据；CPU policy 和 Type-C 原来为空。SCMI 调频缺口已如上修复，USB 固定 peripheral/role-switch 依赖留作独立问题，不在无人场景切换 USB role。124 项本地离线检查通过，50 项 ARM64 Actions40216514281 已成功。
+
+音频证据追加纠正：现存 ACF 与原机保存的长度/哈希一致，且实际文件通过草稿 C 解析器 ASan/UBSan；此前 owner_version_matched=false 为旧标志。实际 PID、独立校准、动态保护和完整 secondary MI2S 路径仍未通过，不加载 AW 草稿或播放，见 OWNER-ACF-BINDING-20261026.md。新 rootfs 正在准备同内核 QEMU 的实际交接/截止验证，尚未替换硬件候选。完整适配仍未完成，人工项目留待集中验收；以下为历史快照。
+
 ## 2026-10-26 run62：关闭无原厂启用依据的 WSA 分支后联合通过
 
 run62 在141.8秒自动返回 Android，七项基线一致，无刷写、记录中零分区写入、无人工恢复。

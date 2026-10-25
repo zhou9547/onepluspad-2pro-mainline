@@ -15,9 +15,10 @@ flashing acceptance.
 | WiFi | run55/58 full bound IPv4 HTTPS on previous network; run61/62 full acceptance on replacement network; run62 desktop and three HTTPS probes jointly pass | UI regression later; bands, roaming, resume, sustained traffic and hotspot mode |
 | Bluetooth transfer | Owner confirmed run51 peer file receipt; component regressions | Reverse transfer, reconnection and other profiles; A2DP/HFP are not accepted |
 | Battery | Repeated capacity/voltage/current/temperature/status inventory | Accuracy over time, charging policy and power consumption |
-| Charging / USB-C / PD | PMIC/ADSP services and tethered test transport exist | Roles, current negotiation, charging limits, thermal response and peripherals |
-| Thermal management | Candidate has enabled TSENS software nodes | Driver readings, cooling devices and trip policy; controlled load only after review |
-| Speakers / receiver | Stock enables two AWINIC nodes; WSA branch quarantined; AW88461 offline object compile and synthetic tests pass | Actual amplifier identity, clock/pin/MI2S route, owner-matched protection/tuning, gain policy and recovery gates before any stream |
+| CPU frequency | run66 two SCMI schedutil policies and CPU cooling devices after reviewed module delivery | Frequency transition accuracy, load/power and thermal behavior; no manual clock or voltage overrides |
+| Charging / USB-C / PD | PMIC/ADSP services and tethered test transport; UCSI bound but deferred initialization with fixed peripheral role | Resolve role provider with independent recovery, then roles/current/PD/charging/peripherals; do not switch current recovery transport unattended |
+| Thermal management | run63 48 readable temperature zones; run66 CPU/GPU/WLAN cooling devices registered | Trip policy and actual thermal intervention; controlled load only after review |
+| Speakers / receiver | Two enabled stock AWINIC nodes; WSA quarantined; offline object compile; saved owner ACF bytes match and actual parser preflight passes | Actual PID, independent calibration/dynamic protection, secondary MI2S route, gain and recovery gates before any stream |
 | Microphones / headset / audio routing | No accepted phone capture/playback path | Codec/DMIC/MI2S endpoints, topology and PipeWire policy; independent stream review first |
 | Accelerometer / gyroscope / compass / light / proximity | Phone ROM extracted; board-independent userspace CI passes | Owner registry/calibration, phone identity and loader semantics, one attach gate; streams and physical orientation unaccepted |
 | Haptics | No functional acceptance | Exact actuator/driver, power constraints and bounded control before physical feedback test |
@@ -28,7 +29,7 @@ flashing acceptance.
 | GNSS | No functional acceptance | Modem/DSP/service transport and bounded location checks; DT absence does not mean hardware absence |
 | NFC | Stock software node, no candidate integration | Actual controller identity, transport/power, userspace and bounded protocol test |
 | Fingerprint / secure biometrics | Stock generic SPI software node, no candidate integration | Actual chip, trusted execution dependencies and userspace support; never overwrite enrollment/calibration |
-| RTC / network time | RAM-only host clock bridge, monotonic recovery deadline preserved | Independent boot time and trusted network time policy, explicit RTC effects review |
+| RTC / network time | RAM host clock bridge preserves monotonic deadline; run63 raw RTC count read without writing | Independent epoch offset and trusted time policy; do not write or guess offset from raw count |
 | Suspend / resume / idle power | Not accepted | Prove independent wake/recovery before any unattended suspend; timers alone do not prove wake |
 | USB host / display / storage peripherals | USB gadget test link works | Physically attached peripherals and role switching later, after isolated theoretical checks |
 | Internal storage / installation / updates | Block read-only RAM guard; repeated Android return checks | No install, partition, boot slot or OTA design is accepted; current scope prohibits writing them |
