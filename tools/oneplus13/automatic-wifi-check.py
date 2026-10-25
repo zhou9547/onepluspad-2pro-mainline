@@ -134,14 +134,33 @@ def check(credentials, iface, execute=run, runtime=Path('/run')):
     result['association_pass'] = rc == 0 and active.strip() == ident
     if not result['association_pass']:
         return result
-    rc, addresses = command('ipv4_address', ['ip', '-j', '-4', 'address', 'show', 'dev', iface], 3)
-    rr, routes = command('ipv4_route', ['ip', '-j', '-4', 'route', 'show', 'dev', iface, 'default'], 3)
-    try:
-        has_ip = any(a.get('scope') == 'global' for dev in json.loads(addresses) for a in dev.get('addr_info', []))
-        defaults = [x for x in json.loads(routes) if x.get('dst') == 'default' and x.get('gateway')]
-        result['dhcp_pass'] = rc == 0 and rr == 0 and has_ip and bool(defaults)
-    except (ValueError, TypeError):
-        result['dhcp_pass'] = False
+    # Activation can complete on IPv6 before DHCPv4 finishes. Observe the same
+    # connection for at most 15 seconds; do not reconnect or invent a lease.
+    deadline = time.monotonic() + 15
+    for attempt in range(8):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        rc, addresses = command('ipv4_address', ['ip', '-j', '-4', 'address', 'show', 'dev', iface], min(3, remaining))
+        remaining = deadline - time.monotonic()
+        if rc or remaining <= 0:
+            break
+        rr, routes = command('ipv4_route', ['ip', '-j', '-4', 'route', 'show', 'dev', iface, 'default'], min(3, remaining))
+        result['ipv4_observations'] = attempt + 1
+        if rr:
+            break
+        try:
+            has_ip = any(a.get('scope') == 'global' for dev in json.loads(addresses) for a in dev.get('addr_info', []))
+            defaults = [x for x in json.loads(routes) if x.get('dst') == 'default' and x.get('gateway')]
+        except (ValueError, TypeError, AttributeError):
+            result['ipv4_observation_invalid'] = True
+            break
+        result['ipv4_global_address_present'] = has_ip
+        result['ipv4_default_route_present'] = bool(defaults)
+        result['dhcp_pass'] = has_ip and bool(defaults)
+        if result['dhcp_pass']:
+            break
+        time.sleep(min(2, max(0, deadline - time.monotonic())))
     if not result['dhcp_pass']:
         return result
     # These are diagnostics, not prerequisites: curl resolves the hostname and

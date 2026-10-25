@@ -1,8 +1,8 @@
-name: OnePlus 13 isolated audio topology verification
+name: OnePlus 13 isolated AW88461 offline check
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  audio-topology:
-    uses: ./.github/workflows/oneplus13-audio-topology.yml
+  audio-component:
+    uses: ./.github/workflows/oneplus13-aw88461-offline.yml

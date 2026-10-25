@@ -62,6 +62,40 @@ class Checks(unittest.TestCase):
         r = self.call(Fake())
         self.assertTrue(all(r[k] for k in ['association_pass', 'dhcp_pass', 'https_pass']))
 
+    def test_ipv6_first_activation_waits_for_delayed_ipv4_on_same_connection(self):
+        base=Fake();observations=0
+        def delayed(args,seconds):
+            nonlocal observations
+            if 'address' in args:
+                observations+=1
+                if observations<3:return 0,'[]'
+            if 'route' in args and observations<3:return 0,'[]'
+            return base(args,seconds)
+        delayed.calls=base.calls
+        r=self.call(delayed)
+        self.assertTrue(r['dhcp_pass'] and r['https_pass'])
+        self.assertEqual(r['ipv4_observations'],3)
+        self.assertEqual(sum('up' in c for c in base.calls),1)
+
+    def test_ipv6_only_never_passes_ipv4_acceptance_and_observation_is_bounded(self):
+        base=Fake();observations=0
+        def absent(args,seconds):
+            nonlocal observations
+            if 'address' in args:observations+=1;return 0,'[]'
+            if 'route' in args:return 0,'[]'
+            return base(args,seconds)
+        absent.calls=base.calls
+        r=self.call(absent)
+        self.assertFalse(r['dhcp_pass'] or r['https_pass'])
+        self.assertEqual(observations,8)
+        self.assertFalse(any(c[0]=='curl' for c in base.calls))
+
+    def test_ipv4_query_timeout_stops_without_reconnection(self):
+        f=Fake(fail='address');r=self.call(f)
+        self.assertFalse(r['dhcp_pass'] or r['https_pass'])
+        self.assertEqual(r['ipv4_address_rc'],124)
+        self.assertEqual(sum('up' in c for c in f.calls),1)
+
     def test_nm_timeout_stops_before_scan_auth(self):
         f = Fake(fail='GENERAL.STATE')
         r = self.call(f)
