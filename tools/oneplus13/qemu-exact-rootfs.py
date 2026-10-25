@@ -23,6 +23,7 @@ def main():
     p.add_argument('--rootfs',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--assembled-manifest',type=Path,help='Public matched-rootfs assembly provenance')
     a=p.parse_args();kernel=a.kernel.resolve();rootfs=a.rootfs.resolve();out=a.output.resolve()
+    shared_cec_test=False
     manifest=json.loads((kernel/'manifest.json').read_text())
     assert manifest['integration_commit']==EXPECTED_KERNEL_COMMIT
     assert manifest['kernel_release']==EXPECTED_RELEASE
@@ -37,6 +38,7 @@ def main():
         assert assembly['kernel_release']==EXPECTED_RELEASE and assembly['rootfs_matching_modules_preinstalled']
         assert assembly['private_firmware_or_calibration_included'] is False
         expected_sha=assembly['rootfs_sha256'];expected_bytes=assembly['rootfs_bytes']
+        shared_cec_test=bool(assembly.get('unreviewed_peripheral_module_policy_sha256'))
     assert sha256(rootfs)==expected_sha and rootfs.stat().st_size==expected_bytes
     with tarfile.open(kernel/'modules.tar.gz') as archive:
         assert all(not x.name.startswith('/') and '..' not in Path(x.name).parts for x in archive)
@@ -62,6 +64,30 @@ def main():
              b'/bin/busybox tar xzf /qemu-matching-modules.tar.gz -C /run/qemu-modules\n'+
              b'cp -a /run/qemu-modules/lib/modules/. /newroot/usr/lib/modules/\n')
     files['bin/oneplus13-qemu-install']['data']=helper.replace(anchor,anchor+install)
+    if shared_cec_test:
+        cec_sha='69c2bafd5315b52d253d0f26c0f8a5351d7bf940f61ee5a242b637483ca42659'
+        with tarfile.open(kernel/'modules.tar.gz') as archive:
+            entry=next(x for x in archive if x.name.endswith('/kernel/drivers/media/cec/core/cec.ko'))
+            import hashlib
+            assert hashlib.sha256(archive.extractfile(entry).read()).hexdigest()==cec_sha
+        files['bin/ram-display-prerequisites.py']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
+            'data':(REPO/'tools/oneplus13/ram-display-prerequisites.py').read_bytes()}
+        helper=files['bin/oneplus13-qemu-install']['data']
+        copy=b'cp /bin/ram-display-prerequisites.py /newroot/run/oneplus13/display-prerequisites.py\n'
+        helper=helper.replace(anchor,anchor+copy,1)
+        marker=b'echo ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED\n'
+        assert helper.count(marker)==1
+        checks=(b'# Reproduce the shared CEC dependency denial without loading display.\n'
+            b'modprobe -n -v --ignore-install msm > /run/oneplus13/msm-before-cec\n'
+            b'grep -q "^install /bin/false" /run/oneplus13/msm-before-cec\n'
+            b'[ ! -d /sys/module/cec ]\n'
+            b'python3 /run/oneplus13/display-prerequisites.py --release "$(uname -r)" --sha256 '+cec_sha.encode()+b'\n'
+            b'modprobe -n -v --ignore-install msm > /run/oneplus13/msm-after-cec\n'
+            b'if grep -q "^install " /run/oneplus13/msm-after-cec; then cat /run/oneplus13/msm-after-cec; exit 1; fi\n'
+            b'grep -q "insmod .*msm.ko" /run/oneplus13/msm-after-cec\n'
+            b'[ ! -d /sys/module/panel_oneplus_aa569 ]\n[ ! -d /sys/module/msm ]\n'
+            b'echo ONEPLUS13_SHARED_CEC_CORE_PREREQUISITE_OK\n')
+        files['bin/oneplus13-qemu-install']['data']=helper.replace(marker,marker+checks,1)
     files['qemu-matching-modules.tar.gz']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
                                            'data':(kernel/'modules.tar.gz').read_bytes()}
     out.mkdir(parents=True,exist_ok=True);ramdisk=out/'initramfs-qemu-only.cpio.gz'
@@ -92,6 +118,7 @@ def main():
     markers=['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED','ONEPLUS13_NATIVE_RUNTIME_GUARDS_OFFLINE_OK',
              'ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK','ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK',
              'ONEPLUS13_DESKTOP_HANDOFF_OK','ONEPLUS13_QEMU_DEADLINE_FIRED','reboot: Restarting system']
+    if shared_cec_test:markers.insert(1,'ONEPLUS13_SHARED_CEC_CORE_PREREQUISITE_OK')
     passed=rc==0 and all(x in log for x in markers)
     if passed:passed=all(log.index(x)<log.index(y) for x,y in zip(markers,markers[1:]))
     count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
@@ -102,6 +129,7 @@ def main():
             'kernel_image_sha256':sha256(kernel/'Image'),'modules_sha256':sha256(kernel/'modules.tar.gz'),
             'qemu_only_module_delivery':True,'rootfs_bytes_unchanged':sha256(rootfs)==expected_sha,
             'assembled_rootfs':bool(a.assembled_manifest),
+            'shared_cec_core_prerequisite_tested':shared_cec_test,
             'returncode':rc,'required_markers':{x:x in log for x in markers},
             'http_bytes':stats['bytes'],'http_parts':stats['parts'],'handoff_and_deadline_pass':passed,
             'physical_display_input_radio_or_audio_tested':False}
