@@ -1,5 +1,11 @@
 # 一加13适配状态
 
+## 2026-10-26 run69：联合回归通过，传感器设备门禁拒绝后自动恢复
+
+run69 显示、GPU、普通用户桌面及平台检查通过，FastRPC 模块与六组上下文注册；附着前设备门禁错误要求 misc/device/of_node，但固定源码没有设置 miscdev.parent，因而拒绝，未执行 attach ioctl。103.1秒自动返回 Android，七项基线一致，无刷写/人工恢复。未见严重内核故障，仍按显式失败策略保留真机停止标记，不自动解除或重试。
+
+已离线改用唯一绑定 RPMSG 通道的 DT 祖先、ADSP label、唯一 secure 字符节点和设备号，并补真实无 misc 父节点形态及拒绝测试。22项新增 Linux 检查和实际 rootfs Python/fcntl/模块哈希检查已准备；修订版未再上机。传感器反向RPC、registry、数据和轴向仍未通过。详见 SENSOR-FIRST-ATTACH-20261026.md。以下 run68 是当前最近完整隔离平台通过记录。
+
 ## 2026-10-26 run68：手机专用固件与新桌面联合通过
 
 共享 CEC/UBWC 修复通过 Actions40226313784 的 ARM64 和实际 rootfs QEMU/自动截止，并经下载摘要、ZIP CRC、候选 rootfs 哈希独立绑定。run68 单次显示激活、Adreno GPU 像素读回、普通用户 Wayland/项目 Mesa/Settings、CPU/输入/电池/温度清单和最终内核健康全部通过，93.6 秒自动返回 Android，七项基线一致；不刷写、无人工恢复、无无线/音频/传感器流。仅软件桌面通过，不把 WiFi combined=false 误记为整轮失败，也不声称肉眼画面/真实触摸通过。

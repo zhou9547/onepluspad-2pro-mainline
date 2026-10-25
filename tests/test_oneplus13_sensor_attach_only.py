@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
-import errno, hashlib, importlib.util, os, tempfile, unittest
+import errno, hashlib, importlib.util, os, stat, tempfile, unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock
 P=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-sensor-attach-only.py'
 spec=importlib.util.spec_from_file_location('sensor_attach_only',P)
@@ -81,5 +82,35 @@ class Qualification(unittest.TestCase):
         self.assertTrue((self.root/m.MARKER).exists())
         self.assertEqual(sum('--ignore-install' in a for a in self.calls),1)
         self.assertFalse(any('restart' in a or 'rmmod' in a for a in self.calls))
+
+@unittest.skipIf(os.name=='nt','RPMSG links require Linux symlink semantics')
+class DeviceTopology(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup);self.root=Path(self.tmp.name)
+        self.info=SimpleNamespace(st_mode=stat.S_IFCHR|0o600,st_rdev=os.makedev(10,123))
+        for name,data in [(m.NODE,b''),('sys/class/misc/fastrpc-adsp-secure/dev',b'10:123\n'),
+              ('sys/firmware/devicetree/base/'+m.OF_NODE+'/label',b'adsp\0')]:
+            p=self.root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
+        self.channel=self.root/'sys/bus/rpmsg/devices/adsp-channel';self.channel.mkdir(parents=True)
+        driver=self.root/'sys/bus/rpmsg/drivers/qcom,fastrpc';driver.mkdir(parents=True)
+        (self.channel/'driver').symlink_to(driver)
+        (self.channel/'of_node').symlink_to(self.root/'sys/firmware/devicetree/base'/m.OF_NODE)
+    def test_real_driver_shape_has_no_misc_parent(self):
+        self.assertFalse((self.root/'sys/class/misc/fastrpc-adsp-secure/device').exists())
+        m.device_ready(self.root,self.info)
+    def test_wrong_device_number_rejected(self):
+        (self.root/'sys/class/misc/fastrpc-adsp-secure/dev').write_text('10:124')
+        with self.assertRaises(ValueError):m.device_ready(self.root,self.info)
+    def test_wrong_or_ambiguous_rpmsg_channel_rejected(self):
+        extra=self.channel.parent/'other';extra.mkdir();(extra/'driver').symlink_to((self.channel/'driver').resolve())
+        with self.assertRaises(ValueError):m.device_ready(self.root,self.info)
+        (extra/'driver').unlink();extra.rmdir()
+        (self.channel/'of_node').unlink();(self.channel/'of_node').symlink_to(self.root/'wrong')
+        with self.assertRaises(ValueError):m.device_ready(self.root,self.info)
+    def test_additional_domain_or_wrong_label_rejected(self):
+        p=self.root/'dev/fastrpc-cdsp';p.touch()
+        with self.assertRaises(ValueError):m.device_ready(self.root,self.info)
+        p.unlink();(self.root/'sys/firmware/devicetree/base'/m.OF_NODE/'label').write_bytes(b'cdsp\0')
+        with self.assertRaises(ValueError):m.device_ready(self.root,self.info)
 
 if __name__=='__main__':unittest.main()

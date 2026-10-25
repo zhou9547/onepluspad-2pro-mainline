@@ -1,5 +1,15 @@
 # Technical debt (single register for the phone)
 
+Latest run69: display/GPU/ordinary-user desktop/platform passed; FastRPC registered
+six contexts, but the pre-ioctl device guard refused absent misc ancestry.
+Pinned source never sets miscdev.parent. Automatic Android return103.1s, seven
+baseline samples match, no flash/manual recovery or critical kernel evidence.
+The failure halt remains set; no automatic hardware retry/rearm. Offline guard
+correction uses unique bound RPMSG ancestry/ADSP label and secure misc devnum;
+four additional topology tests cover the actual parentless misc shape. No first
+attach, reverse RPC, registry or stream acceptance. See SENSOR-FIRST-ATTACH-20261026.md.
+run68 below remains the most recent complete isolated-platform pass.
+
 Current run68: shared-core Actions40226313784 and independently bound artifact
 pass. Exact phone ADSP/graphics, explicit display, GPU readback, ordinary-user
 desktop software, CPU/input/battery/thermal inventory and health jointly pass.

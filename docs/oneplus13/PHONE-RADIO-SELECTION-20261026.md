@@ -21,7 +21,9 @@ wifisar.cfg, which is absent in the verified saved ODM; its fallback values
 must not be converted into assumed phone safety limits. Absence in that image
 does not prove absence of a runtime overlay or of other HAL power controls.
 Pinned vendor SAR source confirms the separate user-defined/index selectors.
-Units, firmware acknowledgements and Linux-facing enforcement still need review.
+The pinned vendor API now establishes USER half-dBm units and a distinct V2
+profile-index namespace. Effective firmware policy/acknowledgements and
+Linux-facing enforcement remain open; see SAR-PROTOCOL-GAP-20261026.md.
 
 Pinned ath12k source supports ELF-versus-binary board download and uses a256KiB
 WCN7860 board limit. Exact/default board-2 and board.bin/regdb fallbacks exist;

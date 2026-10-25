@@ -67,14 +67,26 @@ def validate(root,release,digest,policy_sha,run=command):
     return module
 
 
-def device_ready(root):
+def device_ready(root,node_stat=None):
     path=root/NODE
-    info=path.stat()
+    info=path.stat() if node_stat is None else node_stat
     if path.is_symlink() or not stat.S_ISCHR(info.st_mode):raise ValueError('Expected secure ADSP character node')
     base=root/'sys/class/misc/fastrpc-adsp-secure'
     if (base/'dev').read_text().strip()!=f'{os.major(info.st_rdev)}:{os.minor(info.st_rdev)}':raise ValueError('Device number mismatch')
-    if (base/'device/of_node').resolve()!=(root/'sys/firmware/devicetree/base'/OF_NODE).resolve():
-        raise ValueError('Wrong ADSP node ancestry')
+    # This pinned driver's misc_register() does not set miscdev.parent. There
+    # is deliberately no misc/device/of_node link. Verify the independently
+    # bound unique RPMSG channel, rather than inventing a misc ancestry.
+    if sorted(p.name for p in (root/'dev').glob('fastrpc-*'))!=['fastrpc-adsp-secure']:
+        raise ValueError('Unexpected FastRPC domain device')
+    channels=[]
+    for entry in (root/'sys/bus/rpmsg/devices').iterdir():
+        if (entry/'driver').resolve().name=='qcom,fastrpc':channels.append(entry)
+    if len(channels)!=1:raise ValueError('Expected one bound FastRPC channel')
+    expected=root/'sys/firmware/devicetree/base'/OF_NODE
+    if (channels[0]/'of_node').resolve()!=expected.resolve() or (expected/'label').read_bytes()!=b'adsp\0':
+        raise ValueError('Wrong bound ADSP channel')
+    if (base/'device/of_node').exists() and (base/'device/of_node').resolve()!=expected.resolve():
+        raise ValueError('Unexpected conflicting misc ancestry')
 
 
 def worker(open_fd=os.open,ioctl=None,close_fd=os.close,clock=time.monotonic):
@@ -156,7 +168,10 @@ def main():
         result=prepare(Path('/'),a.release,a.sha256,a.policy_sha256)
         print('RAM_SENSOR_ATTACH_RESULT '+json.dumps(result,sort_keys=True),flush=True)
     except (ValueError,OSError,RuntimeError,subprocess.SubprocessError) as exc:
-        print('RAM_SENSOR_ATTACH_FAILED '+type(exc).__name__,flush=True)
+        # Qualification messages are fixed strings; retain the failed gate,
+        # without printing paths, command output or arbitrary OSError details.
+        reason=str(exc) if isinstance(exc,(ValueError,RuntimeError)) else type(exc).__name__
+        print('RAM_SENSOR_ATTACH_FAILED '+json.dumps({'type':type(exc).__name__,'gate':reason}),flush=True)
         return 1
     return 0
 

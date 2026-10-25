@@ -1,5 +1,22 @@
 # Bounded phone sensor-domain transport qualification
 
+Current hardware result: run69 repeated display/GPU/ordinary-user desktop and
+platform checks, then refused the sensor probe after module registration.
+It returned to Android automatically in103.1seconds; seven baseline samples
+match, no flash or manual recovery. The original device guard incorrectly
+expected `misc/device/of_node`: pinned `fastrpc_device_register()` never sets
+`miscdev.parent`. Thus this version has no such ancestry. No attach ioctl was
+reached. The explicit stop-on-failure flag remains set; no automatic rearm or
+second phone attempt is made.
+
+The correction verifies the sole bound FastRPC RPMSG channel's DT ancestry
+and ADSP label, sole secure ADSP character node and its sysfs device number.
+It rejects other domains, ambiguous channels or conflicting optional ancestry.
+Four Linux topology tests model the real parentless misc shape and rejection
+cases. It also records fixed qualification gate messages, instead of hiding
+the failed gate behind a generic ValueError. This is an offline correction,
+not a claim that the new guard or first attach has passed hardware.
+
 This review qualifies an optional single transport experiment, not a sensor
 service or sensor stream. The working run68 candidate remains unchanged.
 Radio, sound and CDSP stay isolated. No registry/data archive is needed for
@@ -47,7 +64,8 @@ recovery guard/timer, absent radio/sound/client activation, exact module/release
 zero dependencies and unchanged denial policy. It refuses any active udev rule
 mentioning FastRPC/hexagonrpc/ssccli. It masks sensor client services in RAM,
 records one attempt before the explicit module load and retains normal modprobe
-denial. It verifies the secure ADSP character node's device number and DT ancestry.
+denial. It verifies the secure ADSP character node's device number and the unique
+bound RPMSG channel's DT ancestry. Misc ancestry is absent in this kernel.
 
 A separately bounded worker issues one literal0x5208 ioctl, immediately closes
 its local descriptor and records the actual return/errno and elapsed time.
@@ -57,7 +75,7 @@ for termination/close; outer transport remains bounded. Any failure ends the
 run and requests Android recovery; critical health or recovery failure halts
 future hardware. The existing independent600second recovery remains active.
 
-Nine Linux host tests cover the actual worker call sequence/error close and
+Thirteen Linux host tests cover the actual worker call sequence/error close and
 qualification failures, masks-before-load, retained failure marker and unchanged
 module policy. ARM64 Actions must pass before optional hardware execution.
 This narrow milestone cannot be recorded as sensor adaptation complete.
