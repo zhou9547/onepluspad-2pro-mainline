@@ -70,7 +70,7 @@ def main():
         module_policy_sha=sha256(module_policy)
         for module in blocked:
             dry=run(['chroot',root,'/usr/sbin/modprobe','-S',RELEASE,'--show-depends',module])
-            assert dry.strip() and all(line=='install /bin/false' for line in dry.splitlines()),(module,dry[:1800])
+            assert dry.strip() and all(line.strip()=='install /bin/false' for line in dry.splitlines()),(module,dry[:1800])
             result=subprocess.run(['chroot',str(root),'/usr/sbin/modprobe','-S',RELEASE,module],
                 stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=5)
             assert result.returncode!=0,'Unreviewed peripheral load was not denied: '+module
