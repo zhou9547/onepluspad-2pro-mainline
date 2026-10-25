@@ -1,0 +1,117 @@
+# OnePlus 13 / 一加 13：离线适配候选
+
+适用目标为一加 13（dodge / SM8750），不适用于 13R、13T、13s 或平板。
+这是针对后续真机测试的开发候选，**没有真机启动或外设可用的结论**。
+仓库原有 Pad 2 Pro 的功能表、固件包、分区脚本和刷机步骤均不适用于手机。
+
+最新候选：c2e659aaa062 / [Actions39992904871](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39992904871)。
+内核/完整模块、23项Python、主机C ASan/UBSan和QEMU通过，实际附件已下载复验。
+默认、触控、AA569显示、WCN7860无线、Adreno830五棵独立树均已离线校准。
+本机私有显示RAM候选已用本次匹配模块生成；GPU有独立无显示路径，认证和真实渲染仍未验证。
+9份匹配原厂OTA输入已与本机大小/哈希核对，WLAN实际板号/活动BDF/SAR仍未验证。
+尚未真机启动，不能作为日常可刷系统。音频及次要外设推迟。
+
+新增[完整RAM用户态交接](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40007875169)：
+实际Ubuntu GNOME SquashFS在QEMU进入systemd，GDM active/running、GNOME50.1、
+NetworkManager/D-Bus与只读保护通过；[恢复服务实际触发](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40009535169)也通过。
+最终[完整HTTP分块下载、进系统与限时恢复](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40010305668)通过，实际传输7块/432734208字节。
+根文件系统含匹配内核模块和四份图形固件；手机原生显示/触控/WLAN仍需独立真机验收。
+复现工具和证据见[DESKTOP-BOOT.md](DESKTOP-BOOT.md)、[STOCK-FIRMWARE.md](STOCK-FIRMWARE.md)。
+`package-desktop.py`只在主机生成本机校准的独立RAM镜像，不生成持久安装镜像。
+后续现场门槛见[TEST-HANDOFF.md](TEST-HANDOFF.md)，当前不执行这些手机操作。
+以下较早构建记录用于追溯。
+
+2026-10-23 只读取证后的更新候选：
+
+- [源码 d337d2f4bea9 的编译与 QEMU 检查](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39892351557)
+- [内核、匹配模块和独立触控 DTB](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39892351557/artifacts/12474888299)
+- 本机已确认 PJZ110 / 24 GiB / AA569 量产面板 / S3910 HBP；原厂启动输入只保存在主机私有目录。
+- 原厂树对照与全部六个 DTBO 的隔离合并通过，已实现专用内存校准和主机 v4 打包工具。
+- 原生显示仍待 SPR/DSC 实现，触控模块未经过真实手指测试；**不是可刷入日常使用的系统**。
+
+设备只允许已授权的root只读取证（含后续SSH）；没有向手机写文件、重启、试启动、刷写或改设置。
+具体证据与边界见 STOCK-CALIBRATION.md、NATIVE-INPUT.md、NATIVE-DISPLAY.md。
+
+2026-10-23 离线首版已构建并完成全新主机下载复验：
+
+- [内核、手机 DTB、模块与实验性 RAM 镜像](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39821954442/artifacts/12444478734)
+- [Ubuntu 26.04.1 GNOME 用户态](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39809729390/artifacts/12438829003)
+- [内核下载复验](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39823094330) · [桌面下载复验](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/39812509439)
+
+这证明编译与离线启动路径通过，**不代表完整硬件适配完成**。内核附件保留 14 天，
+根文件系统附件保留 7 天，请下载保存；也可按固定来源重新构建。
+
+## 下载与复现
+
+在本仓库 Actions 中运行 **OnePlus 13 offline build**，下载成功运行中的
+`oneplus13-offline-<commit>` artifact。也可在 Ubuntu 24.04 主机上安装工作流
+列出的依赖后，在原生 ARM64 主机运行 `bash tools/oneplus13/build.sh`。
+
+产物包含 Image / Image.gz、手机 DTB、匹配的模块、内核配置、只读 RAM
+initramfs、实验性 Android v2 RAM 镜像、输入版本、SHA256 和独立检查结果。
+`phone-kernel.patch` 可应用到固定的内核提交复现手机板级修改；内核版本后缀
+包含来源提交和配置哈希，模块须与该版本及清单一致。
+`verification.json` 和 `qemu.log` 只证明离线格式、构建和 ARM64 用户态路径。
+QEMU virt 不模拟 SM8750 手机硬件。
+
+另一个工作流 **OnePlus 13 Ubuntu GNOME rootfs** 在原生 ARM64 runner 上构建
+Ubuntu 26.04.1 + GNOME。基础 tarball 以 Canonical 官方 SHA256 固定，软件包
+从固定的 Ubuntu 签名快照获取，产物包含 `rootfs.squashfs`、精确软件包列表和
+校验清单。它是独立的用户态暂存产物，不含手机固件、已配置用户或默认密码；
+部署前需创建用户并合入同一次内核构建的模块。它不会自动写入手机存储。
+为避免未经验证的休眠路径，暂存桌面禁用自动休眠，见技术债 D04。
+
+## 真机测试前
+
+当前默认设备树只提供源自社区参考的保守低内存区，避免把未知容量当成
+16/24 GB；bootloader 是否覆盖内存描述仍需验证。板级供电来自被固定版本的
+一加 13 社区设备树。专用主机校准工具现在可以使用本机15个非空RAM区，并保留
+全部原厂保护区；这没有替代真实启动、USB调试和恢复验证。
+
+`boot-oneplus13-ram-experimental.img` 是打包格式候选。**不要刷入任何分区**。
+它没有被证明能通过该手机 ABL 的 DTB 选择、stock DTBO 和 hypervisor 叠加。
+先取得匹配原厂 boot/init_boot/vendor_boot/dtbo/vbmeta、运行时 FDT、型号、
+容量、系统版本和解锁状态，校验恢复文件后再设计唯一一次 RAM 测试。
+本项目只对本机执行了已授权的读取命令；没有提供自动分区或擦除工具。
+
+后续可在保留原厂 Android、已具备 root 且由你操作的电脑上取证：
+
+```sh
+python3 tools/oneplus13/collect-stock.py --serial YOUR_ADB_SERIAL --output /private/oneplus13-stock
+```
+
+此工具只读取；输出目录须在 Git 仓库外或已忽略的私有目录。默认只取启动
+镜像头，不能当完整恢复备份；加 `--include-boot-images` 才读取完整的当前槽
+启动镜像。它也不备份 GPT、校准或 Android 数据，不能代替完整恢复方案。
+工具按实际存在的分区选择当前槽，并记录 dtbo/vbmeta 是否有槽位后缀；不会
+用另一槽位的启动镜像代替当前槽位。
+取证文件可能包含设备唯一信息，请保存在本机，不要直接上传公开仓库。
+
+RAM 环境设计为 300 秒后重启；kernel panic 为 15 秒。实际硬件死锁可能令
+软件计时器失效，自动恢复也需要真机验证。启动后逐个将块设备设置为只读，
+不挂载 Android；USB NCM 地址为 172.16.13.1，HTTP 日志端口 8080，
+开发 root shell 为 telnet 23 / USB ACM。只在可信 USB 连接下运行此调试镜像。
+
+## 功能范围
+
+当前工作：SM8750 平台复用、独立手机设备树与配置、匹配模块、RAM 调试
+用户态、自动构建和产物检查。默认诊断使用固件framebuffer线索，独立AA569原生
+DSC/SPR候选已编译。屏幕实际输出、S3910物理触控、GPU认证/渲染、无线、音频、电量/充电、休眠、
+传感器、蜂窝、相机与双系统均待独立移植/真机验证；不能由编译成功推断。
+
+S3910 已有独立 LBP 模块和 DTB 编译候选，默认诊断 DTB 不启用它。
+主机校准流程依次运行 collect-stock.py（完整当前槽输入）、calibrate.py
+（需要主机 libufdt/ufdt-apply 和实际编译 DTB）及 package-calibrated.py。
+后者只在主机生成未签名 v4 三件套和实验性 v2 RAM 镜像，不执行任何设备命令。
+原始输入必须保持私有；产物也不能在真实启动验收前当作安装包。
+
+源码、已知差距和下一步见同目录 STATUS.md、TECHNICAL-DEBT.md 和 WORKLOG.md；
+产物中的独立 README 是本说明的副本。
+
+## 来源
+
+- 平台内核：yzddmr6/linux-sm8750-erhai，固定提交见 source.json。
+- 手机板级资料：sm8750-mainline/linux 的 OnePlus-13-WIP，index986，BSD-3-Clause。
+- 一加官方：OnePlusOSS 的 SM8750 devicetree/modules 源码。
+
+保留原始版权和许可证。没有分发这台手机的校准数据、唯一地址或私钥。

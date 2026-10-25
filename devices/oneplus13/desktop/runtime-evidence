@@ -1,0 +1,16 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-only
+set -eu
+mkdir -p /run/evidence
+echo ONEPLUS13_SYSTEMD_ALIVE > /run/evidence/systemd-alive.txt
+echo ONEPLUS13_SYSTEMD_ALIVE > /dev/kmsg
+while :; do
+    cat /proc/uptime > /run/evidence/uptime.txt
+    dmesg > /run/evidence/dmesg.txt
+    for disk in /sys/class/block/*; do
+        [ -e "$disk/ro" ] || continue
+        printf '%s ' "${disk##*/}"
+        cat "$disk/ro"
+    done > /run/evidence/block-readonly.txt
+    sleep 5
+done
