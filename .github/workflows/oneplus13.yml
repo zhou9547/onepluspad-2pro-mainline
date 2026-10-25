@@ -1,8 +1,8 @@
-name: OnePlus 13 isolated AW88461 offline check
+name: OnePlus 13 isolated complete feature gates
 on:
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  audio-component:
-    uses: ./.github/workflows/oneplus13-aw88461-offline.yml
+  gates:
+    uses: ./.github/workflows/oneplus13-complete-gates.yml

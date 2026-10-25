@@ -102,10 +102,38 @@ def check(credentials, iface, execute=run, runtime=Path('/run')):
     rc, _ = command('managed', ['nmcli', '--wait', '4', 'device', 'set', iface, 'managed', 'yes'], 6)
     if rc:
         return result
+    rc, device_path = command('device_path', ['nmcli', '--wait', '4', '-g', 'GENERAL.DBUS-PATH', 'device', 'show', iface], 6)
+    device_path = device_path.strip()
+    if rc or not re.fullmatch(r'/org/freedesktop/NetworkManager/Devices/[0-9]+',device_path):
+        result['scan_property_unavailable'] = True
+        return result
+    scan_property = ['busctl','--system','--timeout=2','get-property','org.freedesktop.NetworkManager',
+                     device_path,'org.freedesktop.NetworkManager.Device.Wireless','LastScan']
+    rc, before = command('scan_before',scan_property,3)
+    initial = re.fullmatch(r'x (-?[0-9]+)\s*',before)
+    if rc or not initial:
+        result['scan_property_unavailable'] = True
+        return result
     rc, _ = command('rescan', ['nmcli', '--wait', '8', 'device', 'wifi', 'rescan', 'ifname', iface], 10)
     if rc:
         return result
-    time.sleep(3)  # Request completion is asynchronous; give the single scan time.
+    # NetworkManager documents LastScan as completion in CLOCK_BOOTTIME ms.
+    # RequestScan success only acknowledges a request. Wait for its completion
+    # without requesting a second scan, driver reset or reconnect.
+    scan_deadline = time.monotonic() + 16
+    result['scan_completed'] = False
+    for attempt in range(9):
+        remaining = scan_deadline - time.monotonic()
+        if remaining <= 0:break
+        rc, after = command('scan_completion',scan_property,min(3,remaining))
+        observed = re.fullmatch(r'x (-?[0-9]+)\s*',after)
+        result['scan_observations'] = attempt + 1
+        if rc or not observed:return result
+        if int(observed[1]) > int(initial[1]):
+            result['scan_completed'] = True
+            break
+        time.sleep(min(2,max(0,scan_deadline-time.monotonic())))
+    if not result['scan_completed']:return result
     rc, output = command('ap_list', ['nmcli', '--wait', '4', '--escape', 'no', '-g', 'SSID',
                                     'device', 'wifi', 'list', 'ifname', iface, '--rescan', 'no'], 6)
     result['target_seen'] = rc == 0 and ssid in output.splitlines()
@@ -175,7 +203,8 @@ def check(credentials, iface, execute=run, runtime=Path('/run')):
                              'https://example.com/'], 9)
     result['https_address_family'] = 'IPv4'
     result['https_metrics'] = https_metrics(output)
-    result['https_pass'] = rc == 0
+    result['https_pass'] = (rc == 0 and result['https_metrics'].get('http_code') == 200
+                            and result['https_metrics'].get('ssl_verify_result') == 0)
     return result
 
 

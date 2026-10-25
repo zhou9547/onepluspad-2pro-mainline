@@ -1,5 +1,25 @@
 # Technical debt (single register for the phone)
 
+Current run62: quarantined WSA branch, new-network scan/authentication/IPv4/route/
+certificate-verified HTTPS and ordinary-user desktop with three bound HTTPS
+samples jointly pass. Android returns in141.8s, seven baseline samples match.
+Run59/60/61 recovered in128.7/117.3/134.7s with matching baselines. Their verifier
+issues were reviewed offline: await LastScan completion, observe delayed IPv4
+without reconnecting, and do not treat optional getent/ping timeouts as failed
+core networking. Core query/HTTPS timeout and kernel/recovery failure gates stay.
+Software-only desktop acceptance cannot claim combined WiFi acceptance.
+
+New rootfs03ecbd66 is separately downloaded/hash/runtime-verified, not substituted
+into the hash-bound hardware image. Audio topology CI40213811895 and AW88461
+offline CI40214539084 pass; downloaded reports/source hashes match. The AW draft
+is object compile only. Actual chip ID, owner protection/tuning and full MI2S
+machine/topology/clock route remain missing. Saved secondary-MI2S phandles and
+raw-active-low versus descriptor reset polarity are independently documented.
+Sensor config matches the original narrow shim; matching text is not DSP ABI or
+registry/calibration acceptance. Full feature register includes camera/modem/GNSS/
+NFC/fingerprint/IR/Hall/ToF/haptics/thermal/power/RTC/suspend/storage gaps. Run63
+only adds passive sysfs inventory, not function claims or new peripheral activation.
+
 Current run58: ordinary-user active Wayland GNOME, its project Mesa mappings,
 Settings network process/application bus, three unchanged-compositor/service
 samples and three bound WiFi certificate-verified HTTP200 probes pass. Android

@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import unittest
 from types import SimpleNamespace
+from unittest.mock import patch
 
 spec=importlib.util.spec_from_file_location('desktop',Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-desktop-check.py')
 desktop=importlib.util.module_from_spec(spec);spec.loader.exec_module(desktop)
@@ -12,6 +13,17 @@ wifi=importlib.util.module_from_spec(spec);spec.loader.exec_module(wifi)
 
 
 class Desktop(unittest.TestCase):
+    def test_software_only_never_claims_wifi_or_combined_acceptance(self):
+        with patch.object(desktop,'SAMPLES',[{'bound_wifi_https':None}]*3):
+            r=desktop.completed_result(False)
+        self.assertTrue(r['software_acceptance_pass'])
+        self.assertFalse(r['wifi_tested'] or r['wifi_stability_pass'] or r['combined_pass'])
+
+    def test_three_successful_probes_required_for_combined_acceptance(self):
+        for probes,passed in [([],False),([True]*2,False),([True]*3,True),([True,False,True],False)]:
+            samples=[{'bound_wifi_https':{'passed':p}} for p in probes]
+            with patch.object(desktop,'SAMPLES',samples):r=desktop.completed_result(True)
+            self.assertEqual(r['combined_pass'],passed)
     def test_config_preserves_other_sections_and_daemon_options(self):
         result=desktop.autologin_config('[daemon]\nWaylandEnable=true\nAutomaticLogin=old\n[security]\nDisallowTCP=true\n')
         c=configparser.ConfigParser();c.read_string(result)

@@ -1,5 +1,28 @@
 # 一加13适配状态
 
+## 2026-10-26 run62：关闭无原厂启用依据的 WSA 分支后联合通过
+
+run62 在141.8秒自动返回 Android，七项基线一致，无刷写、记录中零分区写入、无人工恢复。
+候选只修改已审查的 WSA 分支状态并删除其播放 link，保留原 kernel/ramdisk/rootfs/恢复保护。
+新 WiFi 的完成扫描、认证、IPv4/路由及 HTTPS，与普通用户 Wayland/项目 Mesa/网络设置应用和
+三次短时 HTTPS 联合通过，均为 HTTP200、证书结果0。没有人工屏幕或触摸验收窗口。
+run59/60/61 分别128.7/117.3/134.7秒恢复且基线一致：前两轮暴露扫描及 DHCP 异步等待缺口；
+run61完整联网通过但可选 getent 超时误触发提前恢复。对应门禁已在离线检查后修正。
+run63准备增加被动平台状态清单，不激活新外设、音频/传感器流或休眠。
+
+Actions40212524437 的完整 rootfs 构建已通过，完整下载及主机独立复核完成；新 rootfs
+SHA256 f9140e5c98d70bca6a04b8934dc9b1937bbf28b1eb0218411eaa0a9939a6cced，
+没有替换至旧哈希绑定镜像。Actions40213811895 的音频拓扑合成检查通过；
+Actions40214539084 的 AW88461 草稿 ARM64 对象编译、1023个畸形输入与19个I/O故障注入通过，
+产物已下载校验。均不代表真实功放或声学安全通过，未加入真机 DT/镜像。
+
+原厂 phandle 复核确认 secondary MI2S 及其四个 TLMM pinctrl，不能默认 primary。
+原厂 raw GPIO 复位低有效，新草稿使用逻辑 descriptor，必须显式转换极性，不能照抄旧 flags。
+手机 sensor 配置文本与原项目一致，可以复用窄 property shim/目录映射；registry、校准、
+DSP ABI和轴向仍开放。完整功能远未全部验收，见 COMPLETE-FEATURE-MATRIX-20261026.md、
+AUDIO-MI2S-RESET-REVIEW-20261026.md 和 SENSOR-LOADER-CONTRACT-20261026.md。
+下文“当前”段落保留为历史快照。
+
 ## 2026-10-26 run58：普通用户桌面与短时联网联合通过
 
 run58 在 144.8 秒返回 Android，七项抽查一致，未刷写、无记录分区写入、无人工恢复。

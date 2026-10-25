@@ -23,6 +23,7 @@ class Fake:
         self.password_file = None
         self.state=state
         self.fail_status=fail_status
+        self.scan_reads=0
 
     def __call__(self, args, seconds):
         self.calls.append(args)
@@ -33,6 +34,11 @@ class Fake:
             return 0, 'offline-network\n' if self.target else 'other-network\n'
         if 'GENERAL.STATE' in args:
             return 0, self.state+'\n'
+        if 'GENERAL.DBUS-PATH' in args:
+            return 0,'/org/freedesktop/NetworkManager/Devices/3\n'
+        if 'LastScan' in args:
+            self.scan_reads+=1
+            return 0,'x '+str(100 if self.scan_reads==1 else 200)+'\n'
         if 'add' in args:
             self.ident = args[args.index('connection.uuid')+1]
         if 'passwd-file' in args:
@@ -45,6 +51,8 @@ class Fake:
             return 0, json.dumps([{'addr_info': [{'scope': 'global'}]}])
         if 'route' in args:
             return 0, json.dumps([{'dst': 'default', 'gateway': '192.0.2.1'}])
+        if args[0]=='curl':
+            return 0,'http_code=200\nssl_verify_result=0\n'
         return 0, ''
 
 
@@ -95,6 +103,52 @@ class Checks(unittest.TestCase):
         self.assertFalse(r['dhcp_pass'] or r['https_pass'])
         self.assertEqual(r['ipv4_address_rc'],124)
         self.assertEqual(sum('up' in c for c in f.calls),1)
+
+    def test_async_scan_waits_for_completion_before_listing(self):
+        base=Fake();observations=0
+        def delayed(args,seconds):
+            nonlocal observations
+            if 'LastScan' in args:
+                observations+=1
+                return 0,'x '+str(100 if observations<4 else 200)+'\n'
+            if 'SSID' in args:self.assertEqual(observations,4)
+            return base(args,seconds)
+        delayed.calls=base.calls
+        r=self.call(delayed)
+        self.assertTrue(r['scan_completed'] and r['https_pass'])
+        self.assertEqual(r['scan_observations'],3)
+        self.assertEqual(sum('rescan' in c for c in base.calls),1)
+
+    def test_scan_never_finishes_does_not_list_or_authenticate(self):
+        base=Fake();observations=0
+        def unchanged(args,seconds):
+            nonlocal observations
+            if 'LastScan' in args:observations+=1;return 0,'x 100\n'
+            return base(args,seconds)
+        unchanged.calls=base.calls
+        r=self.call(unchanged)
+        self.assertFalse(r['scan_completed'] or r['association_pass'])
+        self.assertEqual(observations,10)
+        self.assertFalse(any('SSID' in c or 'passwd-file' in c for c in base.calls))
+
+    def test_invalid_scan_property_never_stages_credentials(self):
+        base=Fake()
+        def invalid(args,seconds):
+            if 'LastScan' in args:return 0,'x private-invalid\n'
+            return base(args,seconds)
+        invalid.calls=base.calls
+        r=self.call(invalid)
+        self.assertTrue(r['scan_property_unavailable'])
+        self.assertFalse(any('rescan' in c or 'passwd-file' in c for c in base.calls))
+
+    def test_curl_zero_requires_expected_http_and_certificate_metrics(self):
+        for output in ['', 'http_code=302\nssl_verify_result=0\n','http_code=200\nssl_verify_result=9\n']:
+            base=Fake()
+            def incomplete(args,seconds):
+                if args[0]=='curl':return 0,output
+                return base(args,seconds)
+            incomplete.calls=base.calls
+            self.assertFalse(self.call(incomplete)['https_pass'])
 
     def test_nm_timeout_stops_before_scan_auth(self):
         f = Fake(fail='GENERAL.STATE')

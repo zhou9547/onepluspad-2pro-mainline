@@ -111,7 +111,7 @@ def socket_file(path):
         return False
 
 
-def check():
+def check(check_wifi=True):
     import pwd
     uid = pwd.getpwnam('a').pw_uid
     if uid < 1000:
@@ -154,7 +154,7 @@ def check():
     wifi = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(wifi)
     interfaces = [p.name for p in Path('/sys/class/net').iterdir() if (p/'wireless').exists()]
-    if len(interfaces) != 1:
+    if check_wifi and len(interfaces) != 1:
         raise ValueError('exactly one WiFi interface required')
     for index in range(3):
         if index:
@@ -168,16 +168,21 @@ def check():
             command(['systemctl', 'is-active', '--quiet', unit])
         if not (Path('/proc')/shells[0]).exists():
             raise ValueError('user compositor restarted')
-        probe = probe_https(wifi, interfaces[0])
+        probe = probe_https(wifi, interfaces[0]) if check_wifi else None
         SAMPLES.append({'session_active': True, 'app_process_present': True, 'app_bus_replies': True,
                         'guard_timer_gdm_bluetooth_active': True, 'same_compositor': True,
                         'bound_wifi_https': probe})
         # Record short transfer/certificate failures, but do not repeat hung
         # processes or missing executables. No association or radio retries.
-        if probe['returncode'] in (124, 126, 127):
+        if probe is not None and probe['returncode'] in (124, 126, 127):
             raise ValueError('bounded stability client unavailable or hung')
-    wifi_pass = all(s['bound_wifi_https']['passed'] for s in SAMPLES)
+    return completed_result(check_wifi)
+
+
+def completed_result(check_wifi):
+    wifi_pass = check_wifi and len(SAMPLES) == 3 and all(s['bound_wifi_https']['passed'] for s in SAMPLES)
     return {'software_acceptance_pass': True, 'wifi_stability_pass': wifi_pass,
+            'wifi_tested': check_wifi,
             'combined_pass': wifi_pass, 'ordinary_user_wayland_session': True,
             'user_shell_project_mesa': True, 'settings_network_process_and_bus': True,
             'session_observations': OBSERVATIONS,
@@ -188,6 +193,7 @@ def check():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--configure', action='store_true')
+    parser.add_argument('--software-only', action='store_true')
     args = parser.parse_args()
     try:
         ram_only(Path('/proc/mounts').read_text(), Path('/run/oneplus13/ram-session').exists())
@@ -200,7 +206,7 @@ def main():
             path.write_text(autologin_config(path.read_text()))
             print('RAM_DESKTOP_AUTOLOGIN_CONFIGURED')
         else:
-            print('RAM_DESKTOP_RESULT '+json.dumps(check(), sort_keys=True))
+            print('RAM_DESKTOP_RESULT '+json.dumps(check(check_wifi=not args.software_only), sort_keys=True))
     except (ValueError, OSError, KeyError, configparser.Error) as exc:
         # Do not publish arbitrary subprocess output, environment or identifiers.
         print('RAM_DESKTOP_RESULT '+json.dumps({'software_acceptance_pass': False,
