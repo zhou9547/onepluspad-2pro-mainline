@@ -1,0 +1,20 @@
+{
+  "distribution": "Ubuntu",
+  "version": "26.04.1 LTS",
+  "codename": "resolute",
+  "architecture": "arm64",
+  "base_url": "https://cdimage.ubuntu.com/ubuntu-base/releases/26.04/release/ubuntu-base-26.04.1-base-arm64.tar.gz",
+  "base_sha256": "5a1906794ced63a71a8119c3f211ef5f0bbe0a243001b4bbd41fdf80c5b219fd",
+  "apt_snapshot": "20261020T000000Z",
+  "apt_uri": "https://snapshot.ubuntu.com/ubuntu/20261020T000000Z/",
+  "packages": [
+    "systemd-sysv", "ubuntu-standard", "gnome-shell", "gnome-session", "ubuntu-session",
+    "gdm3", "gnome-control-center", "gnome-terminal", "gnome-initial-setup",
+    "nautilus", "network-manager", "wpasupplicant", "iw", "dbus-user-session", "bluez", "gnome-bluetooth-sendto", "bluez-obexd", "xwayland", "libgl1-mesa-dri",
+    "mesa-utils", "systemd-resolved", "sudo", "locales", "console-setup", "busybox-static", "curl",
+    "ca-certificates", "openssh-client", "kmod", "zstd"
+  ],
+  "hardware_status": "NOT_DEVICE_TESTED",
+  "accounts": "No default password or autologin. Create a user before deployment.",
+  "scope": "Generic GNOME userspace staging image; phone firmware and matching modules are separate. No persistent installer."
+}
