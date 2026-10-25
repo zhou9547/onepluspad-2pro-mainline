@@ -55,6 +55,10 @@ def main():
             tf.extractall(modules,members=members,filter='data')
         shutil.copytree(modules/'lib/modules',root/'usr/lib/modules',dirs_exist_ok=True)
         pin.write_text(RELEASE+'\n')
+        deadline=root/'usr/lib/systemd/system/oneplus13-ram-deadline.timer'
+        policy=deadline.read_text()
+        assert policy.count('OnBootSec=900s\n')==1
+        deadline.write_text(policy.replace('OnBootSec=900s\n','OnBootSec=600s\n'))
         logs['mesa-control']=run(['dpkg-deb','-f',mesa,'Package','Version','Architecture','Depends'])
         assert 'arm64' in logs['mesa-control']
         logs['mesa-extract']=run(['dpkg-deb','-x',mesa,root])
@@ -89,6 +93,7 @@ def main():
     result={'scope':'PUBLIC_RAM_ROOTFS_MATCHED_KERNEL','base_rootfs_sha256':BASE_SHA,
         'kernel_integration_commit':KERNEL_COMMIT,'kernel_release':RELEASE,'modules_sha256':sha256(archive),
         'mesa_sha256':MESA_SHA,'rootfs_sha256':sha256(image),'rootfs_bytes':image.stat().st_size,
+        'runtime_absolute_deadline_seconds':600,
         'rootfs_matching_modules_preinstalled':True,'merged_usr_preserved':True,
         'mesa_dependencies_resolved':True,'locked_root_no_default_account':True,
         'bluetooth_address_generated':False,'private_firmware_or_calibration_included':False,
