@@ -1,5 +1,15 @@
 # Technical debt (single register for the phone)
 
+run70 owner session passed the requested visual display/scaling, real touch,
+Settings and on-screen keyboard checks; automatic Android return189.9s and
+seven matching samples. New unattended run71 passed one corrected SNS attach
+ioctl and immediate local close, plus display/GPU/desktop/platform/health;
+Android return104.6s, seven matching samples. Local close is not a DSP release
+acknowledgement. No reverse server, registry service or streams ran. Historical
+run69 halt/ledger stay immutable, with a new source-bound grant for this scope.
+The next bounded reverse-fileserver helper is pending ARM64/QEMU qualification,
+not a sensor acceptance. See SENSOR-REVERSE-FILESERVER-20261026.md.
+
 Latest run69: display/GPU/ordinary-user desktop/platform passed; FastRPC registered
 six contexts, but the pre-ioctl device guard refused absent misc ancestry.
 Pinned source never sets miscdev.parent. Automatic Android return103.1s, seven

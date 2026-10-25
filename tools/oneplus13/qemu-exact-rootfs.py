@@ -93,6 +93,17 @@ def main():
             b'[ ! -d /sys/module/panel_oneplus_aa569 ]\n[ ! -d /sys/module/msm ]\n'
             b'echo ONEPLUS13_SHARED_CEC_CORE_PREREQUISITE_OK\n')
         files['bin/oneplus13-qemu-install']['data']=helper.replace(marker,marker+checks,1)
+        for name in ['ram-sensor-fileserver.py','qemu-sensor-fileserver-selftest.py']:
+            files['bin/'+name]={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
+                               'data':(REPO/'tools/oneplus13'/name).read_bytes()}
+        helper=files['bin/oneplus13-qemu-install']['data']
+        copies=b''.join(b'cp /bin/'+n.encode()+b' /newroot/run/oneplus13/'+n.encode()+b'\n'
+                        for n in ['ram-sensor-fileserver.py','qemu-sensor-fileserver-selftest.py'])
+        helper=helper.replace(anchor,anchor+copies,1)
+        handoff=b'echo ONEPLUS13_DESKTOP_HANDOFF_OK\n'
+        assert helper.count(handoff)==1
+        files['bin/oneplus13-qemu-install']['data']=helper.replace(handoff,
+            b'python3 /run/oneplus13/qemu-sensor-fileserver-selftest.py\n'+handoff,1)
     files['qemu-matching-modules.tar.gz']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
                                            'data':(kernel/'modules.tar.gz').read_bytes()}
     out.mkdir(parents=True,exist_ok=True);ramdisk=out/'initramfs-qemu-only.cpio.gz'
@@ -124,6 +135,8 @@ def main():
              'ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK','ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK',
              'ONEPLUS13_DESKTOP_HANDOFF_OK','ONEPLUS13_QEMU_DEADLINE_FIRED','reboot: Restarting system']
     if shared_cec_test:markers.insert(1,'ONEPLUS13_SHARED_CEC_CORE_PREREQUISITE_OK')
+    if shared_cec_test:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),
+                                    'ONEPLUS13_SENSOR_FILESERVER_SANDBOX_QEMU_OK')
     passed=rc==0 and all(x in log for x in markers)
     if passed:passed=all(log.index(x)<log.index(y) for x,y in zip(markers,markers[1:]))
     count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
@@ -136,6 +149,7 @@ def main():
             'assembled_rootfs':bool(a.assembled_manifest),
             'shared_cec_core_prerequisite_tested':shared_cec_test,
             'shared_ubwc_configuration_prerequisite_tested':shared_cec_test,
+            'synthetic_sensor_fileserver_sandbox_tested':shared_cec_test,
             'returncode':rc,'required_markers':{x:x in log for x in markers},
             'http_bytes':stats['bytes'],'http_parts':stats['parts'],'handoff_and_deadline_pass':passed,
             'physical_display_input_radio_or_audio_tested':False}

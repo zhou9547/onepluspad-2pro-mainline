@@ -1,0 +1,57 @@
+# Bounded phone reverse file-server qualification
+
+run71's single INIT_ATTACH_SNS ioctl returned0 and the local descriptor closed
+in approximately0.001seconds. Display/GPU/ordinary-user desktop/platform and
+final health passed; Android returned automatically in104.6seconds with seven
+matching baseline samples. It did not start a listener, deliver registry data
+or request samples. Kernel release ignores the remote release status; local
+close does not prove a DSP teardown acknowledgement.
+
+The next proposed milestone reuses the original pinned hexagonrpcd, its narrow
+property shim, separate vendor/ODM mappings and phone-specific saved inputs.
+The five generic ARM64 ELF files have an existing native build/test artifact;
+the phone's userspace ABI-reference library hashes match its pinned references.
+No Pad mount matrix, claimed sensor identity, service/udev hook, firmware or
+kernel module is delivered in this private runtime archive. Its923 data files
+include the unit's original registry and saved socinfo. No private bytes or
+manifest are published. Loading files is not evidence that calibration is used
+correctly or sensor axes/accuracy are accepted.
+
+`ram-sensor-fileserver.py` binds the module/release/policy, corrected attach
+guard, archive, manifest and trace executable by hash. It validates every
+archive path, size, byte hash, mode, ELF architecture and all three exact data
+mapping links before extraction. No target may already exist, use a symlink
+ancestor or collide with another member's parent. It writes only the RAM
+overlay. Exact bytes are checked before the only attachment and after service
+exit; any changed data fails qualification.
+
+The existing unit-denial policy stays intact; automatic sensor clients are
+RAM-masked and one attempt marker precedes the sole explicit module load.
+The file server runs as UID/GID65534, without capabilities, with read-only root,
+private networking, AF_UNIX only and one allowed FastRPC character device.
+No SSC/iio client or dynamic PD is launched. There is no restart loop. A28second
+observation has a40second systemd runtime cap and12second stop cap; outer host
+staging and both independent RAM recovery timers remain in force. A stop or
+health failure requests immediate Android recovery; no ADSP restart/unload is
+used as a retry. This does not make a timeout equivalent to guaranteed remote
+teardown.
+
+The actual daemon is wrapped with the existing pinned ARM64 strace, recording
+only openat/ioctl/close and numeric ioctl arguments, never dereferencing RPC
+payloads. Raw logs remain private. Acceptance requires one successful attach,
+successful invoke returns, actual config and registry mapping opens, no logged
+unsupported/refused/error operation, clean service stop, retained policy and
+unchanged private data. Mere process liveness or an ioctl return cannot prove
+these file-service conditions. Sensor samples, axes, accuracy and stream
+shutdown remain separate gates.
+
+Nineteen Linux unit tests cover byte/permission/architecture/hook/mapping and
+destination refusal, exact single attach trace, failed opens, bounded sandbox
+properties, early exit, close timeout and unsupported reverse methods. The
+assembled-rootfs QEMU observer additionally exercises the exact transient-unit
+builder with a synthetic non-RPC process, UID/capability checks, refused root
+writes, allowed state output and clean stop. It checks dummy-virt identity and
+cannot run on a phone. That sandbox test does not execute real strace, an
+ioctl or any proprietary input; separate exact-rootfs link/CLI probes cover
+the real generic runtime. ARM64 and QEMU qualification must pass before a
+phone file-server run is eligible.

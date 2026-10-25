@@ -1,5 +1,14 @@
 # Bounded phone sensor-domain transport qualification
 
+Update after a new owner grant: run71 used the corrected guard below. One
+literal0x5208 ioctl returned0, with local close after approximately0.001seconds;
+display/GPU/desktop/platform/final health passed. Android returned automatically
+in104.6seconds and seven baseline samples matched. No listener, registry/data
+service or stream ran; no DSP release acknowledgement was observed. Historical
+run69 halt/ledger remain unchanged. The following run69 diagnosis is retained
+as history. Next reverse-file-service preparation is separate and pending
+qualification; see SENSOR-REVERSE-FILESERVER-20261026.md.
+
 Current hardware result: run69 repeated display/GPU/ordinary-user desktop and
 platform checks, then refused the sensor probe after module registration.
 It returned to Android automatically in103.1seconds; seven baseline samples
