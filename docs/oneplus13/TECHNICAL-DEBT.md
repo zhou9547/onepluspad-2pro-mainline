@@ -1,5 +1,50 @@
 # Technical debt (single register for the phone)
 
+Current run68: shared-core Actions40226313784 and independently bound artifact
+pass. Exact phone ADSP/graphics, explicit display, GPU readback, ordinary-user
+desktop software, CPU/input/battery/thermal inventory and health jointly pass.
+Automatic Android return93.6s; seven baseline samples match; no flash/manual
+recovery/radio/streams. This supersedes the pending/run67 snapshots below.
+Software-only desktop acceptance keeps combined WiFi false intentionally.
+
+Phone sensor runtime links pass exact-rootfs host QEMU. A private5-ELF/923-data
+archive now excludes Pad auto-attach hooks/matrix, firmware and modules. It is
+not attach/stream eligible. HAL-reported sensor families are retained separately
+from raw identity. WLAN active BDF/regdb selection is known; SAR script/XML and
+vendor selectors are reviewed, but effective limits/units/acknowledgements and
+BT provenance remain open. See SHARED-DISPLAY-CORES-20261026.md,
+PHONE-SENSOR-DATA-20261026.md and PHONE-RADIO-SELECTION-20261026.md.
+
+Current run67: guarded matching-module rootfs and exact phone ADSP single start
+pass; display activation is blocked by shared CEC/UBWC dependency install rules.
+Android returns automatically in70.9s with seven matching baseline samples.
+No run68 has started. Explicit bound generic-core/data-table prerequisites pass
+seven synthetic tests; actual-rootfs Actions40226313784 is pending. Earlier
+CEC-only emulator failures are retained, not accepted. See
+SHARED-DISPLAY-CORES-20261026.md.
+
+Phone ABI-reference libraries match the original project's pinned binaries;
+923-file private data-only sensor package is verified, not delivered/attached.
+Android logs confirm actual peach BDF/regdb selection and a separate wifisar
+service. SAR/power and BT provenance remain open; no further radio activation.
+See PHONE-SENSOR-DATA-20261026.md and PHONE-RADIO-SELECTION-20261026.md.
+Older pending/run66 snapshots below are historical.
+
+Current provenance hold: inherited ADSP is Pad reference data (6/58 current
+stock matches), and WLAN/BDF/regdb also remain reference inputs. Legacy payload
+hardware reuse is blocked. Exact phone OTA ADSP matches58/58 and passes actual
+PIL/reserved-memory structural review, but authentication/ABI/streams remain
+unaccepted. Prior scan/HTTPS proves historical traffic only; phone BDF selection
+and SAR/power policy must precede further RF. Guarded matching-module rootfs
+assembly/QEMU run40223386011 is pending; no phone run after66 yet. See
+FIRMWARE-PROVENANCE-20261026.md. The first assembly40221133412 is held because
+preinstalled modules need explicit peripheral dependency-load isolation.
+
+Original sensor importer passes host-only byte/permission checks on744 owner
+registry files; reverse-RPC ABI/attach/streams/axes remain open. Both stock amps
+show a PID2308-specific callback, still indirect evidence. Do not use the draft
+driver's profile-writing probe as a passive identification operation.
+
 Current run66: two SCMI schedutil policies and CPU cooling devices register after
 bounded, exact-hash loading of the already delivered CPUCP/socinfo modules. Full
 ordinary-user desktop/GPU/replacement-network HTTPS/BT components/input/battery

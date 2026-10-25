@@ -8,19 +8,19 @@ flashing acceptance.
 
 | Function | Current evidence | Remaining work |
 | --- | --- | --- |
-| Native display | Prior visible-display owner evidence; repeated explicit AA569 activation | Visual artifacts, brightness range, blank/unblank, rotation, refresh modes and sustained use |
-| GNOME ordinary user | run58 active Wayland user session, project Mesa, Settings process and application bus | Visual usability, scaling, on-screen keyboard and UI interaction |
-| GPU | Adreno 830/Mesa 26.2.3 4×4 pixel readback and compositor mappings | Wider rendering/API workload, performance, stability and power |
+| Native display | run68 exact-phone-firmware/new-rootfs single AA569 activation; prior visible-display owner evidence | Visual artifacts, brightness range, blank/unblank, rotation, refresh modes and sustained use |
+| GNOME ordinary user | run68 active Wayland user session, project Mesa, Settings process and application bus on new guarded rootfs | Visual usability, scaling, on-screen keyboard and UI interaction |
+| GPU | run68 exact-phone graphics plus Adreno 830/Mesa 26.2.3 4×4 pixel readback and compositor mappings | Wider rendering/API workload, performance, stability and power |
 | Touch | Native input device; run50/51 real touch-down counts | Entire panel, coordinates, gestures, multitouch and palm behavior |
-| WiFi | run55/58 full bound IPv4 HTTPS on previous network; run61/62 full acceptance on replacement network; run62 desktop and three HTTPS probes jointly pass | UI regression later; bands, roaming, resume, sustained traffic and hotspot mode |
-| Bluetooth transfer | Owner confirmed run51 peer file receipt; component regressions | Reverse transfer, reconnection and other profiles; A2DP/HFP are not accepted |
-| Battery | Repeated capacity/voltage/current/temperature/status inventory | Accuracy over time, charging policy and power consumption |
+| WiFi | Actual Android peach BDF/regdb selection now established; historical run55/58 and61/62 HTTPS used inherited reference firmware and legacy payload is held | Effective phone SAR/power limits/units and Linux enforcement before further RF; then exact-phone-firmware automatic scan/auth/DHCP/HTTPS, UI, bands, roaming, resume and sustained traffic |
+| Bluetooth transfer | Owner confirmed run51 peer file receipt using inherited reference inputs; later component regressions | Exact phone firmware/address/power path review before new radio run; reverse transfer, reconnection and other profiles; A2DP/HFP unaccepted |
+| Battery | run68 exact phone ADSP58/58 single start with battery capacity/voltage/current/temperature inventory; old telemetry used reference ADSP | Accuracy over time, charging policy and power consumption |
 | CPU frequency | run66 two SCMI schedutil policies and CPU cooling devices after reviewed module delivery | Frequency transition accuracy, load/power and thermal behavior; no manual clock or voltage overrides |
 | Charging / USB-C / PD | PMIC/ADSP services and tethered test transport; UCSI bound but deferred initialization with fixed peripheral role | Resolve role provider with independent recovery, then roles/current/PD/charging/peripherals; do not switch current recovery transport unattended |
 | Thermal management | run63 48 readable temperature zones; run66 CPU/GPU/WLAN cooling devices registered | Trip policy and actual thermal intervention; controlled load only after review |
 | Speakers / receiver | Two enabled stock AWINIC nodes; WSA quarantined; offline object compile; saved owner ACF bytes match and actual parser preflight passes | Actual PID, independent calibration/dynamic protection, secondary MI2S route, gain and recovery gates before any stream |
 | Microphones / headset / audio routing | No accepted phone capture/playback path | Codec/DMIC/MI2S endpoints, topology and PipeWire policy; independent stream review first |
-| Accelerometer / gyroscope / compass / light / proximity | Phone ROM extracted; board-independent userspace CI passes | Owner registry/calibration, phone identity and loader semantics, one attach gate; streams and physical orientation unaccepted |
+| Accelerometer / gyroscope / compass / light / proximity | Exact host ABI-reference binaries match; private phone registry/data and manual runtime prepared; exact-rootfs runtime links pass; HAL reports BMI26x/AK0991x/TCS3720 and fusion light | First reviewed phone DSP/reverse-RPC attach; calibration meaning, streams and physical orientation unaccepted; no Pad automatic hooks or axis matrix |
 | Haptics | No functional acceptance | Exact actuator/driver, power constraints and bounded control before physical feedback test |
 | IR transmitter / Hall / cover / ToF | No functional acceptance; vendor software clues require effective-node and identity review | Actual devices and electrical limits, driver/API integration, physical targets or magnets later |
 | Power / volume / alert keys | GPIO/power-key software nodes; input inventory only | Map actual events, short/long behavior and desktop integration |
@@ -54,9 +54,10 @@ not a substitute for such prerequisites, even with an owner present.
 
 ## Autonomous work order
 
-First finish regression of the quarantined nonaudio image and asynchronous
-NetworkManager gates. Keep the separately verified new rootfs distinct from
-the old hash-bound RAM image. Then resolve the AW/MI2S and phone sensor loader
+The exact phone ADSP/new guarded rootfs isolated-platform regression is now
+accepted at run68. Keep that candidate separate from held legacy payloads.
+Resolve exact phone
+WLAN/BT source/selection/SAR before further radio tests. Then resolve AW/MI2S and phone sensor loader
 prerequisites offline, and research unimplemented peripherals against pinned
 phone/community/vendor sources. Each candidate needs its own theoretical,
 build and recovery evidence before a bounded combined test. Do not rerun a
