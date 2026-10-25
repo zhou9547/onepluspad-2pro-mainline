@@ -66,10 +66,13 @@ def main():
     files['bin/oneplus13-qemu-install']['data']=helper.replace(anchor,anchor+install)
     if shared_cec_test:
         cec_sha='69c2bafd5315b52d253d0f26c0f8a5351d7bf940f61ee5a242b637483ca42659'
+        ubwc_sha='96c8350913e8e271aed91a6586726d2061eaea6d23b03922c6050a969c685a1d'
         with tarfile.open(kernel/'modules.tar.gz') as archive:
             entry=next(x for x in archive if x.name.endswith('/kernel/drivers/media/cec/core/cec.ko'))
             import hashlib
             assert hashlib.sha256(archive.extractfile(entry).read()).hexdigest()==cec_sha
+            entry=next(x for x in archive if x.name.endswith('/kernel/drivers/soc/qcom/ubwc_config.ko'))
+            assert hashlib.sha256(archive.extractfile(entry).read()).hexdigest()==ubwc_sha
         files['bin/ram-display-prerequisites.py']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
             'data':(REPO/'tools/oneplus13/ram-display-prerequisites.py').read_bytes()}
         helper=files['bin/oneplus13-qemu-install']['data']
@@ -81,8 +84,9 @@ def main():
             b'modprobe -n -v --ignore-install msm > /run/oneplus13/msm-before-cec\n'
             b'grep -q "^install /bin/false" /run/oneplus13/msm-before-cec\n'
             b'[ ! -d /sys/module/cec ]\n'
+            b'[ ! -d /sys/module/ubwc_config ]\n'
             b'python3 /run/oneplus13/display-prerequisites.py --release "$(uname -r)" --sha256 '+cec_sha.encode()+
-            b' --policy-sha256 '+assembly['unreviewed_peripheral_module_policy_sha256'].encode()+b'\n'
+            b' --ubwc-sha256 '+ubwc_sha.encode()+b' --policy-sha256 '+assembly['unreviewed_peripheral_module_policy_sha256'].encode()+b'\n'
             b'modprobe -n -v --ignore-install msm > /run/oneplus13/msm-after-cec\n'
             b'if grep "^install " /run/oneplus13/msm-after-cec | grep -v "^install /bin/true *$"; then cat /run/oneplus13/msm-after-cec; exit 1; fi\n'
             b'grep -q "insmod .*msm.ko" /run/oneplus13/msm-after-cec\n'
@@ -131,6 +135,7 @@ def main():
             'qemu_only_module_delivery':True,'rootfs_bytes_unchanged':sha256(rootfs)==expected_sha,
             'assembled_rootfs':bool(a.assembled_manifest),
             'shared_cec_core_prerequisite_tested':shared_cec_test,
+            'shared_ubwc_configuration_prerequisite_tested':shared_cec_test,
             'returncode':rc,'required_markers':{x:x in log for x in markers},
             'http_bytes':stats['bytes'],'http_parts':stats['parts'],'handoff_and_deadline_pass':passed,
             'physical_display_input_radio_or_audio_tested':False}
