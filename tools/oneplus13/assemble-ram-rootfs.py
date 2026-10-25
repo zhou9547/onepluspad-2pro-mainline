@@ -17,7 +17,10 @@ MESA_SHA='e53465ff50986cda9da206089e8cf787047745f21aaa5b54579e891c7fd65eba'
 REPO=Path(__file__).resolve().parents[2]
 
 def run(args):
-    return subprocess.check_output([str(x) for x in args],stderr=subprocess.STDOUT,text=True,timeout=180)
+    result=subprocess.run([str(x) for x in args],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=180)
+    if result.returncode:
+        raise RuntimeError('Offline assembly command failed: '+str(args[-3:])+'\n'+result.stdout[-4000:])
+    return result.stdout
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('--base',type=Path,required=True)
@@ -62,10 +65,10 @@ def main():
             'gnome':['/usr/bin/gnome-shell','--version'],
             'supplicant':['/usr/sbin/wpa_supplicant','-v'],
             'bt-address-help':['/usr/sbin/erhai-bt-address','--help'],
-            'panel-module':['/usr/sbin/modinfo','-F','vermagic','panel_oneplus_aa569'],
-            'gpu-module':['/usr/sbin/modinfo','-F','vermagic','msm'],
-            'mesa-dependencies':['/usr/bin/ldd','/usr/lib/erhai/mesa/lib/libEGL_mesa.so.0'],
-            'gallium-dependencies':['/usr/bin/ldd','/usr/lib/erhai/mesa/lib/dri/msm_dri.so'],
+            'panel-module':['/usr/sbin/modinfo','-k',RELEASE,'-F','vermagic','panel_oneplus_aa569'],
+            'gpu-module':['/usr/sbin/modinfo','-k',RELEASE,'-F','vermagic','msm'],
+            'mesa-dependencies':['/usr/bin/env','LD_LIBRARY_PATH=/usr/lib/erhai/mesa/lib','/usr/bin/ldd','/usr/lib/erhai/mesa/lib/libEGL_mesa.so.0'],
+            'gallium-dependencies':['/usr/bin/env','LD_LIBRARY_PATH=/usr/lib/erhai/mesa/lib','/usr/bin/ldd','/usr/lib/erhai/mesa/lib/dri/msm_dri.so'],
         }
         for name,command in checks.items():
             value=run(['chroot',root,*command]);logs[name]=value
