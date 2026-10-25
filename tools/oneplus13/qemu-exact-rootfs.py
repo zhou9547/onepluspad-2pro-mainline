@@ -81,9 +81,10 @@ def main():
             b'modprobe -n -v --ignore-install msm > /run/oneplus13/msm-before-cec\n'
             b'grep -q "^install /bin/false" /run/oneplus13/msm-before-cec\n'
             b'[ ! -d /sys/module/cec ]\n'
-            b'python3 /run/oneplus13/display-prerequisites.py --release "$(uname -r)" --sha256 '+cec_sha.encode()+b'\n'
+            b'python3 /run/oneplus13/display-prerequisites.py --release "$(uname -r)" --sha256 '+cec_sha.encode()+
+            b' --policy-sha256 '+assembly['unreviewed_peripheral_module_policy_sha256'].encode()+b'\n'
             b'modprobe -n -v --ignore-install msm > /run/oneplus13/msm-after-cec\n'
-            b'if grep -q "^install " /run/oneplus13/msm-after-cec; then cat /run/oneplus13/msm-after-cec; exit 1; fi\n'
+            b'if grep "^install " /run/oneplus13/msm-after-cec | grep -v "^install /bin/true *$"; then cat /run/oneplus13/msm-after-cec; exit 1; fi\n'
             b'grep -q "insmod .*msm.ko" /run/oneplus13/msm-after-cec\n'
             b'[ ! -d /sys/module/panel_oneplus_aa569 ]\n[ ! -d /sys/module/msm ]\n'
             b'echo ONEPLUS13_SHARED_CEC_CORE_PREREQUISITE_OK\n')

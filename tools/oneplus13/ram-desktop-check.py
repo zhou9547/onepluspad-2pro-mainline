@@ -150,9 +150,11 @@ def check(check_wifi=True):
     else:
         raise ValueError('settings application did not start')
     COMPLETED['settings_process_started'] = True
-    spec = importlib.util.spec_from_file_location('wifi', Path(__file__).with_name('automatic-wifi-check.py'))
-    wifi = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(wifi)
+    wifi = None
+    if check_wifi:
+        spec = importlib.util.spec_from_file_location('wifi', Path(__file__).with_name('automatic-wifi-check.py'))
+        wifi = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(wifi)
     interfaces = [p.name for p in Path('/sys/class/net').iterdir() if (p/'wireless').exists()]
     if check_wifi and len(interfaces) != 1:
         raise ValueError('exactly one WiFi interface required')

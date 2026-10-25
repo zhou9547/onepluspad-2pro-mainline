@@ -7,6 +7,7 @@ pre=importlib.util.module_from_spec(spec);spec.loader.exec_module(pre)
 class Prerequisite(unittest.TestCase):
     def fixture(self,root):
         files={'run/oneplus13/ram-session':b'', 'proc/mounts':b'overlay / overlay rw 0 0\n',
+            pre.POLICY:b'blacklist cec\ninstall cec /bin/false\ninstall fastrpc /bin/false\n',
             'sys/class/block/sda/ro':b'1\n','usr/lib/modules/test/kernel/drivers/media/cec/core/cec.ko':b'module'}
         for name,data in files.items():
             p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(data)
@@ -15,23 +16,25 @@ class Prerequisite(unittest.TestCase):
             self.calls.append(args)
             if 'is-active' in args:return 'active'
             if '-F' in args:return 'test SMP'
-            if '-c' in args:return 'install cec /bin/false '
+            if '-c' in args:return (root/pre.POLICY).read_text()
             (root/'sys/module/cec').mkdir(parents=True)
             return ''
-        return hashlib.sha256(b'module').hexdigest(),run
+        return hashlib.sha256(b'module').hexdigest(),hashlib.sha256((root/pre.POLICY).read_bytes()).hexdigest(),run
     def test_one_explicit_core_load_and_no_adapter(self):
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);digest,run=self.fixture(root)
-            result=pre.prepare(root,'test',digest,run)
+            root=Path(folder);digest,policy_sha,run=self.fixture(root)
+            original=(root/pre.POLICY).read_bytes()
+            result=pre.prepare(root,'test',digest,policy_sha,run)
+            self.assertEqual((root/pre.POLICY).read_bytes(),original.replace(b'install cec /bin/false\n',b'install cec /bin/true\n'))
             self.assertEqual(result['hardware_cec_adapters'],0)
             loads=[x for x in self.calls if '--ignore-install' in x]
             self.assertEqual(loads,[['/usr/sbin/modprobe','--ignore-install','cec']])
-            with self.assertRaises(ValueError):pre.prepare(root,'test',digest,run)
+            with self.assertRaises(ValueError):pre.prepare(root,'test',digest,policy_sha,run)
             self.assertEqual([x for x in self.calls if '--ignore-install' in x],loads)
     def test_wrong_hash_readwrite_storage_or_adapter_prevents_load(self):
         for fault in ['hash','storage','adapter','bus','policy','service','vermagic']:
             with self.subTest(fault=fault),tempfile.TemporaryDirectory() as folder:
-                root=Path(folder);digest,run=self.fixture(root)
+                root=Path(folder);digest,policy_sha,run=self.fixture(root)
                 if fault=='hash':digest='0'*64
                 if fault=='storage':(root/'sys/class/block/sda/ro').write_text('0')
                 if fault=='adapter':(root/'dev/cec0').touch()
@@ -41,30 +44,30 @@ class Prerequisite(unittest.TestCase):
                     if fault=='service' and 'is-active' in args:return 'inactive'
                     if fault=='vermagic' and '-F' in args:return 'other SMP'
                     return run(args)
-                with self.assertRaises(ValueError):pre.prepare(root,'test',digest,invoke)
+                with self.assertRaises(ValueError):pre.prepare(root,'test',digest,policy_sha,invoke)
                 self.assertFalse(any('--ignore-install' in x for x in self.calls))
     def test_failed_load_retains_attempt_and_never_retries(self):
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);digest,run=self.fixture(root)
+            root=Path(folder);digest,policy_sha,run=self.fixture(root)
             def fail(args):
                 if '--ignore-install' in args:raise subprocess.CalledProcessError(1,args)
                 return run(args)
-            with self.assertRaises(subprocess.SubprocessError):pre.prepare(root,'test',digest,fail)
+            with self.assertRaises(subprocess.SubprocessError):pre.prepare(root,'test',digest,policy_sha,fail)
             self.assertTrue((root/'run/oneplus13/cec-core-load-attempted').exists())
-            with self.assertRaises(FileExistsError):pre.prepare(root,'test',digest,fail)
+            with self.assertRaises(FileExistsError):pre.prepare(root,'test',digest,policy_sha,fail)
     def test_no_module_registration_is_failure(self):
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);digest,run=self.fixture(root)
+            root=Path(folder);digest,policy_sha,run=self.fixture(root)
             def no_load(args):return '' if '--ignore-install' in args else run(args)
-            with self.assertRaises(ValueError):pre.prepare(root,'test',digest,no_load)
+            with self.assertRaises(ValueError):pre.prepare(root,'test',digest,policy_sha,no_load)
     def test_adapter_created_during_core_load_is_failure(self):
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);digest,run=self.fixture(root)
+            root=Path(folder);digest,policy_sha,run=self.fixture(root)
             def adapter(args):
                 answer=run(args)
                 if '--ignore-install' in args:(root/'dev/cec0').touch()
                 return answer
-            with self.assertRaises(ValueError):pre.prepare(root,'test',digest,adapter)
+            with self.assertRaises(ValueError):pre.prepare(root,'test',digest,policy_sha,adapter)
     def test_real_command_cannot_target_fixture(self):
-        with self.assertRaises(ValueError):pre.prepare(Path('/never-real'),'test','0'*64)
+        with self.assertRaises(ValueError):pre.prepare(Path('/never-real'),'test','0'*64,'0'*64)
 if __name__=='__main__':unittest.main()

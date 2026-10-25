@@ -55,7 +55,10 @@ def collect(root):
         if any(found.values()):keys.append({'capabilities':found})
     supplies=[]
     for p in children(root/'sys/class/power_supply',limit=16):
-        supplies.append({field:text(p/field) for field in ['type','status','online','usb_type','voltage_max','current_max']})
+        supplies.append({field:text(p/field) for field in ['type','status','online','usb_type','voltage_max','current_max',
+            'capacity','voltage_now','current_now','temp']})
+    remoteprocs=[{'name':text(p/'name'),'state':text(p/'state')}
+        for p in children(root/'sys/class/remoteproc','remoteproc*',16)]
     roles=[text(p/'role') for p in children(root/'sys/class/usb_role',limit=8)]
     ports=[{field:text(p/field) for field in ['data_role','power_role','power_operation_mode']}
            for p in children(root/'sys/class/typec','port[0-9]',8)]
@@ -64,7 +67,7 @@ def collect(root):
     return {'scope':'PASSIVE_SYSFS_INVENTORY_ONLY','no_control_writes':True,
             'hardware_functional_acceptance':False,'thermal_zones':thermal,'cooling_devices':cooling,
             'rtc':rtc,'cpu_frequency_policies':cpus,'advertised_key_devices':keys,
-            'power_supplies':supplies,'usb_roles':roles,'typec_ports':ports,
+            'power_supplies':supplies,'remote_processors':remoteprocs,'usb_roles':roles,'typec_ports':ports,
             'hardware_block_devices_observed':len(block),'all_observed_block_devices_read_only':bool(block) and all(v==1 for v in block),
             'writable_block_devices_observed':sum(v==0 for v in block),
             'available_sleep_states':text(root/'sys/power/state'),

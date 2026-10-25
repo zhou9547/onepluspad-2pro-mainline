@@ -13,6 +13,26 @@ wifi=importlib.util.module_from_spec(spec);spec.loader.exec_module(wifi)
 
 
 class Desktop(unittest.TestCase):
+    def test_software_only_runs_without_wifi_helper_installed(self):
+        class FakePath:
+            name='wayland-0'
+            def __init__(self,*args):pass
+            def __truediv__(self,other):return self
+            def glob(self,pattern):return [self]
+            def iterdir(self):return iter([])
+            def read_text(self):return '/usr/lib/erhai/mesa/lib/libEGL_mesa.so.0'
+            def exists(self):return True
+        with patch.dict('sys.modules',{'pwd':SimpleNamespace(getpwnam=lambda name:SimpleNamespace(pw_uid=1000))}), \
+             patch.object(desktop,'Path',FakePath),patch.object(desktop,'user_session',return_value={'Name':'a'}), \
+             patch.object(desktop,'process_ids',return_value=['42']),patch.object(desktop,'socket_file',return_value=True), \
+             patch.object(desktop,'command',return_value=''),patch.object(desktop.time,'sleep'), \
+             patch.object(desktop.importlib.util,'spec_from_file_location',side_effect=AssertionError('WiFi helper must not be imported')), \
+             patch.object(desktop,'SAMPLES',[]),patch.object(desktop,'COMPLETED',{}):
+            result=desktop.check(check_wifi=False)
+        self.assertTrue(result['software_acceptance_pass'])
+        self.assertFalse(result['wifi_tested'] or result['combined_pass'])
+        self.assertEqual(len(result['samples']),3)
+
     def test_software_only_never_claims_wifi_or_combined_acceptance(self):
         with patch.object(desktop,'SAMPLES',[{'bound_wifi_https':None}]*3):
             r=desktop.completed_result(False)
