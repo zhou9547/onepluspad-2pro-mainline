@@ -1,5 +1,17 @@
 # Bounded phone reverse file-server qualification
 
+Offline follow-up40246612604 passed148 native ARM64 tests and ordinary exact
+rootfs handoff, but the expanded assembled-rootfs observer hit its old180second
+emulator deadline at180.806s, immediately after native handoff selftest180.290s.
+The new sandbox had not reached its success marker; no sandbox exception or
+phone result was observed. This is a failed offline gate, not evidence that
+the permission fix passed its integration test. The expanded dummy-virt-only
+HTTP observer now gets300seconds, while the original fixture remains180 for
+the ordinary check; phone runtime/initramfs deadlines and SquashFS stay
+unchanged. Two tests reject phone/nonmatching installer inputs and constrain
+the rewrite to the sole explicit emulator fixture. The VM must still prove
+the real UID/umask read checks and automatic deadline/reboot before hardware.
+
 run72 update: initial native146 tests and both QEMU/deadline jobs passed at
 Actions40245671869, but the phone rejected executable traversal under UID65534.
 The delivery shell's umask077 made newly created root-owned parents0700;

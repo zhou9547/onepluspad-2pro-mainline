@@ -18,6 +18,14 @@ EXPECTED_KERNEL_COMMIT='1f5c1128d42a62244bef9974e58cfe07adf29f7d'
 EXPECTED_ROOTFS='f9140e5c98d70bca6a04b8934dc9b1937bbf28b1eb0218411eaa0a9939a6cced'
 EXPECTED_RELEASE='7.2.0-oneplus13-g7a81d184e309-c963dc1c909ec-p4f8ae6f76730'
 
+def reserve_emulator_time(helper):
+    """Budget the added sandbox ONLY in the explicit dummy-virt observer."""
+    if b'grep -qx linux,dummy-virt' not in helper or b'[ "${1:-}" = /newroot ]' not in helper:
+        raise ValueError('Not the emulator-only observer installer')
+    if b'oneplus13.desktop.qemu-http=1' not in helper or helper.count(b'deadline=180 ;; esac')!=1:
+        raise ValueError('Unexpected emulator deadline fixture')
+    return helper.replace(b'deadline=180 ;; esac',b'deadline=300 ;; esac',1)
+
 def main():
     p=argparse.ArgumentParser();p.add_argument('--kernel',type=Path,required=True)
     p.add_argument('--rootfs',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
@@ -104,6 +112,7 @@ def main():
         assert helper.count(handoff)==1
         files['bin/oneplus13-qemu-install']['data']=helper.replace(handoff,
             b'python3 /run/oneplus13/qemu-sensor-fileserver-selftest.py\n'+handoff,1)
+        files['bin/oneplus13-qemu-install']['data']=reserve_emulator_time(files['bin/oneplus13-qemu-install']['data'])
     files['qemu-matching-modules.tar.gz']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
                                            'data':(kernel/'modules.tar.gz').read_bytes()}
     out.mkdir(parents=True,exist_ok=True);ramdisk=out/'initramfs-qemu-only.cpio.gz'
@@ -150,6 +159,8 @@ def main():
             'shared_cec_core_prerequisite_tested':shared_cec_test,
             'shared_ubwc_configuration_prerequisite_tested':shared_cec_test,
             'synthetic_sensor_fileserver_sandbox_tested':shared_cec_test,
+            'qemu_only_deadline_seconds':300 if shared_cec_test else 180,
+            'phone_recovery_deadline_modified':False,
             'returncode':rc,'required_markers':{x:x in log for x in markers},
             'http_bytes':stats['bytes'],'http_parts':stats['parts'],'handoff_and_deadline_pass':passed,
             'physical_display_input_radio_or_audio_tested':False}

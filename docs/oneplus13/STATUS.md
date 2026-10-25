@@ -1,5 +1,7 @@
 # 一加13适配状态
 
+离线补充：修订权限版Actions40246612604的148项ARM64和普通rootfs交接通过，但扩大的组装rootfs观察器在native handoff检查180.290秒之后，于180.806秒触发原180秒VM截止，未到新增sandbox成功标志。该门槛仍失败，没有再次上机。仅为dummy-virt专用HTTP观察器预留300秒，手机/rootfs/恢复参数不变，新增两项只允许精确QEMU fixture的检查；等待重跑实际sandbox和自动截止。
+
 ## 2026-10-26 run72：文件服务包装目录权限拒绝，自动恢复
 
 run72 桌面/GPU/普通用户/平台回归通过，但低权限strace在启动hexagonrpcd前的stat得到Permission denied，文件服务未通过；101.9秒自动返回Android，七项基线一致，无刷写或人工恢复。已停止该版本硬件重试并保留新窗口停止锁存。
