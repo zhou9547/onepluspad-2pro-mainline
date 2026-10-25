@@ -2,6 +2,8 @@
 
 ## 2026-10-26 run69：联合回归通过，传感器设备门禁拒绝后自动恢复
 
+修订源码574f1d5026f96b4c7312776aa6ce88ae9f972a64的 Actions40230509511 已全部通过：原生 ARM64、精确 rootfs 交接、实际组装 rootfs/自动截止均成功。本地主机整套188项Linux检查通过，私有联合运行器13项检查通过。没有换入新 rootfs 或再次启动手机；真机停止锁存保留。保存的 Android 输入清单另确认 PMIH010x HV haptics 与 ToF8801 软件注册，不能以参考包 AW86927 替代手机振动路径，见 SAVED-PERIPHERAL-INPUTS-20261026.md。
+
 run69 显示、GPU、普通用户桌面及平台检查通过，FastRPC 模块与六组上下文注册；附着前设备门禁错误要求 misc/device/of_node，但固定源码没有设置 miscdev.parent，因而拒绝，未执行 attach ioctl。103.1秒自动返回 Android，七项基线一致，无刷写/人工恢复。未见严重内核故障，仍按显式失败策略保留真机停止标记，不自动解除或重试。
 
 已离线改用唯一绑定 RPMSG 通道的 DT 祖先、ADSP label、唯一 secure 字符节点和设备号，并补真实无 misc 父节点形态及拒绝测试。22项新增 Linux 检查和实际 rootfs Python/fcntl/模块哈希检查已准备；修订版未再上机。传感器反向RPC、registry、数据和轴向仍未通过。详见 SENSOR-FIRST-ATTACH-20261026.md。以下 run68 是当前最近完整隔离平台通过记录。
