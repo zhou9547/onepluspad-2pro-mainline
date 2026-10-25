@@ -21,13 +21,23 @@ EXPECTED_RELEASE='7.2.0-oneplus13-g7a81d184e309-c963dc1c909ec-p4f8ae6f76730'
 def main():
     p=argparse.ArgumentParser();p.add_argument('--kernel',type=Path,required=True)
     p.add_argument('--rootfs',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
+    p.add_argument('--assembled-manifest',type=Path,help='Public matched-rootfs assembly provenance')
     a=p.parse_args();kernel=a.kernel.resolve();rootfs=a.rootfs.resolve();out=a.output.resolve()
     manifest=json.loads((kernel/'manifest.json').read_text())
     assert manifest['integration_commit']==EXPECTED_KERNEL_COMMIT
     assert manifest['kernel_release']==EXPECTED_RELEASE
     for name in ['Image','initramfs.cpio.gz','modules.tar.gz']:
         assert sha256(kernel/name)==manifest['files'][name]['sha256'],name
-    assert sha256(rootfs)==EXPECTED_ROOTFS and rootfs.stat().st_size==426221568
+    expected_sha=EXPECTED_ROOTFS;expected_bytes=426221568
+    if a.assembled_manifest:
+        assembly=json.loads(a.assembled_manifest.read_text())
+        assert assembly['scope']=='PUBLIC_RAM_ROOTFS_MATCHED_KERNEL'
+        assert assembly['base_rootfs_sha256']==EXPECTED_ROOTFS
+        assert assembly['kernel_integration_commit']==EXPECTED_KERNEL_COMMIT
+        assert assembly['kernel_release']==EXPECTED_RELEASE and assembly['rootfs_matching_modules_preinstalled']
+        assert assembly['private_firmware_or_calibration_included'] is False
+        expected_sha=assembly['rootfs_sha256'];expected_bytes=assembly['rootfs_bytes']
+    assert sha256(rootfs)==expected_sha and rootfs.stat().st_size==expected_bytes
     with tarfile.open(kernel/'modules.tar.gz') as archive:
         assert all(not x.name.startswith('/') and '..' not in Path(x.name).parts for x in archive)
     packed,_=derive((kernel/'initramfs.cpio.gz').read_bytes())
@@ -41,8 +51,9 @@ def main():
     bind=(b'[ "$qemu" = 1 ]\n'+
           b'tr \'\\000\' \'\\n\' < /sys/firmware/devicetree/base/compatible | grep -qx linux,dummy-virt\n'+
           b'[ "$(uname -r)" = '+EXPECTED_RELEASE.encode()+b' ]\n'+
-          b'[ ! -e /newroot/usr/lib/oneplus13-desktop/kernel-release ]\n'+
-          b'printf \'%s\\n\' '+EXPECTED_RELEASE.encode()+b' > /newroot/usr/lib/oneplus13-desktop/kernel-release\n')
+          (b'' if a.assembled_manifest else
+           b'[ ! -e /newroot/usr/lib/oneplus13-desktop/kernel-release ]\n'+
+           b'printf \'%s\\n\' '+EXPECTED_RELEASE.encode()+b' > /newroot/usr/lib/oneplus13-desktop/kernel-release\n'))
     files['bin/oneplus13-ram-prepare']['data']=prepare.replace(release_check,bind+release_check)
     helper=files['bin/oneplus13-qemu-install']['data']
     anchor=b'[ "${1:-}" = /newroot ]\n'
@@ -63,7 +74,7 @@ def main():
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     cmdline=('console=ttyAMA0 rdinit=/init panic=15 oneplus13.desktop=1 '
              'oneplus13.desktop.qemu=1 oneplus13.desktop.qemu-http=1 '
-             f'oneplus13.rootfs.sha256={EXPECTED_ROOTFS} oneplus13.rootfs.bytes={rootfs.stat().st_size}')
+             f'oneplus13.rootfs.sha256={expected_sha} oneplus13.rootfs.bytes={rootfs.stat().st_size}')
     command=['qemu-system-aarch64','-machine','virt','-cpu','cortex-a76','-m','6144','-smp','2',
              '-nographic','-no-reboot','-nic','none','-kernel',str(kernel/'Image'),'-initrd',str(ramdisk),
              '-drive',f'file={rootfs},format=raw,if=none,readonly=on,id=rootfs',
@@ -86,10 +97,11 @@ def main():
     count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
     passed=passed and stats['bytes']==rootfs.stat().st_size and stats['parts']==list(range(count))
     report={'scope':'QEMU_EXACT_ROOTFS_HANDOFF_ONLY','phone_operations':0,'hardware_tested':False,
-            'rootfs_sha256':EXPECTED_ROOTFS,'rootfs_bytes':rootfs.stat().st_size,
+            'rootfs_sha256':expected_sha,'rootfs_bytes':rootfs.stat().st_size,
             'kernel_integration_commit':EXPECTED_KERNEL_COMMIT,'kernel_release':EXPECTED_RELEASE,
             'kernel_image_sha256':sha256(kernel/'Image'),'modules_sha256':sha256(kernel/'modules.tar.gz'),
-            'qemu_only_module_delivery':True,'rootfs_bytes_unchanged':sha256(rootfs)==EXPECTED_ROOTFS,
+            'qemu_only_module_delivery':True,'rootfs_bytes_unchanged':sha256(rootfs)==expected_sha,
+            'assembled_rootfs':bool(a.assembled_manifest),
             'returncode':rc,'required_markers':{x:x in log for x in markers},
             'http_bytes':stats['bytes'],'http_parts':stats['parts'],'handoff_and_deadline_pass':passed,
             'physical_display_input_radio_or_audio_tested':False}
