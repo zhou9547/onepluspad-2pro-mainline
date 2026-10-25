@@ -32,13 +32,24 @@ def main():
         assert all(not x.name.startswith('/') and '..' not in Path(x.name).parts for x in archive)
     packed,_=derive((kernel/'initramfs.cpio.gz').read_bytes())
     files=read_cpio(gzip.decompress(packed))
+    # The generic userspace artifact deliberately has no kernel-release pin.
+    # Supply the separately verified matching kernel in the emulator's RAM
+    # overlay before prepare's normal release check, never by editing SquashFS.
+    prepare=files['bin/oneplus13-ram-prepare']['data']
+    release_check=b'[ "$(cat /newroot/usr/lib/oneplus13-desktop/kernel-release)" = "$(uname -r)" ]\n'
+    assert prepare.count(release_check)==1
+    bind=(b'[ "$qemu" = 1 ]\n'+
+          b'tr \'\\000\' \'\\n\' < /sys/firmware/devicetree/base/compatible | grep -qx linux,dummy-virt\n'+
+          b'[ "$(uname -r)" = '+EXPECTED_RELEASE.encode()+b' ]\n'+
+          b'[ ! -e /newroot/usr/lib/oneplus13-desktop/kernel-release ]\n'+
+          b'printf \'%s\\n\' '+EXPECTED_RELEASE.encode()+b' > /newroot/usr/lib/oneplus13-desktop/kernel-release\n')
+    files['bin/oneplus13-ram-prepare']['data']=prepare.replace(release_check,bind+release_check)
     helper=files['bin/oneplus13-qemu-install']['data']
     anchor=b'[ "${1:-}" = /newroot ]\n'
     assert helper.count(anchor)==1
     install=(b'mkdir -p /run/qemu-modules /newroot/usr/lib/modules\n'+
              b'/bin/busybox tar xzf /qemu-matching-modules.tar.gz -C /run/qemu-modules\n'+
-             b'cp -a /run/qemu-modules/lib/modules/. /newroot/usr/lib/modules/\n'+
-             b'echo "$(uname -r)" > /newroot/usr/lib/oneplus13-desktop/kernel-release\n')
+             b'cp -a /run/qemu-modules/lib/modules/. /newroot/usr/lib/modules/\n')
     files['bin/oneplus13-qemu-install']['data']=helper.replace(anchor,anchor+install)
     files['qemu-matching-modules.tar.gz']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
                                            'data':(kernel/'modules.tar.gz').read_bytes()}
