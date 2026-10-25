@@ -1,5 +1,15 @@
 # Technical debt (single register for the phone)
 
+run72 failed before a successful reverse daemon launch: root umask077 made new
+installer directories0700, so UID65534 strace could not stat the executable.
+Android returned automatically101.9s, seven samples match; platform regression
+passed, no critical signatures in the bounded failure tail. Hardware retry is
+latched. The exact executed helper reproduces0700 on the host. Fix new parents
+explicitly0755, never relax existing ones, and test actual installation under
+umask077 plus real UID65534 reads in the exact-rootfs synthetic sandbox. Prior
+QEMU only tested synthetic-process launch and missed the installer interaction.
+No successful reverse file service, sensor stream or remote release is claimed.
+
 run70 owner session passed the requested visual display/scaling, real touch,
 Settings and on-screen keyboard checks; automatic Android return189.9s and
 seven matching samples. New unattended run71 passed one corrected SNS attach

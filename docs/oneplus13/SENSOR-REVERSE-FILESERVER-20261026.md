@@ -1,5 +1,20 @@
 # Bounded phone reverse file-server qualification
 
+run72 update: initial native146 tests and both QEMU/deadline jobs passed at
+Actions40245671869, but the phone rejected executable traversal under UID65534.
+The delivery shell's umask077 made newly created root-owned parents0700;
+strace could not stat hexagonrpcd. Platform regression passed, Android returned
+in101.9seconds with seven matching samples, and further hardware is latched.
+The exact saved helper reproduces this failure on the host. The original
+synthetic sandbox did not exercise installation under that umask.
+
+The correction explicitly chmods only new parents0755 and refuses inaccessible
+existing parents without changing them. Two new unit tests cover both cases.
+The emulator now invokes the actual installer under umask077 and requires real
+UID65534 reads of public synthetic binary and0640 registry paths. This tests
+the previously missed installer/sandbox boundary, still without real RPC or
+private inputs. Revised ARM64/QEMU results are required before another review.
+
 run71's single INIT_ATTACH_SNS ioctl returned0 and the local descriptor closed
 in approximately0.001seconds. Display/GPU/ordinary-user desktop/platform and
 final health passed; Android returned automatically in104.6seconds with seven

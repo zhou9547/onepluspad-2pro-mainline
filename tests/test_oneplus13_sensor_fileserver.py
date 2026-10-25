@@ -75,6 +75,22 @@ class Archive(unittest.TestCase):
         target=self.root/'target';file=target/m.PREFIX/'bin/hexagonrpcd';file.parent.mkdir(parents=True);file.write_bytes(b'existing')
         with self.assertRaises(ValueError):m.install(target,self.entries,lambda *a:None)
         self.assertEqual(file.read_bytes(),b'existing')
+    @unittest.skipIf(os.name=='nt','Target POSIX umask and permission semantics')
+    def test_umask077_still_allows_new_ancestors_to_be_traversed(self):
+        target=self.root/'target';target.mkdir()
+        previous=os.umask(0o077)
+        try:m.install(target,self.entries,lambda *a:None)
+        finally:os.umask(previous)
+        for name in self.entries:
+            for parent in (target/name).parents:
+                if parent==target:break
+                self.assertTrue(parent.stat().st_mode&stat.S_IXOTH,str(parent))
+    @unittest.skipIf(os.name=='nt','Target POSIX umask and permission semantics')
+    def test_existing_inaccessible_ancestor_rejected_not_relaxed(self):
+        target=self.root/'target';directory=target/'usr/lib/erhai'
+        directory.mkdir(parents=True);directory.chmod(0o700)
+        with self.assertRaises(ValueError):m.install(target,self.entries,lambda *a:None)
+        self.assertEqual(stat.S_IMODE(directory.stat().st_mode),0o700)
 
 class Trace(unittest.TestCase):
     def test_success_evidence_keeps_remote_release_unclaimed(self):

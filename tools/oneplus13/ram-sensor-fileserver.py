@@ -77,15 +77,27 @@ def install(root,entries,chown=os.chown):
             if parent==root:break
             if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
                 raise ValueError('Unexpected destination ancestry')
+            if parent.exists() and not (parent.stat().st_mode&stat.S_IXOTH):
+                raise ValueError('Unprivileged destination ancestor not traversable')
+    def parents(dest):
+        # The RAM delivery shell deliberately uses umask077. Explicitly set
+        # traversable modes on NEW directories; never relax existing ones.
+        relative=dest.parent.relative_to(root)
+        current=root
+        for component in relative.parts:
+            current=current/component
+            if not current.exists():
+                current.mkdir(mode=0o755)
+                current.chmod(0o755)
     for name,(value,mode,target) in entries.items():
         if value is None:continue
-        dest=root/name;dest.parent.mkdir(parents=True,exist_ok=True)
+        dest=root/name;parents(dest)
         with dest.open('xb') as stream:stream.write(value)
         dest.chmod(mode)
         if not name.startswith(PREFIX):chown(dest,UID,UID)
     for name,(value,mode,target) in entries.items():
         if target is not None:
-            dest=root/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.symlink_to(target)
+            dest=root/name;parents(dest);dest.symlink_to(target)
 
 def trace_facts(text):
     # raw=ioctl keeps requests numeric across strace versions. Trace never
