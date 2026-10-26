@@ -28,6 +28,12 @@ or unsupported-dispatch lines, records their counts without paths, and reports
 partial traces and unclean stops remain fatal. The normal mode retains the
 strict zero-error acceptance rule.
 
+The worker now records the service state before issuing its one stop. A
+`systemd-run` startup error is retained as evidence while status, logs and trace
+are collected; an already failed or early-exited unit is then rejected
+explicitly. This closes the run74 path where `CalledProcessError` bypassed the
+diagnostic summary.
+
 ## Data and handles
 
 The backend holds at most four files in process memory. Each file is capped at
