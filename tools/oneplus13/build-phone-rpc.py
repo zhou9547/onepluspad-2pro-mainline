@@ -110,7 +110,7 @@ def main():
         if not any(item['name'].endswith('phone-ramfs-storage') for item in tested):raise ValueError('No actual RAM storage test')
         if not any(item['name'].endswith('phone-camera-info') for item in tested):raise ValueError('No exact camera input mapping test')
         test_counts[name]=len(tested)
-    outputs={}
+    outputs={};offline_tests={}
     if native and not a.host_check:
         entries={'usr/lib/erhai/sensors/bin/hexagonrpcd':out/'release/hexagonrpcd/hexagonrpcd',
                  'usr/lib/erhai/sensors/lib/libhexagonrpc.so.0.5':out/'release/libhexagonrpc/libhexagonrpc.so.0.5'}
@@ -124,6 +124,19 @@ def main():
                 outputs[name]={'bytes':len(value),'sha256':sha(path),'mode':info.mode}
         outputs['runtime_archive_sha256']=sha(runtime)
         run(['readelf','-d',entries['usr/lib/erhai/sensors/bin/hexagonrpcd']],log)
+        tests_archive=out/'phone-rpc-tests-arm64.tar.gz'
+        test_names=['test_apps_std_ram','test_phone_ramfs']
+        with tarfile.open(tests_archive,'x:gz') as tf:
+            for name in test_names:
+                path=out/'release/tests'/name;value=path.read_bytes()
+                if value[:6]!=b'\x7fELF\x02\x01' or struct.unpack_from('<H',value,18)[0]!=183:raise ValueError('Not native ARM64 selftest')
+                info=tarfile.TarInfo(name);info.size=len(value);info.mode=0o755;info.mtime=0
+                with path.open('rb') as stream:tf.addfile(info,stream)
+                offline_tests[name]={'bytes':len(value),'sha256':sha(path),'mode':0o755}
+        (out/'phone-rpc-tests.json').write_text(json.dumps({
+            'scope':'PUBLIC_ARM64_RPC_MOCK_SELFTESTS','files':offline_tests,
+            'archive_sha256':sha(tests_archive),'synthetic_data_only':True,
+            'fastrpc_call_mocked_to_fail':True,'hardware_qualification_implied':False},indent=2)+'\n')
     for name in ['COPYING','LICENSE','COPYING.GPL']:
         if (source/name).is_file():shutil.copy2(source/name,out/('LICENSE-'+name))
     for name in ['GPL-3','LGPL-3']:
@@ -147,7 +160,8 @@ def main():
        'exact_read_only_camera_input_mapping_tests_pass':True,
        'unqualified_output_type_sequences_refused_before_ioctl':True,
        'synthetic_board_data_only':True,'private_inputs_included':False,'services_or_udev_or_firmware_included':False,
-       'sensor_attach_stream_or_hardware_eligible':False,'outputs':outputs}
+       'sensor_attach_stream_or_hardware_eligible':False,'outputs':outputs,
+       'separate_mock_selftest_export':offline_tests}
     (out/'verification.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 

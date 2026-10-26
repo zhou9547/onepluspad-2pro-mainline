@@ -30,8 +30,13 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--kernel',type=Path,required=True)
     p.add_argument('--rootfs',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--assembled-manifest',type=Path,help='Public matched-rootfs assembly provenance')
+    p.add_argument('--rpc-selftest-archive',type=Path,help='Public native ARM64 mock-test archive, never phone data')
+    p.add_argument('--rpc-selftest-manifest',type=Path)
     a=p.parse_args();kernel=a.kernel.resolve();rootfs=a.rootfs.resolve();out=a.output.resolve()
     shared_cec_test=False
+    mock_tests=bool(a.rpc_selftest_archive or a.rpc_selftest_manifest)
+    if mock_tests and not (a.rpc_selftest_archive and a.rpc_selftest_manifest and a.assembled_manifest):
+        raise ValueError('Mock tests require both public archive inputs and matched rootfs provenance')
     manifest=json.loads((kernel/'manifest.json').read_text())
     assert manifest['integration_commit']==EXPECTED_KERNEL_COMMIT
     assert manifest['kernel_release']==EXPECTED_RELEASE
@@ -113,6 +118,25 @@ def main():
         files['bin/oneplus13-qemu-install']['data']=helper.replace(handoff,
             b'python3 /run/oneplus13/qemu-sensor-fileserver-selftest.py\n'+handoff,1)
         files['bin/oneplus13-qemu-install']['data']=reserve_emulator_time(files['bin/oneplus13-qemu-install']['data'])
+    if mock_tests:
+        assert shared_cec_test and not out.exists(),'Use a fresh emulator-only output'
+        test_helper=REPO/'tools/oneplus13/ram-rpc-selftest.py'
+        spec=importlib.util.spec_from_file_location('rpc_mock_contract',test_helper)
+        mock=importlib.util.module_from_spec(spec);spec.loader.exec_module(mock)
+        test_manifest=json.loads(a.rpc_selftest_manifest.read_text())
+        mock.archive_entries(a.rpc_selftest_archive,test_manifest)
+        fixture={'ram-rpc-selftest.py':test_helper,'rpc-selftests.tar.gz':a.rpc_selftest_archive,
+                 'rpc-selftests.json':a.rpc_selftest_manifest}
+        for name,path in fixture.items():
+            files['bin/'+name]={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,'data':path.read_bytes()}
+        helper=files['bin/oneplus13-qemu-install']['data']
+        copies=b''.join(b'cp /bin/'+n.encode()+b' /newroot/run/oneplus13/'+n.encode()+b'\n' for n in fixture)
+        helper=helper.replace(anchor,anchor+copies,1)
+        checks=(b'python3 /run/oneplus13/ram-rpc-selftest.py --archive /run/oneplus13/rpc-selftests.tar.gz '
+                b'--manifest /run/oneplus13/rpc-selftests.json --archive-sha256 '+sha256(a.rpc_selftest_archive).encode()+
+                b' --manifest-sha256 '+sha256(a.rpc_selftest_manifest).encode()+b'\n'
+                b'echo ONEPLUS13_RPC_MOCK_SELFTEST_QEMU_OK\n')
+        files['bin/oneplus13-qemu-install']['data']=helper.replace(handoff,checks+handoff,1)
     files['qemu-matching-modules.tar.gz']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
                                            'data':(kernel/'modules.tar.gz').read_bytes()}
     out.mkdir(parents=True,exist_ok=True);ramdisk=out/'initramfs-qemu-only.cpio.gz'
@@ -146,6 +170,7 @@ def main():
     if shared_cec_test:markers.insert(1,'ONEPLUS13_SHARED_CEC_CORE_PREREQUISITE_OK')
     if shared_cec_test:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),
                                     'ONEPLUS13_SENSOR_FILESERVER_SANDBOX_QEMU_OK')
+    if mock_tests:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_RPC_MOCK_SELFTEST_QEMU_OK')
     passed=rc==0 and all(x in log for x in markers)
     if passed:passed=all(log.index(x)<log.index(y) for x,y in zip(markers,markers[1:]))
     count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
@@ -159,6 +184,7 @@ def main():
             'shared_cec_core_prerequisite_tested':shared_cec_test,
             'shared_ubwc_configuration_prerequisite_tested':shared_cec_test,
             'synthetic_sensor_fileserver_sandbox_tested':shared_cec_test,
+            'synthetic_rpc_mock_tests_sandboxed':mock_tests,
             'qemu_only_deadline_seconds':300 if shared_cec_test else 180,
             'phone_recovery_deadline_modified':False,
             'returncode':rc,'required_markers':{x:x in log for x in markers},

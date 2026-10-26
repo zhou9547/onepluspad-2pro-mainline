@@ -1,5 +1,12 @@
 # Technical debt (single register for the phone)
 
+The next joint acceptance preparation exports two existing synthetic C tests
+separately from the production runtime and adds a twelve-second UID65534 systemd
+sandbox with devices hidden/denied and no network. Eleven wrapper/archive checks
+pass; native artifacts and full exact-rootfs QEMU execution remain pending.
+No new phone scope is qualified by these source changes. Camera input/readback,
+service evidence and desktop/GPU/platform regressions must be reviewed together.
+
 The pinned vendor SAR response review now distinguishes parser success from the
 SAR2 result field, lossy capability-version/band mappings, the GET assert/clamp
 path above64 rows, and SET submission versus correlated result/readback/replay.
