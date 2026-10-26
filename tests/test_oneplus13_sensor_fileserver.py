@@ -126,6 +126,7 @@ class BoundedService(unittest.TestCase):
             self.assertIn('--property='+value,cmd)
         self.assertNotIn('ssccli',joined);self.assertNotIn('iio-sensor-proxy',joined)
         self.assertNotIn('-p',cmd);self.assertNotIn('-c',cmd)
+        self.assertIn('-W',cmd)
         self.assertIn('raw=ioctl',cmd)
     def run_service(self,active='active',result='success',log='',trace=TRACE):
         calls=[];now=[0]

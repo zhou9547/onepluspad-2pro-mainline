@@ -7,7 +7,9 @@ on:
       - .github/workflows/oneplus13-phone-rpc.yml
       - tools/oneplus13/build-phone-rpc.py
       - tools/oneplus13/sensor-patches/**
+      - tools/oneplus13/ram-sensor-fileserver.py
       - tests/test_oneplus13_phone_rpc_builder.py
+      - tests/test_oneplus13_sensor_fileserver.py
   workflow_dispatch:
 
 permissions:
@@ -32,6 +34,8 @@ jobs:
           test "$(uname -m)" = aarch64
       - name: Check source recipe refusal cases
         run: python3 -m unittest discover -s tests -p test_oneplus13_phone_rpc_builder.py -v
+      - name: Check bounded reverse-file service controls
+        run: python3 -m unittest discover -s tests -p test_oneplus13_sensor_fileserver.py -v
       - name: Build only generic phone RPC binaries and run C sanitizer checks
         run: python3 tools/oneplus13/build-phone-rpc.py --output out/phone-rpc
       - name: Preserve bounded source and test evidence

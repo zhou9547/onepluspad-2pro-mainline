@@ -128,7 +128,8 @@ def service_command(trace):
     result+=['--property='+p for p in props]
     result += [str(trace),'-f','-qq','-T','-s','160','-e','trace=openat,ioctl,close','-e','raw=ioctl',
       '-o',STATE+'/syscalls.log','/usr/lib/erhai/sensors/bin/hexagonrpcd',
-      '-f','/dev/fastrpc-adsp-secure','-d','adsp','-s','-R','/usr/share/erhai-sensors/hexagonrpcd']
+      '-f','/dev/fastrpc-adsp-secure','-d','adsp','-s','-W',
+      '-R','/usr/share/erhai-sensors/hexagonrpcd']
     return result
 
 def execute(args,seconds=8):
