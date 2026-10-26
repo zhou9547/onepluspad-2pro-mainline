@@ -1,5 +1,19 @@
 # Technical debt (single register for the phone)
 
+The camera component draft stages23 original, source-pinned patches: standalone
+PHY, external-PHY CAMSS plumbing, Kaanapali dependencies and SM8750 RDI support.
+All apply with fuzz=0 to fresh affected files at the phone kernel pin. Native
+joint camera/amplifier object compilation remains pending. No phone sensor
+driver, board power/lane graph, custom ultrawide PHY qualification, ISP or
+libcamera pipeline is implied. Speaker calibration/dynamic protection remain
+incomplete. No boot image or phone DT integration is produced.
+
+SSC native Actions40281827817 passed3 release/3 ASan+UBSan executables. Fresh
+exact-rootfs userspace loader, lock-only CLI and pure tests pass in an isolated
+library namespace; no QRTR query was executed. Hard-deadline/cleanup review and
+actual discovery remain separate gates, and all measurement requests stay
+blocked. The earlier native-pending stage below is historical.
+
 The isolated SSC metadata probe now has an irreversible process send guard,
 real-send rejection tests, original delivery encoding regression and fresh-tar
 host release/ASan+UBSan results (three executables each). Native ARM64 and exact
