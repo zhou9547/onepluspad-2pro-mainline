@@ -1,5 +1,12 @@
 # Technical debt (single register for the phone)
 
+The pinned vendor SAR response review now distinguishes parser success from the
+SAR2 result field, lossy capability-version/band mappings, the GET assert/clamp
+path above64 rows, and SET submission versus correlated result/readback/replay.
+See SAR-PROTOCOL-GAP-20261026.md. No firmware response or actual phone RF policy
+has been observed. No radio command, phone test or latch change accompanies
+this source-only review; do not use GET/parser success alone to open the RF gate.
+
 Current combined offline results: native ARM64 Actions40270669480 passed14
 release/14 ASan+UBSan C and6+36 Python checks, fresh exact-rootfs link/CLI probes,
 actual UID65534 reading930 files and933 absent delivery destinations. The later

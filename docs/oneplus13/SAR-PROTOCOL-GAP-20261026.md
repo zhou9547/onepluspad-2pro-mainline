@@ -46,3 +46,34 @@ power path with exact phone firmware/BDF/regdb selection and bounded failure
 handling. First radio activation must wait for that joint review. Historical
 network/BT behavior remains real evidence from reference inputs, not a phone
 RF acceptance substitute.
+
+## Response/capability review: source success is not policy acceptance
+
+Further review of the same pinned vendor tree identifies distinct evidence
+requirements before any RF activation:
+
+- `wlan_hdd_sar_limits.c:318` maps both internal SAR version6 and unexpected
+  versions to the userspace version1 value. A reported version1 alone cannot
+  identify the original firmware capability. The CTL grouping flag is separate.
+- `wmi_unified_sta_tlv.c:1560` decodes/logs the SAR2 result field and returns
+  parser success for a well-formed event even when that field names a firmware
+  rejection. A parser return code is not a successful SAR2 result.
+- The GET decoder at line1586 checks the available row count, then has an
+  assert-and-clamp path above64 rows. Assertion behavior depends on its build;
+  neither a potentially clamped reply nor unknown coverage proves a complete
+  active table. Future code must retain the original count and refuse ambiguity.
+- The HDD GET path at line252 waits for a response with a5000ms deadline. The
+  shown SET path at line776 checks the SME submission and stores configuration
+  for firmware-restart replay without an equivalent correlated-result wait.
+  Submission, actual result, active readback and restart replay require separate
+  evidence; no phone result has been observed in this review.
+- The band translator at line68 explicitly handles2/5GHz and maps an unknown
+  value to2GHz. Do not carry that fallback into a strict verifier or infer6GHz
+  coverage from this function. This does not prove which path this phone uses.
+
+The sources are bound by their saved manifest hashes to vendor commit
+`d50b305f7da9e14715a25120a4ac7b1a4b8b97c3`. Local evidence
+`sar-response-semantics-review.json` records function anchors and hashes. No
+socket, vendor command, firmware event or phone test was performed; RF remains
+unqualified. This adds requirements to the later joint review and does not
+rearm any historical stop latch.
