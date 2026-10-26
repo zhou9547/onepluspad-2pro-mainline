@@ -1,4 +1,4 @@
-﻿From: Codex <codex@openai.com>
+From: Codex <codex@openai.com>
 Subject: [PATCH] phone libssc: add one-way metadata-only discovery guard
 
 Reuse the original libssc discovery and attribute constructors, without opening

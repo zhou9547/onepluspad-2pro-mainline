@@ -1,4 +1,4 @@
-﻿# SPDX-License-Identifier: GPL-2.0-only
+# SPDX-License-Identifier: GPL-2.0-only
 import hashlib,importlib.util,io,json,subprocess,tarfile,tempfile,unittest
 from pathlib import Path
 from types import SimpleNamespace
