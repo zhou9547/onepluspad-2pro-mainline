@@ -5,6 +5,13 @@ method33 registry rename was repeatedly unsupported. Overlay0008 adds a bounded
 RAM-only copy-on-write registry namespace and rename semantics; host tests pass,
 native/rootfs and a new source-bound review remain. Run75 halt is retained.
 
+Run76 passed the bounded rename diagnostic with2573 successful reverse invokes,
+zero write/unsupported refusals, clean stop, no stream and matching Android
+baseline. Full acceptance remains withheld for37 classified missing config/OEM
+lookups, absent directory-inode evidence and no DSP release acknowledgement.
+Run76's one-shot ledger is sealed; the private PCB scalar addition is not a retry
+authorization.
+
 Run74's bounded write diagnostic returned Android and matching baselines but found
 two more registry temporaries and a >256-byte reverse input. Overlay0007 adds the
 four exact RAM paths in total and a64KiB listener buffer; launcher failures now

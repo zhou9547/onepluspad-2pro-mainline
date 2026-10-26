@@ -360,6 +360,13 @@ failed the diagnostic bound because method33 registry renames were unsupported.
 Overlay0008 now implements bounded RAM-only method33 renames; run75 remains
 halted pending native ARM64 and a fresh source-bound review.
 
+Run76 passed the bounded registry-rename diagnostic: one attach,28s window,
+2573 successful reverse invokes, zero write refusals and zero unsupported
+dispatches, clean stop, no stream, Android return132.9s and seven matching
+baselines. Display/GPU/desktop also passed. It retained37 classified missing
+config/OEM lookups and did not claim full file-server or sensor acceptance. A
+private PCB scalar is now included in the next RAM rehearsal input.
+
 Run74, one source-bound RAM write diagnostic, exposed the next two concrete
 gaps: registry temporaries `fstempfile` and `parsed_file_list.csv`, plus a reverse
 request larger than256 bytes. Android returned automatically107.7s after the

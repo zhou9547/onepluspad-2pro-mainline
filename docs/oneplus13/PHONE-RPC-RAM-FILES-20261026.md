@@ -66,6 +66,21 @@ The open methods still require absolute registry paths. Only method33
 canonicalizes a bare basename into this registry namespace, matching how the
 sensor process composes temporary and final names.
 
+Native ARM64 Actions40265238637 at
+`a987c7b010c31a4c7a4cb603c8c916271cb38ebf` passes the method33 overlay and all
+previous13 release/13 ASan/UBSan/six Python checks. Artifact12626485873 and a
+fresh exact-rootfs QEMU-user link/CLI probe pass; runtime SHA256 is
+`44a13f41801579e433f1aeb0f38382b8c3571c7b04344a8f8ed13ba7a5a4d6c3`.
+
+Bounded run76 then passed the diagnostic stage: one attach,28s observation,
+2573 successful reverse invokes, zero write refusals, zero unsupported/refused
+dispatches, clean stop and no sensor/radio/audio stream. Android returned in
+132.9s with seven matching baselines; display, GPU and ordinary-user desktop
+also passed. The diagnostic still recorded37 classified missing configuration
+or OEM lookups and intentionally reports `file_server_accepted: false`. A
+verified owner PCB scalar is now staged privately in the RAM archive to close
+the six known PCB path misses; its value and hash are not public artifacts.
+
 ## Data and handles
 
 The backend holds at most four files in process memory. Each file is capped at
