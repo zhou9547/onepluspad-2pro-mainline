@@ -353,6 +353,13 @@ sensor stream is accepted. See PHONE-PCB-MAPPING-20261026.md for scope and holds
 
 # 2026-10-26 phone RPC VFS follow-up
 
+Run75 completed a full bounded service window: Android returned134.6s after boot,
+seven baselines matched, display/GPU/desktop passed, the daemon stopped cleanly,
+there were zero write-mode refusals and2648 successful reverse invokes. It still
+failed the diagnostic bound because method33 registry renames were unsupported.
+Overlay0008 now implements bounded RAM-only method33 renames; run75 remains
+halted pending native ARM64 and a fresh source-bound review.
+
 Run74, one source-bound RAM write diagnostic, exposed the next two concrete
 gaps: registry temporaries `fstempfile` and `parsed_file_list.csv`, plus a reverse
 request larger than256 bytes. Android returned automatically107.7s after the
@@ -360,6 +367,8 @@ original boot command; seven baselines matched and display/GPU/ordinary-user
 desktop passed. Overlay0007 now adds only those two exact RAM paths and a separate
 64KiB listener input buffer; service launch failure is also retained as
 diagnostic evidence. Run74 remains halted. See PHONE-RPC-RAM-FILES-20261026.md.
+Native Actions40263745661 and a fresh exact-rootfs QEMU-user link/loader/CLI
+probe pass; no new phone retry is implied.
 
 Default-off phone overlay0006 now integrates bounded volatile copies for the two
 run73 write paths. Host v18 passes13 release +13 ASan/UBSan C tests and6 Python

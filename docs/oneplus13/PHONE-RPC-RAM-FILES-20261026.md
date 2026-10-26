@@ -34,6 +34,34 @@ are collected; an already failed or early-exited unit is then rejected
 explicitly. This closes the run74 path where `CalledProcessError` bypassed the
 diagnostic summary.
 
+Native ARM64 Actions40263745661 at
+`19c7ea18ea2a6f87db0b400c1ca7a9bd300066ed` passes the expanded13 release,
+13 ASan/UBSan and six Python checks plus the300-byte listener fixture.
+Artifact12624744782 passes ZIP CRC, exact two-AArch64-ELF manifest and license
+checks; runtime SHA256 is
+`20ab0e426f023d0f97f2257643103b21aa99d56b8114ff1d93fbd206af2b9880`.
+Fresh exact-rootfs QEMU-user RPATH/loader/`-W` startup still opens no device and
+performs no ioctl. The expanded private rehearsal archive passes all931-destination
+and real UID65534 read checks. These are offline results, not run75 eligibility.
+
+Bounded run75 then completed its28-second service observation with a single
+successful attach,2648 successful reverse invokes, active pre-stop state and a
+clean stop. Android returned automatically in134.6s; all seven baselines
+matched, and display/GPU/ordinary-user desktop regressions passed. The complete
+daemon log had zero write-mode refusals. The diagnostic result still failed its
+reviewed error bound because method33 (`frename`) was unsupported repeatedly
+(436 classified unsupported/refused lines), alongside37 missing configuration or
+OEM lookups. The captured failure tail contains no original registry-DIR or
+camera-registry write refusal and no large-input cutoff.
+
+Phone overlay0008 implements method33 for the bounded copy-on-write registry.
+It admits only basenames below the exact persist sensor registry directory or
+the exact camera registry path, atomically renames only RAM data, preserves
+source handles, and refuses replacement of an active destination. Limits are512
+in-memory files,16MiB aggregate,1MiB per file and64 handles. Host release and
+ASan/UBSan tests pass; native ARM64 and a new source-bound review remain
+mandatory. Run75 stays halted.
+
 ## Data and handles
 
 The backend holds at most four files in process memory. Each file is capped at
