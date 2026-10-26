@@ -127,12 +127,19 @@ def interpret(mode,output):
 def run_probe(mode,state=STATE,run=subprocess.run):
     unit,args=command(mode,state)
     status=None
+    failed=True
     try:
         result=run(args,capture_output=True,text=True,timeout=26)
+        failed=bool(result.returncode)
         if result.returncode:status=execution_status(unit,run)
     finally:
         try:
             stopped=run(['/usr/bin/systemctl','stop',unit],capture_output=True,text=True,timeout=5)
+            if failed:
+                # Execution status is already captured. This clears only the
+                # transient unit state; hardware stop ledgers are never reset.
+                reset=run(['/usr/bin/systemctl','reset-failed',unit],capture_output=True,text=True,timeout=1)
+                if reset.returncode not in (0,1,5):raise ValueError('SSC transient unit cleanup failed')
         finally:
             inactive=run(['/usr/bin/systemctl','is-active',unit],capture_output=True,text=True,timeout=4)
         if stopped.returncode not in (0,5) or inactive.returncode not in (3,4) or inactive.stdout.strip() not in ('inactive','unknown'):

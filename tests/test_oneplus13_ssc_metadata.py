@@ -18,6 +18,7 @@ class ControlTests(unittest.TestCase):
                 if fail:raise fail
                 return SimpleNamespace(returncode=0,stdout=output,stderr='')
             if command[1]=='stop':return SimpleNamespace(returncode=0,stdout='',stderr='')
+            if command[1]=='reset-failed':return SimpleNamespace(returncode=0,stdout='',stderr='')
             return SimpleNamespace(returncode=0 if active else 3,stdout='active' if active else 'inactive')
         return run
     def test_discovery_requires_all_types_and_cleanup(self):
@@ -26,10 +27,10 @@ class ControlTests(unittest.TestCase):
         self.assertEqual([c[1] for c in self.calls[1:]],['stop','is-active'])
     def test_discovery_timeout_still_stops(self):
         with self.assertRaises(subprocess.TimeoutExpired):m.run_probe('discover',run=self.runner(fail=subprocess.TimeoutExpired('probe',26)))
-        self.assertEqual([c[1] for c in self.calls[1:]],['stop','is-active'])
+        self.assertEqual([c[1] for c in self.calls[1:]],['stop','reset-failed','is-active'])
     def test_failed_launch_still_stops(self):
         with self.assertRaises(OSError):m.run_probe('discover',run=self.runner(fail=OSError('synthetic launch failure')))
-        self.assertEqual([c[1] for c in self.calls[1:]],['stop','is-active'])
+        self.assertEqual([c[1] for c in self.calls[1:]],['stop','reset-failed','is-active'])
     def test_unit_still_active_refused(self):
         with self.assertRaises(ValueError):m.run_probe('discover',run=self.runner(active=True))
     def test_missing_or_duplicate_type_refused(self):
@@ -93,7 +94,7 @@ class ControlTests(unittest.TestCase):
         with self.assertRaises(ValueError) as caught:m.run_probe('discover',run=failed)
         self.assertIn('"ExecMainStatus": 203',str(caught.exception))
         self.assertNotIn('raw stderr',str(caught.exception))
-        self.assertEqual([c[1] for c in self.calls[1:]],['show','stop','is-active'])
+        self.assertEqual([c[1] for c in self.calls[1:]],['show','stop','reset-failed','is-active'])
     def test_private_status_values_are_not_echoed(self):
         def run(cmd,**kw):return SimpleNamespace(returncode=0,stdout='Result=private_value\n')
         self.assertEqual(m.execution_status('synthetic.service',run),{'availability':'unrecognized_status'})
@@ -105,6 +106,15 @@ class ControlTests(unittest.TestCase):
             if cmd[0].endswith('systemd-run'):result.returncode=255
             return result
         with self.assertRaisesRegex(ValueError,'query_failed'):m.run_probe('discover',run=failed)
+        self.assertEqual(self.calls[-1][1],'is-active')
+    def test_transient_reset_timeout_still_checks_and_refuses(self):
+        run=self.runner()
+        def failed(cmd,**kw):
+            if cmd[1]=='reset-failed':self.calls.append(cmd);raise subprocess.TimeoutExpired('reset-failed',1)
+            result=run(cmd,**kw)
+            if cmd[0].endswith('systemd-run'):result.returncode=255
+            return result
+        with self.assertRaises(subprocess.TimeoutExpired):m.run_probe('discover',run=failed)
         self.assertEqual(self.calls[-1][1],'is-active')
     @unittest.skipUnless(__import__('os').name=='posix' and __import__('os').geteuid()==0,'actual root-owned POSIX permissions')
     def test_private_failure_capture_is_exclusive_bounded_and_not_echoed(self):

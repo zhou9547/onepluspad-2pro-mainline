@@ -33,6 +33,7 @@ class CompositeTests(unittest.TestCase):
                 return SimpleNamespace(returncode=0,stdout='',stderr='')
             if command[1]=='is-active':return SimpleNamespace(returncode=0 if active else 3,stdout='active' if active else 'inactive',stderr='')
             if command[1]=='show':return SimpleNamespace(returncode=4,stdout='',stderr='')
+            if command[1]=='reset-failed':return SimpleNamespace(returncode=0,stdout='',stderr='')
             raise AssertionError(command)
         return run
     def probe(self,**kw):return m.metadata_callback(self.fs,ssc,run=self.runner(**kw),clock=self.clock,sleep=self.sleep)
@@ -69,13 +70,13 @@ class CompositeTests(unittest.TestCase):
         self.assertEqual(self.calls,[])
     def test_query_timeout_still_stops_and_checks_state(self):
         with self.assertRaises(subprocess.TimeoutExpired):self.probe(query_error=subprocess.TimeoutExpired('query',16))
-        self.assertEqual([c[1] for c,t in self.calls[1:]],['stop','is-active'])
+        self.assertEqual([c[1] for c,t in self.calls[1:]],['stop','reset-failed','is-active'])
     def test_query_launch_error_still_stops(self):
         with self.assertRaises(OSError):self.probe(query_error=OSError('synthetic launch failure'))
         self.assertEqual(self.calls[-1][0][1],'is-active')
     def test_nonzero_query_still_stops(self):
         with self.assertRaises(ValueError):self.probe(exitcode=1)
-        self.assertEqual([t for c,t in self.calls],[16,2,3,2])
+        self.assertEqual([t for c,t in self.calls],[16,1,3,1,2])
         self.assertEqual(self.calls[-1][0][1],'is-active')
     def test_stop_timeout_still_checks_and_refuses(self):
         with self.assertRaises(subprocess.TimeoutExpired):self.probe(stop_error=subprocess.TimeoutExpired('stop',3))
