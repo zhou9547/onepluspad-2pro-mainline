@@ -1,5 +1,13 @@
 # Technical debt (single register for the phone)
 
+The isolated SSC metadata probe now has an irreversible process send guard,
+real-send rejection tests, original delivery encoding regression and fresh-tar
+host release/ASan+UBSan results (three executables each). Native ARM64 and exact
+rootfs hard-deadline/cleanup checks remain pending; no sensor samples or new
+phone qualification are claimed. See SSC-METADATA-PROBE-20261026.md. The pinned
+original-project chronology is recorded separately; camera support is new
+work, and phone two-AW/MI2S speakers must not inherit Pad six-AW/TDM tuning.
+
 Run79 jointly passed both synthetic ARM64 userspace tests, the actual read-only
 camera-input open, clean reverse-service stop and display/GPU/desktop/platform
 regressions; automatic Android recovery took131.7s with seven baseline matches.
