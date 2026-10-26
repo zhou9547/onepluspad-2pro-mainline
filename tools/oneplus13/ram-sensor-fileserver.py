@@ -106,7 +106,8 @@ def trace_facts(text):
     if len(attach)!=1 or not re.search(r'= 0(?:x0)?(?:\s|$)',attach[0]):
         raise ValueError('Missing single successful attach trace')
     opens=[x for x in text.splitlines() if 'openat(' in x and re.search(r'= [0-9]+(?:\s|$)',x)]
-    registry=any('/sensors/registry"' in x for x in opens)
+    # The original rpcd_builder's SENSORS_REGISTRY includes a trailing '/'.
+    registry=any(re.search(r'/sensors/registry/?"',x) is not None for x in opens)
     config=any('/sensors/sns_reg.conf"' in x for x in opens)
     invoke=sum('ioctl(' in x and '0xc0105203,' in x and re.search(r'= 0(?:x0)?(?:\s|$)',x) is not None for x in text.splitlines())
     return {'attach_ioctl_trace_success':True,'attach_calls':1,'successful_invoke_calls_observed':invoke,
@@ -133,6 +134,15 @@ def service_command(trace):
 def execute(args,seconds=8):
     return subprocess.check_output(args,text=True,stderr=subprocess.STDOUT,timeout=seconds).strip()
 
+def daemon_error_summary(log):
+    lines=log.splitlines()
+    writes=sum(bool(re.match(r'Tried to open .+ for writing$',x)) for x in lines)
+    errors=sum(bool(re.search(r'Could not|Unsupported|Refused request|Unable to|Error|failed|Unknown search directory',x,re.I)) for x in lines)
+    return {'error_lines':errors,'write_refusals':writes,
+            'missing_file_lookups':sum(x.startswith('Could not open ') and x.endswith(': No such file or directory') for x in lines),
+            'unsupported_or_refused_dispatches':sum(bool(re.search(r'Unsupported|Refused request',x,re.I)) for x in lines),
+            'arbitrary_paths_or_file_contents_in_summary':False}
+
 def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic):
     started=False
     try:
@@ -148,9 +158,22 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic):
     if facts.get('ActiveState')!='inactive' or facts.get('MainPID')!='0' or facts.get('Result')!='success':
         raise ValueError('File server stop not clean')
     log=Path(STATE+'/daemon.log').read_text(errors='replace')
-    if re.search(r'Could not|Unsupported|Refused request|Unable to|Error|failed|Unknown search directory',log,re.I):
+    summary=daemon_error_summary(log)
+    trace=Path(STATE+'/syscalls.log').read_text(errors='replace')
+    try:
+        result=trace_facts(trace);trace_failure=None
+    except ValueError as exc:
+        result=None;trace_failure=str(exc)
+    # Save bounded derived facts even when a strict acceptance gate refuses
+    # later. The complete trace was already captured on RAM; do not infer
+    # attach or initial registry reads from an unrelated tail of that trace.
+    print('RAM_SENSOR_FILESERVER_DIAGNOSTIC '+json.dumps({
+       'file_server_cleanly_stopped':True,'daemon_errors':summary,
+       'complete_local_trace_facts':result,'trace_qualification_error':trace_failure,
+       'sensor_stream_requested':False,'acceptance_not_implied':True},sort_keys=True),flush=True)
+    if summary['error_lines'] or summary['write_refusals']:
         raise ValueError('Reverse file service reported unsupported or failed operation')
-    result=trace_facts(Path(STATE+'/syscalls.log').read_text(errors='replace'))
+    if trace_failure is not None:raise ValueError(trace_failure)
     if not result['registry_mapping_open_observed'] or not result['config_mapping_open_observed'] or result['successful_invoke_calls_observed']<3:
         raise ValueError('No successful phone configuration/registry reverse service evidence')
     return {**result,'bounded_observation_seconds':28,'file_server_cleanly_stopped':True,
@@ -187,11 +210,17 @@ def main():
         guard.device_ready(root);guard.guard(root,guard.command)
         os.chown('/dev/fastrpc-adsp-secure',UID,UID);os.chmod('/dev/fastrpc-adsp-secure',0o600)
         state=Path(STATE);state.mkdir(mode=0o700);os.chown(state,UID,UID)
-        facts=serve(a.trace_tool)
-        guard.guard(root,guard.command)
-        if sha(root/guard.POLICY)!=a.policy_sha256:raise ValueError('Module denial policy changed')
-        for name,(value,mode,target) in entries.items():
-            if value is not None and sha(root/name)!=hashlib.sha256(value).hexdigest():raise ValueError('Private data changed after read-only service')
+        try:facts=serve(a.trace_tool)
+        finally:
+            # A refused RPC/file lookup still needs post-service protection
+            # and exact-copy checks before the host requests recovery.
+            guard.guard(root,guard.command)
+            if sha(root/guard.POLICY)!=a.policy_sha256:raise ValueError('Module denial policy changed')
+            for name,(value,mode,target) in entries.items():
+                if value is not None and sha(root/name)!=hashlib.sha256(value).hexdigest():raise ValueError('Private data changed after read-only service')
+            print('RAM_SENSOR_FILESERVER_POSTCONDITIONS '+json.dumps({
+                'no_sensor_clients_remaining':True,'module_policy_unchanged':True,
+                'private_data_bytes_unchanged':True,'acceptance_not_implied':True},sort_keys=True),flush=True)
         result={'scope':'BOUNDED_PRIVATE_PHONE_SENSOR_REVERSE_FILESERVER_ONLY','worker':facts,
                 'sensor_stream_requested':False,'ssc_or_iio_client_started':False,'adsp_restarted':False,
                 'module_unloaded':False,'firmware_or_kernel_replaced':False,'module_policy_unchanged':True,

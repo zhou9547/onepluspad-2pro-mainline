@@ -1,5 +1,33 @@
 # Bounded phone reverse file-server qualification
 
+run73 followed the successful150-test ARM64 and exact-rootfs real-UID/umask
+sandbox/deadline40247176201. The old permission refusal is gone: actual phone
+ODM configurations were opened through reverse RPC, with37 successful invoke
+returns in the saved tail and clean service stop. Strict acceptance still
+refused missing lookups and write requests. Android returned automatically in
+134.0s with seven matching samples; platform regression passed, no streams or
+flash/manual recovery. The single corrected-attempt ledger is halted too.
+
+There were27 requested source-absent vendor-index names,20 containing a literal
+# prefix;11 other missing OEM/board lookups, and two refused writes, including
+the existing registry DIR and camera dump. Do not strip/alias # names, fabricate
+data, discard errors or enable writes as a success shortcut. Passive Android
+metadata for14 actually requested candidates found4 present and10 absent;
+private values/hashes stay local. No library execution or phone write occurred.
+The saved trace tail does not contain the initial attach/registry operations;
+successful later invokes cannot reconstruct those missing facts.
+
+The helper now emits bounded derived facts from its COMPLETE local trace before
+any log-based refusal, preserving the strict failure. It reports error counts
+without arbitrary paths/data, explicitly refuses write-mode warnings and checks
+private-copy/module-policy/client postconditions even on rejected service exit.
+The original rpcd_builder maps registry with a trailing slash; its trace match
+accepts that exact directory with or without the slash, rejects neighboring
+names, and remains separate from proof of registry use or sensor data. These
+offline diagnostic improvements do not qualify another hardware attempt. First
+review read-only virtual-FS/write ABI, actual OEM DSP inputs and board mapping;
+no dynamic DSP ELF or SSC/iio client has been approved here.
+
 Offline follow-up40246612604 passed148 native ARM64 tests and ordinary exact
 rootfs handoff, but the expanded assembled-rootfs observer hit its old180second
 emulator deadline at180.806s, immediately after native handoff selftest180.290s.

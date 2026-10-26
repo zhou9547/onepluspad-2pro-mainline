@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import copy,hashlib,importlib.util,io,json,os,stat,struct,tarfile,tempfile,unittest
+import contextlib
 from pathlib import Path
 from unittest.mock import patch
 P=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-sensor-fileserver.py'
@@ -93,6 +94,13 @@ class Archive(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(directory.stat().st_mode),0o700)
 
 class Trace(unittest.TestCase):
+    def test_error_summary_preserves_refusals_without_private_paths(self):
+        private='/private/unit/unique-data'
+        result=m.daemon_error_summary('Could not open '+private+': No such file or directory\nTried to open '+private+' for writing\nRefused request on handle 1\n')
+        self.assertEqual(result['error_lines'],2)
+        self.assertEqual(result['write_refusals'],1)
+        self.assertEqual(result['missing_file_lookups'],1)
+        self.assertNotIn(private,json.dumps(result))
     def test_success_evidence_keeps_remote_release_unclaimed(self):
         result=m.trace_facts(TRACE)
         self.assertEqual(result['attach_calls'],1)
@@ -106,6 +114,10 @@ class Trace(unittest.TestCase):
     def test_failed_file_open_is_not_a_mapping_pass(self):
         result=m.trace_facts(TRACE.replace('O_RDONLY|O_DIRECTORY) = 4','O_RDONLY|O_DIRECTORY) = -1 ENOENT'))
         self.assertFalse(result['registry_mapping_open_observed'])
+    def test_original_builder_trailing_slash_registry_mapping(self):
+        self.assertTrue(m.trace_facts(TRACE.replace('/sensors/registry"','/sensors/registry/"'))['registry_mapping_open_observed'])
+    def test_neighbor_registry_name_is_not_the_required_mapping(self):
+        self.assertFalse(m.trace_facts(TRACE.replace('/sensors/registry"','/sensors/registry-other"'))['registry_mapping_open_observed'])
 
 class BoundedService(unittest.TestCase):
     def test_service_has_bounds_and_no_client_or_dynamic_pd(self):
@@ -141,5 +153,22 @@ class BoundedService(unittest.TestCase):
         with self.assertRaises(ValueError):self.run_service(result='timeout')
     def test_unsupported_reverse_method_refuses_pass(self):
         with self.assertRaises(ValueError):self.run_service(log='Refused request on handle 1')
+    def test_write_refusal_cannot_silently_pass(self):
+        with self.assertRaises(ValueError):self.run_service(log='Tried to open /private/registry/DIR for writing')
+    def test_complete_trace_diagnostic_precedes_missing_lookup_failure(self):
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output),self.assertRaises(ValueError):
+            self.run_service(log='Could not open optional.so: No such file or directory')
+        line=next(x for x in output.getvalue().splitlines() if x.startswith('RAM_SENSOR_FILESERVER_DIAGNOSTIC '))
+        facts=json.loads(line.split(' ',1)[1])
+        self.assertTrue(facts['complete_local_trace_facts']['attach_ioctl_trace_success'])
+        self.assertEqual(facts['daemon_errors']['missing_file_lookups'],1)
+        self.assertTrue(facts['acceptance_not_implied'])
+    def test_partial_trace_is_evidence_failure_not_acceptance(self):
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output),self.assertRaises(ValueError):self.run_service(trace=TRACE.splitlines()[-1])
+        facts=json.loads(output.getvalue().split(' ',1)[1])
+        self.assertIsNone(facts['complete_local_trace_facts'])
+        self.assertIsNotNone(facts['trace_qualification_error'])
 
 if __name__=='__main__':unittest.main()
