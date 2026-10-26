@@ -1,0 +1,95 @@
+# SPDX-License-Identifier: GPL-2.0-only
+import hashlib,importlib.util,io,json,subprocess,tarfile,tempfile,unittest
+from pathlib import Path
+from types import SimpleNamespace
+
+path=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-ssc-metadata.py'
+spec=importlib.util.spec_from_file_location('ssc_metadata',path)
+m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+GOOD='\n'.join('SSC_PHONE_METADATA type='+t+' available=yes completed=yes' for t in sorted(m.TYPES))+'\nSSC_PHONE_METADATA_RESULT complete=yes samples_requested=no cleanup_returned=yes\n'
+VERIFY='SSC_PHONE_METADATA_LOCK_VERIFIED_NO_QRTR\nok 6 /phone/06-one-way-lock\nPHONE_METADATA_SEND_GUARD_BLOCKED_ALL_UNREVIEWED_REQUESTS_BEFORE_QMI\n'
+
+class ControlTests(unittest.TestCase):
+    def runner(self,output=GOOD,fail=None,active=False):
+        self.calls=[]
+        def run(command,**kw):
+            self.calls.append(command)
+            if command[0].endswith('systemd-run'):
+                if fail:raise fail
+                return SimpleNamespace(returncode=0,stdout=output,stderr='')
+            if command[1]=='stop':return SimpleNamespace(returncode=0,stdout='',stderr='')
+            return SimpleNamespace(returncode=0 if active else 3,stdout='active' if active else 'inactive')
+        return run
+    def test_discovery_requires_all_types_and_cleanup(self):
+        facts=m.run_probe('discover',run=self.runner())
+        self.assertEqual(facts['metadata_available'],sorted(m.TYPES));self.assertTrue(facts['unit_inactive'])
+        self.assertEqual([c[1] for c in self.calls[1:]],['stop','is-active'])
+    def test_discovery_timeout_still_stops(self):
+        with self.assertRaises(subprocess.TimeoutExpired):m.run_probe('discover',run=self.runner(fail=subprocess.TimeoutExpired('probe',26)))
+        self.assertEqual([c[1] for c in self.calls[1:]],['stop','is-active'])
+    def test_failed_launch_still_stops(self):
+        with self.assertRaises(OSError):m.run_probe('discover',run=self.runner(fail=OSError('synthetic launch failure')))
+        self.assertEqual([c[1] for c in self.calls[1:]],['stop','is-active'])
+    def test_unit_still_active_refused(self):
+        with self.assertRaises(ValueError):m.run_probe('discover',run=self.runner(active=True))
+    def test_missing_or_duplicate_type_refused(self):
+        for output in (GOOD.replace('type=gyro','type=mag'),GOOD.replace('available=yes','available=no',1),GOOD.replace('cleanup_returned=yes','cleanup_returned=no')):
+            with self.subTest(output=output),self.assertRaises(ValueError):m.interpret('discover',output)
+    def test_verify_is_network_isolated(self):
+        _,command=m.command('verify');self.assertIn('--property=PrivateNetwork=yes',command)
+        self.assertIn('--property=RestrictAddressFamilies=AF_UNIX',command)
+        self.assertNotIn('--property=PrivateNetwork=no',command)
+        self.assertEqual(m.run_probe('verify',run=self.runner(VERIFY))['native_guard_checks_passed'],3)
+    def test_discover_has_only_qrtr_and_unix_families(self):
+        _,command=m.command('discover')
+        self.assertIn('--property=RestrictAddressFamilies=AF_UNIX AF_QIPCRTR',command)
+        self.assertIn('--property=RuntimeMaxSec=20s',command);self.assertIn('--property=KillMode=control-group',command)
+        self.assertIn('--property=PrivateDevices=yes',command);self.assertIn('--property=DevicePolicy=closed',command)
+        self.assertIn('--setenv=LD_LIBRARY_PATH='+str(m.STATE/'probe'),command)
+    def test_oversized_output_refused(self):
+        with self.assertRaises(ValueError):m.interpret('discover',GOOD+'x'*32768)
+    def test_nonzero_exit_rejected_after_stop(self):
+        run=self.runner()
+        def failed(cmd,**kw):
+            result=run(cmd,**kw)
+            if cmd[0].endswith('systemd-run'):result.returncode=1
+            return result
+        with self.assertRaises(ValueError):m.run_probe('discover',run=failed)
+        self.assertEqual(self.calls[-1][1],'is-active')
+    def test_stop_timeout_still_queries_state_and_refuses(self):
+        run=self.runner()
+        def stop_timeout(cmd,**kw):
+            if len(cmd)>1 and cmd[1]=='stop':
+                self.calls.append(cmd);raise subprocess.TimeoutExpired('stop',5)
+            return run(cmd,**kw)
+        with self.assertRaises(subprocess.TimeoutExpired):m.run_probe('discover',run=stop_timeout)
+        self.assertEqual(self.calls[-1][1],'is-active')
+
+class ArchiveTests(unittest.TestCase):
+    def fixture(self,root,symlink=False):
+        manifest={'scope':'PUBLIC_PHONE_SSC_METADATA_ONLY_PROBE','files':{},'one_way_send_guard':True,
+          'samples_or_streams_allowed':False,'private_inputs_included':False,'hardware_qualified':False}
+        archive=root/'synthetic.tar.gz'
+        with tarfile.open(archive,'w:gz') as tf:
+            for n in sorted(m.NAMES):
+                data=bytearray(32);data[:6]=b'\x7fELF\x02\x01';data[18:20]=(183).to_bytes(2,'little')
+                info=tarfile.TarInfo(n);info.size=len(data);info.mode=0o755
+                if symlink:info.type=tarfile.SYMTYPE;info.linkname='/tmp/never-follow'
+                tf.addfile(info,io.BytesIO(data))
+                manifest['files'][n]={'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),'mode':0o755}
+        manifest['archive_sha256']=m.sha(archive);return archive,manifest
+    def test_exact_synthetic_inventory(self):
+        with tempfile.TemporaryDirectory() as d:
+            archive,manifest=self.fixture(Path(d));self.assertEqual(set(m.entries(archive,manifest)),m.NAMES)
+    def test_symlink_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            archive,manifest=self.fixture(Path(d),True)
+            with self.assertRaises(ValueError):m.entries(archive,manifest)
+    def test_changed_capability_or_hash_refused(self):
+        with tempfile.TemporaryDirectory() as d:
+            archive,manifest=self.fixture(Path(d));manifest['samples_or_streams_allowed']=True
+            with self.assertRaises(ValueError):m.entries(archive,manifest)
+            manifest['samples_or_streams_allowed']=False;manifest['archive_sha256']='0'*64
+            with self.assertRaises(ValueError):m.entries(archive,manifest)
+
+if __name__=='__main__':unittest.main()

@@ -5,6 +5,10 @@ with their original signoffs and source URLs/hashes in sources.json. Codex
 prepared the selection, source-bound builder and isolated workflow; this is
 not an upstream merged camera implementation or a claim of phone testing.
 
+The first native W=1/-Werror build found an unused local left by the external
+PHY conversion. A separate Codex correction removes that single declaration;
+the original23 patches retain their hashes. The compiler gate stays enabled.
+
 The sequence is X1E PHY v13 (two patches), CAMSS external PHY v12 (six),
 Kaanapali v15 (eight), then SM8750 v6 (seven). All23 apply with fuzz=0 on
 fresh affected source files from the actual phone kernel pin. Native object

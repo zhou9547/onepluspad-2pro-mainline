@@ -167,5 +167,13 @@
   ],
   "phone_dt_included": false,
   "phone_calibration_included": false,
-  "hardware_qualified": false
+  "hardware_qualified": false,
+  "local_fixes": [
+    {
+      "file": "fixes/0001-remove-obsolete-external-phy-local.patch",
+      "sha256": "5887604ea73fceb4bbbf27253e0185c4bdb0bcf1a9a876168a2c0ef4dc1681ce",
+      "reason": "remove unused declaration observed by native W=1/-Werror compile",
+      "author": "Codex <codex@openai.com>"
+    }
+  ]
 }

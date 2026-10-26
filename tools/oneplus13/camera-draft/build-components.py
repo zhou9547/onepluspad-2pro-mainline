@@ -33,7 +33,8 @@ def main():
     run(['git','-C',kernel,'fetch','--depth','1','origin',PIN],timeout=240)
     run(['git','-C',kernel,'checkout','--detach','FETCH_HEAD'],timeout=180)
     if run(['git','-C',kernel,'rev-parse','HEAD']).strip()!=PIN:raise ValueError('Kernel pin mismatch')
-    for entry in lock['patches']:
+    if len(lock.get('local_fixes',[]))!=1:raise ValueError('Missing reviewed compiler correction')
+    for entry in lock['patches']+lock['local_fixes']:
         name=Path(entry['file'])
         if name.is_absolute() or '..' in name.parts:raise ValueError('Unsafe patch name')
         patch=HERE/name
@@ -74,7 +75,7 @@ def main():
         files[name]={'sha256':sha(path),'bytes':len(data)}
     (out/'kernel.config').write_text(cfg)
     proof={'scope':'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
-       'kernel_pin':PIN,'patches':lock['patches'],'aarch64_objects':files,
+       'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
        'warning_errors_enabled':True,'phone_dts_or_candidate_changed':False,
        'module_install_or_boot_image_created':False,'firmware_or_private_data_included':False,
        'camera_sensor_driver_and_board_graph_complete':False,

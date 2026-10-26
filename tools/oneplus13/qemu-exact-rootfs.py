@@ -32,11 +32,16 @@ def main():
     p.add_argument('--assembled-manifest',type=Path,help='Public matched-rootfs assembly provenance')
     p.add_argument('--rpc-selftest-archive',type=Path,help='Public native ARM64 mock-test archive, never phone data')
     p.add_argument('--rpc-selftest-manifest',type=Path)
+    p.add_argument('--ssc-probe-archive',type=Path,help='Public SSC guard fixtures; QRTR queries forbidden in QEMU')
+    p.add_argument('--ssc-probe-manifest',type=Path)
     a=p.parse_args();kernel=a.kernel.resolve();rootfs=a.rootfs.resolve();out=a.output.resolve()
     shared_cec_test=False
     mock_tests=bool(a.rpc_selftest_archive or a.rpc_selftest_manifest)
+    ssc_tests=bool(a.ssc_probe_archive or a.ssc_probe_manifest)
     if mock_tests and not (a.rpc_selftest_archive and a.rpc_selftest_manifest and a.assembled_manifest):
         raise ValueError('Mock tests require both public archive inputs and matched rootfs provenance')
+    if ssc_tests and not (a.ssc_probe_archive and a.ssc_probe_manifest and a.assembled_manifest):
+        raise ValueError('SSC fixtures require both public archive inputs and matched rootfs provenance')
     manifest=json.loads((kernel/'manifest.json').read_text())
     assert manifest['integration_commit']==EXPECTED_KERNEL_COMMIT
     assert manifest['kernel_release']==EXPECTED_RELEASE
@@ -137,6 +142,24 @@ def main():
                 b' --manifest-sha256 '+sha256(a.rpc_selftest_manifest).encode()+b'\n'
                 b'echo ONEPLUS13_RPC_MOCK_SELFTEST_QEMU_OK\n')
         files['bin/oneplus13-qemu-install']['data']=helper.replace(handoff,checks+handoff,1)
+    if ssc_tests:
+        assert shared_cec_test and not out.exists(),'Use a fresh emulator-only output'
+        ssc_helper=REPO/'tools/oneplus13/ram-ssc-metadata.py'
+        ssc_fixture=REPO/'tools/oneplus13/qemu-ssc-metadata-selftest.py'
+        spec=importlib.util.spec_from_file_location('ssc_probe_contract',ssc_helper)
+        ssc=importlib.util.module_from_spec(spec);spec.loader.exec_module(ssc)
+        ssc.entries(a.ssc_probe_archive,json.loads(a.ssc_probe_manifest.read_text()))
+        fixtures={'ram-ssc-metadata.py':ssc_helper,'qemu-ssc-metadata-selftest.py':ssc_fixture,
+                  'ssc-probe.tar.gz':a.ssc_probe_archive,'ssc-probe.json':a.ssc_probe_manifest}
+        for name,path in fixtures.items():
+            files['bin/'+name]={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,'data':path.read_bytes()}
+        helper=files['bin/oneplus13-qemu-install']['data']
+        copies=b''.join(b'cp /bin/'+n.encode()+b' /newroot/run/oneplus13/'+n.encode()+b'\n' for n in fixtures)
+        helper=helper.replace(anchor,anchor+copies,1)
+        checks=(b'python3 /run/oneplus13/qemu-ssc-metadata-selftest.py --archive-sha256 '+sha256(a.ssc_probe_archive).encode()+
+                b' --manifest-sha256 '+sha256(a.ssc_probe_manifest).encode()+b'\n'
+                b'echo ONEPLUS13_SSC_GUARD_SANDBOX_QEMU_OK\n')
+        files['bin/oneplus13-qemu-install']['data']=helper.replace(handoff,checks+handoff,1)
     files['qemu-matching-modules.tar.gz']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
                                            'data':(kernel/'modules.tar.gz').read_bytes()}
     out.mkdir(parents=True,exist_ok=True);ramdisk=out/'initramfs-qemu-only.cpio.gz'
@@ -171,6 +194,7 @@ def main():
     if shared_cec_test:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),
                                     'ONEPLUS13_SENSOR_FILESERVER_SANDBOX_QEMU_OK')
     if mock_tests:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_RPC_MOCK_SELFTEST_QEMU_OK')
+    if ssc_tests:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_SSC_GUARD_SANDBOX_QEMU_OK')
     passed=rc==0 and all(x in log for x in markers)
     if passed:passed=all(log.index(x)<log.index(y) for x,y in zip(markers,markers[1:]))
     count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
@@ -185,6 +209,8 @@ def main():
             'shared_ubwc_configuration_prerequisite_tested':shared_cec_test,
             'synthetic_sensor_fileserver_sandbox_tested':shared_cec_test,
             'synthetic_rpc_mock_tests_sandboxed':mock_tests,
+            'synthetic_ssc_guard_tests_sandboxed':ssc_tests,
+            'ssc_qrtr_discovery_executed':False,
             'qemu_only_deadline_seconds':300 if shared_cec_test else 180,
             'phone_recovery_deadline_modified':False,
             'returncode':rc,'required_markers':{x:x in log for x in markers},
