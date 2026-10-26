@@ -357,8 +357,10 @@ Default-off phone overlay0006 now integrates bounded volatile copies for the two
 run73 write paths. Host v18 passes13 release +13 ASan/UBSan C tests and6 Python
 checks. The exact method5 wire test and storage LSan test pass; full-suite leak
 detection remains disabled because the original root-tree builder lacks a
-destructor. Native ARM64 and exact-rootfs checks remain pending. No phone
-operation or run74 qualification. See PHONE-RPC-RAM-FILES-20261026.md.
+destructor. Native ARM64 Actions40260814820 and artifact12624705085 pass; a fresh
+exact-rootfs QEMU-user RPATH/loader/`-W` CLI probe also passes without device
+access. No phone operation or run74 qualification. See
+PHONE-RPC-RAM-FILES-20261026.md.
 
 The original read-only VFS alias/parent cleanup bug is reproduced with ASan and
 fixed in phone overlay0005 before any RAM write backend. Fresh host build v8

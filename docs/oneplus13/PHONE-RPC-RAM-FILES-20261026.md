@@ -67,7 +67,15 @@ source patch, an undeclared builder variable, a test call arity, wrong fixture
 path, uninitialized error output, and an incorrect EOF assertion. Each output is
 retained privately. None was published, installed or used for a phone boot.
 
-Native ARM64 CI, artifact integrity and a fresh exact-rootfs QEMU-user probe are
-still required. This work does not qualify reverse writes on a phone, sensor
-streams, CHRE mapping, missing OEM data or the halted run73 acceptance. No run74
-plan exists.
+Native ARM64 Actions40260814820 at
+`8a724331f292c40c03a7821698212d161ed9f884` passes the same13 release,13
+ASan/UBSan and six Python checks. Artifact12624705085 passes ZIP CRC, the exact
+two-AArch64-ELF manifest and license checks; runtime SHA256 is
+`9fe629152041e9a83b8a6ad7b9c9d328b9c7ca2f8273dbb0913a91a8b7ac1cf9`.
+A fresh extraction of the exact phone rootfs system libraries passes QEMU-user
+normal-RPATH startup, loader resolution and `-W` usage reporting. Its trace opens
+no device and performs no ioctl. The baseline runtime and phone images were not
+replaced.
+
+This work does not qualify reverse writes on a phone, sensor streams, CHRE
+mapping, missing OEM data or the halted run73 acceptance. No run74 plan exists.
