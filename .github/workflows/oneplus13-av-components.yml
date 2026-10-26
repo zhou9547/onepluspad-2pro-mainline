@@ -5,6 +5,9 @@ on:
     paths:
       - .github/workflows/oneplus13-av-components.yml
       - tools/oneplus13/camera-draft/**
+      - tools/oneplus13/review-camera-board-map.py
+      - tests/test_oneplus13_camera_board_map.py
+      - docs/oneplus13/STATUS.md
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +29,8 @@ jobs:
           test "$(uname -m)" = aarch64
       - name: Compile fixed camera prerequisites and actual amplifier functions
         run: python3 tools/oneplus13/camera-draft/build-components.py --output out/av-components
+      - name: Run camera board-map contract tests without private FDT
+        run: python3 -m unittest discover -s tests -p test_oneplus13_camera_board_map.py -v
       - name: Preserve component review evidence only
         if: always()
         uses: actions/upload-artifact@v4
