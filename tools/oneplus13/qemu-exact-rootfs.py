@@ -185,10 +185,13 @@ def main():
     spec=importlib.util.spec_from_file_location('server',REPO/'tools/oneplus13/serve-rootfs.py')
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
     stats={'bytes':0,'parts':[]}
-    server=module.ThreadingHTTPServer(('127.0.0.1',8000),module.handler(rootfs,stats));server.daemon_threads=True
-    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    use_http=not bool(a.rootfs_manifest)
+    server=thread=None
+    if use_http:
+        server=module.ThreadingHTTPServer(('127.0.0.1',8000),module.handler(rootfs,stats));server.daemon_threads=True
+        thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     cmdline=('console=ttyAMA0 rdinit=/init panic=15 oneplus13.desktop=1 '
-             'oneplus13.desktop.qemu=1 oneplus13.desktop.qemu-http=1 '
+             'oneplus13.desktop.qemu=1 '+('oneplus13.desktop.qemu-http=1 ' if use_http else '')+
              f'oneplus13.rootfs.sha256={expected_sha} oneplus13.rootfs.bytes={rootfs.stat().st_size}')
     command=['qemu-system-aarch64','-machine','virt','-cpu','cortex-a76','-m','6144','-smp','2',
              '-nographic','-no-reboot','-nic','none','-kernel',str(kernel/'Image'),'-initrd',str(ramdisk),
@@ -202,7 +205,8 @@ def main():
     except subprocess.TimeoutExpired as exc:
         log=exc.stdout or b'';log=log.decode(errors='replace') if isinstance(log,bytes) else log;rc=124
     finally:
-        server.shutdown();server.server_close();thread.join()
+        if use_http:
+            server.shutdown();server.server_close();thread.join()
     (out/'qemu.log').write_text(log)
     markers=['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED','ONEPLUS13_NATIVE_RUNTIME_GUARDS_OFFLINE_OK',
              'ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK','ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK',
@@ -216,8 +220,9 @@ def main():
         markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_SSC_GUARD_SANDBOX_QEMU_OK')
     passed=rc==0 and all(x in log for x in markers)
     if passed:passed=all(log.index(x)<log.index(y) for x,y in zip(markers,markers[1:]))
-    count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
-    passed=passed and stats['bytes']==rootfs.stat().st_size and stats['parts']==list(range(count))
+    if use_http:
+        count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
+        passed=passed and stats['bytes']==rootfs.stat().st_size and stats['parts']==list(range(count))
     report={'scope':'QEMU_EXACT_ROOTFS_HANDOFF_ONLY','phone_operations':0,'hardware_tested':False,
             'rootfs_sha256':expected_sha,'rootfs_bytes':rootfs.stat().st_size,
             'kernel_integration_commit':EXPECTED_KERNEL_COMMIT,'kernel_release':EXPECTED_RELEASE,
