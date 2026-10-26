@@ -135,7 +135,7 @@ class BoundedService(unittest.TestCase):
         self.assertNotIn('-p',cmd);self.assertNotIn('-c',cmd)
         self.assertIn('-W',cmd)
         self.assertIn('raw=ioctl',cmd)
-    def run_service(self,active='active',result='success',log='',trace=TRACE,diagnostic=False,show_error=False,launch_timeout=False):
+    def run_service(self,active='active',result='success',log='',trace=TRACE,diagnostic=False,show_error=False,launch_timeout=False,hook=None,hook_advance=0):
         calls=[];now=[0];stopped=[False]
         self.last_calls=calls
         def run(args,seconds=8):
@@ -153,9 +153,15 @@ class BoundedService(unittest.TestCase):
                 return 'ActiveState=active\nSubState=running\nMainPID=123\nResult=success'
             raise AssertionError(args)
         def sleep(value):now[0]+=value
+        self.hook_calls=0
+        def during_active():
+            self.hook_calls+=1
+            hook()
+            now[0]+=hook_advance
         def contents(path,*a,**k):return trace if str(path).endswith('syscalls.log') else log
         with patch.object(m.Path,'read_text',contents):
-            answer=m.serve('/run/trace',run,sleep,lambda:now[0],diagnostic=diagnostic)
+            answer=m.serve('/run/trace',run,sleep,lambda:now[0],diagnostic=diagnostic,
+                           during_active=during_active if hook is not None else None)
         return answer,calls
     def test_success_stops_once_before_acceptance(self):
         answer,calls=self.run_service()
@@ -235,5 +241,18 @@ class BoundedService(unittest.TestCase):
         facts=json.loads(output.getvalue().split(' ',1)[1])
         self.assertIsNone(facts['complete_local_trace_facts'])
         self.assertIsNotNone(facts['trace_qualification_error'])
+    def test_reviewed_callback_runs_once_while_active(self):
+        answer,_=self.run_service(hook=lambda:None,hook_advance=4)
+        self.assertEqual(self.hook_calls,1);self.assertTrue(answer['file_server_cleanly_stopped'])
+    def test_callback_failure_still_stops_file_service(self):
+        def failed():raise ValueError('synthetic metadata refusal')
+        with self.assertRaises(ValueError):self.run_service(hook=failed)
+        self.assertEqual(sum(a[1]=='stop' for a,s in self.last_calls if len(a)>1),1)
+    def test_callback_overrun_stops_and_refuses_pass(self):
+        with self.assertRaises(ValueError):self.run_service(hook=lambda:None,hook_advance=29)
+        self.assertEqual(sum(a[1]=='stop' for a,s in self.last_calls if len(a)>1),1)
+    def test_inactive_service_cannot_start_callback(self):
+        with self.assertRaises(ValueError):self.run_service(active='inactive',hook=lambda:None)
+        self.assertEqual(self.hook_calls,0)
 
 if __name__=='__main__':unittest.main()

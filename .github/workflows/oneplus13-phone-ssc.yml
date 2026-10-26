@@ -9,6 +9,10 @@ on:
       - tools/oneplus13/ram-ssc-metadata.py
       - tools/oneplus13/qemu-ssc-metadata-selftest.py
       - tests/test_oneplus13_ssc_metadata.py
+      - tools/oneplus13/ram-sensor-discovery.py
+      - tools/oneplus13/ram-sensor-fileserver.py
+      - tools/oneplus13/qemu-sensor-discovery-selftest.py
+      - tests/test_oneplus13_sensor_discovery.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -34,6 +38,8 @@ jobs:
       - name: Build guarded probe and test without QRTR or hardware
         run: |
           python3 -m unittest discover -s tests -p test_oneplus13_ssc_metadata.py -v
+          python3 -m unittest discover -s tests -p test_oneplus13_sensor_fileserver.py -v
+          python3 -m unittest discover -s tests -p test_oneplus13_sensor_discovery.py -v
           python3 tools/oneplus13/build-phone-ssc-probe.py --meson /tmp/phone-ssc-meson/bin/meson --output out/phone-ssc
       - name: Preserve public source evidence and isolated probe
         if: always()

@@ -150,7 +150,9 @@ def main():
         ssc=importlib.util.module_from_spec(spec);spec.loader.exec_module(ssc)
         ssc.entries(a.ssc_probe_archive,json.loads(a.ssc_probe_manifest.read_text()))
         fixtures={'ram-ssc-metadata.py':ssc_helper,'qemu-ssc-metadata-selftest.py':ssc_fixture,
-                  'ssc-probe.tar.gz':a.ssc_probe_archive,'ssc-probe.json':a.ssc_probe_manifest}
+                  'ssc-probe.tar.gz':a.ssc_probe_archive,'ssc-probe.json':a.ssc_probe_manifest,
+                  'ram-sensor-discovery.py':REPO/'tools/oneplus13/ram-sensor-discovery.py',
+                  'qemu-sensor-discovery-selftest.py':REPO/'tools/oneplus13/qemu-sensor-discovery-selftest.py'}
         for name,path in fixtures.items():
             files['bin/'+name]={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,'data':path.read_bytes()}
         helper=files['bin/oneplus13-qemu-install']['data']
@@ -158,6 +160,8 @@ def main():
         helper=helper.replace(anchor,anchor+copies,1)
         checks=(b'python3 /run/oneplus13/qemu-ssc-metadata-selftest.py --archive-sha256 '+sha256(a.ssc_probe_archive).encode()+
                 b' --manifest-sha256 '+sha256(a.ssc_probe_manifest).encode()+b'\n'
+                b'python3 /run/oneplus13/qemu-sensor-discovery-selftest.py\n'
+                b'echo ONEPLUS13_SENSOR_DISCOVERY_COMPOSITE_QEMU_OK\n'
                 b'echo ONEPLUS13_SSC_GUARD_SANDBOX_QEMU_OK\n')
         files['bin/oneplus13-qemu-install']['data']=helper.replace(handoff,checks+handoff,1)
     files['qemu-matching-modules.tar.gz']={'mode':stat.S_IFREG|0o600,'major':0,'minor':0,
@@ -194,7 +198,9 @@ def main():
     if shared_cec_test:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),
                                     'ONEPLUS13_SENSOR_FILESERVER_SANDBOX_QEMU_OK')
     if mock_tests:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_RPC_MOCK_SELFTEST_QEMU_OK')
-    if ssc_tests:markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_SSC_GUARD_SANDBOX_QEMU_OK')
+    if ssc_tests:
+        markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_SENSOR_DISCOVERY_COMPOSITE_QEMU_OK')
+        markers.insert(markers.index('ONEPLUS13_DESKTOP_HANDOFF_OK'),'ONEPLUS13_SSC_GUARD_SANDBOX_QEMU_OK')
     passed=rc==0 and all(x in log for x in markers)
     if passed:passed=all(log.index(x)<log.index(y) for x,y in zip(markers,markers[1:]))
     count=(rootfs.stat().st_size+module.CHUNK-1)//module.CHUNK
@@ -210,6 +216,7 @@ def main():
             'synthetic_sensor_fileserver_sandbox_tested':shared_cec_test,
             'synthetic_rpc_mock_tests_sandboxed':mock_tests,
             'synthetic_ssc_guard_tests_sandboxed':ssc_tests,
+            'synthetic_concurrent_metadata_and_reverse_units_tested':ssc_tests,
             'ssc_qrtr_discovery_executed':False,
             'qemu_only_deadline_seconds':300 if shared_cec_test else 180,
             'phone_recovery_deadline_modified':False,

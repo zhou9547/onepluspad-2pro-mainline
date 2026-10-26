@@ -89,6 +89,20 @@ def run_probe(mode,state=STATE,run=subprocess.run):
     return {'scope':'BOUNDED_SSC_METADATA_ONLY','mode':mode,'uid':65534,'unit_inactive':True,
             'measurement_commands_allowed':False,'peripheral_hardware_qualification_implied':False,**facts}
 
+def install(files,state=STATE):
+    if state.exists() or state.is_symlink():raise ValueError('Preserve prior probe evidence')
+    for parent in state.parents:
+        if parent==Path('/'):break
+        if (parent.is_symlink() or not parent.is_dir() or parent.stat().st_uid!=0
+            or parent.stat().st_mode&0o022 or not parent.stat().st_mode&stat.S_IXOTH):
+            raise ValueError('Unexpected probe ancestry')
+    state.mkdir(mode=0o755);state.chmod(0o755)
+    for name,data in files.items():
+        path=state/name
+        path.parent.mkdir(mode=0o755,exist_ok=True);path.parent.chmod(0o755)
+        with path.open('xb') as stream:stream.write(data)
+        path.chmod(0o755)
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--mode',choices=['verify','discover'],required=True)
@@ -99,18 +113,7 @@ def main():
     if a.manifest.stat().st_size>65536 or a.archive.stat().st_size>8*1024*1024:raise ValueError('Delivery bound exceeded')
     if sha(a.archive)!=a.archive_sha256 or sha(a.manifest)!=a.manifest_sha256:raise ValueError('Delivery hash mismatch')
     files=entries(a.archive,json.loads(a.manifest.read_text()))
-    if STATE.exists() or STATE.is_symlink():raise ValueError('Preserve prior probe evidence')
-    for parent in STATE.parents:
-        if parent==Path('/'):break
-        if (parent.is_symlink() or not parent.is_dir() or parent.stat().st_uid!=0
-            or parent.stat().st_mode&0o022 or not parent.stat().st_mode&stat.S_IXOTH):
-            raise ValueError('Unexpected probe ancestry')
-    STATE.mkdir(mode=0o755);STATE.chmod(0o755)
-    for name,data in files.items():
-        path=STATE/name
-        path.parent.mkdir(mode=0o755,exist_ok=True);path.parent.chmod(0o755)
-        with path.open('xb') as stream:stream.write(data)
-        path.chmod(0o755)
+    install(files)
     facts=run_probe(a.mode)
     print('RAM_SSC_METADATA_RESULT '+json.dumps(facts,sort_keys=True),flush=True)
 

@@ -1,5 +1,15 @@
 # Camera, speaker and SSC offline component results
 
+The composite discovery runner now bounds metadata readiness to three seconds and
+the actual SSC unit query/stop/state checks to 16/3/2 seconds. Its host suite has
+16 additional cases for duplicate attach, incomplete trace, oversized trace or
+output, launch/query/stop timeout, nonzero exit, residual activity and incomplete
+four-type metadata. A dummy-virt-only concurrent-unit self-test is embedded in the
+exact-rootfs assembly recipe; it is pending a fresh VM rebuild and remains separate
+from phone qualification. The two AudioReach drafts also enforce one decoded PCM
+capability block (S24_LE, 48 kHz, two channels) and have a dedicated ARM64 compile
+workflow. Neither change enables streams, calibration, protection or RF.
+
 Native ARM64 Actions40285807929, source4d16034f4c95445d372e14a7f93002c5a18e75f6,
 passes the joint camera/amplifier object build with W=1 and -Werror. It compiles
 CAMSS, CSID980, VFE980, standalone CSI PHY, CCI, CAMCC, CAMBIST MCLK and the

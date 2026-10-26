@@ -154,12 +154,13 @@ def daemon_error_summary(log):
             'unknown_search_directories':sum(x.startswith('Unknown search directory ') for x in lines),
             'arbitrary_paths_or_file_contents_in_summary':False}
 
-def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=False):
+def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=False,during_active=None):
     started=False
     launch_failed=False
     exited_early=False
     status_query_failed=False
     pre_status=None
+    callback_completed=False
     try:
         # A launch timeout can occur after systemd created the unit.
         started=True
@@ -178,6 +179,14 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
             if active!='active':
                 exited_early=True
                 break
+            # The original CLI supplies no callback. A separate source-bound
+            # composite may run one bounded metadata-only client here, while
+            # retaining this same unit lifetime and unconditional stop path.
+            if during_active is not None and not callback_completed:
+                if launch_failed:raise ValueError('Cannot start callback after failed file server launch')
+                during_active()
+                callback_completed=True
+                if clock()>until:raise ValueError('Metadata callback exceeded the observation window')
             sleep(min(1,max(0,until-clock())))
     finally:
         if started:
