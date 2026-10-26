@@ -17,7 +17,7 @@ EXTRAS={
  '0005-retain-vfs-aliases-and-directory-parents.patch':'f055af775735dba2bec49b0794049186a0c6a09fc55d5f2aa0ba7ae6b127162d',
  '0006-add-volatile-apps-std-files.patch':'bbe6cdd895830a2446331ee160c48dcff97706d580bd8e2f1b7f6ff9283ff254',
  '0007-expand-bounded-ram-inputs.patch':'1ce5cd9c7e2423ee17b0a9acc084ca09890c4220317aa57f2eedf668b4e26771',
- '0008-support-bounded-registry-renames.patch':'b5204ceab1065a6b3ae8c0b6af308a32cbe824234292a7fcbdf66150633b3261'}
+ '0008-support-bounded-registry-renames.patch':'987a07d6470212042313dc0fa594a64cbdb165ab9dec5319c58f037070eca3a0'}
 SOURCE_COMMIT='598b591ae9da6a6cfe2ca5ea78998019ca6395ea'
 ARCHIVE_SHA='05181d130f1e3a3f4c368be606a627562f7abd972c5efff92a21d66d35a2fe51'
 

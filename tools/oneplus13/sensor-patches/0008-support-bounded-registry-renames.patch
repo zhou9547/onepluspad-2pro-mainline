@@ -97,7 +97,7 @@ do not qualify phone writes or a sensor stream.
  		return AEE_EUNSUPPORTED;
  
  	fd = hexagonfs_openat(ctx->fds, ctx->rootfd, ctx->adsp_library_dirfd, pathname);
-@@ -539,6 +552,35 @@
+@@ -539,6 +552,38 @@
  	first_out->ctimensec = (int64_t) stats.st_ctim.tv_nsec;
  
  	return 0;
@@ -110,6 +110,8 @@ do not qualify phone writes or a sensor stream.
 +	struct apps_std_ctx *ctx = data;
 +	const char *old_name;
 +	const char *new_name;
++	char old_canonical[PR_NAME_MAX];
++	char new_canonical[PR_NAME_MAX];
 +	unsigned int index;
 +	int ret;
 +
@@ -119,8 +121,9 @@ do not qualify phone writes or a sensor stream.
 +		return AEE_EBADPARM;
 +	old_name = inbufs[1].p;
 +	new_name = inbufs[2].p;
-+	if (!ctx->ramfs.enabled || !pr_name_supported(old_name)
-+	 || !pr_name_supported(new_name))
++	if (!ctx->ramfs.enabled
++	 || pr_canonical_name(old_name, old_canonical)
++	 || pr_canonical_name(new_name, new_canonical))
 +		return AEE_EUNSUPPORTED;
 +	ret = apps_std_seed_ram(ctx, old_name,
 +				ctx->adsp_library_dirfd, &index);
@@ -133,7 +136,7 @@ do not qualify phone writes or a sensor stream.
  }
  
  /*
-@@ -753,7 +795,12 @@
+@@ -753,7 +798,12 @@
  		.impl = apps_std_stat,
  	},
  	{ .def = NULL, .impl = NULL, },
@@ -243,7 +246,7 @@ do not qualify phone writes or a sensor stream.
 +static inline bool pr_name_supported(const char *name)
 +{
 +    char canonical[PR_NAME_MAX];
-+    return pr_canonical_name(name,canonical)==0;
++    return name && strchr(name,'/') && pr_canonical_name(name,canonical)==0;
 +}
 +static inline int pr_find(struct phone_ramfs *fs,const char *name)
 +{

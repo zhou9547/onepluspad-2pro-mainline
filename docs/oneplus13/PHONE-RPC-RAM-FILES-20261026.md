@@ -62,6 +62,10 @@ in-memory files,16MiB aggregate,1MiB per file and64 handles. Host release and
 ASan/UBSan tests pass; native ARM64 and a new source-bound review remain
 mandatory. Run75 stays halted.
 
+The open methods still require absolute registry paths. Only method33
+canonicalizes a bare basename into this registry namespace, matching how the
+sensor process composes temporary and final names.
+
 ## Data and handles
 
 The backend holds at most four files in process memory. Each file is capped at
