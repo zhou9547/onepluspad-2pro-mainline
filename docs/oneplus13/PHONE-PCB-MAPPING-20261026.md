@@ -24,16 +24,16 @@ zero-byte argument; skip only those zero-byte test accesses. Sanitizer checks
 stay enabled. These findings are host reproductions, not claims that they caused
 a previous phone failure. The original failure logs remain local evidence.
 
-Nine C tests pass in release and ASan/UBSan on the host after the three phone
-patches. The original builder explicitly lacks a destructor for its virtual
+The first three overlays passed nine C tests in release and ASan/UBSan on both
+the host and native ARM64 (Actions40250963720). The original builder explicitly lacks a destructor for its virtual
 tree, so leak checking is excluded and recorded separately; invalid memory and
 undefined-behavior checks remain active. Six Python source-recipe/archive and
-artifact-environment refusal tests pass. Native ARM64 is still required before
-runtime qualification, followed by actual phone-rootfs linking. Other untested
+artifact-environment refusal tests pass. The fourth overlay described below
+requires a fresh native build, followed by actual phone-rootfs linking. Other untested
 IDL families and writable-registry semantics are not accepted by this result.
 
 `build-phone-rpc.py` builds just generic hexagonrpcd and libhexagonrpc from the
-pinned original source and five unchanged patches plus three phone overlays.
+pinned original source and five unchanged patches plus four phone overlays.
 The dedicated native ARM64 workflow runs both C variants, records input hashes,
 and exports only the two ELF files and source/test/license evidence. It adds no
 service/udev hook, ROM, private registry, DSP library or installer. Meson sees a
@@ -41,3 +41,26 @@ limited build environment so its recorded test logs do not inherit runner or
 proxy credentials. No phone operation or sensor/DSP executable is run by the
 builder. Ubuntu24.04 host-built ELF still needs exact Ubuntu26.04 rootfs CLI/link
 verification; a successful build is not a working sensor system.
+
+## Input type sequences: preserve the original wire contract
+
+The original golden-wire test already covers TYPE_SEQ after a TYPE with the same
+descriptor index. It hides a real bug: TYPE_SEQ never selects its own inner type,
+so sequence-first uses an uninitialized pointer and differing indices reuse the
+previous type. A private draft refusing both input and output sequences failed
+that unchanged original test and was rejected before publication or phone use.
+
+The fourth phone patch selects and validates the input descriptor, advances past
+its metadata buffer for subsequent arguments, and makes zero-count sequences
+consume no metadata in allocation/encoding/freeing. Buffer counts stay wide until
+the scalar's eight-bit limit is checked before allocation. Output TYPE_SEQ has no
+validated implementation and is refused before consuming pointers or ioctl.
+No new output ABI is claimed.
+
+The added real C mock-ioctl test checks exact bytes and buffer ordering for a
+sequence first, different indices, consecutive sequences, a following blob,
+fixed-blob structs, zero count and invalid descriptor/count refusal. All original
+tests remain unchanged. Ten C tests pass in release and ASan/UBSan on the host;
+the uninitialized-inner-type warning is gone. This is not exhaustive IDL or
+allocation-failure validation, and does not remove the hardware/registry holds.
+Standard GPL/LGPL license text and contributor attribution accompany artifacts.

@@ -388,3 +388,11 @@ Unimplemented peripherals are tracked in STATUS.md, not represented as working.
 ## 2026-10-24 本地真机补充
 
 D14：ABL改写根model/compatible，导致手机physical-platform误拒绝。已按原项目model＋chassis方式修复并通过正反例，真机已越过切根门槛并进入systemd/GDM。继续保留VMID3、Gunyah及无绑定驱动条件。保持900秒截止的真机会话已返回原Android，单次交接与返回验证完成；物理显示、触控、GPU及WLAN仍独立待验收。
+2026-10-26 phone-only RPC follow-up: input TYPE_SEQ now selects its own checked
+descriptor and consumes sequence metadata correctly, including empty sequences;
+the original input golden-wire test remains unchanged. Output TYPE_SEQ is
+explicitly unsupported before ioctl, and allocation-failure handling and other
+IDL families are not exhaustively qualified. Native rebuild/rootfs linking,
+writable-registry ABI, absent OEM data and DSP library provenance remain gates.
+See PHONE-PCB-MAPPING-20261026.md; source unit tests do not qualify phone streams.
+

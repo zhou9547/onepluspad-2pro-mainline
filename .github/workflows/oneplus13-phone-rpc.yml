@@ -44,6 +44,7 @@ jobs:
             out/phone-rpc/verification.json
             out/phone-rpc/build.log
             out/phone-rpc/LICENSE-*
+            out/phone-rpc/COPYRIGHT.txt
             out/phone-rpc/release/meson-logs/testlog.txt
             out/phone-rpc/sanitized/meson-logs/testlog.txt
           if-no-files-found: error

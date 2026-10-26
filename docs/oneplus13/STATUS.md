@@ -336,3 +336,14 @@ ASan/UBSan 以及新内核 rootfs/QEMU 交接与恢复通过；物理显示仍�
 真机门槛：用户后续安排有现场恢复条件的限时RAM引导，先验证USB、RAM和恢复，再逐项验证显示/触控。当前只读权限禁止执行试启动或刷写。
 
 设备状态：本阶段共4次经独立审核、45秒截止/2KiB上限的SSH元数据查询（1次非root、3次用户确认后的root），均与PJZ110 Android16 .501指纹匹配。已确认UID0、WLAN目录和PCI17cb:110e；读取12个固件文件的大小/哈希。公开Lineage参考ZAP/BDF不匹配，匹配版本的官方OTA九文件全部相符。最新有限日志未提供QMI板号或活动BDF，不据此猜测。0次二进制文件传输、手机写入、重启或试启动。未重新散列分区或完整FDT；只读限制继续有效。
+# 2026-10-26 offline RPC follow-up
+
+The phone-only RPC overlay preserves and fixes the original input TYPE_SEQ wire
+layout (own index, metadata cursor and empty sequence), validates descriptor
+indices and checks scalar buffer limits before allocation. Unqualified output
+TYPE_SEQ is refused before ioctl. Ten release and ten ASan/UBSan C tests pass
+locally; the original golden tests remain intact. The earlier three overlays
+passed native ARM64 Actions40250963720; this fourth overlay still needs its
+fresh native build and exact Ubuntu rootfs link check. No new phone run or
+sensor stream is accepted. See PHONE-PCB-MAPPING-20261026.md for scope and holds.
+

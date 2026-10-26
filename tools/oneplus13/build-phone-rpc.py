@@ -12,7 +12,8 @@ REPO=Path(__file__).resolve().parents[2]
 EXTRAS={
  '0001-serve-phone-pcb-version-read-only.patch':'a2f30815f42b1a167588ff0a7c3322743b47bb41ccded130dbc94e22f7a23bd7',
  '0002-copy-unaligned-wire-size-without-UB.patch':'4c015b91881c6a7c62ae1dc87cf06250788c3353108ae5ea675ea03a0f50f321',
- '0003-read-packed-type-fields-with-byte-copies.patch':'5d369bbd1966b194f84aab999cb6f19a6a7b1e7b0ab1167b870477320436cfe1'}
+ '0003-read-packed-type-fields-with-byte-copies.patch':'5d369bbd1966b194f84aab999cb6f19a6a7b1e7b0ab1167b870477320436cfe1',
+ '0004-fix-input-type-sequence-marshalling.patch':'bc54e868b010761dc614125ebb71e97172aacfcaacf0b49789ec89079fd34afe'}
 SOURCE_COMMIT='598b591ae9da6a6cfe2ca5ea78998019ca6395ea'
 ARCHIVE_SHA='05181d130f1e3a3f4c368be606a627562f7abd972c5efff92a21d66d35a2fe51'
 
@@ -82,6 +83,7 @@ def main():
     for patch in patches:run(['patch','-d',source,'-p1','--batch','--fuzz=0','-i',patch],log)
     common=['--prefix=/usr/lib/erhai/sensors','--libdir=lib','--bindir=bin','--libexecdir=libexec',
             '--wrap-mode=nofallback','-Dc_link_args=-Wl,-rpath,/usr/lib/erhai/sensors/lib']
+    test_counts={}
     for name,options in [('release',['--buildtype=release']),
                           ('sanitized',['--buildtype=debug','-Db_sanitize=address,undefined','-Db_lundef=false'])]:
         build=out/name
@@ -94,6 +96,10 @@ def main():
             environment['ASAN_OPTIONS']='detect_leaks=0:abort_on_error=1'
             environment['UBSAN_OPTIONS']='halt_on_error=1:print_stacktrace=1'
         run(['meson','test','-C',build,'--print-errorlogs'],log,environment)
+        tested=[json.loads(line) for line in (build/'meson-logs/testlog.json').read_text().splitlines() if line.strip()]
+        if len(tested)!=10 or not all(item['result']=='OK' for item in tested):raise ValueError('Missing exact C test results')
+        if not any(item['name'].endswith('input-type-sequence') for item in tested):raise ValueError('No actual input sequence wire test')
+        test_counts[name]=len(tested)
     outputs={}
     if native and not a.host_check:
         entries={'usr/lib/erhai/sensors/bin/hexagonrpcd':out/'release/hexagonrpcd/hexagonrpcd',
@@ -110,10 +116,21 @@ def main():
         run(['readelf','-d',entries['usr/lib/erhai/sensors/bin/hexagonrpcd']],log)
     for name in ['COPYING','LICENSE','COPYING.GPL']:
         if (source/name).is_file():shutil.copy2(source/name,out/('LICENSE-'+name))
+    for name in ['GPL-3','LGPL-3']:
+        path=Path('/usr/share/common-licenses')/name
+        if not path.is_file():raise ValueError('Standard redistribution license text missing')
+        shutil.copy2(path,out/('LICENSE-'+name))
+    (out/'COPYRIGHT.txt').write_text(
+        'Original linux-msm/hexagonrpc sources retain their Sensor Shell and HexagonRPC contributor notices.\n'
+        'Original source commit: '+SOURCE_COMMIT+'\n'
+        'Phone supplemental patches: Codex <codex@openai.com>; see verification.json for source and patch hashes.\n'
+        'No factory data, calibration, firmware, service integration or installer is included.\n')
     report={'scope':'OFFLINE_PHONE_RPC_SOURCE_BUILD_ONLY','phone_operations':0,'native_arm64':native,
        'host_check_only':a.host_check,'original_source_commit':SOURCE_COMMIT,'source_archive_sha256':ARCHIVE_SHA,
        'original_recipe_sha256':sha(lock_path),'patches':[{'name':p.name,'sha256':sha(p)} for p in patches],
        'release_tests_pass':True,'asan_ubsan_tests_pass':True,'leaks_tested':False,
+       'c_test_counts':test_counts,'input_type_sequence_wire_fixtures_pass':True,
+       'unqualified_output_type_sequences_refused_before_ioctl':True,
        'synthetic_board_data_only':True,'private_inputs_included':False,'services_or_udev_or_firmware_included':False,
        'sensor_attach_stream_or_hardware_eligible':False,'outputs':outputs}
     (out/'verification.json').write_text(json.dumps(report,indent=2)+'\n')
