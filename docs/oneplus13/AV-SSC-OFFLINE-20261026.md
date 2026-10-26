@@ -1,5 +1,11 @@
 # Camera, speaker and SSC offline component results
 
+The public follow-up commit `b9b2b0687387ffeed8187aeb0b5d65d9e310b72a` passed
+Actions 40291375012 (native ARM64 SSC and composite controls) and 40291375256
+(native ARM64 capture/speaker topology compile and decode). A fresh exact-rootfs
+QEMU run with the new composite helper is still pending; no new phone boot plan
+is created until that source-bound proof is available.
+
 The composite discovery runner now bounds metadata readiness to three seconds and
 the actual SSC unit query/stop/state checks to 16/3/2 seconds. Its host suite has
 16 additional cases for duplicate attach, incomplete trace, oversized trace or
