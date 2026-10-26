@@ -30,6 +30,7 @@ def main():
     p=argparse.ArgumentParser();p.add_argument('--kernel',type=Path,required=True)
     p.add_argument('--rootfs',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--assembled-manifest',type=Path,help='Public matched-rootfs assembly provenance')
+    p.add_argument('--rootfs-manifest',type=Path,help='Exact owner-tested public rootfs artifact manifest')
     p.add_argument('--rpc-selftest-archive',type=Path,help='Public native ARM64 mock-test archive, never phone data')
     p.add_argument('--rpc-selftest-manifest',type=Path)
     p.add_argument('--ssc-probe-archive',type=Path,help='Public SSC guard fixtures; QRTR queries forbidden in QEMU')
@@ -48,6 +49,19 @@ def main():
     for name in ['Image','initramfs.cpio.gz','modules.tar.gz']:
         assert sha256(kernel/name)==manifest['files'][name]['sha256'],name
     expected_sha=EXPECTED_ROOTFS;expected_bytes=426221568
+    if a.rootfs_manifest:
+        exact=json.loads(a.rootfs_manifest.read_text())
+        assert not a.assembled_manifest
+        assert exact['integration_commit']=='de8eef9ca4d94940e6edb63f26a1dcd9d0bed7b2'
+        assert exact['matching_kernel_release']==EXPECTED_RELEASE
+        expected_sha=exact['files']['rootfs.squashfs']['sha256']
+        expected_bytes=exact['files']['rootfs.squashfs']['size']
+        assembly={
+            'kernel_integration_commit':EXPECTED_KERNEL_COMMIT,
+            'kernel_release':EXPECTED_RELEASE,
+            'rootfs_sha256':expected_sha,
+            'rootfs_bytes':expected_bytes,
+        }
     if a.assembled_manifest:
         assembly=json.loads(a.assembled_manifest.read_text())
         assert assembly['scope']=='PUBLIC_RAM_ROOTFS_MATCHED_KERNEL'

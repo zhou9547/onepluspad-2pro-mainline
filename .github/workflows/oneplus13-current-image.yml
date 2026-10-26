@@ -71,7 +71,7 @@ jobs:
           python3 tools/oneplus13/qemu-exact-rootfs.py \
             --kernel out/exact-kernel \
             --rootfs out/exact-rootfs/rootfs.squashfs \
-            --assembled-manifest out/exact-rootfs/manifest.json \
+            --rootfs-manifest out/exact-rootfs/manifest.json \
             --output out/current-image-handoff
       - name: Record public build qualification
         run: |
