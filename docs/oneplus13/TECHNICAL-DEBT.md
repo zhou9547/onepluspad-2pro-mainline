@@ -12,6 +12,13 @@ lookups, absent directory-inode evidence and no DSP release acknowledgement.
 Run76's one-shot ledger is sealed; the private PCB scalar addition is not a retry
 authorization.
 
+Run77 resolved the PCB lookup and classified every remaining missing request:
+27 absent vendor configuration probes, one camera-info blob and three OEM/DSP
+probes. All31 SHA256 fingerprints matched saved requests. A stale private harness
+file-count assertion caused the wrapper to fail after the service target passed;
+it is corrected. Do not fabricate nonzero/extra DSP files or ignore the four real
+inputs; run77 stays sealed.
+
 Run74's bounded write diagnostic returned Android and matching baselines but found
 two more registry temporaries and a >256-byte reverse input. Overlay0007 adds the
 four exact RAM paths in total and a64KiB listener buffer; launcher failures now

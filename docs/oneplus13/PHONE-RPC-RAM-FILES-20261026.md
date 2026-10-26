@@ -85,6 +85,20 @@ or OEM lookups and intentionally reports `file_server_accepted: false`. A
 verified owner PCB scalar is now staged privately in the RAM archive to close
 the six known PCB path misses; its value and hash are not public artifacts.
 
+Bounded run77 loaded that private PCB scalar and completed another28-second
+diagnostic with one attach,2591 successful reverse invokes, zero write refusals,
+zero unsupported/refused dispatches and a clean stop. Android returned in132.7s
+with seven matching baselines; display/GPU/ordinary-user desktop passed. The
+missing lookup count fell from37 to31 and all31 SHA256 fingerprints matched saved
+requests with no unknown hash. Categories are27 absent vendor sensor-config
+probes, one rear-camera-info request and three OEM/DSP probes. PCB lookup
+disappeared.
+
+The private runner then rejected the otherwise completed stage because it still
+asserted923 data files after the PCB scalar made the count924. That stale
+assertion is corrected; run77 remains halted and the service is still not called
+fully accepted. No extra phone boot is needed to prove the target.
+
 ## Data and handles
 
 The backend holds at most four files in process memory. Each file is capped at

@@ -367,6 +367,14 @@ baselines. Display/GPU/desktop also passed. It retained37 classified missing
 config/OEM lookups and did not claim full file-server or sensor acceptance. A
 private PCB scalar is now included in the next RAM rehearsal input.
 
+Run77 completed the lookup-inventory target after adding the private PCB scalar:
+PCB misses disappeared, missing lookups fell37→31, all31 hashes matched saved
+requests and there were zero unknown hashes, writes refusals or unsupported RPCs.
+The private runner's stale923-data-file assertion failed after the archive grew
+to924; it is corrected and run77 is sealed. Remaining real probes are one camera
+blob and three OEM/DSP items;27 vendor configuration probes are absent from the
+saved vendor index.
+
 Run74, one source-bound RAM write diagnostic, exposed the next two concrete
 gaps: registry temporaries `fstempfile` and `parsed_file_list.csv`, plus a reverse
 request larger than256 bytes. Android returned automatically107.7s after the
