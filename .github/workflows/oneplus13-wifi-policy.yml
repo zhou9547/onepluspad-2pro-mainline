@@ -24,6 +24,8 @@ jobs:
           test "$(uname -m)" = aarch64
           gcc --version
           python3 tools/oneplus13/wifi-draft/check.py --output out/wifi-policy
+      - name: Exercise actual driver code with synthetic responses
+        run: python3 tools/oneplus13/wifi-draft/check-driver.py --output out/wifi-driver-tests --references out/wifi-policy/references
       - name: Preserve public offline evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -34,5 +36,37 @@ jobs:
             out/wifi-policy/build.log
             out/wifi-policy/vendor-oracle.h
             out/wifi-policy/references
+            out/wifi-driver-tests/verification.json
+            out/wifi-driver-tests/build.log
+          if-no-files-found: error
+          retention-days: 14
+  wifi-driver-compile:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare native compiler
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev
+          test "$(uname -m)" = aarch64
+      - name: Compile exact-kernel dormant phone SAR integration
+        run: python3 tools/oneplus13/wifi-draft/build-driver.py --output out/wifi-driver
+      - name: Preserve public driver compilation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oneplus13-wifi-driver-${{ github.sha }}
+          path: |
+            out/wifi-driver/compile.log
+            out/wifi-driver/verification.json
+            out/wifi-driver/integration.json
+            out/wifi-driver/kernel.config
+            out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/phone-sar.o
+            out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/sar-wire.o
+            out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/wmi.o
+            out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/core.o
           if-no-files-found: error
           retention-days: 14

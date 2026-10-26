@@ -32,3 +32,28 @@ firmware delivery, a phone-specific effective policy, enforcement before scans,
 and current-rootfs scan/authentication/DHCP/verified-HTTPS acceptance. Earlier
 run66 network traffic used reference inputs and cannot substitute for this.
 The current phone candidate and all prior stop ledgers remain unchanged.
+# Dormant kernel transport follow-up
+
+`phone-sar.c` is new GPL-2.0-only code by Codex. The integration tool binds every
+modified original file to kernel7a81d184e3098624d4342d8f4eff5e23674bcc9f and
+preserves the original files' notices. It adds the actual WMI receive hooks,
+EXT capability and nested EXT2 flags, serialized bounded GET and V2 SET/result/GET
+observation, and lifecycle cancellation. Ambiguous timeout, duplicate/unexpected
+events or firmware detach permanently close this instance, including later SSR.
+There is no automatic query, command, policy replay, cfg80211 callback or RF gate.
+Sleepable internal callers must hold the existing core lifecycle mutex.
+
+`check-driver.py` compiles the **actual driver translation unit** with synthetic
+transport/completions and real pthread locks. Four static assertions bind command
+and event IDs to the actual pinned vendor enum, separately from the TLV codec
+oracle. Twenty-eight groups pass release and ASan/UBSan/LSan on the host. This
+does not exercise the real kernel scheduler or establish firmware compatibility.
+Native ARM64 and actual kernel object compilation are pending.
+
+The V2 API returns the raw SAR2 result and a complete GET table as observations.
+V2 SET indexes and GET half-dBm limits are deliberately never compared as one
+unit. Successful observation does not qualify an effective phone power policy;
+no production caller or RF admission code is attached. Unknown version/CTL flag,
+missing required flags or USER mode are refused by this V2-only API. Exact phone
+firmware delivery and qualified phone policy remain necessary before radio use.
+
