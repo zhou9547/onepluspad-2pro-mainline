@@ -1,5 +1,12 @@
 # Technical debt (single register for the phone)
 
+Current combined offline results: native ARM64 Actions40270669480 passed14
+release/14 ASan+UBSan C and6+36 Python checks, fresh exact-rootfs link/CLI probes,
+actual UID65534 reading930 files and933 absent delivery destinations. The later
+"native14 pending" sentence below records the earlier source submission stage;
+it is superseded here. See BATCHED-RPC-PREPARATION-20261026.md. No run78 is
+qualified, old halts remain retained, and all peripheral gates still apply.
+
 Overlay0010 stages an exact, read-only camera metadata filename. The private
 input was passively copied from Android, matched the earlier inventory hash and
 preserved all seven baseline samples; no reboot/activation or phone write was

@@ -1,5 +1,7 @@
 # 一加13适配状态
 
+最新离线联合准备已通过：Actions40270669480验证14项release、14项ASan/UBSan C、6项构建和36项服务检查；精确rootfs loader/CLI、私有交付普通UID读取和933个目的路径检查通过。见[BATCHED-RPC-PREPARATION-20261026.md](BATCHED-RPC-PREPARATION-20261026.md)。没有新增RAM启动或run78资格；下方“14项待完成”是此前提交时的状态，现由本条更新。
+
 ## 2026-10-26 联合验收准备增加只读相机输入
 
 0009与退出取证修订已由原生ARM64 Actions40269798259验证：13项release、13项ASan/UBSan、36项服务及6项构建检查通过；产物校验和精确rootfs QEMU-user RPATH/loader/CLI通过。另沿本机已保存库实际dispatch核对method33和method9共35条指令，确认重命名三输入/无输出、字符串长度与终止检查，以及seek偏移符号扩展；未执行库。
