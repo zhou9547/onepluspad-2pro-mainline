@@ -90,13 +90,9 @@ else
     mount --bind /sys/kernel/config /newroot/sys/kernel/config
     /bin/oneplus13-physical-platform /newroot/sys
 fi
-# A private native-display initramfs may carry the owner's SPR profile. Keep it
-# exclusively in this ephemeral overlay, never in a public rootfs artifact.
-spr=lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin
-if [ -f "/$spr" ]; then
-    mkdir -p "/newroot/${spr%/*}"
-    cp "/$spr" "/newroot/$spr"
-    chmod 600 "/newroot/$spr"
-fi
+# Carry the complete, hash-bound private payload into RAM only. The helper is
+# preserved as non-executable data; this does not enable desktop activation.
+. /bin/oneplus13-native-handoff
+stage_native_payload / /newroot "$(uname -r)"
 chroot /newroot /usr/libexec/oneplus13-runtime-guard --once
 echo ONEPLUS13_RAM_ROOT_READY > /run/evidence/rootfs.txt

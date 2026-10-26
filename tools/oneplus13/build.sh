@@ -23,6 +23,17 @@ fi
 git -C "$src" fetch --depth 1 origin "${pin[1]}"
 git -C "$src" checkout --detach FETCH_HEAD
 [[ $(git -C "$src" rev-parse HEAD) == "${pin[1]}" ]]
+if [[ ${PHONE_WIFI_TRANSPORT_DRAFT:-0} == 1 ]]; then
+  # Offline-only transport integration. This installs no RF policy/caller and
+  # adds no firmware; hardware acceptance remains separately gated.
+  python3 tools/oneplus13/wifi-draft/integrate-driver.py --kernel "$src" \
+    > "$dest/wifi-driver-integration.json"
+  git -C "$src" add --intent-to-add \
+    drivers/net/wireless/ath/ath12k/phone-sar.c \
+    drivers/net/wireless/ath/ath12k/phone-sar.h \
+    drivers/net/wireless/ath/ath12k/sar-wire.c \
+    drivers/net/wireless/ath/ath12k/sar-wire.h
+fi
 for patch in "$repo"/devices/oneplus13/kernel-patches/*.patch; do
   if git -C "$src" apply --reverse --check "$patch" 2>/dev/null; then
     continue # an identical rerun in this disposable build tree
@@ -39,14 +50,18 @@ python3 tools/oneplus13/check-command-clock.py --kernel-source "$src" \
   --output "$dest/command-clock-verification.json" --sanitize
 python3 tools/oneplus13/check-panel.py --kernel-source "$src" \
   --output "$dest/panel-component-verification.json" --sanitize
+python3 tools/oneplus13/check-dsi-batch.py --kernel-source "$src" \
+  --output "$dest/dsi-batch-verification.json" --sanitize
+python3 tools/oneplus13/check-fixed-phy.py --kernel-source "$src" \
+  --output "$dest/fixed-phy-verification.json" --sanitize
 python3 tools/oneplus13/check-dpu.py --kernel-source "$src" \
   --output "$dest/dpu-buffer-verification.json" --sanitize
 python3 tools/oneplus13/check-spr-profile.py \
   --output "$dest/spr-profile-verification.json" --sanitize
+python3 tools/oneplus13/check-native-identity.py \
+  --output "$dest/native-identity-verification.json" --sanitize
 python3 tools/oneplus13/check-spr-runtime.py --kernel-source "$src" \
   --output "$dest/spr-runtime-verification.json" --sanitize
-python3 tools/oneplus13/check-command-budget.py --kernel-source "$src" \
-  --output "$dest/command-budget-verification.json" --sanitize
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
@@ -109,6 +124,9 @@ make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-touch.dtb 2>&1 | tee "$kout/touch-dtb.log"
 make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-native.dtb 2>&1 | tee "$kout/native-dtb.log"
+python3 tools/oneplus13/check-command-budget.py --kernel-source "$src" \
+  --native-dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-native.dtb" \
+  --output "$dest/command-budget-verification.json" --sanitize
 python3 tools/oneplus13/check-native-dtb.py \
   --dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-native.dtb" \
   --output "$dest/native-dtb-verification.json" --negative-controls

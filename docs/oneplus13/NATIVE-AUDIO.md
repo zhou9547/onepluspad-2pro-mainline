@@ -1,5 +1,14 @@
 # Phone audio evidence and acceptance
 
+2026-10-26 correction: effective stock runtime FDT status disables the WSA
+macro and every WSA884x/WSA883x speaker directly or through an ancestor. The two
+AWINIC smartpa nodes are enabled. Template node presence is not evidence that a
+phone uses that path. The handed-over run42 WSA-enabled DT is held against
+hardware reuse; run47 PCM open/HW_PARAMS/PREPARE is not stock speaker progress.
+Do not continue streams or complete QRD WSA mixer routing as a phone speaker
+fix. Resolve the actual AWINIC MI2S path and protection first. This review used
+saved FDT only and made no phone/amp/register changes.
+
 Saved owner runtime FDT has two awinic,aw882xx_smartpa nodes, I2C990000 addresses
 34/35, sound-channel0/1. This is a vendor family name, not a measured chip ID.
 The codec path includes WCD939x and LPASS SoundWire. Do not substitute the Pad's

@@ -3,9 +3,21 @@
 # Derived from the project's erhai-physical-platform; phone guards are separate.
 set -eu
 sysroot=${1:-/sys}
-case "$sysroot" in /sys|/newroot/sys) ;; *) exit 2 ;; esac
+case "$sysroot" in /*) ;; *) echo 'expected an absolute sysfs mount path' >&2; exit 2 ;; esac
 base=$sysroot/firmware/devicetree/base
-tr '\000' '\n' < "$base/compatible" | grep -qx oneplus,dodge
+# Reuse the original erhai helper's model + chassis identity boundary. The
+# phone's ABL replaces both root model and compatible with its selected stock
+# board strings. Accept only the exact compiled or observed dodge identity;
+# a generic Sun MTP board or a tablet must never reach the export correction.
+model=$(tr '\000' '\n' < "$base/model")
+case "$model" in
+    'OnePlus 13 (offline bring-up candidate)'|'OnePlus 13 (AA569 native display experimental candidate)')
+        tr '\000' '\n' < "$base/compatible" | grep -qx oneplus,dodge
+        tr '\000' '\n' < "$base/compatible" | grep -qx qcom,sm8750 ;;
+    'Qualcomm Technologies, Inc. Sun MTP,dodge')
+        tr '\000' '\n' < "$base/compatible" | grep -qx qcom,sun ;;
+    *) echo "physical platform: unsupported phone '$model'" >&2; exit 1 ;;
+esac
 [ "$(tr '\000' '\n' < "$base/chassis-type")" = handset ]
 hyper=$base/hypervisor
 [ -d "$hyper" ] || exit 0

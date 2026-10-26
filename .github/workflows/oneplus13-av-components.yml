@@ -1,0 +1,53 @@
+name: OnePlus 13 camera and speaker offline components
+on:
+  push:
+    branches: [oneplus13-platform-handoff-20261026]
+    paths:
+      - .github/workflows/oneplus13-av-components.yml
+      - tools/oneplus13/camera-draft/**
+      - tools/oneplus13/review-camera-board-map.py
+      - tests/test_oneplus13_camera_board_map.py
+      - docs/oneplus13/STATUS.md
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: oneplus13-av-components-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  components:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Prepare native compiler
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev patch
+          test "$(uname -m)" = aarch64
+      - name: Compile fixed camera prerequisites and actual amplifier functions
+        run: python3 tools/oneplus13/camera-draft/build-components.py --output out/av-components
+      - name: Run camera board-map contract tests without private FDT
+        run: python3 -m unittest discover -s tests -p test_oneplus13_camera_board_map.py -v
+      - name: Preserve component review evidence only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oneplus13-av-components-${{ github.sha }}
+          path: |
+            out/av-components/compile.log
+            out/av-components/verification.json
+            out/av-components/kernel.config
+            out/av-components/audio-synthetic/verification.json
+            out/av-components/camera-synthetic/verification.json
+            out/av-components/camera-synthetic/*.log
+            out/av-components/linux/drivers/media/platform/qcom/camss/*.o
+            out/av-components/linux/drivers/phy/qualcomm/phy-qcom-mipi-csi2*.o
+            out/av-components/linux/drivers/i2c/busses/i2c-qcom-cci.o
+            out/av-components/linux/drivers/clk/qcom/camcc-sm8750.o
+            out/av-components/linux/drivers/clk/qcom/cambistmclkcc-sm8750.o
+            out/av-components/linux/sound/soc/codecs/aw88461.o
+          if-no-files-found: error
+          retention-days: 14

@@ -231,7 +231,7 @@ def main():
     for tool in ('unshare', 'dpkg-deb'):
         if shutil.which(tool) is None:
             die(f'{tool} is required')
-    if not Path('/proc/sys/fs/binfmt_misc/qemu-aarch64').is_file():
+    if os.uname().machine not in ('aarch64', 'arm64') and not Path('/proc/sys/fs/binfmt_misc/qemu-aarch64').is_file():
         die('arm64 binfmt (qemu-user-static) is required to run the build root')
     if not HOST_CA.is_file():
         die(f'{HOST_CA} is required for TLS to the snapshot service')

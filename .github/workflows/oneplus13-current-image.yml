@@ -1,0 +1,105 @@
+name: OnePlus 13 current image reproduction
+
+on:
+  push:
+    branches: [oneplus13-run88-current-image-v2-20261026]
+    paths:
+      - .github/workflows/oneplus13-current-image.yml
+      - tools/oneplus13/automatic-wifi-check.py
+      - tools/oneplus13/ram-desktop-check.py
+      - tools/oneplus13/manual-touch-observer.py
+      - tools/oneplus13/wifi-band-cache.py
+      - tests/test_oneplus13_automatic_wifi.py
+      - tests/test_oneplus13_ram_desktop.py
+      - tests/test_oneplus13_wifi_band_cache.py
+      - tests/test_oneplus13_manual_touch.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run public WiFi, desktop, touch and preserved feature tests
+        run: |
+          test "$(uname -m)" = aarch64
+          python3 -m unittest discover -s tests -p 'test_oneplus13_automatic_wifi.py' -v
+          python3 -m unittest discover -s tests -p 'test_oneplus13_ram_desktop.py' -v
+          python3 -m unittest discover -s tests -p 'test_oneplus13_wifi_band_cache.py' -v
+          python3 -m unittest discover -s tests -p 'test_oneplus13_manual_touch.py' -v
+          python3 -m unittest discover -s tests -p 'test_oneplus13_preserved_features.py' -v
+
+  exact-image:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install assembly and emulator tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends squashfs-tools qemu-system-arm
+      - uses: actions/download-artifact@v4
+        with:
+          name: oneplus13-offline-1f5c1128d42a62244bef9974e58cfe07adf29f7d
+          run-id: 40146822835
+          github-token: ${{ github.token }}
+          path: out/exact-kernel
+      - uses: actions/download-artifact@v4
+        with:
+          name: oneplus13-ubuntu-26.04.1-gnome-03ecbd66a3a55c11edaa78daab4bb8d4702d9e11
+          run-id: 40212524437
+          github-token: ${{ github.token }}
+          path: out/exact-rootfs
+      - uses: actions/download-artifact@v4
+        with:
+          name: erhai-mesa-545787e4e4d47e975a0baa20cce42ce526aa116c
+          run-id: 40099943186
+          github-token: ${{ github.token }}
+          path: out/exact-mesa
+      - name: Assemble public current-image rootfs
+        run: |
+          mapfile -t debs < <(find out/exact-mesa -type f -name '*.deb')
+          test "${#debs[@]}" = 1
+          sudo python3 tools/oneplus13/assemble-ram-rootfs.py             --base out/exact-rootfs/rootfs.squashfs             --kernel out/exact-kernel --mesa "${debs[0]}"             --output out/assembled-rootfs
+      - name: Verify exact current rootfs identity
+        run: |
+          rootfs=out/assembled-rootfs/rootfs.squashfs
+          test "$(stat -c %s "$rootfs")" = 471007232
+          test "$(sha256sum "$rootfs" | cut -d' ' -f1)" = 64930aeb440de2ee4e0643c632cd4350b700ae59421985caa06056a0704a90c1
+      - name: Boot exact assembled rootfs in QEMU
+        run: |
+          python3 tools/oneplus13/qemu-exact-rootfs.py             --kernel out/exact-kernel             --rootfs out/assembled-rootfs/rootfs.squashfs             --assembled-manifest out/assembled-rootfs/manifest.json             --output out/current-image-handoff
+      - name: Record public build qualification
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path('.')
+          files=['out/assembled-rootfs/rootfs.squashfs','out/exact-kernel/Image',
+                 'out/exact-kernel/modules.tar.gz','out/exact-kernel/sm8750-oneplus-dodge-native.dtb']
+          proof={'scope':'PUBLIC_CURRENT_IMAGE_COMPONENTS','source_commit':os.environ['GITHUB_SHA'],
+                 'phone_operations':0,'hardware_tested':False,
+                 'kernel_source_commit':'7a81d184e3098624d4342d8f4eff5e23674bcc9f',
+                 'kernel_integration_commit':'1f5c1128d42a62244bef9974e58cfe07adf29f7d',
+                 'private_inputs_uploaded':False,
+                 'files':{str(p):{'sha256':hashlib.sha256((root/p).read_bytes()).hexdigest(),
+                                  'bytes':(root/p).stat().st_size} for p in files}}
+          pathlib.Path('out/current-image-handoff/public-build.json').write_text(json.dumps(proof,indent=2)+'\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oneplus13-current-image-${{ github.sha }}
+          path: |
+            out/assembled-rootfs/
+            out/current-image-handoff/
+          if-no-files-found: error
+          retention-days: 14

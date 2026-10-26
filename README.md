@@ -1,5 +1,3 @@
-> **OnePlus 13 fork adaptation:** see [phone build and limitations](docs/oneplus13/README.md). The Pad support table below does not describe the phone.
-
 # Ubuntu for OnePlus Pad 2 Pro
 
 Run Ubuntu Desktop 26.04 with GNOME on the OnePlus Pad 2 Pro, using a device-adapted

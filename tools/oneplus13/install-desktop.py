@@ -6,6 +6,7 @@ from pathlib import Path
 import json
 import tarfile
 from common import sha256
+from desktop import PIN
 
 REPO = Path(__file__).resolve().parents[2]
 CONDITION = ('ConditionKernelCommandLine=oneplus13.desktop=1\n'
@@ -40,9 +41,18 @@ def install(root, kernel=None, firmware=None):
         write('usr/libexec/oneplus13-'+name,
               (REPO/'devices/oneplus13/desktop'/name).read_text(), 0o755)
     write('usr/lib/oneplus13-desktop/version', '1\n')
+    write('usr/libexec/oneplus13-native-display',
+          (REPO/'devices/oneplus13/native-desktop.py').read_text(), 0o755)
+    # kmod blacklist only suppresses aliases. The install rules also reject
+    # ordinary explicit/dependency loads. Native desktop packaging stays
+    # disabled until this policy is exercised with the actual ARM64 rootfs.
+    write('etc/modprobe.d/90-oneplus13-display-manual.conf',
+          '# Native display requires a separately validated activation path.\n'
+          'blacklist panel_oneplus_aa569\ninstall panel_oneplus_aa569 /bin/false\n'
+          'blacklist msm\ninstall msm /bin/false\n')
     if kernel:
         manifest = json.loads((kernel/'manifest.json').read_text())
-        if (manifest['integration_commit'] != 'c2e659aaa062647a206c67edcc421f0fa9931f7a' or
+        if (manifest['integration_commit'] != PIN or
                 manifest['device'] != 'oneplus,dodge' or manifest['hardware_tested'] is not False):
             raise ValueError('Desktop requires the pinned verified phone kernel artifact')
         archive = kernel/'modules.tar.gz'

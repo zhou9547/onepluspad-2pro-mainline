@@ -4,6 +4,10 @@
 set -eu
 tr '\000' '\n' < /sys/firmware/devicetree/base/compatible | grep -qx linux,dummy-virt
 [ "${1:-}" = /newroot ]
+cp /bin/oneplus13-native-handoff /newroot/run/oneplus13/native-handoff-lib
+cp /bin/oneplus13-native-handoff-selftest /newroot/run/oneplus13/native-handoff-selftest
+cp /bin/oneplus13-native-display-sha256 /newroot/run/oneplus13/native-display-sha256
+chmod 700 /newroot/run/oneplus13/native-handoff-selftest
 deadline=120
 case " $(cat /proc/cmdline) " in *' oneplus13.desktop.qemu-http=1 '*) deadline=180 ;; esac
 cat > /newroot/run/oneplus13/qemu-check <<'EOF'
@@ -20,6 +24,47 @@ test -f /run/evidence/systemd-alive.txt
 awk -F: '$1 == "root" {if ($2 !~ /^[!*]/) exit 1; found=1} END {if (!found) exit 1}' /etc/shadow
 /usr/bin/gnome-shell --version
 systemctl show gdm3.service -p ActiveState -p SubState
+# Exercise the actual rootfs kmod and full indexes only in dummy-virt.
+# Missing modules must not masquerade as a loading-policy success.
+for module in panel_oneplus_aa569 msm; do
+    modinfo "$module" > /dev/null
+    modprobe -c | grep -qx "install $module /bin/false"
+    modprobe -n -v "$module" > /run/oneplus13/display-load-plan
+    grep -q '^install /bin/false' /run/oneplus13/display-load-plan
+    if modprobe "$module"; then
+        echo "Display policy unexpectedly allowed $module"; exit 1
+    fi
+    [ ! -d "/sys/module/$module" ]
+done
+modprobe -b 'of:NpanelT(null)Coneplus,dodge-aa569' || :
+modprobe -b 'of:Ndisplay-controllerT(null)Cqcom,sm8750-dpu' || :
+[ ! -d /sys/module/panel_oneplus_aa569 ]
+[ ! -d /sys/module/msm ]
+echo ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED
+[ "$(sha256sum /usr/libexec/oneplus13-native-display | cut -d' ' -f1)" = "$(cat /run/oneplus13/native-display-sha256)" ]
+# Exercise real systemd timer D-Bus and matching kmod reads. QEMU has no phone
+# gadget. Its USB-service response and monotonic observation point are fixtures;
+# the shortened 180s VM can reach this observer with <60s left under TCG.
+# Real late-deadline rejection is covered separately; production keeps 60s.
+/usr/bin/python3 - <<'PY'
+import runpy
+ns=runpy.run_path('/usr/libexec/oneplus13-native-display')
+real=ns['command']
+def run(args):
+    if args[:2]==['/usr/bin/systemctl','is-active'] and args[-1]=='oneplus13-ram-usb.service':
+        return 'active'
+    return real(args)
+ns['runtime_checks'](__import__('os').uname().release,run=run,now=lambda:0.0)
+PY
+echo ONEPLUS13_NATIVE_RUNTIME_GUARDS_OFFLINE_OK
+# Reject absent private payload in the actual public QEMU root, without loading.
+if /usr/libexec/oneplus13-native-display --check; then
+    echo 'Native preflight unexpectedly accepted the public QEMU root'; exit 1
+fi
+[ ! -d /sys/module/panel_oneplus_aa569 ]
+[ ! -d /sys/module/msm ]
+echo ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK
+/run/oneplus13/native-handoff-selftest
 echo ONEPLUS13_DESKTOP_HANDOFF_OK
 trap - EXIT
 EOF

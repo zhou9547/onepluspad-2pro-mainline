@@ -41,7 +41,10 @@ def main():
         if arch not in {'arm64', 'all'}:
             raise SystemExit(f'Wrong target package architecture: {package} / {arch}')
         packages[package.split(':')[0]] = version
-    for package in ['gnome-shell', 'gdm3', 'network-manager', 'systemd-resolved', 'ca-certificates']:
+    # --no-install-recommends requires an explicit complete seed. Checking only
+    # NetworkManager misses its WiFi authentication and desktop OBEX services.
+    repo=Path(__file__).resolve().parents[2]
+    for package in json.loads((repo/'devices/oneplus13/ubuntu.json').read_text())['packages']:
         if package not in packages:
             raise SystemExit(f'Missing required desktop package: {package}')
     image = out / 'rootfs.squashfs'
@@ -51,10 +54,19 @@ def main():
     root = next(line for line in read('etc/shadow').decode().splitlines() if line.startswith('root:'))
     if not root.split(':')[1].startswith(('!', '*')):
         raise SystemExit('Root account is not locked')
-    for name in ['usr/bin/gnome-shell', 'usr/sbin/gdm3', 'usr/sbin/NetworkManager']:
+    for name in ['usr/bin/gnome-shell', 'usr/sbin/gdm3', 'usr/sbin/NetworkManager',
+                 'usr/sbin/wpa_supplicant','usr/sbin/iw','usr/bin/bluetoothctl',
+                 'usr/bin/bluetooth-sendto','usr/libexec/bluetooth/obexd']:
         binary = read(name)
         if binary[:5] != b'\x7fELF\x02' or struct.unpack_from('<H', binary, 18)[0] != 183:
             raise SystemExit(f'Wrong executable architecture: {name}')
+    for name,marker in [
+        ('usr/share/dbus-1/system-services/fi.w1.wpa_supplicant1.service',b'Name=fi.w1.wpa_supplicant1'),
+        ('usr/lib/systemd/system/wpa_supplicant.service',b'BusName=fi.w1.wpa_supplicant1'),
+        ('usr/share/dbus-1/services/org.bluez.obex.service',b'Name=org.bluez.obex'),
+        ('usr/lib/systemd/user/obex.service',b'BusName=org.bluez.obex')]:
+        if marker not in read(name):
+            raise SystemExit('Missing or mismatched D-Bus activation contract: '+name)
     if 'VERSION_ID="26.04"' not in read('etc/os-release').decode():
         raise SystemExit('Unexpected Ubuntu release')
     result = {
@@ -65,7 +77,8 @@ def main():
         'packages': len(packages), 'hardware_tested': False,
         'checks': ['all downloaded SHA256SUMS', 'manifest sizes/hashes', 'all package architectures',
                    'required runtime packages', 'locked root in SquashFS', 'empty machine-id in SquashFS',
-                   'actual GNOME/GDM/NetworkManager ARM64 ELF binaries', 'actual Ubuntu os-release']}
+                   'actual desktop/WiFi/Bluetooth ARM64 ELF binaries',
+                   'supplicant and OBEX D-Bus/systemd activation contracts', 'actual Ubuntu os-release']}
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=2))

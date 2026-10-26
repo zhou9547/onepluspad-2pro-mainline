@@ -13,7 +13,7 @@ import threading
 from common import make_cpio, read_cpio, sha256
 
 REPO = Path(__file__).resolve().parents[2]
-PIN = 'c2e659aaa062647a206c67edcc421f0fa9931f7a'
+PIN = 'e5c694473d738f582056d5c35af96e4d8ecfe0ff'
 
 
 def derive(original):
@@ -52,12 +52,17 @@ def derive(original):
             'esac\nwhile :; do\n  dmesg')
     entries['init']['data'] = text.encode()
     for source, target in [('prepare', 'ram-prepare'), ('launch', 'ram-launch'),
-                           ('physical-platform', 'physical-platform'), ('qemu-install', 'qemu-install')]:
+                           ('physical-platform', 'physical-platform'), ('qemu-install', 'qemu-install'),
+                           ('native-handoff', 'native-handoff'),
+                           ('native-handoff-selftest', 'native-handoff-selftest')]:
         name = 'bin/oneplus13-'+target
         if name in entries:
             raise ValueError('Desktop helper already exists')
         entries[name] = {'mode': stat.S_IFREG|0o755, 'major': 0, 'minor': 0,
                          'data': (REPO/'devices/oneplus13/desktop'/source).read_bytes().replace(b'\r\n', b'\n')}
+    native_sha = hashlib.sha256((REPO/'devices/oneplus13/native-desktop.py').read_bytes().replace(b'\r\n', b'\n')).hexdigest()
+    entries['bin/oneplus13-native-display-sha256'] = {
+        'mode': stat.S_IFREG|0o600, 'major':0, 'minor':0, 'data':(native_sha+'\n').encode()}
     packed = gzip.compress(make_cpio([(n, p['mode'], p['data'], p['major'], p['minor'])
                                      for n, p in sorted(entries.items())]), mtime=0)
     check = read_cpio(gzip.decompress(packed))
@@ -65,6 +70,7 @@ def derive(original):
     if any(check[n] != v for n, v in original_entries.items() if n != 'init'):
         raise ValueError('Desktop derivation changed an unrelated diagnostic entry')
     return packed, {'original_entries_preserved_except_explicit_init': len(original_entries)-1,
+                    'native_desktop_helper_sha256':native_sha,
                     'original_init_sha256': hashlib.sha256(before).hexdigest(),
                     'desktop_init_sha256': hashlib.sha256(check['init']['data']).hexdigest()}
 
@@ -136,12 +142,22 @@ def main():
                 server.server_close()
                 thread.join()
         (out/'qemu-desktop.log').write_text(proc.stdout)
-        markers = ['ONEPLUS13_DESKTOP_HANDOFF_OK', 'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
+        markers = ['ONEPLUS13_DISPLAY_AUTOLOAD_BLOCKED', 'ONEPLUS13_NATIVE_RUNTIME_GUARDS_OFFLINE_OK',
+                   'ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK',
+                   'ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK',
+                   'ONEPLUS13_DESKTOP_HANDOFF_OK',
+                   'ONEPLUS13_QEMU_DEADLINE_FIRED', 'reboot: Restarting system']
         if (proc.returncode or any(m not in proc.stdout for m in markers) or
-                not proc.stdout.index(markers[0]) < proc.stdout.index(markers[1]) < proc.stdout.index(markers[2])):
+                not all(proc.stdout.index(left) < proc.stdout.index(right)
+                        for left,right in zip(markers,markers[1:]))):
             print(proc.stdout[-12000:])
             raise SystemExit('Actual GNOME rootfs QEMU handoff failed')
         report['qemu_handoff_verified'] = True
+        report['qemu_display_module_policy_verified'] = True
+        report['qemu_native_preflight_rejects_public_root_verified'] = True
+        report['qemu_native_preflight_runtime_guards_verified'] = True
+        report['qemu_native_payload_data_handoff_verified'] = True
+        report['native_display_activated'] = False
         report['qemu_deadline_expiry_verified'] = True
         report['qemu_deadline_test_seconds'] = 180 if a.qemu_http else 120
         report['physical_deadline_exercised'] = False
