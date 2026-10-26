@@ -142,9 +142,10 @@ def daemon_error_summary(log):
     return {'error_lines':errors,'write_refusals':writes,
             'missing_file_lookups':sum(x.startswith('Could not open ') and x.endswith(': No such file or directory') for x in lines),
             'unsupported_or_refused_dispatches':sum(bool(re.search(r'Unsupported|Refused request',x,re.I)) for x in lines),
+            'unknown_search_directories':sum(x.startswith('Unknown search directory ') for x in lines),
             'arbitrary_paths_or_file_contents_in_summary':False}
 
-def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic):
+def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=False):
     started=False
     try:
         run(service_command(trace));started=True
@@ -172,12 +173,29 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic):
        'file_server_cleanly_stopped':True,'daemon_errors':summary,
        'complete_local_trace_facts':result,'trace_qualification_error':trace_failure,
        'sensor_stream_requested':False,'acceptance_not_implied':True},sort_keys=True),flush=True)
+    if diagnostic:
+        if trace_failure is not None:raise ValueError(trace_failure)
+        if result['successful_invoke_calls_observed']<3:
+            raise ValueError('No successful reverse RPC invokes observed')
+        if summary['write_refusals']:
+            raise ValueError('Reviewed RAM write backend still refused a write')
+        classified=summary['missing_file_lookups']+summary['unsupported_or_refused_dispatches']+summary['unknown_search_directories']
+        if summary['error_lines']!=classified:
+            raise ValueError('Unclassified daemon error during diagnostic run')
+        if summary['missing_file_lookups']>64 or summary['unsupported_or_refused_dispatches']>16 or summary['unknown_search_directories']:
+            raise ValueError('Diagnostic error counts exceed reviewed bounds')
+        return {**result,'bounded_observation_seconds':28,'file_server_cleanly_stopped':True,
+                'file_server_accepted':False,'write_refusals':0,
+                'diagnostic_missing_file_lookups':summary['missing_file_lookups'],
+                'diagnostic_unsupported_dispatches':summary['unsupported_or_refused_dispatches'],
+                'dsp_release_acknowledgement_observed':False}
     if summary['error_lines'] or summary['write_refusals']:
         raise ValueError('Reverse file service reported unsupported or failed operation')
     if trace_failure is not None:raise ValueError(trace_failure)
     if not result['registry_mapping_open_observed'] or not result['config_mapping_open_observed'] or result['successful_invoke_calls_observed']<3:
         raise ValueError('No successful phone configuration/registry reverse service evidence')
     return {**result,'bounded_observation_seconds':28,'file_server_cleanly_stopped':True,
+            'file_server_accepted':True,'write_refusals':0,
             'dsp_release_acknowledgement_observed':False}
 
 def main():
@@ -185,6 +203,7 @@ def main():
     for name in ('release','module-sha256','policy-sha256','attach-helper','attach-helper-sha256',
                  'archive','archive-sha256','manifest','manifest-sha256','trace-tool','trace-sha256'):
         parser.add_argument('--'+name,required=True)
+    parser.add_argument('--diagnostic-ram-writes',action='store_true')
     a=parser.parse_args()
     try:
         if os.geteuid()!=0 or os.uname().release!=a.release:raise ValueError('Wrong root or kernel')
@@ -211,7 +230,7 @@ def main():
         guard.device_ready(root);guard.guard(root,guard.command)
         os.chown('/dev/fastrpc-adsp-secure',UID,UID);os.chmod('/dev/fastrpc-adsp-secure',0o600)
         state=Path(STATE);state.mkdir(mode=0o700);os.chown(state,UID,UID)
-        try:facts=serve(a.trace_tool)
+        try:facts=serve(a.trace_tool,diagnostic=a.diagnostic_ram_writes)
         finally:
             # A refused RPC/file lookup still needs post-service protection
             # and exact-copy checks before the host requests recovery.
@@ -223,6 +242,8 @@ def main():
                 'no_sensor_clients_remaining':True,'module_policy_unchanged':True,
                 'private_data_bytes_unchanged':True,'acceptance_not_implied':True},sort_keys=True),flush=True)
         result={'scope':'BOUNDED_PRIVATE_PHONE_SENSOR_REVERSE_FILESERVER_ONLY','worker':facts,
+                'diagnostic_ram_writes_only':a.diagnostic_ram_writes,
+                'file_server_accepted':facts['file_server_accepted'],
                 'sensor_stream_requested':False,'ssc_or_iio_client_started':False,'adsp_restarted':False,
                 'module_unloaded':False,'firmware_or_kernel_replaced':False,'module_policy_unchanged':True,
                 'private_data_bytes_unchanged':True,'data_files':len(entries)-len(LINKS)-5}

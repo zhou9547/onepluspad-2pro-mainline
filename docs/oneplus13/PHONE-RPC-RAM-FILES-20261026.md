@@ -14,6 +14,15 @@ archive without this option fails before attachment because the daemon rejects
 the unknown argument. The service's 40-second runtime, single attach, no client,
 clean-stop and fail-closed error gates are unchanged.
 
+For a future bounded hardware diagnostic, the worker can select
+`--diagnostic-ram-writes`. This mode still requires one successful attach, at
+least three successful reverse invokes, a valid complete trace, a clean stop and
+zero write refusals. It permits only bounded counts of classified missing-file
+or unsupported-dispatch lines, records their counts without paths, and reports
+`file_server_accepted: false`. Unknown errors, excessive counts, write refusals,
+partial traces and unclean stops remain fatal. The normal mode retains the
+strict zero-error acceptance rule.
+
 ## Data and handles
 
 The backend holds at most two files in process memory. Each file is capped at

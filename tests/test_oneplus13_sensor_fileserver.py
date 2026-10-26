@@ -100,6 +100,7 @@ class Trace(unittest.TestCase):
         self.assertEqual(result['error_lines'],2)
         self.assertEqual(result['write_refusals'],1)
         self.assertEqual(result['missing_file_lookups'],1)
+        self.assertEqual(result['unsupported_or_refused_dispatches'],1)
         self.assertNotIn(private,json.dumps(result))
     def test_success_evidence_keeps_remote_release_unclaimed(self):
         result=m.trace_facts(TRACE)
@@ -128,7 +129,7 @@ class BoundedService(unittest.TestCase):
         self.assertNotIn('-p',cmd);self.assertNotIn('-c',cmd)
         self.assertIn('-W',cmd)
         self.assertIn('raw=ioctl',cmd)
-    def run_service(self,active='active',result='success',log='',trace=TRACE):
+    def run_service(self,active='active',result='success',log='',trace=TRACE,diagnostic=False):
         calls=[];now=[0]
         def run(args,seconds=8):
             calls.append((args,seconds))
@@ -140,7 +141,7 @@ class BoundedService(unittest.TestCase):
         def sleep(value):now[0]+=value
         def contents(path,*a,**k):return trace if str(path).endswith('syscalls.log') else log
         with patch.object(m.Path,'read_text',contents):
-            answer=m.serve('/run/trace',run,sleep,lambda:now[0])
+            answer=m.serve('/run/trace',run,sleep,lambda:now[0],diagnostic=diagnostic)
         return answer,calls
     def test_success_stops_once_before_acceptance(self):
         answer,calls=self.run_service()
@@ -156,6 +157,17 @@ class BoundedService(unittest.TestCase):
         with self.assertRaises(ValueError):self.run_service(log='Refused request on handle 1')
     def test_write_refusal_cannot_silently_pass(self):
         with self.assertRaises(ValueError):self.run_service(log='Tried to open /private/registry/DIR for writing')
+    def test_diagnostic_allows_only_classified_missing_files(self):
+        answer,_=self.run_service(log='Could not open optional.so: No such file or directory',diagnostic=True)
+        self.assertFalse(answer['file_server_accepted'])
+        self.assertEqual(answer['write_refusals'],0)
+        self.assertEqual(answer['diagnostic_missing_file_lookups'],1)
+    def test_diagnostic_still_refuses_write_mode(self):
+        with self.assertRaises(ValueError):
+            self.run_service(log='Tried to open /private/registry/DIR for writing',diagnostic=True)
+    def test_diagnostic_rejects_unclassified_error(self):
+        with self.assertRaises(ValueError):
+            self.run_service(log='Could not start unknown internal subsystem',diagnostic=True)
     def test_complete_trace_diagnostic_precedes_missing_lookup_failure(self):
         output=io.StringIO()
         with contextlib.redirect_stdout(output),self.assertRaises(ValueError):
