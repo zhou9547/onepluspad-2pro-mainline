@@ -1,5 +1,16 @@
 # Technical debt (single register for the phone)
 
+WiFi is now the owner priority. The new transport-free phone SAR codec passes
+14 host release and14 ASan/UBSan/LSan groups, including exact bytes against the
+actual pinned vendor sender. Native ARM64 is pending. QCA USER6/V2=7 must map
+to firmware USER7/V2=8; NONE5 is refused, never treated as firmware BDF4=5.
+This codec is not wired into ath12k WiFi7, does not establish a phone policy,
+and does not authorize RF. Add capability/GET/event integration and serialization
+across firmware restart; qualify exact phone BDF/regdb/firmware rather than the
+reference inputs used by historical run66. Then current-rootfs automatic
+scan/authentication/DHCP/verified-HTTPS and desktop regression remain required.
+
+
 The corrected batch now passes: native10 camera/amplifier objects and actual
 PHY7 release/7 ASan+UBSan cases (Actions40285807929); SSC3 release/3 sanitizer
 executables plus13 wrapper cases (Actions40285807884); and full exact-rootfs

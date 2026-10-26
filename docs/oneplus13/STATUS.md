@@ -1,5 +1,28 @@
 # 一加13适配状态
 
+## 2026-10-26 WiFi priority and SAR protocol implementation
+
+Owner has made WiFi the immediate priority. Run66 previously completed scan,
+authentication, DHCP and certificate-verified HTTPS using reference inputs;
+the current isolated candidate disables radios and has no current WiFi acceptance.
+Do not describe the historical network pass as a current usable WiFi result.
+
+New wifi-draft/sar-wire.c implements explicit QCA-to-WMI selection translation,
+SET/GET encoding, strict complete readback decoding, unmodified capabilities and
+separate SAR2 firmware results. Fourteen real C test groups pass release and
+ASan/UBSan/LSan on WSL; encoded SET bytes match the actual extracted pinned
+vendor sender. Native ARM64 verification is pending. No transport or power
+policy is attached, and no phone RF was enabled. Driver integration, exact
+phone firmware delivery and effective policy remain before WiFi RAM acceptance.
+See tools/oneplus13/wifi-draft/PROVENANCE.md.
+
+Run81 returned to Android automatically in116.2s with seven matching baseline
+properties and zero partition writes. Display/GPU/desktop and two synthetic RPC
+checks passed; SSC exited1, raw diagnostics were saved privately, and both units
+were inactive with no PID. No sensor stream, camera activation, audio or RF.
+The run81 stop and all historical ledgers remain intact.
+
+
 Actions 40294047744 已成功验证相机/功放联合构建及 7 项相机板级映射契约测试。
 原厂 FDT 只读复核结果保留在本地私有输出；私有 FDT、传感器身份和 EEPROM 内容
 没有进入公开提交。
