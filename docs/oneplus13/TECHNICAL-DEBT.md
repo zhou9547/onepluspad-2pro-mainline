@@ -1,5 +1,14 @@
 # Technical debt (single register for the phone)
 
+The corrected batch now passes: native10 camera/amplifier objects and actual
+PHY7 release/7 ASan+UBSan cases (Actions40285807929); SSC3 release/3 sanitizer
+executables plus13 wrapper cases (Actions40285807884); and full exact-rootfs
+UID65534 sandbox, actual timeout, handoff and VM automatic deadline. This
+supersedes the pending rebuild stages below, not the retained fallback failure.
+Two phone-specific audio graph drafts compile/decode offline. Missing sensor
+driver/media graph, WCD channel mapping, speaker calibration/protection and
+physical sensor/RF/audio/camera acceptance remain. See AV-SSC-OFFLINE-20261026.md.
+
 CORRECTION: the earlier SSC QEMU-user -L link result used host ARM64 fallback
 libraries and is not an exact-rootfs pass. Full VM exposed missing protobuf-c,
 qmi, qrtr and mbim runtime libraries. Old evidence is retained and superseded;
