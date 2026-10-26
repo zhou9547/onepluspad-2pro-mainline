@@ -43,10 +43,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Install assembly and emulator tools
+      - name: Install emulator tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends squashfs-tools qemu-system-arm
+          sudo apt-get install -y --no-install-recommends qemu-system-arm
       - uses: actions/download-artifact@v4
         with:
           name: oneplus13-offline-1f5c1128d42a62244bef9974e58cfe07adf29f7d
@@ -55,35 +55,30 @@ jobs:
           path: out/exact-kernel
       - uses: actions/download-artifact@v4
         with:
-          name: oneplus13-ubuntu-26.04.1-gnome-03ecbd66a3a55c11edaa78daab4bb8d4702d9e11
-          run-id: 40212524437
+          name: oneplus13-desktop-rootfs-de8eef9ca4d94940e6edb63f26a1dcd9d0bed7b2
+          run-id: 40068689660
           github-token: ${{ github.token }}
           path: out/exact-rootfs
-      - uses: actions/download-artifact@v4
-        with:
-          name: erhai-mesa-545787e4e4d47e975a0baa20cce42ce526aa116c
-          run-id: 40099943186
-          github-token: ${{ github.token }}
-          path: out/exact-mesa
-      - name: Assemble public current-image rootfs
-        run: |
-          mapfile -t debs < <(find out/exact-mesa -type f -name '*.deb')
-          test "${#debs[@]}" = 1
-          sudo python3 tools/oneplus13/assemble-ram-rootfs.py             --base out/exact-rootfs/rootfs.squashfs             --kernel out/exact-kernel --mesa "${debs[0]}"             --output out/assembled-rootfs
       - name: Verify exact current rootfs identity
         run: |
-          rootfs=out/assembled-rootfs/rootfs.squashfs
+          rootfs=out/exact-rootfs/rootfs.squashfs
           test "$(stat -c %s "$rootfs")" = 471007232
           test "$(sha256sum "$rootfs" | cut -d' ' -f1)" = 64930aeb440de2ee4e0643c632cd4350b700ae59421985caa06056a0704a90c1
+          test "$(sha256sum out/exact-kernel/Image | cut -d' ' -f1)" = 6a026fd545e65b14976bf357f2eee879b74fc36137097f9c1dff4362e4f4c547
+          test "$(sha256sum out/exact-kernel/modules.tar.gz | cut -d' ' -f1)" = d9e2516f951dd99c00263509e88703b5a1d661f6c070a5fa593ffad2bdaf95bb
       - name: Boot exact assembled rootfs in QEMU
         run: |
-          python3 tools/oneplus13/qemu-exact-rootfs.py             --kernel out/exact-kernel             --rootfs out/assembled-rootfs/rootfs.squashfs             --assembled-manifest out/assembled-rootfs/manifest.json             --output out/current-image-handoff
+          python3 tools/oneplus13/qemu-exact-rootfs.py \
+            --kernel out/exact-kernel \
+            --rootfs out/exact-rootfs/rootfs.squashfs \
+            --assembled-manifest out/exact-rootfs/manifest.json \
+            --output out/current-image-handoff
       - name: Record public build qualification
         run: |
           python3 - <<'PY'
           import hashlib,json,os,pathlib
           root=pathlib.Path('.')
-          files=['out/assembled-rootfs/rootfs.squashfs','out/exact-kernel/Image',
+          files=['out/exact-rootfs/rootfs.squashfs','out/exact-kernel/Image',
                  'out/exact-kernel/modules.tar.gz','out/exact-kernel/sm8750-oneplus-dodge-native.dtb']
           proof={'scope':'PUBLIC_CURRENT_IMAGE_COMPONENTS','source_commit':os.environ['GITHUB_SHA'],
                  'phone_operations':0,'hardware_tested':False,
@@ -99,7 +94,7 @@ jobs:
         with:
           name: oneplus13-current-image-${{ github.sha }}
           path: |
-            out/assembled-rootfs/
+            out/exact-rootfs/
             out/current-image-handoff/
           if-no-files-found: error
           retention-days: 14
