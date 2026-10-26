@@ -546,3 +546,5 @@ CLI/linking passed Actions40252529300 plus host QEMU-user; writable-registry
 ABI, absent OEM data and DSP library provenance remain gates.
 See PHONE-PCB-MAPPING-20261026.md; source unit tests do not qualify phone streams.
 
+
+2026-10-26 run80 safely returned to Android after the metadata-only SSC probe stopped before a qualified result. The reverse service had one attach, module policy and private inputs were unchanged, and there were no samples or streams. The probe now carries a 12-second discovery deadline plus whitelisted failure classes, so a future attempt can distinguish service lookup, QRTR/socket setup, policy refusal and timeout without exposing raw private output. This is not sensor-stream or camera/audio acceptance.

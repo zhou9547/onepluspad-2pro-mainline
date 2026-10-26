@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: GPL-2.0-only
+﻿# SPDX-License-Identifier: GPL-2.0-only
 import hashlib,importlib.util,io,json,subprocess,tarfile,tempfile,unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -56,6 +56,25 @@ class ControlTests(unittest.TestCase):
             return result
         with self.assertRaises(ValueError):m.run_probe('discover',run=failed)
         self.assertEqual(self.calls[-1][1],'is-active')
+    def test_failed_discovery_returns_only_classified_reasons(self):
+        output='SSC_PHONE_METADATA_DIAGNOSTIC type=all reason=discovery_timeout\n'+GOOD.replace('available=yes','available=no')
+        run=self.runner(output)
+        def failed(cmd,**kw):
+            result=run(cmd,**kw)
+            if cmd[0].endswith('systemd-run'):result.returncode=255
+            return result
+        with self.assertRaisesRegex(ValueError,'discovery_timeout'):
+            m.run_probe('discover',run=failed)
+        self.assertEqual(self.calls[-1][1],'is-active')
+    def test_unclassified_discovery_output_stays_withheld(self):
+        run=self.runner('private text must not be returned\n')
+        def failed(cmd,**kw):
+            result=run(cmd,**kw)
+            if cmd[0].endswith('systemd-run'):result.returncode=255
+            return result
+        with self.assertRaises(ValueError) as caught:m.run_probe('discover',run=failed)
+        self.assertNotIn('private text',str(caught.exception))
+        self.assertIn('{}',str(caught.exception))
     def test_stop_timeout_still_queries_state_and_refuses(self):
         run=self.runner()
         def stop_timeout(cmd,**kw):
@@ -94,3 +113,4 @@ class ArchiveTests(unittest.TestCase):
             with self.assertRaises(ValueError):m.entries(archive,manifest)
 
 if __name__=='__main__':unittest.main()
+

@@ -57,6 +57,13 @@ def command(mode,state=STATE):
     else:args+=[str(state/'probe/phone-ssc-metadata-probe')]
     return unit,args
 
+def diagnostics(output):
+    if len(output)>32768:raise ValueError('Oversized probe output')
+    rows=re.findall(r'^SSC_PHONE_METADATA_DIAGNOSTIC type=([a-z_]+) reason=([a-z_]+)$',output,re.M)
+    if any(x[0] not in TYPES|{'all'} for x in rows):raise ValueError('Unexpected diagnostic type')
+    if len({x[0] for x in rows})!=len(rows):raise ValueError('Duplicate diagnostic type')
+    return {name:reason for name,reason in rows}
+
 def interpret(mode,output):
     if len(output)>32768:raise ValueError('Oversized probe output')
     if mode=='verify':
@@ -83,7 +90,7 @@ def run_probe(mode,state=STATE,run=subprocess.run):
         if stopped.returncode not in (0,5) or inactive.returncode not in (3,4) or inactive.stdout.strip() not in ('inactive','unknown'):
             raise ValueError('SSC metadata unit did not stop cleanly')
     if result.returncode:
-        detail=(result.stdout+result.stderr)[-1800:] if mode=='verify' else 'private discovery output withheld'
+        detail=(result.stdout+result.stderr)[-1800:] if mode=='verify' else json.dumps(diagnostics(result.stdout+result.stderr),sort_keys=True)
         raise ValueError('SSC metadata process failed, exit='+str(result.returncode)+': '+detail)
     facts=interpret(mode,result.stdout+result.stderr)
     return {'scope':'BOUNDED_SSC_METADATA_ONLY','mode':mode,'uid':65534,'unit_inactive':True,

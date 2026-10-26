@@ -1,4 +1,4 @@
-From: Codex <codex@openai.com>
+﻿From: Codex <codex@openai.com>
 Subject: [PATCH] phone libssc: add one-way metadata-only discovery guard
 
 Reuse the original libssc discovery and attribute constructors, without opening
@@ -165,20 +165,37 @@ remain. This is offline source work, not sensor sample/hardware acceptance.
 +}
 --- /dev/null
 +++ b/src/phone-ssc-metadata-probe.c
-@@ -0,0 +1,60 @@
+@@ -0,0 +1,81 @@
 +/* SPDX-License-Identifier: GPL-3.0-or-later */
 +/* Uses original libssc discovery/attribute constructors, never sensor_open. */
 +#include <glib.h>
 +#include <gio/gio.h>
 +#include <stdio.h>
 +#include "libssc-sensor.h"
++#include "libssc-client-private.h"
 +#include "libssc-phone-probe.h"
-+typedef struct { const char *type; SSCSensor *sensor; gboolean done,available; } Probe;
++typedef struct { const char *type; SSCSensor *sensor; gboolean done,available; const char *error_kind; } Probe;
 +static Probe probes[]={{.type="accel"},{.type="ambient_light"},{.type="gyro"},{.type="mag"}};
 +static GMainLoop *loop;
 +static GCancellable *cancel;
 +static gboolean timed_out;
 +static guint completed;
++static const char *error_kind(const GError *error)
++{
++    const char *domain;
++    if(!error) return "none";
++    domain=g_quark_to_string(error->domain);
++    if(domain && g_str_equal(domain,"ssc-client") && error->code==SSC_CLIENT_ERROR_LOOKUP) return "ssc_service_lookup";
++    if(g_error_matches(error,ssc_sensor_error_quark(),SSC_SENSOR_ERROR_NO_SERVICE)) return "sensor_service_unavailable";
++    if(g_error_matches(error,G_IO_ERROR,G_IO_ERROR_PERMISSION_DENIED)) return "metadata_policy_refused";
++    if(g_error_matches(error,G_IO_ERROR,G_IO_ERROR_CANCELLED)) return "cancelled";
++    if(domain && g_str_equal(domain,"g-io-error-quark")) return "g_io_error";
++    if(domain && g_str_equal(domain,"qmi-error")) return "qmi_error";
++    if(domain && g_str_equal(domain,"qmi-protocol-error")) return "qmi_protocol_error";
++    if(domain && g_str_equal(domain,"ssc-client")) return "ssc_client_other";
++    if(domain && g_str_equal(domain,"ssc-sensor")) return "ssc_sensor_other";
++    return "unlisted_error_domain";
++}
 +static void ready(GObject *source,GAsyncResult *result,gpointer data)
 +{
 +    Probe *probe=data;
@@ -186,6 +203,7 @@ remain. This is offline source work, not sensor sample/hardware acceptance.
 +    (void)source;
 +    probe->sensor=ssc_sensor_new_finish(result,&error);
 +    if(probe->sensor) g_object_get(probe->sensor,SSC_SENSOR_AVAILABLE,&probe->available,NULL);
++    probe->error_kind=error_kind(error);
 +    g_clear_error(&error);probe->done=TRUE;completed++;
 +    if(completed==G_N_ELEMENTS(probes)) g_main_loop_quit(loop);
 +}
@@ -208,12 +226,15 @@ remain. This is offline source work, not sensor sample/hardware acceptance.
 +    if(!ssc_phone_metadata_only_locked()) return 3;
 +    if(verify_lock) { puts("SSC_PHONE_METADATA_LOCK_VERIFIED_NO_QRTR");return 0; }
 +    loop=g_main_loop_new(NULL,FALSE);cancel=g_cancellable_new();
-+    guint timer=g_timeout_add_seconds(8,deadline,NULL);
++    guint timer=g_timeout_add_seconds(12,deadline,NULL);
 +    for(gsize i=0;i<G_N_ELEMENTS(probes);i++) ssc_sensor_new((gchar*)probes[i].type,cancel,ready,&probes[i]);
 +    g_main_loop_run(loop);
 +    if(!timed_out) g_source_remove(timer);
 +    gboolean all=completed==G_N_ELEMENTS(probes) && !timed_out;
++    if(timed_out) puts("SSC_PHONE_METADATA_DIAGNOSTIC type=all reason=discovery_timeout");
 +    for(gsize i=0;i<G_N_ELEMENTS(probes);i++) {
++        if(probes[i].error_kind && !g_str_equal(probes[i].error_kind,"none"))
++            printf("SSC_PHONE_METADATA_DIAGNOSTIC type=%s reason=%s\n",probes[i].type,probes[i].error_kind);
 +        printf("SSC_PHONE_METADATA type=%s available=%s completed=%s\n",probes[i].type,
 +               probes[i].available?"yes":"no",probes[i].done?"yes":"no");
 +        all=all && probes[i].available;
@@ -337,3 +358,4 @@ remain. This is offline source work, not sensor sample/hardware acceptance.
 +    g_print("PHONE_METADATA_SEND_GUARD_BLOCKED_ALL_UNREVIEWED_REQUESTS_BEFORE_QMI\n");
 +    return 0;
 +}
+

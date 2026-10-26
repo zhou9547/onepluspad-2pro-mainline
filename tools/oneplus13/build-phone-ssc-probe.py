@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 """Build an isolated metadata-only SSC probe, never an enabled sensor service."""
 import argparse,hashlib,json,os,platform,re,shutil,struct,subprocess,tarfile,urllib.request
@@ -7,7 +7,7 @@ REPO=Path(__file__).resolve().parents[2]
 ARCHIVE_SHA='716d6bd6b34d2d753060c6b54c9a87e34fae75b724c763bf9ef487efa3621587'
 SOURCE_COMMIT='0cf77b93b55752da34dca2dcecc06fca8665184b'
 EXTRA='0001-add-metadata-only-discovery-guard.patch'
-EXTRA_SHA='50811cc82d6f221abce333731d50ff3d8d0355bb002f7aea850c4d1f30538bb5'
+EXTRA_SHA='cdd32c31591d01610c768a5790be602b8843be266c261efb84ef8f6d553f63c7'
 RUNTIME_LIBRARIES={'libprotobuf-c.so.1','libqmi-glib.so.5','libqrtr-glib.so.0','libmbim-glib.so.4'}
 
 def sha(path):
@@ -119,3 +119,6 @@ def main():
         'artifact_files':files,'runtime_libraries':runtime_libraries}
     (out/'verification.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))
 if __name__=='__main__':main()
+
+
+

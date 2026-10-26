@@ -62,3 +62,5 @@ Firmware, factory data, XML contents and identifiers remain local. Phone state
 remains Android after run79; its automatic return and seven baseline matches
 are unchanged. Sensor samples, camera captures, audio streams and RF are not
 accepted by these offline results.
+
+2026-10-26 run80 safely returned to Android after the metadata-only SSC probe stopped before a qualified result. The reverse service had one attach, module policy and private inputs were unchanged, and there were no samples or streams. The probe now carries a 12-second discovery deadline plus whitelisted failure classes, so a future attempt can distinguish service lookup, QRTR/socket setup, policy refusal and timeout without exposing raw private output. This is not sensor-stream or camera/audio acceptance.

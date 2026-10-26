@@ -482,3 +482,5 @@ QEMU-user normal-RPATH/help/loader checks pass, without changing baseline stagin
 No new phone operation or run73 retry qualification. See
 PHONE-RPC-VFS-LIFETIME-20261026.md. Earlier snapshots below remain historical.
 
+
+2026-10-26 run80 safely returned to Android after the metadata-only SSC probe stopped before a qualified result. The reverse service had one attach, module policy and private inputs were unchanged, and there were no samples or streams. The probe now carries a 12-second discovery deadline plus whitelisted failure classes, so a future attempt can distinguish service lookup, QRTR/socket setup, policy refusal and timeout without exposing raw private output. This is not sensor-stream or camera/audio acceptance.
