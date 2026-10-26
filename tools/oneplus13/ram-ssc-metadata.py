@@ -10,6 +10,9 @@ NAMES={'probe/phone-ssc-metadata-probe','probe/libssc.so.2',
        'probe/libprotobuf-c.so.1','probe/libqmi-glib.so.5','probe/libqrtr-glib.so.0','probe/libmbim-glib.so.4'}
 RUNTIME_LIBRARIES={'libprotobuf-c.so.1','libqmi-glib.so.5','libqrtr-glib.so.0','libmbim-glib.so.4'}
 TYPES={'accel','ambient_light','gyro','mag'}
+REASONS={'discovery_timeout','ssc_service_lookup','sensor_service_unavailable',
+         'metadata_policy_refused','cancelled','g_io_error','qmi_error',
+         'qmi_protocol_error','ssc_client_other','ssc_sensor_other','unlisted_error_domain'}
 
 def sha(path):
     with Path(path).open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
@@ -48,7 +51,8 @@ def command(mode,state=STATE):
        'KillMode=control-group','MemoryMax=128M','TasksMax=16','RuntimeMaxSec=20s','TimeoutStopSec=2s',
        'PrivateNetwork='+('yes' if mode=='verify' else 'no'),
        'RestrictAddressFamilies='+('AF_UNIX' if mode=='verify' else 'AF_UNIX AF_QIPCRTR')]
-    args=['/usr/bin/systemd-run','--quiet','--wait','--pipe','--collect','--unit='+unit,
+    # Retain failed units until their execution status has been inspected.
+    args=['/usr/bin/systemd-run','--quiet','--wait','--pipe','--unit='+unit,
           '--setenv=LD_LIBRARY_PATH='+str(state/'probe'),*['--property='+x for x in properties]]
     if mode=='verify':
         args+=['/bin/sh','-eu','-c','"$1" --verify-lock; "$2"; "$3"','--',
@@ -61,8 +65,50 @@ def diagnostics(output):
     if len(output)>32768:raise ValueError('Oversized probe output')
     rows=re.findall(r'^SSC_PHONE_METADATA_DIAGNOSTIC type=([a-z_]+) reason=([a-z_]+)$',output,re.M)
     if any(x[0] not in TYPES|{'all'} for x in rows):raise ValueError('Unexpected diagnostic type')
+    if any(x[1] not in REASONS for x in rows):raise ValueError('Unexpected diagnostic reason')
     if len({x[0] for x in rows})!=len(rows):raise ValueError('Duplicate diagnostic type')
     return {name:reason for name,reason in rows}
+
+def execution_status(unit,run):
+    fields={'LoadState':{'loaded','not-found','error','masked'},
+            'ActiveState':{'active','inactive','failed','activating','deactivating'},
+            'SubState':{'dead','failed','running','exited','start','stop','stop-sigterm','stop-sigkill'},
+            'Result':{'success','exit-code','signal','core-dump','timeout','resources','protocol',
+                      'start-limit-hit','oom-kill','exec-condition','assert','condition'},
+            'ExecMainCode':None,'ExecMainStatus':None}
+    try:
+        result=run(['/usr/bin/systemctl','show',unit,*['--property='+n for n in fields]],
+                   capture_output=True,text=True,timeout=2)
+    except (OSError,subprocess.TimeoutExpired):return {'availability':'query_failed'}
+    if result.returncode or len(result.stdout)>4096:return {'availability':'unit_unavailable'}
+    facts={}
+    for line in result.stdout.splitlines():
+        name,sep,value=line.partition('=')
+        if not sep or name not in fields or name in facts:return {'availability':'unrecognized_status'}
+        if fields[name] is None:
+            if not re.fullmatch(r'[0-9]{1,3}',value):return {'availability':'unrecognized_status'}
+            facts[name]=int(value)
+        elif value in fields[name]:facts[name]=value
+        else:return {'availability':'unrecognized_status'}
+    if set(facts)!=set(fields):return {'availability':'incomplete_status'}
+    return {'availability':'observed',**facts}
+
+def save_private_failure(state,result):
+    # Only an installed RAM state directory permits local raw evidence. Never
+    # include these bytes in stdout or exception text; the host may copy them
+    # into private records before automatic recovery.
+    if not state.exists():return {'saved':False}
+    if state.is_symlink() or not state.is_dir() or state.stat().st_uid!=0 or state.stat().st_mode&0o022:
+        raise ValueError('Unsafe private diagnostic ancestry')
+    target=state/'failure-private';target.mkdir(mode=0o700);target.chmod(0o700)
+    facts={'saved':True,'files':{}}
+    for name,value in [('stdout',result.stdout),('stderr',result.stderr)]:
+        data=value.encode('utf-8',errors='replace');bounded=data[:32768]
+        fd=os.open(target/name,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+        with os.fdopen(fd,'wb') as stream:stream.write(bounded)
+        facts['files'][name]={'bytes_saved':len(bounded),'truncated':len(data)>len(bounded),
+                              'sha256':hashlib.sha256(bounded).hexdigest()}
+    return facts
 
 def interpret(mode,output):
     if len(output)>32768:raise ValueError('Oversized probe output')
@@ -80,8 +126,10 @@ def interpret(mode,output):
 
 def run_probe(mode,state=STATE,run=subprocess.run):
     unit,args=command(mode,state)
+    status=None
     try:
         result=run(args,capture_output=True,text=True,timeout=26)
+        if result.returncode:status=execution_status(unit,run)
     finally:
         try:
             stopped=run(['/usr/bin/systemctl','stop',unit],capture_output=True,text=True,timeout=5)
@@ -90,7 +138,11 @@ def run_probe(mode,state=STATE,run=subprocess.run):
         if stopped.returncode not in (0,5) or inactive.returncode not in (3,4) or inactive.stdout.strip() not in ('inactive','unknown'):
             raise ValueError('SSC metadata unit did not stop cleanly')
     if result.returncode:
-        detail=(result.stdout+result.stderr)[-1800:] if mode=='verify' else json.dumps(diagnostics(result.stdout+result.stderr),sort_keys=True)
+        if mode=='verify':detail=(result.stdout+result.stderr)[-1800:]
+        else:
+            private=save_private_failure(state,result)
+            detail=json.dumps({'probe':diagnostics(result.stdout+result.stderr),
+                               'execution':status,'private_output':private},sort_keys=True)
         raise ValueError('SSC metadata process failed, exit='+str(result.returncode)+': '+detail)
     facts=interpret(mode,result.stdout+result.stderr)
     return {'scope':'BOUNDED_SSC_METADATA_ONLY','mode':mode,'uid':65534,'unit_inactive':True,

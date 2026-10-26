@@ -32,6 +32,7 @@ class CompositeTests(unittest.TestCase):
                 if stop_error:raise stop_error
                 return SimpleNamespace(returncode=0,stdout='',stderr='')
             if command[1]=='is-active':return SimpleNamespace(returncode=0 if active else 3,stdout='active' if active else 'inactive',stderr='')
+            if command[1]=='show':return SimpleNamespace(returncode=4,stdout='',stderr='')
             raise AssertionError(command)
         return run
     def probe(self,**kw):return m.metadata_callback(self.fs,ssc,run=self.runner(**kw),clock=self.clock,sleep=self.sleep)
@@ -74,6 +75,7 @@ class CompositeTests(unittest.TestCase):
         self.assertEqual(self.calls[-1][0][1],'is-active')
     def test_nonzero_query_still_stops(self):
         with self.assertRaises(ValueError):self.probe(exitcode=1)
+        self.assertEqual([t for c,t in self.calls],[16,2,3,2])
         self.assertEqual(self.calls[-1][0][1],'is-active')
     def test_stop_timeout_still_checks_and_refuses(self):
         with self.assertRaises(subprocess.TimeoutExpired):self.probe(stop_error=subprocess.TimeoutExpired('stop',3))

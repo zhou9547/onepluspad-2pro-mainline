@@ -226,7 +226,7 @@ remain. This is offline source work, not sensor sample/hardware acceptance.
 +    if(!ssc_phone_metadata_only_locked()) return 3;
 +    if(verify_lock) { puts("SSC_PHONE_METADATA_LOCK_VERIFIED_NO_QRTR");return 0; }
 +    loop=g_main_loop_new(NULL,FALSE);cancel=g_cancellable_new();
-+    guint timer=g_timeout_add_seconds(12,deadline,NULL);
++    guint timer=g_timeout_add_seconds(8,deadline,NULL);
 +    for(gsize i=0;i<G_N_ELEMENTS(probes);i++) ssc_sensor_new((gchar*)probes[i].type,cancel,ready,&probes[i]);
 +    g_main_loop_run(loop);
 +    if(!timed_out) g_source_remove(timer);

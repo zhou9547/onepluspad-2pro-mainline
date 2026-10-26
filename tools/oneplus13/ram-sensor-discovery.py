@@ -15,7 +15,7 @@ def load(name,path,digest):
 
 def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.sleep):
     # The probe is installed BEFORE the reverse-service window. Bound the
-    # actual query and both cleanup calls to 16+3+2s, plus at most 3s readiness.
+    # actual query, failure status and cleanup to 16+2+3+2s, plus <=3s readiness.
     # Keep the original independent 20s systemd cap and 28s service window.
     until=clock()+3
     while True:
@@ -37,6 +37,7 @@ def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.
         if command[0]=='/usr/bin/systemd-run':limit=16
         elif command==['/usr/bin/systemctl','stop','oneplus13-ssc-metadata-discover.service']:limit=3
         elif command==['/usr/bin/systemctl','is-active','oneplus13-ssc-metadata-discover.service']:limit=2
+        elif command[:3]==['/usr/bin/systemctl','show','oneplus13-ssc-metadata-discover.service']:limit=2
         else:raise ValueError('Unreviewed metadata command')
         kwargs['timeout']=min(kwargs['timeout'],limit)
         return run(command,**kwargs)

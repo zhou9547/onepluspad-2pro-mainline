@@ -74,7 +74,50 @@ class ControlTests(unittest.TestCase):
             return result
         with self.assertRaises(ValueError) as caught:m.run_probe('discover',run=failed)
         self.assertNotIn('private text',str(caught.exception))
-        self.assertIn('{}',str(caught.exception))
+        self.assertIn('"probe": {}',str(caught.exception))
+    def test_diagnostic_reasons_are_exact_public_categories(self):
+        for reason in m.REASONS:
+            self.assertEqual(m.diagnostics('SSC_PHONE_METADATA_DIAGNOSTIC type=gyro reason='+reason),{'gyro':reason})
+        for text in ('type=gyro reason=private_identifier','type=other reason=g_io_error',
+                     'type=gyro reason=g_io_error\nSSC_PHONE_METADATA_DIAGNOSTIC type=gyro reason=cancelled'):
+            with self.subTest(text=text),self.assertRaises(ValueError):
+                m.diagnostics('SSC_PHONE_METADATA_DIAGNOSTIC '+text)
+    def test_failed_exec_status_is_queried_before_cleanup(self):
+        run=self.runner('raw stderr must stay private')
+        status='LoadState=loaded\nActiveState=failed\nSubState=failed\nResult=exit-code\nExecMainCode=1\nExecMainStatus=203\n'
+        def failed(cmd,**kw):
+            result=run(cmd,**kw)
+            if cmd[0].endswith('systemd-run'):result.returncode=255
+            elif cmd[1]=='show':result.returncode=0;result.stdout=status
+            return result
+        with self.assertRaises(ValueError) as caught:m.run_probe('discover',run=failed)
+        self.assertIn('"ExecMainStatus": 203',str(caught.exception))
+        self.assertNotIn('raw stderr',str(caught.exception))
+        self.assertEqual([c[1] for c in self.calls[1:]],['show','stop','is-active'])
+    def test_private_status_values_are_not_echoed(self):
+        def run(cmd,**kw):return SimpleNamespace(returncode=0,stdout='Result=private_value\n')
+        self.assertEqual(m.execution_status('synthetic.service',run),{'availability':'unrecognized_status'})
+    def test_failure_status_timeout_still_performs_cleanup(self):
+        run=self.runner()
+        def failed(cmd,**kw):
+            if cmd[1]=='show':self.calls.append(cmd);raise subprocess.TimeoutExpired('show',2)
+            result=run(cmd,**kw)
+            if cmd[0].endswith('systemd-run'):result.returncode=255
+            return result
+        with self.assertRaisesRegex(ValueError,'query_failed'):m.run_probe('discover',run=failed)
+        self.assertEqual(self.calls[-1][1],'is-active')
+    @unittest.skipUnless(__import__('os').name=='posix' and __import__('os').geteuid()==0,'actual root-owned POSIX permissions')
+    def test_private_failure_capture_is_exclusive_bounded_and_not_echoed(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);root.chmod(0o755)
+            result=SimpleNamespace(stdout='private_value'*5000,stderr='private stderr')
+            facts=m.save_private_failure(root,result)
+            self.assertEqual((root/'failure-private').stat().st_mode&0o777,0o700)
+            self.assertEqual((root/'failure-private/stdout').stat().st_mode&0o777,0o600)
+            self.assertEqual((root/'failure-private/stdout').stat().st_size,32768)
+            self.assertTrue(facts['files']['stdout']['truncated'])
+            self.assertNotIn('private_value',json.dumps(facts))
+            with self.assertRaises(FileExistsError):m.save_private_failure(root,result)
     def test_stop_timeout_still_queries_state_and_refuses(self):
         run=self.runner()
         def stop_timeout(cmd,**kw):
