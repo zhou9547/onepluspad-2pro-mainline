@@ -55,6 +55,7 @@ int ath12k_wmi_cmd_send(struct fake_pdev *pdev, struct sk_buff *b, u32 command)
 	if(mode==15){struct psar_table tmp;recursion_status=ath12k_phone_sar_get(active,&tmp);}
 	put(result,699u<<16|4);put(result+4,mode==4?1:mode==5?64:0);
 	if(mode==14)selection=1;
+	if(mode==18)selection=0;
 	put(table,709u<<16|8);put(table+4,selection);put(table+8,selection==8?1:0);
 	put(table+12,18u<<16|(selection==8?20:0));
 	if(selection==8){put(table+16,710u<<16|16);put(table+32,42);}
@@ -117,6 +118,8 @@ int main(void)
 	}groups++;
 	fixture(&ab,0);assert(!ath12k_phone_sar_event(&ab,0,bytes,sizeof(bytes)));assert(!ab.wmi_ab.phone_sar.poisoned);finish(&ab);groups++;
 	fixture(&ab,1);row.value=12;assert(ath12k_phone_sar_observe_v2(&ab,&row,1,&result,&table)==-EINVAL && !sends);finish(&ab);groups++;
+	fixture(&ab,5);mode=18;assert(!ath12k_phone_sar_get(&ab,&table));assert(table.firmware_selection==0 && !table.count);
+	row.value=3;assert(ath12k_phone_sar_observe_v2(&ab,&row,1,&result,&table)==-EOPNOTSUPP && sends==1);finish(&ab);groups++;
 	printf("driver_groups=%d actual_driver_code=yes tokenless_timeout_latched=yes hardware=no\n",groups);
 	return 0;
 }

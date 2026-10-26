@@ -125,9 +125,9 @@ def main():
             r = subprocess.run(argv, capture_output=True, env=env, timeout=60)
             with log.open('ab') as stream: stream.write(json.dumps(argv).encode()+b'\n'+r.stdout+r.stderr)
             if r.returncode: raise RuntimeError('Offline SAR check failed; see build.log')
-        if b'groups=14 vendor_sender_exact_bytes=yes hardware=no' not in r.stdout:
+        if b'groups=15 vendor_sender_exact_bytes=yes hardware=no' not in r.stdout:
             raise ValueError('Missing actual C test completion')
-        counts[config] = 14
+        counts[config] = 15
     proof = {'scope':'PHONE_WIFI_SAR_CODEC_VENDOR_ORACLE_OFFLINE_ONLY', 'phone_operations':0,
              'machine':platform.machine(), 'test_groups':counts, 'vendor_sender_exact_bytes':True,
              'asan_ubsan_lsan_enabled':True, 'wire_source_commit':lock['commit'],

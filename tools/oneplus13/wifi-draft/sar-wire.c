@@ -126,8 +126,10 @@ int psar_decode_table(const unsigned char *data, size_t len,
 		return PSAR_INVALID;
 	tmp.firmware_selection = get32(data + 4);
 	tmp.count = get32(data + 8);
-	/* Refuse clamping/truncation and unknown firmware selection semantics. */
-	if (!((tmp.firmware_selection >= 1 && tmp.firmware_selection <= 5) ||
+	/* OFF is a valid observation, never permission to transmit or disable SAR.
+	 * TAS firmware can report an empty legacy table; retain that distinction.
+	 */
+	if (!(tmp.firmware_selection <= 5 ||
 	      tmp.firmware_selection == 7 || tmp.firmware_selection == 8))
 		return PSAR_UNSUPPORTED;
 	if (tmp.count > PSAR_MAX_ROWS ||

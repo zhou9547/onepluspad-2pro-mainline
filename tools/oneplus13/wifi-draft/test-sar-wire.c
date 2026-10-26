@@ -119,7 +119,12 @@ int main(void)
 	fixture(event, 8); memcpy(event + 36, event + 16, 20);
 	assert(psar_decode_table(event, 176, &table) == PSAR_INVALID);
 	fixture(event, 8); word(event + 4, WMI_SAR_FEATURE_OFF);
-	assert(psar_decode_table(event, 176, &table) == PSAR_UNSUPPORTED); groups++;
+	assert(psar_decode_table(event, 176, &table) == PSAR_INVALID); groups++;
+	word(event + 8, 0);word(event + 12, WMITLV_TAG_ARRAY_STRUC << 16);
+	assert(psar_decode_table(event, 16, &table) == PSAR_OK);
+	assert(table.firmware_selection == WMI_SAR_FEATURE_OFF && table.count == 0);
+	/* Decoder observation does not permit a SET that disables limits. */
+	assert(psar_encode_set(5, NULL, 0, out, sizeof(out), &n) == PSAR_UNSUPPORTED); groups++;
 
 	word(event, WMITLV_TAG_STRUC_wmi_sar2_result_event_fixed_param << 16 | 4);
 	for (raw = 0; raw < 10; raw++) {
@@ -144,7 +149,7 @@ int main(void)
 			(void)psar_decode_table(event, 176, &table);
 		}
 	} groups++;
-	assert(groups == 14);
+	assert(groups == 15);
 	printf("PHONE_SAR_WIRE_TESTS groups=%u vendor_sender_exact_bytes=yes hardware=no\n", groups);
 	return 0;
 }
