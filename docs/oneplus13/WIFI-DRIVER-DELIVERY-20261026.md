@@ -33,6 +33,17 @@ new sources in the resulting phone-kernel.patch, and produce matching Image
 and modules. This does not install a cfg80211 policy, firmware or automatic
 SAR caller, and is not permission to activate the resulting WLAN DTB.
 
+The platform-review branch is a thin public overlay, not the complete phone
+build tree. The full build checks out the already published/tested phone base
+1f5c1128d42a62244bef9974e58cfe07adf29f7d and overlays only the reviewed WiFi
+directory and guarded build script at the selected workflow commit. The output
+wifi-source-binding.json pins both commits and every overlay file, while the
+phone-kernel.patch contains all new driver sources and determines the new
+kernel release. Existing baseline panel/touch inputs are retained. The initial
+dispatch was rejected before starting because the reusable PLL workflow was
+absent from the thin branch; its public definition and full-baseline checkout
+are now included. No phone was involved in that CI configuration failure.
+
 An exact-source audit also found a version-name discrepancy: the pinned WMI
 capability extractor passes `active_version` directly, WMA/HDD retain it, and
 the sequential host SAR_VERSION_5 maps to QCA5; the firmware enum names raw4

@@ -39,6 +39,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          # The platform-review branch is a thin public overlay. Reuse the
+          # already published complete phone baseline for this selected build.
+          ref: ${{ inputs.wifi-transport-only == true && '1f5c1128d42a62244bef9974e58cfe07adf29f7d' || github.sha }}
+      - uses: actions/checkout@v4
+        if: ${{ inputs.wifi-transport-only == true }}
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .wifi-overlay
+      - name: Bind reviewed WiFi overlay onto published phone baseline
+        if: ${{ inputs.wifi-transport-only == true }}
+        run: |
+          test "$(git rev-parse HEAD)" = 1f5c1128d42a62244bef9974e58cfe07adf29f7d
+          test "$(git -C .wifi-overlay rev-parse HEAD)" = "$GITHUB_SHA"
+          cp -a .wifi-overlay/tools/oneplus13/wifi-draft tools/oneplus13/
+          cp .wifi-overlay/tools/oneplus13/build.sh tools/oneplus13/build.sh
+          mkdir -p out/oneplus13
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path('.')
+          files=[root/'tools/oneplus13/build.sh',*sorted((root/'tools/oneplus13/wifi-draft').glob('*'))]
+          proof={'scope':'PUBLIC_PINNED_PHONE_BASE_PLUS_REVIEWED_WIFI_OVERLAY',
+                 'phone_base_commit':'1f5c1128d42a62244bef9974e58cfe07adf29f7d',
+                 'wifi_overlay_commit':os.environ['GITHUB_SHA'],'phone_operations':0,
+                 'files':{str(p):hashlib.sha256(p.read_bytes()).hexdigest() for p in files if p.is_file()}}
+          (root/'out/oneplus13/wifi-source-binding.json').write_text(json.dumps(proof,indent=2)+'\n')
+          PY
       - name: Install build dependencies
         timeout-minutes: 10
         run: |
@@ -100,6 +127,7 @@ jobs:
             out/oneplus13/wlan-dtb-verification.json
             out/oneplus13/gpu-dtb-verification.json
             out/oneplus13/wifi-driver-integration.json
+            out/oneplus13/wifi-source-binding.json
           if-no-files-found: ignore
           retention-days: 14
       - name: Install QEMU inspection tools
