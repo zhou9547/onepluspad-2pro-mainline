@@ -1,5 +1,28 @@
 # 一加13适配状态
 
+## WiFi current result: prepared, not restored
+
+Latest WiFi source4786b1195330f8823c95574cac67ed481b3ae639 passed native ARM64
+Actions40319212570:15 codec and29 actual-driver groups in release/sanitized
+configurations, plus complete common/WiFi7 family recompilation and both
+relocatable composite links with warnings as errors. A separately selected
+full-kernel build input now includes this dormant transport in real phone
+Image/modules output; it adds no firmware, RF policy or automatic SAR command.
+
+Five exact-phone WLAN files were staged on the host, unmodified and inactive.
+The current isolated candidate has no WCN7860 firmware in either rootfs or
+initramfs, and its radio nodes/modules remain disabled. No new RAM boot or
+current WiFi acceptance occurred. Historical networking results do not cover it.
+
+Bounded Android GET219/GET164 queries reported QCA capability5 (documented TAS),
+NONE/empty legacy limits and unresolved CTL grouping, with seven baseline
+properties matching and no SET/scan/file write/reboot. Pinned firmware and host
+SAR version names/numbering are not fully consistent; do not infer a raw WMI
+version or substitute USER/V2 policy. The decoder now retains an OFF/empty
+observation while SET-to-NONE is still refused. Effective phone TAS/SmartTx
+policy/lifecycle and current-image network acceptance remain open. See
+WIFI-DRIVER-DELIVERY-20261026.md. Earlier sections below are historical.
+
 ## 2026-10-26 WiFi priority and SAR protocol implementation
 
 Owner has made WiFi the immediate priority. Run66 previously completed scan,

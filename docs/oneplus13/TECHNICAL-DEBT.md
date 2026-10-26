@@ -1,5 +1,20 @@
 # Technical debt (single register for the phone)
 
+Current WiFi gap: radio-disabled isolated image contains no WCN7860 firmware.
+Exact-phone five-file host staging is ready. Dormant SAR transport and the
+entire common/WiFi7 family pass native compile/link Actions40319212570 with
+15+29 release/sanitized test groups; full Image/modules integration is now
+an explicit offline workflow input and still requires its own full build result.
+No current-image WiFi test passed. Android GET advertises QCA5/TAS but legacy
+GET is NONE/empty; pinned WMI/host numbering has a naming discrepancy. Preserve
+raw capability and reject guessed USER/V2 or disabled/unlimited interpretations.
+Resolve effective TAS/SmartTx lifecycle/policy before production RF admission,
+then rebuild exact candidate and perform scan/auth/DHCP/verified HTTPS jointly
+with desktop/platform/recovery checks. No new RAM boot is authorized by CI.
+
+The sections below retain earlier pending stages; current results above take
+precedence. Historical stop ledgers remain preserved.
+
 WiFi is now the owner priority. The new transport-free phone SAR codec passes
 14 host release and14 ASan/UBSan/LSan groups, including exact bytes against the
 actual pinned vendor sender. Native ARM64 is pending. QCA USER6/V2=7 must map

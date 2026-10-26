@@ -26,6 +26,24 @@ common/WiFi7 family and its two relocatable composite links. Four leaf objects
 are not a safe replacement for that family rebuild, module modpost or runtime
 qualification. No compiled object is installed on the phone.
 
+Complete common/WiFi7 compilation and relocatable linking then passed native
+Actions40319212570 with warnings as errors. The full phone build has an explicit
+`wifi-transport-only` input to include this dormant integration, preserve all
+new sources in the resulting phone-kernel.patch, and produce matching Image
+and modules. This does not install a cfg80211 policy, firmware or automatic
+SAR caller, and is not permission to activate the resulting WLAN DTB.
+
+An exact-source audit also found a version-name discrepancy: the pinned WMI
+capability extractor passes `active_version` directly, WMA/HDD retain it, and
+the sequential host SAR_VERSION_5 maps to QCA5; the firmware enum names raw4
+SMART_TX and raw5 TAS. The QCA API documents QCA5 as TAS. Do not use the vendor
+API label alone to choose one firmware policy or assume this public source
+exactly describes every proprietary component on the running Android image.
+The raw WMI observation, effective firmware policy and TAS/SmartTx lifecycle
+remain necessary. The audited57 WMI/header files contain the history command
+definitions in the separate firmware API but no corresponding WMI C sender;
+three WMA/HDD files were additionally checked for capability propagation.
+
 The new dormant SAR integration binds kernel7a81d184e3098624d4342d8f4eff5e23674bcc9f.
 It hooks actual WMI capability, nested EXT2 flags and response receive paths.
 The internal API serializes bounded GET or V2 SET/result/GET observations.
