@@ -35,7 +35,10 @@ def main():
     if 'CONFIG_ATH12K=m\n' not in config:raise ValueError('ath12k disabled')
     base='drivers/net/wireless/ath/ath12k/'
     targets=[base+n for n in ['phone-sar.o','sar-wire.o','wmi.o','core.o']]
-    run(['make','-C',kernel,'ARCH=arm64','-j'+str(min(os.cpu_count() or 2,8)),'W=1','KCFLAGS=-Werror',*targets],600)
+    # wmi_base layout changed: rebuild the complete common + WiFi7 family,
+    # including its relocatable composite links, not just four leaf objects.
+    run(['make','-C',kernel,'ARCH=arm64','-j'+str(min(os.cpu_count() or 2,8)),'W=1','KCFLAGS=-Werror',base],600)
+    targets += [base+'ath12k.o',base+'wifi7/ath12k_wifi7.o']
     objects={}
     for name in targets:
         data=(kernel/name).read_bytes()
@@ -43,7 +46,8 @@ def main():
         objects[name]={'sha256':hashlib.sha256(data).hexdigest(),'bytes':len(data)}
     (out/'kernel.config').write_text(config)
     proof={'scope':'DORMANT_PHONE_SAR_KERNEL_OBJECTS_ONLY','phone_operations':0,'integration':binding,
-           'aarch64_objects':objects,'warnings_as_errors':True,'module_link_or_runtime_tested':False,
+           'aarch64_objects':objects,'warnings_as_errors':True,'complete_common_and_wifi7_recompiled':True,
+           'relocatable_composite_links_tested':True,'module_modpost_or_runtime_tested':False,
            'boot_image_created':False,'candidate_modified':False,'private_inputs_included':False,
            'effective_phone_power_policy':False,'current_wifi_qualified':False}
     (out/'verification.json').write_text(json.dumps(proof,indent=2)+'\n');print(json.dumps(proof,indent=2))

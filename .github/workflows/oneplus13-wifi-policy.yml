@@ -68,5 +68,7 @@ jobs:
             out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/sar-wire.o
             out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/wmi.o
             out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/core.o
+            out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/ath12k.o
+            out/wifi-driver/linux/drivers/net/wireless/ath/ath12k/wifi7/ath12k_wifi7.o
           if-no-files-found: error
           retention-days: 14

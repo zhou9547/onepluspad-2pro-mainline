@@ -19,6 +19,13 @@ OFF/empty GET as an observation, preserves SET-to-NONE refusal, and has15 codec
 plus29 actual-driver groups passing host release and ASan/UBSan/LSan. Native
 verification for that follow-up remains separate.
 
+Follow-up native Actions40318336080 passed15+29 groups in both release and
+sanitized configurations and the four actual kernel objects. Because embedding
+SAR state changes `wmi_base` layout, a further gate recompiles the complete
+common/WiFi7 family and its two relocatable composite links. Four leaf objects
+are not a safe replacement for that family rebuild, module modpost or runtime
+qualification. No compiled object is installed on the phone.
+
 The new dormant SAR integration binds kernel7a81d184e3098624d4342d8f4eff5e23674bcc9f.
 It hooks actual WMI capability, nested EXT2 flags and response receive paths.
 The internal API serializes bounded GET or V2 SET/result/GET observations.
