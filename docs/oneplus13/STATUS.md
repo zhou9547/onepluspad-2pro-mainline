@@ -1,5 +1,9 @@
 # 一加13适配状态
 
+## 2026-10-26 RPC序列与精确rootfs链接：离线门槛通过
+
+保留原项目已有TYPE_SEQ测试，修复序列首参/独立索引/元数据游标/空序列，并在分配前检查八位buffer数量；未验收输出序列在ioctl前拒绝。10项C release和10项ASan/UBSan、6项Python在native ARM64 Actions40252529300通过。产物CRC/哈希/2个AArch64 ELF复验通过，在精确Ubuntu26.04 rootfs新提取目录中QEMU-user验证正常RPATH、帮助和加载器解析，无设备打开或ioctl。没有替换基准库或手机候选，run73停止状态保留。下面08:50的原9项记录是历史阶段；OEM库、写registry ABI与实际传感器仍未完成，见PHONE-PCB-MAPPING-20261026.md。
+
 ## 2026-10-26 手机PCB只读映射及RPC对齐问题：仅离线
 
 按run73真实请求和已保存的本机scalar，新增手机专用虚拟PCB版本只读映射；公共补丁不含值，缺文件仍ENOENT，不透传主机/proc。原五个patch与Pad配方不变。真实C合成输入覆盖精确字节、缺失、EOF/seek、相邻名与越界路径拒绝。
@@ -343,7 +347,7 @@ layout (own index, metadata cursor and empty sequence), validates descriptor
 indices and checks scalar buffer limits before allocation. Unqualified output
 TYPE_SEQ is refused before ioctl. Ten release and ten ASan/UBSan C tests pass
 locally; the original golden tests remain intact. The earlier three overlays
-passed native ARM64 Actions40250963720; this fourth overlay still needs its
-fresh native build and exact Ubuntu rootfs link check. No new phone run or
+passed native ARM64 Actions40250963720; the fourth overlay passed native
+Actions40252529300 and exact Ubuntu rootfs CLI/link checks. No new phone run or
 sensor stream is accepted. See PHONE-PCB-MAPPING-20261026.md for scope and holds.
 

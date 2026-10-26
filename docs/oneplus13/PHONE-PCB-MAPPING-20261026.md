@@ -29,7 +29,7 @@ the host and native ARM64 (Actions40250963720). The original builder explicitly 
 tree, so leak checking is excluded and recorded separately; invalid memory and
 undefined-behavior checks remain active. Six Python source-recipe/archive and
 artifact-environment refusal tests pass. The fourth overlay described below
-requires a fresh native build, followed by actual phone-rootfs linking. Other untested
+passed native Actions40252529300 and exact phone-rootfs CLI/link checks. Other untested
 IDL families and writable-registry semantics are not accepted by this result.
 
 `build-phone-rpc.py` builds just generic hexagonrpcd and libhexagonrpc from the
@@ -64,3 +64,17 @@ tests remain unchanged. Ten C tests pass in release and ASan/UBSan on the host;
 the uninitialized-inner-type warning is gone. This is not exhaustive IDL or
 allocation-failure validation, and does not remove the hardware/registry holds.
 Standard GPL/LGPL license text and contributor attribution accompany artifacts.
+
+Native ARM64 Actions40252529300 validates commit
+`c93d2a9d7f88513ad0f256af7c0e616fd514aab9`: ten release plus ten ASan/UBSan C
+tests and six Python recipe tests pass. Downloaded artifact12621352875 passes
+ZIP CRC, manifest hashes and the two AArch64 ELF checks. Runtime archive SHA256:
+`4469edf223632c8e0c341ca559381a4ad807bdc38b97e79ab181f9b4cf47ba13`.
+
+In a fresh extraction of the exact phone Ubuntu26.04 rootfs, the normal RPATH
+loads the new library and daemon `--help` returns the original usage/exit4.
+A separate loader report resolves the intended new library; the help syscall
+trace opens no device and issues no ioctl. This is a host QEMU-user linking
+probe, not a DSP/file-service test. The baseline sensor runtime and phone
+candidate were not replaced. run73's missing OEM libraries and writable-registry
+ABI remain unresolved, and its hardware stop state is retained.

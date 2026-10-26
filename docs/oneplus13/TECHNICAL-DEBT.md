@@ -392,7 +392,8 @@ D14：ABL改写根model/compatible，导致手机physical-platform误拒绝。�
 descriptor and consumes sequence metadata correctly, including empty sequences;
 the original input golden-wire test remains unchanged. Output TYPE_SEQ is
 explicitly unsupported before ioctl, and allocation-failure handling and other
-IDL families are not exhaustively qualified. Native rebuild/rootfs linking,
-writable-registry ABI, absent OEM data and DSP library provenance remain gates.
+IDL families are not exhaustively qualified. Native rebuild and exact-rootfs
+CLI/linking passed Actions40252529300 plus host QEMU-user; writable-registry
+ABI, absent OEM data and DSP library provenance remain gates.
 See PHONE-PCB-MAPPING-20261026.md; source unit tests do not qualify phone streams.
 
