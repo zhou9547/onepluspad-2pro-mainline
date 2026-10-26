@@ -147,18 +147,29 @@ def daemon_error_summary(log):
 
 def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=False):
     started=False
+    launch_failed=False
+    exited_early=False
+    pre_status=None
     try:
-        run(service_command(trace));started=True
+        try:
+            run(service_command(trace))
+        except (subprocess.CalledProcessError,OSError):
+            launch_failed=True
+        started=True
         until=clock()+28
         while clock()<until:
-            if run(['/usr/bin/systemctl','is-active',UNIT])!='active':raise ValueError('File server exited early')
+            if run(['/usr/bin/systemctl','is-active',UNIT])!='active':
+                exited_early=True
+                break
             sleep(min(1,max(0,until-clock())))
     finally:
-        if started:run(['/usr/bin/systemctl','stop',UNIT],16)
+        if started:
+            pre_status=run(['/usr/bin/systemctl','show',UNIT,'-p','ActiveState','-p','SubState','-p','Result','-p','MainPID'])
+            run(['/usr/bin/systemctl','stop',UNIT],16)
     status=run(['/usr/bin/systemctl','show',UNIT,'-p','ActiveState','-p','SubState','-p','Result','-p','MainPID'])
     facts=dict(x.split('=',1) for x in status.splitlines() if '=' in x)
-    if facts.get('ActiveState')!='inactive' or facts.get('MainPID')!='0' or facts.get('Result')!='success':
-        raise ValueError('File server stop not clean')
+    before=dict(x.split('=',1) for x in (pre_status or '').splitlines() if '=' in x)
+    clean_stop=facts.get('ActiveState')=='inactive' and facts.get('MainPID')=='0' and facts.get('Result')=='success'
     log=Path(STATE+'/daemon.log').read_text(errors='replace')
     summary=daemon_error_summary(log)
     trace=Path(STATE+'/syscalls.log').read_text(errors='replace')
@@ -170,9 +181,15 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
     # later. The complete trace was already captured on RAM; do not infer
     # attach or initial registry reads from an unrelated tail of that trace.
     print('RAM_SENSOR_FILESERVER_DIAGNOSTIC '+json.dumps({
-       'file_server_cleanly_stopped':True,'daemon_errors':summary,
+       'file_server_cleanly_stopped':clean_stop,'service_launch_returned_error':launch_failed,
+       'service_exited_during_observation':exited_early,
+       'pre_stop_service_state':{k:before.get(k) for k in ('ActiveState','SubState','Result','MainPID')},
+       'daemon_errors':summary,
        'complete_local_trace_facts':result,'trace_qualification_error':trace_failure,
        'sensor_stream_requested':False,'acceptance_not_implied':True},sort_keys=True),flush=True)
+    if not clean_stop:raise ValueError('File server stop not clean')
+    if launch_failed or exited_early or before.get('ActiveState')!='active':
+        raise ValueError('File server exited before the bounded observation window')
     if diagnostic:
         if trace_failure is not None:raise ValueError(trace_failure)
         if result['successful_invoke_calls_observed']<3:

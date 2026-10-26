@@ -1,5 +1,11 @@
 # Technical debt (single register for the phone)
 
+Run74's bounded write diagnostic returned Android and matching baselines but found
+two more registry temporaries and a >256-byte reverse input. Overlay0007 adds the
+four exact RAM paths in total and a64KiB listener buffer; launcher failures now
+preserve status/log/trace facts. Run74 is halted, not accepted. Native/rootfs
+qualification and a new source-bound review are required before any further boot.
+
 2026-10-26 phone overlay0006 integrates the reviewed method5 write ABI and two
 exact run73 paths into a default-off process-memory backend with preallocation
 guards and full exit cleanup. Host/native13+13 C and6 Python checks pass, as do

@@ -130,13 +130,15 @@ class BoundedService(unittest.TestCase):
         self.assertIn('-W',cmd)
         self.assertIn('raw=ioctl',cmd)
     def run_service(self,active='active',result='success',log='',trace=TRACE,diagnostic=False):
-        calls=[];now=[0]
+        calls=[];now=[0];stopped=[False]
         def run(args,seconds=8):
             calls.append((args,seconds))
             if args[0].endswith('systemd-run'):return ''
             if args[1]=='is-active':return active
-            if args[1]=='stop':return ''
-            if args[1]=='show':return 'ActiveState=inactive\nSubState=dead\nMainPID=0\nResult='+result
+            if args[1]=='stop':stopped[0]=True;return ''
+            if args[1]=='show':
+                if stopped[0]:return 'ActiveState=inactive\nSubState=dead\nMainPID=0\nResult='+result
+                return 'ActiveState=active\nSubState=running\nMainPID=123\nResult=success'
             raise AssertionError(args)
         def sleep(value):now[0]+=value
         def contents(path,*a,**k):return trace if str(path).endswith('syscalls.log') else log
@@ -151,6 +153,25 @@ class BoundedService(unittest.TestCase):
         self.assertIn(16,[s for a,s in calls if a[1]=='stop'])
     def test_early_exit_requests_stop_and_refuses_pass(self):
         with self.assertRaises(ValueError):self.run_service(active='inactive')
+    def test_systemd_run_early_error_still_preserves_diagnostic(self):
+        output=io.StringIO();stopped=[False]
+        def run(args,seconds=8):
+            if args[0].endswith('systemd-run'):
+                raise m.subprocess.CalledProcessError(1,args)
+            if args[1]=='is-active':return 'inactive'
+            if args[1]=='stop':stopped[0]=True;return ''
+            if args[1]=='show':
+                if stopped[0]:return 'ActiveState=inactive\nSubState=dead\nMainPID=0\nResult=success'
+                return 'ActiveState=failed\nSubState=failed\nMainPID=0\nResult=exit-code'
+            raise AssertionError(args)
+        with patch.object(m.Path,'read_text',lambda path,*a,**k:TRACE if str(path).endswith('syscalls.log') else 'Large input'):
+            with contextlib.redirect_stdout(output),self.assertRaises(ValueError):
+                m.serve('/run/trace',run,lambda value:None,lambda:0,diagnostic=True)
+        line=next(x for x in output.getvalue().splitlines() if x.startswith('RAM_SENSOR_FILESERVER_DIAGNOSTIC '))
+        facts=json.loads(line.split(' ',1)[1])
+        self.assertTrue(facts['service_launch_returned_error'])
+        self.assertEqual(facts['pre_stop_service_state']['ActiveState'],'failed')
+        self.assertTrue(facts['file_server_cleanly_stopped'])
     def test_kernel_close_timeout_refuses_pass(self):
         with self.assertRaises(ValueError):self.run_service(result='timeout')
     def test_unsupported_reverse_method_refuses_pass(self):

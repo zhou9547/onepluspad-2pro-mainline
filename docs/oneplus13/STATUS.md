@@ -353,6 +353,14 @@ sensor stream is accepted. See PHONE-PCB-MAPPING-20261026.md for scope and holds
 
 # 2026-10-26 phone RPC VFS follow-up
 
+Run74, one source-bound RAM write diagnostic, exposed the next two concrete
+gaps: registry temporaries `fstempfile` and `parsed_file_list.csv`, plus a reverse
+request larger than256 bytes. Android returned automatically107.7s after the
+original boot command; seven baselines matched and display/GPU/ordinary-user
+desktop passed. Overlay0007 now adds only those two exact RAM paths and a separate
+64KiB listener input buffer; service launch failure is also retained as
+diagnostic evidence. Run74 remains halted. See PHONE-RPC-RAM-FILES-20261026.md.
+
 Default-off phone overlay0006 now integrates bounded volatile copies for the two
 run73 write paths. Host v18 passes13 release +13 ASan/UBSan C tests and6 Python
 checks. The exact method5 wire test and storage LSan test pass; full-suite leak

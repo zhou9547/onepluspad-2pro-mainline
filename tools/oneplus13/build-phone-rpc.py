@@ -15,7 +15,8 @@ EXTRAS={
  '0003-read-packed-type-fields-with-byte-copies.patch':'5d369bbd1966b194f84aab999cb6f19a6a7b1e7b0ab1167b870477320436cfe1',
  '0004-fix-input-type-sequence-marshalling.patch':'bc54e868b010761dc614125ebb71e97172aacfcaacf0b49789ec89079fd34afe',
  '0005-retain-vfs-aliases-and-directory-parents.patch':'f055af775735dba2bec49b0794049186a0c6a09fc55d5f2aa0ba7ae6b127162d',
- '0006-add-volatile-apps-std-files.patch':'bbe6cdd895830a2446331ee160c48dcff97706d580bd8e2f1b7f6ff9283ff254'}
+ '0006-add-volatile-apps-std-files.patch':'bbe6cdd895830a2446331ee160c48dcff97706d580bd8e2f1b7f6ff9283ff254',
+ '0007-expand-bounded-ram-inputs.patch':'1ce5cd9c7e2423ee17b0a9acc084ca09890c4220317aa57f2eedf668b4e26771'}
 SOURCE_COMMIT='598b591ae9da6a6cfe2ca5ea78998019ca6395ea'
 ARCHIVE_SHA='05181d130f1e3a3f4c368be606a627562f7abd972c5efff92a21d66d35a2fe51'
 
@@ -136,6 +137,7 @@ def main():
        'release_tests_pass':True,'asan_ubsan_tests_pass':True,'leaks_tested':False,
        'c_test_counts':test_counts,'input_type_sequence_wire_fixtures_pass':True,'vfs_alias_parent_lifetime_tests_pass':True,
        'volatile_ram_wire_tests_pass':True,'volatile_ram_storage_tests_pass':True,
+       'listener_large_input_64k_test_pass':True,
        'unqualified_output_type_sequences_refused_before_ioctl':True,
        'synthetic_board_data_only':True,'private_inputs_included':False,'services_or_udev_or_firmware_included':False,
        'sensor_attach_stream_or_hardware_eligible':False,'outputs':outputs}

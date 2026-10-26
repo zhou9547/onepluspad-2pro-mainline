@@ -1,11 +1,16 @@
 # Phone RPC volatile file path
 
-Run73 observed reverse-RPC write requests for two exact names:
+Run73 observed reverse-RPC write requests for these two exact names:
 
 * `/mnt/vendor/persist/sensors/registry/registry/DIR`
 * `/mnt/vendor/persist/sensors/cam_registry_dump.txt`
 
-Phone overlay0006 adds a default-off backend for those names. The daemon only
+Bounded run74 then showed the same workload using two registry temporaries:
+
+* `/mnt/vendor/persist/sensors/registry/fstempfile`
+* `/mnt/vendor/persist/sensors/registry/parsed_file_list.csv`
+
+Phone overlays0006/0007 add a default-off backend for those four names. The daemon only
 enables it with `-W`; the common and Pad startup paths remain read-only. No host
 writable descriptor or phone pathname is opened for mutation.
 
@@ -25,8 +30,8 @@ strict zero-error acceptance rule.
 
 ## Data and handles
 
-The backend holds at most two files in process memory. Each file is capped at
-1MiB and each read or write at64KiB. A read handle can first copy a bounded
+The backend holds at most four files in process memory. Each file is capped at
+1MiB, aggregate storage at4MiB, and each read or write at64KiB. A read handle can first copy a bounded
 snapshot from the existing virtual filesystem. W and A create an empty memory
 copy; A then appends. R, RB, W, WB, A and AB are accepted for these names.
 Other modes, neighboring names, embedded NULs, traversal and unsupported search
@@ -57,6 +62,11 @@ read this checks the live handle and64KiB limit before `alloc_outbufs4`, closing
 the path where a large output request would otherwise allocate first. Non-RAM
 handles retain their existing read path.
 
+Run74 also observed an incoming reverse request larger than the old256-byte
+stack buffer. Overlay0007 moves request receipt to a separately allocated64KiB
+buffer and retains a hard EMSGSIZE failure above that capacity. The listener
+refusal fixture now sends a300-byte request.
+
 Fread, fwrite, fseek, fflush and fclose recognize the reserved namespace.
 Outputs are cleared before validation. Normal-file writes and mapped-file stat
 requests remain unsupported instead of reporting stale snapshot metadata.
@@ -80,6 +90,17 @@ Earlier generated candidates failed in sequence on a repository-only file in the
 source patch, an undeclared builder variable, a test call arity, wrong fixture
 path, uninitialized error output, and an incorrect EOF assertion. Each output is
 retained privately. None was published, installed or used for a phone boot.
+
+Bounded run74 exercised the first backend on the phone. Android returned
+automatically in107.7s and all seven baseline samples matched; display, GPU and
+ordinary-user desktop regressions passed. The bounded log no longer showed the
+original registry-DIR or cam-registry write refusals, or the six PCB-version
+misses. It did reveal repeated writes to the two additional temporary paths and
+a reverse request above256 bytes, which stopped the listener before a diagnostic
+summary could be emitted. The service launch wrapper also lost its summary when
+`systemd-run` returned the early failure. Run74 is halted and was not treated as
+acceptance. The following overlay and launcher changes are fresh software work,
+not a retry credential.
 
 Native ARM64 Actions40260814820 at
 `8a724331f292c40c03a7821698212d161ed9f884` passes the same13 release,13
