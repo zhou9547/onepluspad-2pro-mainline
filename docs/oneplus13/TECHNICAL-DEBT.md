@@ -1,5 +1,12 @@
 # Technical debt (single register for the phone)
 
+2026-10-26 phone overlay0006 integrates the reviewed method5 write ABI and two
+exact run73 paths into a default-off process-memory backend with preallocation
+guards and full exit cleanup. Host13+13 C and6 Python checks pass; native ARM64
+and exact-rootfs probes remain. It is not phone-qualified. Other method families,
+persistent storage, DSP-mapped file data and every remaining peripheral gate stay
+open. See PHONE-RPC-RAM-FILES-20261026.md.
+
 2026-10-26 phone VFS overlay0005 fixes reproduced alias/ancestor ownership before
 volatile writes. Host and native Actions40256968720 pass11 release +11 ASan/UBSan
 and6 Python; the new two-ELF artifact and exact-rootfs QEMU-user linking also pass.

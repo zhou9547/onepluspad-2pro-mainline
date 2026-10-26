@@ -14,7 +14,8 @@ EXTRAS={
  '0002-copy-unaligned-wire-size-without-UB.patch':'4c015b91881c6a7c62ae1dc87cf06250788c3353108ae5ea675ea03a0f50f321',
  '0003-read-packed-type-fields-with-byte-copies.patch':'5d369bbd1966b194f84aab999cb6f19a6a7b1e7b0ab1167b870477320436cfe1',
  '0004-fix-input-type-sequence-marshalling.patch':'bc54e868b010761dc614125ebb71e97172aacfcaacf0b49789ec89079fd34afe',
- '0005-retain-vfs-aliases-and-directory-parents.patch':'f055af775735dba2bec49b0794049186a0c6a09fc55d5f2aa0ba7ae6b127162d'}
+ '0005-retain-vfs-aliases-and-directory-parents.patch':'f055af775735dba2bec49b0794049186a0c6a09fc55d5f2aa0ba7ae6b127162d',
+ '0006-add-volatile-apps-std-files.patch':'bbe6cdd895830a2446331ee160c48dcff97706d580bd8e2f1b7f6ff9283ff254'}
 SOURCE_COMMIT='598b591ae9da6a6cfe2ca5ea78998019ca6395ea'
 ARCHIVE_SHA='05181d130f1e3a3f4c368be606a627562f7abd972c5efff92a21d66d35a2fe51'
 
@@ -98,9 +99,11 @@ def main():
             environment['UBSAN_OPTIONS']='halt_on_error=1:print_stacktrace=1'
         run(['meson','test','-C',build,'--print-errorlogs'],log,environment)
         tested=[json.loads(line) for line in (build/'meson-logs/testlog.json').read_text().splitlines() if line.strip()]
-        if len(tested)!=11 or not all(item['result']=='OK' for item in tested):raise ValueError('Missing exact C test results')
+        if len(tested)!=13 or not all(item['result']=='OK' for item in tested):raise ValueError('Missing exact C test results')
         if not any(item['name'].endswith('input-type-sequence') for item in tested):raise ValueError('No actual input sequence wire test')
         if not any(item['name'].endswith('hexagonfs-lifetime') for item in tested):raise ValueError('No actual VFS lifetime test')
+        if not any(item['name'].endswith('apps-std-ram') for item in tested):raise ValueError('No actual RAM wire test')
+        if not any(item['name'].endswith('phone-ramfs-storage') for item in tested):raise ValueError('No actual RAM storage test')
         test_counts[name]=len(tested)
     outputs={}
     if native and not a.host_check:
@@ -132,6 +135,7 @@ def main():
        'original_recipe_sha256':sha(lock_path),'patches':[{'name':p.name,'sha256':sha(p)} for p in patches],
        'release_tests_pass':True,'asan_ubsan_tests_pass':True,'leaks_tested':False,
        'c_test_counts':test_counts,'input_type_sequence_wire_fixtures_pass':True,'vfs_alias_parent_lifetime_tests_pass':True,
+       'volatile_ram_wire_tests_pass':True,'volatile_ram_storage_tests_pass':True,
        'unqualified_output_type_sequences_refused_before_ioctl':True,
        'synthetic_board_data_only':True,'private_inputs_included':False,'services_or_udev_or_firmware_included':False,
        'sensor_attach_stream_or_hardware_eligible':False,'outputs':outputs}
