@@ -1,5 +1,19 @@
 # Technical debt (single register for the phone)
 
+Overlay0009 repairs offline-reproduced snapshot resurrection and missing-source
+rename name-table exhaustion, plus an uninitialized index when append creates a
+missing file. Bounded tombstones consume the same finite name table; exhaustion
+refuses rename before changing names/data. Source handles remain valid. Signed
+IDL seek, negative errno mapping and failed-seed cleanup have actual C coverage.
+Fresh-tar host13 release/13 ASan+UBSan tests pass; native ARM64 remains pending.
+Service controls have36 Python checks including real systemctl nonzero status
+semantics, pre-stop query failure and launch timeout cleanup. These repairs do
+not resolve missing OEM/camera inputs or qualify a new phone boot/sensor stream.
+
+The owner requests batching multiple adaptation targets into one future qualified
+RAM acceptance, with display/GPU/desktop/platform regressions. Do not consume a
+phone boot for one isolated repair or repeat an already-passed diagnostic.
+
 Run75 removed observed write-mode refusals and ran the full service window, but
 method33 registry rename was repeatedly unsupported. Overlay0008 adds a bounded
 RAM-only copy-on-write registry namespace and rename semantics; host tests pass,

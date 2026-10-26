@@ -33,7 +33,7 @@ class SourceArchive(unittest.TestCase):
         lock=json.loads((m.REPO/'packaging/sensors/sources.json').read_text())
         recipe=next(x for x in lock['sources'] if x['name']=='hexagonrpc')
         self.assertEqual(len(recipe['patches']),5)
-        self.assertEqual(len(m.EXTRAS),8)
+        self.assertEqual(len(m.EXTRAS),9)
         for name,digest in m.EXTRAS.items():self.assertEqual(m.sha(m.REPO/'tools/oneplus13/sensor-patches'/name),digest)
     def test_recorded_meson_environment_excludes_runner_secrets(self):
         with patch.dict(m.os.environ,{'PATH':'/usr/bin','HOME':'/tmp/home','GITHUB_TOKEN':'fixture-secret','HTTPS_PROXY':'fixture-private-proxy'},clear=True):

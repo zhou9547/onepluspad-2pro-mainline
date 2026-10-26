@@ -137,7 +137,7 @@ def execute(args,seconds=8):
 
 def daemon_error_summary(log):
     lines=log.splitlines()
-    writes=sum(bool(re.match(r'Tried to open .+ for writing$',x)) for x in lines)
+    writes=sum(bool(re.match(r'Tried to open .+ (?:for writing|in an unsupported mode)$',x)) for x in lines)
     errors=sum(bool(re.search(r'Could not|Unsupported|Refused request|Unable to|Error|failed|Unknown search directory',x,re.I)) for x in lines)
     missing_hashes=set()
     for line in lines:
@@ -158,23 +158,35 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
     started=False
     launch_failed=False
     exited_early=False
+    status_query_failed=False
     pre_status=None
     try:
+        # A launch timeout can occur after systemd created the unit.
+        started=True
         try:
             run(service_command(trace))
-        except (subprocess.CalledProcessError,OSError):
+        except (subprocess.CalledProcessError,OSError,subprocess.TimeoutExpired):
             launch_failed=True
-        started=True
         until=clock()+28
         while clock()<until:
-            if run(['/usr/bin/systemctl','is-active',UNIT])!='active':
+            try:
+                active=run(['/usr/bin/systemctl','is-active',UNIT])
+            except subprocess.CalledProcessError:
+                # systemctl returns nonzero for inactive/failed units.
+                active='unknown'
+                status_query_failed=True
+            if active!='active':
                 exited_early=True
                 break
             sleep(min(1,max(0,until-clock())))
     finally:
         if started:
-            pre_status=run(['/usr/bin/systemctl','show',UNIT,'-p','ActiveState','-p','SubState','-p','Result','-p','MainPID'])
-            run(['/usr/bin/systemctl','stop',UNIT],16)
+            try:
+                pre_status=run(['/usr/bin/systemctl','show',UNIT,'-p','ActiveState','-p','SubState','-p','Result','-p','MainPID'])
+            except (subprocess.CalledProcessError,OSError,subprocess.TimeoutExpired):
+                status_query_failed=True
+            finally:
+                run(['/usr/bin/systemctl','stop',UNIT],16)
     status=run(['/usr/bin/systemctl','show',UNIT,'-p','ActiveState','-p','SubState','-p','Result','-p','MainPID'])
     facts=dict(x.split('=',1) for x in status.splitlines() if '=' in x)
     before=dict(x.split('=',1) for x in (pre_status or '').splitlines() if '=' in x)
@@ -192,12 +204,13 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
     print('RAM_SENSOR_FILESERVER_DIAGNOSTIC '+json.dumps({
        'file_server_cleanly_stopped':clean_stop,'service_launch_returned_error':launch_failed,
        'service_exited_during_observation':exited_early,
+       'service_status_query_failed':status_query_failed,
        'pre_stop_service_state':{k:before.get(k) for k in ('ActiveState','SubState','Result','MainPID')},
        'daemon_errors':summary,
        'complete_local_trace_facts':result,'trace_qualification_error':trace_failure,
        'sensor_stream_requested':False,'acceptance_not_implied':True},sort_keys=True),flush=True)
     if not clean_stop:raise ValueError('File server stop not clean')
-    if launch_failed or exited_early or before.get('ActiveState')!='active':
+    if launch_failed or exited_early or status_query_failed or before.get('ActiveState')!='active':
         raise ValueError('File server exited before the bounded observation window')
     if diagnostic:
         if trace_failure is not None:raise ValueError(trace_failure)

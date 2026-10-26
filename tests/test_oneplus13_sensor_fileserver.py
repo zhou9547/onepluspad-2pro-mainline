@@ -94,6 +94,10 @@ class Archive(unittest.TestCase):
         self.assertEqual(stat.S_IMODE(directory.stat().st_mode),0o700)
 
 class Trace(unittest.TestCase):
+    def test_current_mode_refusal_is_counted_without_private_path(self):
+        result=m.daemon_error_summary('Tried to open /private/unit/data in an unsupported mode')
+        self.assertEqual(result['write_refusals'],1)
+        self.assertNotIn('/private/unit/data',json.dumps(result))
     def test_error_summary_preserves_refusals_without_private_paths(self):
         private='/private/unit/unique-data'
         result=m.daemon_error_summary('Could not open '+private+': No such file or directory\nTried to open '+private+' for writing\nRefused request on handle 1\n')
@@ -131,15 +135,21 @@ class BoundedService(unittest.TestCase):
         self.assertNotIn('-p',cmd);self.assertNotIn('-c',cmd)
         self.assertIn('-W',cmd)
         self.assertIn('raw=ioctl',cmd)
-    def run_service(self,active='active',result='success',log='',trace=TRACE,diagnostic=False):
+    def run_service(self,active='active',result='success',log='',trace=TRACE,diagnostic=False,show_error=False,launch_timeout=False):
         calls=[];now=[0];stopped=[False]
+        self.last_calls=calls
         def run(args,seconds=8):
             calls.append((args,seconds))
-            if args[0].endswith('systemd-run'):return ''
-            if args[1]=='is-active':return active
+            if args[0].endswith('systemd-run'):
+                if launch_timeout:raise m.subprocess.TimeoutExpired(args,8)
+                return ''
+            if args[1]=='is-active':
+                if isinstance(active,Exception):raise active
+                return active
             if args[1]=='stop':stopped[0]=True;return ''
             if args[1]=='show':
                 if stopped[0]:return 'ActiveState=inactive\nSubState=dead\nMainPID=0\nResult='+result
+                if show_error:raise m.subprocess.CalledProcessError(1,args)
                 return 'ActiveState=active\nSubState=running\nMainPID=123\nResult=success'
             raise AssertionError(args)
         def sleep(value):now[0]+=value
@@ -155,6 +165,22 @@ class BoundedService(unittest.TestCase):
         self.assertIn(16,[s for a,s in calls if a[1]=='stop'])
     def test_early_exit_requests_stop_and_refuses_pass(self):
         with self.assertRaises(ValueError):self.run_service(active='inactive')
+    def test_nonzero_active_query_still_stops_and_preserves_diagnostic(self):
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output),self.assertRaises(ValueError):
+            self.run_service(active=m.subprocess.CalledProcessError(3,['systemctl']),diagnostic=True)
+        self.assertIn('RAM_SENSOR_FILESERVER_DIAGNOSTIC ',output.getvalue())
+        self.assertEqual(sum(a[1]=='stop' for a,s in self.last_calls if len(a)>1),1)
+    def test_failed_pre_stop_query_cannot_skip_stop(self):
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output),self.assertRaises(ValueError):
+            self.run_service(show_error=True,diagnostic=True)
+        self.assertIn('"service_status_query_failed": true',output.getvalue())
+        self.assertEqual(sum(a[1]=='stop' for a,s in self.last_calls if len(a)>1),1)
+    def test_launch_timeout_still_requests_exactly_one_stop(self):
+        with contextlib.redirect_stdout(io.StringIO()),self.assertRaises(ValueError):
+            self.run_service(launch_timeout=True,diagnostic=True)
+        self.assertEqual(sum(a[1]=='stop' for a,s in self.last_calls if len(a)>1),1)
     def test_systemd_run_early_error_still_preserves_diagnostic(self):
         output=io.StringIO();stopped=[False]
         def run(args,seconds=8):
@@ -188,6 +214,9 @@ class BoundedService(unittest.TestCase):
     def test_diagnostic_still_refuses_write_mode(self):
         with self.assertRaises(ValueError):
             self.run_service(log='Tried to open /private/registry/DIR for writing',diagnostic=True)
+    def test_diagnostic_refuses_current_unsupported_mode_message(self):
+        with self.assertRaises(ValueError):
+            self.run_service(log='Tried to open /private/registry/DIR in an unsupported mode',diagnostic=True)
     def test_diagnostic_rejects_unclassified_error(self):
         with self.assertRaises(ValueError):
             self.run_service(log='Could not start unknown internal subsystem',diagnostic=True)
