@@ -27,6 +27,14 @@ v7 output is retained and was never published or used on a phone.
 
 The whole suite still excludes leak checking because the original root-tree
 builder lacks a destructor. Only the standalone alias fixture checks leaks.
-Native ARM64 CI remains required. This change adds no writable registry, DSP
+Native ARM64 Actions40256968720 at c06a985e7f3636462b8cef54b71b34ccc34e9846
+also passed11 release +11 ASan/UBSan C tests and6 Python checks. Artifact12622398417
+passes ZIP CRC, exact two-AArch64-ELF manifest and license checks; runtime SHA256
+50476dc721d2c20f285e38a815d72692374969a3f3e2275e3817a0fdb91e8740.
+Fresh exact phone rootfs system libraries pass QEMU-user normal-RPATH help and
+the independent loader report; help trace opens no device and performs no ioctl.
+The baseline runtime and phone images were not replaced.
+
+This change adds no writable registry, DSP
 mapping, sensor stream or phone retry qualification. Run73's halted acceptance
 and the other peripheral gates remain in force. The shared Pad recipe is intact.

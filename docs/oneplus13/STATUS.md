@@ -356,7 +356,9 @@ sensor stream is accepted. See PHONE-PCB-MAPPING-20261026.md for scope and holds
 The original read-only VFS alias/parent cleanup bug is reproduced with ASan and
 fixed in phone overlay0005 before any RAM write backend. Fresh host build v8
 passes11 release +11 ASan/UBSan C tests and6 Python checks; the original apps_std
-test now really deinitializes its context. Native ARM64 CI remains pending.
+test now really deinitializes its context. Native ARM64 Actions40256968720 passes
+the same11+11 C and6 Python checks. Artifact verification and fresh exact-rootfs
+QEMU-user normal-RPATH/help/loader checks pass, without changing baseline staging.
 No new phone operation or run73 retry qualification. See
 PHONE-RPC-VFS-LIFETIME-20261026.md. Earlier snapshots below remain historical.
 

@@ -1,7 +1,8 @@
 # Technical debt (single register for the phone)
 
 2026-10-26 phone VFS overlay0005 fixes reproduced alias/ancestor ownership before
-volatile writes. Host11 release +11 ASan/UBSan and6 Python pass; native pending.
+volatile writes. Host and native Actions40256968720 pass11 release +11 ASan/UBSan
+and6 Python; the new two-ELF artifact and exact-rootfs QEMU-user linking also pass.
 The original apps_std test now calls deinit; only the isolated alias fixture
 checks leaks, because the root-tree destructor is still absent. Writable ABI
 dispatch, bounded preallocation, RAM cleanup integration, missing OEM lookups
