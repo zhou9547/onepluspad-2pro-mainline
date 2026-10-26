@@ -1,5 +1,22 @@
 # Technical debt (single register for the phone)
 
+Overlay0010 stages an exact, read-only camera metadata filename. The private
+input was passively copied from Android, matched the earlier inventory hash and
+preserved all seven baseline samples; no reboot/activation or phone write was
+performed. Source/artifacts contain synthetic tests only. Host14 release/14
+ASan+UBSan pass; native14 validation remains pending. The file has not yet been
+delivered to a new RAM session and does not qualify camera operation.
+
+All27 absent configuration requests occur literally in the saved stock json.lst
+(20 include '#'). Parser semantics remain unproved, so keep exact bytes/ENOENT.
+The Qualcomm oemconfig ENOENT warning exception is evidence of reference logging
+policy, not proof of phone feature optionality. Dynamic TPPE/CHRE registrations
+remain real unresolved inputs; do not execute them to remove a diagnostic error.
+
+Overlay0009 and service cleanup passed native ARM64 Actions40269798259 and fresh
+exact-rootfs loader/CLI probes. Method33/9 dispatch and signed seek ABI were
+corroborated against35 saved phone ELF instructions, without executing the ELF.
+
 Overlay0009 repairs offline-reproduced snapshot resurrection and missing-source
 rename name-table exhaustion, plus an uninitialized index when append creates a
 missing file. Bounded tombstones consume the same finite name table; exhaustion

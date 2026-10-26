@@ -18,7 +18,8 @@ EXTRAS={
  '0006-add-volatile-apps-std-files.patch':'bbe6cdd895830a2446331ee160c48dcff97706d580bd8e2f1b7f6ff9283ff254',
  '0007-expand-bounded-ram-inputs.patch':'1ce5cd9c7e2423ee17b0a9acc084ca09890c4220317aa57f2eedf668b4e26771',
  '0008-support-bounded-registry-renames.patch':'987a07d6470212042313dc0fa594a64cbdb165ab9dec5319c58f037070eca3a0',
- '0009-preserve-volatile-namespace-failure-semantics.patch':'1ed5bb901b5e20192eb1b9e44d8b7b965119b1fd93b0cd65c952943847267aa0'}
+ '0009-preserve-volatile-namespace-failure-semantics.patch':'1ed5bb901b5e20192eb1b9e44d8b7b965119b1fd93b0cd65c952943847267aa0',
+ '0010-map-exact-camera-metadata-read-only.patch':'c33a494ccd71dc9b938f1de939a899e87d4eaf63bae4a26b2f8bb9c87be357bf'}
 SOURCE_COMMIT='598b591ae9da6a6cfe2ca5ea78998019ca6395ea'
 ARCHIVE_SHA='05181d130f1e3a3f4c368be606a627562f7abd972c5efff92a21d66d35a2fe51'
 
@@ -102,11 +103,12 @@ def main():
             environment['UBSAN_OPTIONS']='halt_on_error=1:print_stacktrace=1'
         run(['meson','test','-C',build,'--print-errorlogs'],log,environment)
         tested=[json.loads(line) for line in (build/'meson-logs/testlog.json').read_text().splitlines() if line.strip()]
-        if len(tested)!=13 or not all(item['result']=='OK' for item in tested):raise ValueError('Missing exact C test results')
+        if len(tested)!=14 or not all(item['result']=='OK' for item in tested):raise ValueError('Missing exact C test results')
         if not any(item['name'].endswith('input-type-sequence') for item in tested):raise ValueError('No actual input sequence wire test')
         if not any(item['name'].endswith('hexagonfs-lifetime') for item in tested):raise ValueError('No actual VFS lifetime test')
         if not any(item['name'].endswith('apps-std-ram') for item in tested):raise ValueError('No actual RAM wire test')
         if not any(item['name'].endswith('phone-ramfs-storage') for item in tested):raise ValueError('No actual RAM storage test')
+        if not any(item['name'].endswith('phone-camera-info') for item in tested):raise ValueError('No exact camera input mapping test')
         test_counts[name]=len(tested)
     outputs={}
     if native and not a.host_check:
@@ -142,6 +144,7 @@ def main():
        'listener_large_input_64k_test_pass':True,
        'bounded_ram_registry_rename_tests_pass':True,
        'volatile_namespace_tombstone_failure_and_signed_seek_tests_pass':True,
+       'exact_read_only_camera_input_mapping_tests_pass':True,
        'unqualified_output_type_sequences_refused_before_ioctl':True,
        'synthetic_board_data_only':True,'private_inputs_included':False,'services_or_udev_or_firmware_included':False,
        'sensor_attach_stream_or_hardware_eligible':False,'outputs':outputs}
