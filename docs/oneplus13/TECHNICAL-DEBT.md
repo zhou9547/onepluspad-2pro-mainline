@@ -1,5 +1,15 @@
 # Technical debt (single register for the phone)
 
+Run79 jointly passed both synthetic ARM64 userspace tests, the actual read-only
+camera-input open, clean reverse-service stop and display/GPU/desktop/platform
+regressions; automatic Android recovery took131.7s with seven baseline matches.
+The30 remaining requests are27 stock config probes and three OEM/DSP probes.
+No sensor stream/camera operation/DSP release acknowledgement is accepted.
+Run78 stopped before reboot at an old host command allowlist, zero RAM boots;
+its retained stop is addressed by an exact bounded stock battery read with six
+host fixtures, not a broader general transport permission. Run79 is sealed.
+See JOINT-RAM-RUN79-20261026.md; earlier pending stages below are historical.
+
 The next joint acceptance preparation exports two existing synthetic C tests
 separately from the production runtime and adds a twelve-second UID65534 systemd
 sandbox with devices hidden/denied and no network. Eleven wrapper/archive checks
