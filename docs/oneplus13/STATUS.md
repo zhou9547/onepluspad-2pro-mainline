@@ -351,3 +351,12 @@ passed native ARM64 Actions40250963720; the fourth overlay passed native
 Actions40252529300 and exact Ubuntu rootfs CLI/link checks. No new phone run or
 sensor stream is accepted. See PHONE-PCB-MAPPING-20261026.md for scope and holds.
 
+# 2026-10-26 phone RPC VFS follow-up
+
+The original read-only VFS alias/parent cleanup bug is reproduced with ASan and
+fixed in phone overlay0005 before any RAM write backend. Fresh host build v8
+passes11 release +11 ASan/UBSan C tests and6 Python checks; the original apps_std
+test now really deinitializes its context. Native ARM64 CI remains pending.
+No new phone operation or run73 retry qualification. See
+PHONE-RPC-VFS-LIFETIME-20261026.md. Earlier snapshots below remain historical.
+

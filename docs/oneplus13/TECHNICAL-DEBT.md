@@ -1,5 +1,12 @@
 # Technical debt (single register for the phone)
 
+2026-10-26 phone VFS overlay0005 fixes reproduced alias/ancestor ownership before
+volatile writes. Host11 release +11 ASan/UBSan and6 Python pass; native pending.
+The original apps_std test now calls deinit; only the isolated alias fixture
+checks leaks, because the root-tree destructor is still absent. Writable ABI
+dispatch, bounded preallocation, RAM cleanup integration, missing OEM lookups
+and DSP mapping remain unresolved. See PHONE-RPC-VFS-LIFETIME-20261026.md.
+
 run73 resolved installer permissions and exercised real ODM reverse reads,
 but missing OEM/board lookups and two write refusals still block acceptance.
 Automatic Android return134.0s; seven samples match, no stream/manual recovery.
