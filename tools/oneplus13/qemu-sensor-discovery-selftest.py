@@ -26,6 +26,12 @@ def main():
         state=Path(fs.STATE);state.mkdir(mode=0o700);os.chown(state,65534,65534)
         probe_state=here/('composite-probe-'+fixture);probe_state.mkdir(mode=0o755)
         ssc.run_probe=lambda mode,run:original_run_probe(mode,state=probe_state,run=run)
+        bad_exec=here/'synthetic-invalid-interpreter'
+        if fixture=='exec-failure':
+            # The executable exists, so systemd-run accepts the path; its
+            # missing interpreter fails inside the manager with EXIT_EXEC.
+            bad_exec.write_text('#!/run/oneplus13/deliberately-nonexistent-interpreter\n')
+            bad_exec.chmod(0o755)
         tracer=here/('synthetic-tracer-'+fixture)
         tracer.write_text('#!/usr/bin/python3\nimport os,time\nfrom pathlib import Path\nassert os.getuid()==65534\nassert not Path("/dev/fastrpc-adsp-secure").exists()\nPath('+repr(str(state/'syscalls.log'))+').write_text('+repr(trace)+')\ntime.sleep(35)\n')
         tracer.chmod(0o755)
@@ -35,7 +41,7 @@ def main():
             # restrict even discovery to AF_UNIX + PrivateNetwork. No QRTR.
             command=[x.replace('RestrictAddressFamilies=AF_UNIX AF_QIPCRTR','RestrictAddressFamilies=AF_UNIX').replace('PrivateNetwork=no','PrivateNetwork=yes') for x in command]
             if timeout_fixture:command=[x.replace('RuntimeMaxSec=20s','RuntimeMaxSec=2s') for x in command]
-            if fixture=='exec-failure':return unit,command[:-1]+['/run/oneplus13/deliberately-nonexistent-probe']
+            if fixture=='exec-failure':return unit,command[:-1]+[str(bad_exec)]
             assertion='test "$(id -u)" = 65534; test ! -e /dev/fastrpc-adsp-secure; '
             script=assertion+('sleep 30' if timeout_fixture else 'printf %s '+__import__('shlex').quote(good))
             return unit,command[:-1]+['/bin/sh','-eu','-c',script]

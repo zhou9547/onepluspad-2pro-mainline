@@ -91,6 +91,7 @@ def execution_status(unit,run):
         elif value in fields[name]:facts[name]=value
         else:return {'availability':'unrecognized_status'}
     if set(facts)!=set(fields):return {'availability':'incomplete_status'}
+    if facts['LoadState']=='not-found':return {'availability':'unit_unavailable'}
     return {'availability':'observed',**facts}
 
 def save_private_failure(state,result):

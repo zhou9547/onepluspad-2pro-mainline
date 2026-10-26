@@ -98,6 +98,10 @@ class ControlTests(unittest.TestCase):
     def test_private_status_values_are_not_echoed(self):
         def run(cmd,**kw):return SimpleNamespace(returncode=0,stdout='Result=private_value\n')
         self.assertEqual(m.execution_status('synthetic.service',run),{'availability':'unrecognized_status'})
+    def test_absent_unit_cannot_report_observed_success(self):
+        output='LoadState=not-found\nActiveState=inactive\nSubState=dead\nResult=success\nExecMainCode=0\nExecMainStatus=0\n'
+        def run(cmd,**kw):return SimpleNamespace(returncode=0,stdout=output)
+        self.assertEqual(m.execution_status('synthetic.service',run),{'availability':'unit_unavailable'})
     def test_failure_status_timeout_still_performs_cleanup(self):
         run=self.runner()
         def failed(cmd,**kw):
