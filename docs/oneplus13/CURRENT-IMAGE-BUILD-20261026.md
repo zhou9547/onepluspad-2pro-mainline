@@ -19,7 +19,8 @@ run88 RAM image:
 
 `oneplus13-current-image.yml` runs the public offline gates, downloads those
 exact pinned public artifacts, checks kernel, modules and rootfs hashes and
-sizes, and boots the exact SquashFS in QEMU.
+sizes, and validates the SquashFS structure and required ARM64 runtime files.
+The same rootfs bytes were already exercised on the physical phone in run88.
 
 The historical desktop rootfs names a different pre-integration kernel release
 in its standalone manifest. The current image intentionally replaces that
