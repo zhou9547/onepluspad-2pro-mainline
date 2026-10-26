@@ -1,5 +1,11 @@
 # 一加13适配状态
 
+## 2026-10-26 手机PCB只读映射及RPC对齐问题：仅离线
+
+按run73真实请求和已保存的本机scalar，新增手机专用虚拟PCB版本只读映射；公共补丁不含值，缺文件仍ENOENT，不透传主机/proc。原五个patch与Pad配方不变。真实C合成输入覆盖精确字节、缺失、EOF/seek、相邻名与越界路径拒绝。
+
+完整ASan/UBSan进一步在原有测试中复现wire-size未对齐存储和packed参数原生指针未对齐读取，并发现测试double的零长度NULL比较/复制。已用保留原布局的memcpy修复运行时代码，并只跳过测试中零字节内存访问，不关sanitizer。九项C检查的release与ASan/UBSan均通过，六项Python配方/归档/环境检查通过，尚待专用native ARM64构建和精确rootfs链接。没有再操作手机，run73停止标记保留。详见PHONE-PCB-MAPPING-20261026.md；这些离线发现不能认作历史真机故障原因或完整传感器通过。
+
 ## 2026-10-26 run73：原厂配置实际反向读取，完整文件服务门槛仍拒绝
 
 新的150项ARM64和精确rootfs/umask/真实UID sandbox/300s VM自动截止全部通过后，在原8h授权内经源码绑定的软件故障恢复审查执行一次run73；run72与run69父账本继续halted，没有抹除失败。目录权限问题实机消失，原厂ODM配置通过真实reverse RPC打开读取，保存尾部有37个成功invoke，服务干净停止。完整文件服务仍因缺失lookup与两个写请求被拒绝，134.0秒自动返回Android，七项基线一致，桌面/GPU/平台通过，无流/刷写/人工恢复。run73单次子账本也halted，不直接重试。

@@ -1,5 +1,15 @@
 # Technical debt (single register for the phone)
 
+run73 resolved installer permissions and exercised real ODM reverse reads,
+but missing OEM/board lookups and two write refusals still block acceptance.
+Automatic Android return134.0s; seven samples match, no stream/manual recovery.
+The saved tail cannot prove the initial attach or registry reads. A phone-only
+read-only PCB mapping and three sanitizer-backed source overlays are now prepared;
+release9 and ASan/UBSan9 host tests pass, not native/rootfs/phone qualification.
+Shared Pad recipe stays unchanged. Writable registry ABI, DSP library mapping,
+other IDL families, actual samples and accuracy remain open. See
+PHONE-PCB-MAPPING-20261026.md and SENSOR-REVERSE-FILESERVER-20261026.md.
+
 run72 failed before a successful reverse daemon launch: root umask077 made new
 installer directories0700, so UID65534 strace could not stat the executable.
 Android returned automatically101.9s, seven samples match; platform regression
