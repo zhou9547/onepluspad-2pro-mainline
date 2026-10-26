@@ -1,6 +1,7 @@
 """One bounded NetworkManager WiFi acceptance; credentials stay in RAM files.
 
-No raw iw scan, driver reset, module reload, persistent install or retries.
+One requested owner-SSID scan with bounded read-only cache observations.
+No raw iw scan, driver reset, module reload, persistent install or reconnect.
 This file is safe to publish; the separate credentials JSON is private.
 """
 import argparse
@@ -114,7 +115,8 @@ def check(credentials, iface, execute=run, runtime=Path('/run')):
     if rc or not initial:
         result['scan_property_unavailable'] = True
         return result
-    rc, _ = command('rescan', ['nmcli', '--wait', '8', 'device', 'wifi', 'rescan', 'ifname', iface], 10)
+    rc, _ = command('rescan', ['nmcli', '--wait', '8', 'device', 'wifi', 'rescan', 'ifname', iface, 'ssid', ssid], 10)
+    result['directed_scan_requested'] = True
     if rc:
         return result
     # NetworkManager documents LastScan as completion in CLOCK_BOOTTIME ms.
@@ -134,9 +136,22 @@ def check(credentials, iface, execute=run, runtime=Path('/run')):
             break
         time.sleep(min(2,max(0,scan_deadline-time.monotonic())))
     if not result['scan_completed']:return result
-    rc, output = command('ap_list', ['nmcli', '--wait', '4', '--escape', 'no', '-g', 'SSID',
-                                    'device', 'wifi', 'list', 'ifname', iface, '--rescan', 'no'], 6)
-    result['target_seen'] = rc == 0 and ssid in output.splitlines()
+    cache_deadline = time.monotonic() + 10
+    result['maximum_visible_ssid_rows'] = 0
+    for observation in range(3):
+        remaining = cache_deadline - time.monotonic()
+        if remaining <= 0:break
+        rc, output = command('ap_list', ['nmcli', '--wait', '4', '--escape', 'no', '-g', 'SSID',
+                                        'device', 'wifi', 'list', 'ifname', iface, '--rescan', 'no'], min(6,remaining))
+        rows = output.splitlines() if rc == 0 else []
+        result['ap_list_observations'] = observation + 1
+        result['scan_result_rows'] = len(rows)
+        result['visible_ssid_rows'] = sum(bool(row) for row in rows)
+        result['unique_visible_ssids'] = len({row for row in rows if row})
+        result['maximum_visible_ssid_rows'] = max(result['maximum_visible_ssid_rows'],result['visible_ssid_rows'])
+        result['target_seen'] = rc == 0 and ssid in rows
+        if rc or result['target_seen']:break
+        if observation < 2:time.sleep(min(1,max(0,cache_deadline-time.monotonic())))
     if rc or not result['target_seen']:
         return result
     ident = str(uuid.uuid4())

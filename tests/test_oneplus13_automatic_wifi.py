@@ -161,6 +161,43 @@ class Checks(unittest.TestCase):
         r = self.call(f)
         self.assertFalse(r['target_seen'])
         self.assertFalse(any('passwd-file' in c for c in f.calls))
+        self.assertEqual(r['unique_visible_ssids'],1)
+        self.assertNotIn('other-network',json.dumps(r))
+
+    def test_scan_counts_distinguish_empty_results_without_publishing_names(self):
+        base=Fake(target=False)
+        def empty(args,seconds):
+            if 'SSID' in args:return 0,''
+            return base(args,seconds)
+        empty.calls=base.calls
+        r=self.call(empty)
+        self.assertEqual(r['scan_result_rows'],0)
+        self.assertEqual(r['visible_ssid_rows'],0)
+        self.assertFalse(r['target_seen'])
+        self.assertFalse(any('passwd-file' in c for c in base.calls))
+
+    def test_one_directed_scan_and_delayed_cache_publish(self):
+        base=Fake();lists=0
+        def delayed(args,seconds):
+            nonlocal lists
+            if 'SSID' in args:
+                lists+=1
+                if lists<3:return 0,''
+            return base(args,seconds)
+        delayed.calls=base.calls
+        r=self.call(delayed)
+        self.assertTrue(r['target_seen'] and r['https_pass'])
+        self.assertEqual(r['ap_list_observations'],3)
+        scans=[c for c in base.calls if 'rescan' in c]
+        self.assertEqual(len(scans),1)
+        self.assertEqual(scans[0][-2:],['ssid','offline-network'])
+
+    def test_cache_timeout_stops_without_new_scan_or_credentials(self):
+        base=Fake(fail='SSID');r=self.call(base)
+        self.assertEqual(r['ap_list_rc'],124)
+        self.assertEqual(r['ap_list_observations'],1)
+        self.assertEqual(sum('rescan' in c for c in base.calls),1)
+        self.assertFalse(any('passwd-file' in c for c in base.calls))
 
     def test_auth_timeout_removes_secret_file_and_stops(self):
         f = Fake(fail='up')

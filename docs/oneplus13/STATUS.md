@@ -1,5 +1,30 @@
 # 一加13适配状态
 
+## Latest: preserve the working features; no full-network delivery yet
+
+The owner requires subsequent images to retain every previously tested feature.
+The prior isolated image is a diagnostic draft, not a feature-complete upgrade.
+Run82/83 restored the fixed previously tested WLAN/BT software/firmware bytes
+while replacing reference ADSP/GPU with independently verified phone inputs.
+Display, hardware GPU readback, ordinary-user desktop, powered Bluetooth
+controller/sender/OBEX, touch-device inventory, battery and read-only platform
+regressions passed. They returned automatically to Android in132.1/135.9s with
+seven matching baseline properties, zero partition writes and no selected
+severe signatures in saved tails. Old stop and firmware-hold records remain.
+
+Run83's one owner-SSID scan and bounded cache observations saw50 AP rows,
+39 visible SSID rows and38 unique visible SSIDs. The specified target was not
+observed; no authentication/DHCP/HTTPS acceptance is claimed. Raw identifiers,
+credentials and scan lists stay private. Complete-network delivery is blocked.
+verify-preserved-features.py enforces joint current-artifact evidence rather
+than merging historical passes from different candidates. It rejects run83.
+Physical touch/visual and peer receipt were not retested unattended.
+
+Full kernel Actions40320714130 passed Image/modules build and exact-image
+QEMU smoke checks. Its pinned base/overlay, archive CRC and extracted hashes
+were verified locally. It remains offline-only and was not substituted into
+the feature regression without a matching prepared desktop image.
+
 ## WiFi current result: prepared, not restored
 
 Latest WiFi source4786b1195330f8823c95574cac67ed481b3ae639 passed native ARM64
