@@ -21,6 +21,12 @@ run88 RAM image:
 exact pinned public artifacts, checks kernel, modules and rootfs hashes and
 sizes, and boots the exact SquashFS in QEMU.
 
+The historical desktop rootfs names a different pre-integration kernel release
+in its standalone manifest. The current image intentionally replaces that
+runtime binding with the separately delivered kernel modules and release pin
+from integration artifact `1f5c1128d42a62244bef9974e58cfe07adf29f7d`; the exact
+rootfs bytes remain unchanged.
+
 The `oneplus13.yml` and `oneplus13-rootfs.yml` workflows independently compile
 the kernel and rootfs from source at this branch. The platform handoff pipeline
 exercises exact component assembly.

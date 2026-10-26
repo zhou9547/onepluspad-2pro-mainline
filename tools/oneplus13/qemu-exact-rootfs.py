@@ -53,7 +53,6 @@ def main():
         exact=json.loads(a.rootfs_manifest.read_text())
         assert not a.assembled_manifest
         assert exact['integration_commit']=='de8eef9ca4d94940e6edb63f26a1dcd9d0bed7b2'
-        assert exact['matching_kernel_release']==EXPECTED_RELEASE
         expected_sha=exact['files']['rootfs.squashfs']['sha256']
         expected_bytes=exact['files']['rootfs.squashfs']['size']
         assembly={
