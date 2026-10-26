@@ -86,3 +86,31 @@ using the original unchanged plane BW/clock helpers, then apply existing catalog
 inefficiency and burst factors. The wrapper rejects invalid/unassigned visible
 geometry. Non-opt-in calculation remains unchanged. Host C executes both split
 pipe math and the real check/ICC paths with differing old/new inputs.
+
+0008 preserves the AA569 vendor embedded command groups through an optional
+whole-group MIPI host operation. Only SM8750/AA569 single DSI0 command mode
+accepts it. No queued state survives calls and unsupported hosts cannot silently
+send packets individually. The complete bounded buffer is validated/packed
+before one resource lifetime and kickoff; timeout resets before restoration.
+The unchanged single-message packing/dispatch/trigger are checked against the pin.
+Parent clock errors propagate instead of being swallowed. See DSI-BATCH.md for
+actual C fault-injection scope and the still-open physical timing gates.
+
+0009 selects the public AA569 production V7.2 fourteen-register timing only
+for the attached SM8750/DSI0 four-lane command D-PHY native422 fixed-rate
+candidate. Unsupported fixed requests fail before MMIO; ordinary timings stay
+unchanged. Shared host clk_pre/post are updated in the same enable operation.
+The host request is cleared before rate calculation to avoid stale stack data.
+See FIXED-PHY.md for vendor call-path evidence and physical-validation limits.
+
+0010 repairs the existing host power-on error paths: runtime resume failure
+propagates, and failed parent/rate/clock setup releases the acquired PM/OPP
+references before regulators. The ordinary successful sequence is unchanged.
+Actual power-on functions run under fault injection in check-dsi-batch.py.
+
+0011 uses the required AA569 two-LM topology for the mixer clock floor and
+splits pipes before assignment against the real OPP after both ceiling-rounded
+budget factors. It preserves aggregate bandwidth, OPP tables and legacy paths.
+The checker reads the compiled native DTB, replays the old rejection, executes
+the real split and verifies rounding boundaries. See DPU-OPP.md for fixture and
+physical-validation limits.

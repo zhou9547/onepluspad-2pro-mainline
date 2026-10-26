@@ -94,6 +94,9 @@ def build_initramfs(original, modules, release, xml, helper):
     if b'@KERNEL_RELEASE@' in files['sbin/start-native-display']:
         raise ValueError('Unresolved native helper template')
     files['etc/oneplus13-native-candidate'] = (release+'\n').encode()
+    files['etc/oneplus13-native-handoff'] = ('ONEPLUS13_NATIVE_HANDOFF_V1\n'+release+'\n'+
+        hashlib.sha256(profile).hexdigest()+'\n'+
+        hashlib.sha256(files['sbin/start-native-display']).hexdigest()+'\n').encode()
     for name, data in files.items():
         if name in entries:
             raise ValueError('Native input would replace an existing ramdisk entry')
@@ -119,5 +122,6 @@ def build_initramfs(original, modules, release, xml, helper):
                     'original_init_and_recovery_unchanged': True, 'modules': closure,
                     'private_profile_bytes': len(profile), 'private_profile_sha256': hashlib.sha256(profile).hexdigest(),
                     'manual_load_only_after_usb': True, 'dma_used_by_spr_backend': False,
+                    'native_handoff_version': 1, 'handoff_binds_helper_and_profile': True,
                     'initramfs_sha256': hashlib.sha256(packed).hexdigest(),
                     'qemu_this_derived_image': False}

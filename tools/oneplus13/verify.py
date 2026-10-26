@@ -91,10 +91,17 @@ def verify_artifacts(out):
                     'icc_per_path_average_ceiling': True, 'missing_icc_path_rejected': True,
                     'te_timing_changed': False, 'hardware_transfer_timer_programmed': False,
                     'exact_vendor_hal_algorithm': False}
-        if manifest['command_budget_version'] == 2:
+        if manifest['command_budget_version'] in [2, 3]:
             expected.update(new_atomic_plane_geometry_checked=True, original_plane_math_unchanged=True)
         elif manifest['command_budget_version'] != 1:
             raise ValueError('Unknown command-budget evidence version')
+        if manifest['command_budget_version'] == 3:
+            expected.update(actual_native_dtb_sha256=manifest['files']['sm8750-oneplus-dodge-native.dtb']['sha256'],
+                            actual_mdp_opp_max_hz=575000000,actual_dtb_opp_mode_eligible=True,
+                            fixed_two_mixer_clock_hz=355764706,full_width_old_budget_rejected=True,
+                            actual_plane_split_executed=True,pipe_limit_rounding_boundaries=3417,
+                            native_dtb_negative_controls=6,
+                            plane_geometry_fixture='NO_ROTATION_SCALING_OR_CLIPPING')
         if (
                 any(budget.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C DPU command-budget verification')
@@ -104,22 +111,56 @@ def verify_artifacts(out):
                     'kernel_commit': manifest['kernel_commit'], 'sanitizers': True,
                     'public_on_packets_match': 150, 'public_off_packets_match': 3,
                     'fixed_brightness_dbv': 1433, 'on_lp_off_and_brightness_hs': True,
-                    'power_reset_delays_match': True, 'init_failure_positions_checked': 149,
-                    'short_transfer_rejected': True, 'supply_failure_controls': 8,
+                    'power_reset_delays_match': True, 'supply_failure_controls': 8,
                     'disable_enable_cycle_checked': True,
                     'off_command_failure_positions_checked': 3,
                     'off_command_errors_do_not_wedge_framework_state': True}
         if manifest['panel_component_version'] == 1:
             expected.update(enabled_in_any_dtb=False, spr2_pipeline_implemented=False)
-        elif manifest['panel_component_version'] == 2:
+        elif manifest['panel_component_version'] in (2, 3):
             expected.update(separate_native_dtb_source_present=True,
                             board_node_exercised_by_this_check=False,
                             spr_runtime_exercised_by_this_check=False)
         else:
             raise ValueError('Unknown panel component evidence version')
+        if manifest['panel_component_version'] < 3:
+            expected.update(init_failure_positions_checked=149, short_transfer_rejected=True)
+        else:
+            expected.update(init_dma_failure_groups_checked=12, on_vendor_groups_match=13,
+                            allocation_and_split_group_controls=True)
+            if manifest.get('dsi_batch_version') != 1:
+                raise ValueError('Grouped panel requires DSI batch evidence')
         if (
                 any(panel.get(k) != v for k, v in expected.items())):
             raise ValueError('Missing or failed C panel component verification')
+    if 'dsi_batch_version' in manifest:
+        batch = json.loads((out / 'dsi-batch-verification.json').read_text())
+        expected = {'scope':'HOST_C_DSI_BATCH_ONLY', 'hardware_tested':False,
+                    'sanitizers':True, 'kernel_commit':manifest['kernel_commit'],
+                    'on_vendor_groups_match':13, 'on_packets':150, 'max_group_bytes':312,
+                    'invalid_groups_fail_before_mapping_or_pm':True,
+                    'pm_parent_rate_and_enable_failures_balanced':True,
+                    'one_lock_mapping_resource_lifetime_and_kickoff_per_group':True,
+                    'dma_timeout_reset_before_restore':True, 'no_queued_state_after_return':True,
+                    'synchronous_component_attach_and_failure_cleanup_checked':True,
+                    'ordinary_packing_dispatch_and_manager_trigger_unchanged':True}
+        if manifest['dsi_batch_version'] != 1 or any(batch.get(k) != v for k,v in expected.items()):
+            raise ValueError('Missing or failed C DSI batch verification')
+    if 'fixed_phy_version' in manifest:
+        phy = json.loads((out / 'fixed-phy-verification.json').read_text())
+        expected = {'scope':'HOST_C_FIXED_AA569_PHY_ONLY','hardware_tested':False,
+                    'sanitizers':True,'kernel_commit':manifest['kernel_commit'],
+                    'production_timing_bytes':[0,44,12,12,29,26,12,12,11,2,4,0,36,17],
+                    'real_mmio_writers_match_public_profile':True,'rejected_profiles_before_mmio':7,
+                    'legacy_profiles_unchanged':33,'shared_host_timing_updated':True,
+                    'all_rejection_outputs_unchanged':True,'selector_called_before_any_phy_mmio':True}
+        if manifest['fixed_phy_version'] != 1 or any(phy.get(k) != v for k,v in expected.items()):
+            raise ValueError('Missing or failed fixed AA569 PHY verification')
+    if 'host_power_resources_version' in manifest:
+        batch = json.loads((out / 'dsi-batch-verification.json').read_text())
+        if (manifest['host_power_resources_version'] != 1 or batch.get('sanitizers') is not True or
+                batch.get('host_power_pm_clock_and_pinctrl_failures_balanced') is not True):
+            raise ValueError('Missing host power-on resource failure verification')
     if 'dpu_buffer_version' in manifest:
         dpu = json.loads((out / 'dpu-buffer-verification.json').read_text())
         expected = {'scope': 'HOST_C_DPU_BUFFER_AND_REGISTER_ONLY',

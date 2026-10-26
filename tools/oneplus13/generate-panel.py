@@ -16,7 +16,7 @@ def generate(fixture):
              '/* Generated public OnePlusOSS '+PIN+' AA569 data. */',
              '/* No private XML, identifiers or factory calibration. */',
              '#ifndef DODGE_AA569_DATA_H', '#define DODGE_AA569_DATA_H',
-             'struct aa569_cmd { u16 offset, length; u8 delay_ms; };']
+             'struct aa569_cmd { u16 offset, length; u8 delay_ms, type; bool batch; };']
     for name in ('on', 'off'):
         raw, commands, flattened = bytearray(), [], bytearray()
         for packet in fixture[name+'_packets']:
@@ -29,15 +29,20 @@ def generate(fixture):
                 raise ValueError('Uninvestigated packet type/channel/flags/length')
             raw.extend(bytes([expected, 0, 0, packet['vendor_flags'], packet['delay_ms'],
                               len(data) >> 8, len(data) & 255])+data)
-            commands.append((len(flattened), len(data), packet['delay_ms']))
+            batch = packet['vendor_flags'] == 64
+            if batch and packet['delay_ms']:
+                raise ValueError('Delay before batch completion')
+            commands.append((len(flattened), len(data), packet['delay_ms'], expected, batch))
             flattened.extend(data)
+        if commands[-1][-1]:
+            raise ValueError('Unterminated command group')
         if hashlib.sha256(raw).hexdigest() != fixture[name+'_sha256']:
             raise ValueError('Public command fixture digest mismatch')
         lines.append('static const u8 aa569_'+name+'_bytes[] = {')
         for i in range(0,len(flattened),16):
             lines.append('\t'+', '.join(f'0x{x:02x}' for x in flattened[i:i+16])+',')
         lines += ['};', 'static const struct aa569_cmd aa569_'+name+'[] = {']
-        lines.extend(f'\t{{ {o}, {n}, {d} }},' for o,n,d in commands)
+        lines.extend(f'\t{{ {o}, {n}, {d}, {t}, {str(b).lower()} }},' for o,n,d,t,b in commands)
         lines.append('};')
     if fixture['on_packets'][-1]['payload'] != '29':
         raise ValueError('Display-on is not the last init packet')

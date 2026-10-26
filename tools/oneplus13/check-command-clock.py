@@ -53,6 +53,7 @@ def main():
 #include <stdbool.h>
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 typedef uint8_t u8; typedef uint16_t u16; typedef uint32_t u32; typedef uint64_t u64;
 typedef uint16_t __be16;
 #define __packed __attribute__((packed))
@@ -76,7 +77,7 @@ struct msm_dsi_host {
   struct mipi_dsi_host base;
   unsigned int lanes, dsc_slice_per_pkt;
   int format; unsigned long mode_flags,hs_rate;
-  bool cphy_mode;
+  bool cphy_mode,aa569_batch; int id;
   struct drm_dsc_config *dsc;
   struct drm_display_mode *mode;
   unsigned long pixel_clk_rate,byte_clk_rate,esc_clk_rate,esc_clk;
@@ -84,7 +85,8 @@ struct msm_dsi_host {
 };
 #define to_msm_dsi_host(host) ((struct msm_dsi_host *)(host))
 static unsigned long clk_get_rate(unsigned long clock) {return clock;}
-struct msm_dsi_phy_clk_request {unsigned long bitclk_rate,escclk_rate;};
+struct msm_dsi_phy_clk_request {unsigned long bitclk_rate,escclk_rate;bool aa569_fixed_timing;};
+#define DSI_0 0
 '''
     suffix = r'''
 #define CHECK(c) do {if(!(c)){fprintf(stderr,"check failed line %d\n",__LINE__);return 1;}} while(0)
@@ -104,6 +106,20 @@ int main(void) {
  CHECK(h.byte_clk_rate==170400000UL && h.pixel_clk_rate==181760000UL);
  msm_dsi_host_get_phy_clk_req(&h.base,&req,false);
  CHECK(req.bitclk_rate==1363200000UL && req.escclk_rate==19200000UL);
+ CHECK(!req.aa569_fixed_timing);
+ h.aa569_batch=true;
+ msm_dsi_host_get_phy_clk_req(&h.base,&req,false);
+ CHECK(req.aa569_fixed_timing&&req.bitclk_rate==1363200000UL);
+ for(int c=0;c<7;c++) {
+   h.id=c==0?1:0;h.lanes=c==1?3:4;h.cphy_mode=c==2;
+   h.mode_flags=c==3?MIPI_DSI_MODE_VIDEO:0;h.hs_rate=c==4?1363200001:1363200000;
+   dsc.native_422=c!=5;
+   memset(&req,0xff,sizeof(req));
+   msm_dsi_host_get_phy_clk_req(&h.base,&req,c==6);
+   CHECK(!req.bitclk_rate&&!req.escclk_rate&&!req.aa569_fixed_timing);
+ }
+ h.id=0;h.lanes=4;h.cphy_mode=false;h.mode_flags=0;h.hs_rate=1363200000;
+ dsc.native_422=true;h.aa569_batch=false;
  /* A non-byte-aligned ceiling must be rounded DOWN. */
  h.hs_rate+=7;
  CHECK(!dsi_calc_clk_rate_6g(&h,false) && h.byte_clk_rate*8<=h.hs_rate);

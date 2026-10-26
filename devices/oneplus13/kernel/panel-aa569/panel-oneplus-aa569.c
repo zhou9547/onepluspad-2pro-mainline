@@ -2,7 +2,7 @@
 /*
  * OnePlus 13 AA569 P3 A0019 component; not a complete display pipeline.
  * Public packets: OnePlusOSS d50b305f7da9; generated header retains all bytes.
- * No DTB enables this component until DPU SPR2/lifecycle is implemented.
+ * Only the isolated experimental native DTB enables this component.
  * Author: Codex. No hardware Tested-by claim.
  */
 #include <linux/delay.h>
@@ -12,6 +12,7 @@
 #include <linux/of.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
+#include <video/mipi_display.h>
 #include <drm/display/drm_dsc.h>
 #include <drm/drm_connector.h>
 #include <drm/drm_mipi_dsi.h>
@@ -37,31 +38,47 @@ static struct aa569 *to_aa569(struct drm_panel *panel)
 static int aa569_send(struct aa569 *ctx, const struct aa569_cmd *cmd,
 		      const u8 *bytes, size_t count, bool lp)
 {
-	unsigned long flags = ctx->dsi->mode_flags;
-	ssize_t ret = 0;
-	size_t i;
+	struct mipi_dsi_msg *msgs;
+	size_t i, first, n = 0, max = 0;
+	int ret = 0;
 
-	/* Vendor 0x40 groups host DMA packets; it is not a panel payload flag.
-	 * Mainline sends them serially, retaining byte/type/channel/order/delay.
-	 * Only this driver changes the device flags, under ctx->lock.
-	 */
-	ctx->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
-	if (lp)
-		ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	/* Reject a split vendor group before any transfer or power-mode change. */
+	if (!count)
+		return -EINVAL;
 	for (i = 0; i < count; i++) {
-		ret = mipi_dsi_dcs_write_buffer(ctx->dsi, bytes + cmd[i].offset,
-					      cmd[i].length);
-		if (ret < 0)
-			break;
-		if (ret != cmd[i].length) {
-			ret = -EIO;
-			break;
+		if (++n > 64 || (cmd[i].batch && cmd[i].delay_ms))
+			return -EINVAL;
+		if (!cmd[i].batch) {
+			if (n > max)
+				max = n;
+			n = 0;
 		}
+	}
+	if (n)
+		return -EINVAL;
+	msgs = kcalloc(max, sizeof(*msgs), GFP_KERNEL);
+	if (!msgs)
+		return -ENOMEM;
+	for (first = 0, i = 0; i < count; i++) {
+		n = i - first;
+		msgs[n] = (struct mipi_dsi_msg) {
+			.channel = ctx->dsi->channel,
+			.type = cmd[i].type,
+			.flags = lp ? MIPI_DSI_MSG_USE_LPM : 0,
+			.tx_buf = bytes + cmd[i].offset,
+			.tx_len = cmd[i].length,
+		};
+		if (cmd[i].batch)
+			continue;
+		ret = mipi_dsi_transfer_batch(ctx->dsi, msgs, n + 1);
+		if (ret)
+			break; /* failed DMA may have delivered data; never auto-retry */
 		if (cmd[i].delay_ms)
 			msleep(cmd[i].delay_ms);
+		first = i + 1;
 	}
-	ctx->dsi->mode_flags = flags;
-	return ret < 0 ? ret : 0;
+	kfree(msgs);
+	return ret;
 }
 
 static int aa569_power_off(struct aa569 *ctx)
@@ -186,7 +203,9 @@ static int aa569_enable(struct drm_panel *panel)
 	 * callback. No HBM, PWM switching, low-DBV, AOD or brightness UI yet.
 	 */
 	static const u8 brightness[] = { 0x51, 0x05, 0x99 };
-	static const struct aa569_cmd bright_cmd = { 0, sizeof(brightness), 0 };
+	static const struct aa569_cmd bright_cmd = {
+		.length = sizeof(brightness), .type = MIPI_DSI_DCS_LONG_WRITE,
+	};
 	int ret;
 
 	mutex_lock(&ctx->lock);

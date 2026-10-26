@@ -18,6 +18,7 @@ def main():
     p.add_argument('--patched-source', type=Path)
     p.add_argument('--output', required=True, type=Path)
     p.add_argument('--sanitize', action='store_true')
+    p.add_argument('--cc', nargs='+', default=['gcc'])
     a = p.parse_args()
     repo = Path(__file__).resolve().parents[2]
     pin = json.loads((repo/'devices/oneplus13/source.json').read_text())['kernel']['commit']
@@ -58,7 +59,9 @@ typedef uint8_t u8;typedef uint32_t u32;
 #define EINVAL 22
 #define EBUSY 16
 #define EHOSTDOWN 112
+#ifndef EBADMSG
 #define EBADMSG 74
+#endif
 #define GFP_KERNEL 0
 #define CHECK(x) do {if(!(x)){fprintf(stderr,"SPR runtime check failed %d\n",__LINE__);exit(1);}}while(0)
 static u32 get_unaligned_le32(const void *p){const u8*b=p;return (u32)b[0]|((u32)b[1]<<8)|((u32)b[2]<<16)|((u32)b[3]<<24);}
@@ -102,9 +105,13 @@ static u32 mmio[0x80000/4],offsets[256],values[256],writes,reads,barriers;
 static u32 readl(const void*p){ptrdiff_t off=(const u8*)p-(const u8*)mmio;CHECK(off>=0&&(size_t)off<sizeof(mmio)&&!(off&3));reads++;return mmio[off/4];}
 static void writel(u32 v,void*p){ptrdiff_t off=(u8*)p-(u8*)mmio;CHECK(off>=0&&(size_t)off<sizeof(mmio)&&!(off&3)&&writes<256);offsets[writes]=off;values[writes++]=v;mmio[off/4]=v;}
 static void wmb(void){barriers++;}
-static bool machine=true;
-static bool of_machine_is_compatible(const char*s){CHECK(!strcmp(s,"oneplus,dodge"));return machine;}
-static bool of_device_is_compatible(struct device_node*n,const char*s){CHECK(!strcmp(s,"qcom,sm8750-dpu"));return n->target;}
+static bool machine=true,root_present=true,root_compiled=false;
+static struct device_node root_node;
+static const char *root_model="Qualcomm Technologies, Inc. Sun MTP,dodge",*root_chassis="handset";
+static struct device_node*of_find_node_by_path(const char*s){CHECK(!strcmp(s,"/"));return root_present?&root_node:NULL;}
+static void of_node_put(struct device_node*n){CHECK(n==&root_node);}
+static int of_property_read_string(struct device_node*n,const char*s,const char**out){CHECK(n==&root_node);if(!strcmp(s,"model"))*out=root_model;else {CHECK(!strcmp(s,"chassis-type"));*out=root_chassis;}return *out?0:-EINVAL;}
+static bool of_device_is_compatible(struct device_node*n,const char*s){if(n==&root_node){if(!strcmp(s,"qcom,sun"))return machine&&!root_compiled;CHECK(!strcmp(s,"oneplus,dodge")||!strcmp(s,"qcom,sm8750"));return machine&&root_compiled;}CHECK(!strcmp(s,"qcom,sm8750-dpu"));return n->target;}
 static bool of_property_read_bool(struct device_node*n,const char*s){if(!strcmp(s,"resets"))return n->reset;CHECK(!strcmp(s,"oneplus,aa569-static-spr"));return n->optin;}
 static int dev_err_probe(struct device*d,int ret,const char*fmt){(void)d;(void)fmt;return ret;}
 struct firmware {const u8*data;size_t size;};
@@ -148,6 +155,13 @@ int main(void){
  fw.data=profile_data;fw.size=sizeof(profile_data);
  CHECK(!dpu_aa569_spr_load(&kms)&&!requests&&!reads&&!writes&&!kms.aa569_spr);
  node.optin=true;machine=false;CHECK(dpu_aa569_spr_load(&kms)==-EINVAL&&!requests);machine=true;
+ root_present=false;CHECK(dpu_aa569_spr_load(&kms)==-EINVAL&&!requests);root_present=true;
+ root_model="Qualcomm Technologies, Inc. Sun MTP";CHECK(dpu_aa569_spr_load(&kms)==-EINVAL&&!requests);
+ root_model="OnePlus Pad 2 Pro";CHECK(dpu_aa569_spr_load(&kms)==-EINVAL&&!requests);
+ root_model="OnePlus 13 (AA569 native display experimental candidate)";root_compiled=true;
+ CHECK(aa569_spr_machine());root_compiled=false;CHECK(!aa569_spr_machine());
+ root_model="Qualcomm Technologies, Inc. Sun MTP,dodge";
+ root_chassis="tablet";CHECK(dpu_aa569_spr_load(&kms)==-EINVAL&&!requests);root_chassis="handset";
  node.target=false;CHECK(dpu_aa569_spr_load(&kms)==-EINVAL&&!requests);node.target=true;
  parent_node.reset=false;CHECK(dpu_aa569_spr_load(&kms)==-EINVAL&&!requests);parent_node.reset=true;
  fw_error=-ENOENT;CHECK(dpu_aa569_spr_load(&kms)==-ENOENT&&!kms.aa569_spr);fw_error=0;
@@ -209,7 +223,7 @@ int main(void){
     with tempfile.TemporaryDirectory(prefix='oneplus13-spr-runtime-') as temp:
         source, exe = Path(temp)/'runtime.c', Path(temp)/'runtime.exe'
         source.write_text(combined)
-        command = ['gcc', '-std=gnu11', '-Wall', '-Wextra', '-Werror']
+        command = a.cc + ['-std=gnu11', '-Wall', '-Wextra', '-Werror']
         if a.sanitize:
             command += ['-fsanitize=address,undefined', '-fno-omit-frame-pointer']
         subprocess.run(command+[str(source), '-o', str(exe)], check=True)
@@ -230,6 +244,7 @@ int main(void){
               'all_pipe_udc_preflight_before_any_write': True, 'powered_idle_guards': True,
               'physical_spr_addresses': ['0xae6a400','0xae6b400','0xae6c400','0xae6d400'],
               'profile_missing_or_invalid_rejected': True, 'optin_absent_noop': True,
+              'abl_rewritten_and_compiled_phone_identity_checked': True,
               'pm_restore_cycles': 3, 'aa569_format_exclusivity_checked': True,
               'spr_flush_bit': 8, 'reset_errors_propagated': True,
               'restore_before_encoder_restore': True, 'disable_before_clocks_off': True,

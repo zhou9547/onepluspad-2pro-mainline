@@ -19,6 +19,25 @@ from stock import Fdt, boot_image
 REPO = Path(__file__).resolve().parents[2]
 
 
+def check_native_offline_evidence(kernel,desktop,evidence,helper_sha):
+    if (kernel.get('command_budget_version') != 3 or
+            kernel.get('fixed_phy_version') != 1 or kernel.get('host_power_resources_version') != 1 or
+            kernel.get('dsi_batch_version') != 1 or
+            desktop.get('qemu_native_preflight_rejects_public_root_verified') is not True or
+            desktop.get('qemu_native_preflight_runtime_guards_verified') is not True or
+            desktop.get('native_desktop_helper_sha256') != helper_sha or
+            evidence.get('eligible_for_offline_native_packaging') is not True or
+            evidence.get('hardware_tested') is not False or evidence.get('phone_operations') != 0 or
+            evidence.get('kernel_commit') != kernel.get('integration_commit') or
+            evidence.get('desktop_commit') != desktop.get('integration_commit') or
+            evidence.get('rootfs_sha256') != desktop.get('rootfs_sha256') or
+            evidence.get('native_desktop_helper_sha256') != helper_sha or
+            any(evidence.get(key) is not True for key in ['kernel_download_verified',
+                'clock_te_asan_ubsan_verified','native_preflight_arm64_tests_verified',
+                'desktop_download_verified','actual_dtb_opp_budget_verified'])):
+        raise ValueError('Matching reviewed native offline evidence required')
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--stock', required=True, type=Path)
@@ -27,13 +46,25 @@ def main():
     p.add_argument('--ufdt-tool', required=True, type=Path)
     p.add_argument('--output', required=True, type=Path)
     p.add_argument('--native-xml', type=Path)
+    p.add_argument('--prepare-native-offline', action='store_true',
+                   help='Prepare a reviewed private candidate only; never boot or flash')
+    p.add_argument('--offline-evidence', type=Path)
     a = p.parse_args()
+    if a.native_xml and not a.prepare_native_offline:
+        p.error('Native desktop packaging is disabled: explicit activation, DSI '
+                'batch scheduling and display resource takeover remain unvalidated; '
+                'existing native desktop images are not eligible for testing.')
+    if a.prepare_native_offline and (not a.native_xml or not a.offline_evidence):
+        p.error('--prepare-native-offline requires private XML and reviewed offline evidence')
     spec = importlib.util.spec_from_file_location('collector', REPO/'tools/oneplus13/collect-stock.py')
     collector = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(collector)
     out = collector.private_destination(a.output)
     m = json.loads((a.artifacts/'manifest.json').read_text())
     d = json.loads((a.desktop/'manifest.json').read_text())
+    if a.native_xml:
+        check_native_offline_evidence(m,d,json.loads(a.offline_evidence.read_text()),
+                                     sha256(REPO/'devices/oneplus13/native-desktop.py'))
     if (m['integration_commit'] != PIN or m['hardware_tested'] is not False or
             d.get('kernel_integration_commit') != PIN or d.get('qemu_handoff_verified') is not True or
             d.get('qemu_http_chunk_fetch_verified') is not True or d.get('qemu_deadline_expiry_verified') is not True or
@@ -117,6 +148,8 @@ def main():
               'contains_private_spr_profile': bool(a.native_xml), 'native': native_report,
               'archive': archive_report, 'phone_operations': 0, 'partition_writes': 0,
               'actual_abl_load_and_recovery_unverified': True}
+    report.update(offline_native_prepared_only=bool(a.native_xml),
+                  explicit_native_activation_executed=False,hardware_test_authorized=False)
     (out/'manifest.json').write_text(json.dumps(report, indent=2)+'\n')
     (out/'DO-NOT-FLASH.txt').write_text('PRIVATE RAM desktop candidate. Not phone booted. Never flash.\n')
     (out/'SHA256SUMS').write_text(''.join(f'{sha256(f)}  {f.relative_to(out).as_posix()}\n'

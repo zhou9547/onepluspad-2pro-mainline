@@ -60,13 +60,20 @@ struct dp_sdp_header {u8 bytes[4];};
 #define container_of(p,t,m) ((t *)((char *)(p)-offsetof(t,m)))
 #define MIPI_DSI_MODE_LPM 0x800
 struct drm_panel {int unused;};
-struct mipi_dsi_device {unsigned long mode_flags; int dev;};
+struct mipi_dsi_device {unsigned long mode_flags; int dev; unsigned int channel;};
+struct mipi_dsi_msg {u8 channel,type; u16 flags;size_t tx_len;const void *tx_buf;size_t rx_len;void *rx_buf;};
+#define MIPI_DSI_MSG_USE_LPM 2
+#define MIPI_DSI_DCS_LONG_WRITE 57
+#define GFP_KERNEL 0
+static int alloc_fail;
+static void *kcalloc(size_t n,size_t size,int flags) {(void)flags;return alloc_fail?NULL:calloc(n,size);}
+#define kfree free
 struct regulator {int id,on,load;};
 struct gpio_desc {int id,value;};
 struct mutex {int held;};
 static void mutex_lock(struct mutex *m) {if(m->held)abort();m->held=1;}
 static void mutex_unlock(struct mutex *m) {if(!m->held)abort();m->held=0;}
-static int verbose,op,fail_op,tx,fail_tx,short_tx,fail_disable_id,warnings;
+static int verbose,op,fail_op,tx,groups,fail_group,fail_disable_id,warnings;
 #define dev_warn(dev,...) do {(void)(dev);warnings++;} while(0)
 #define dev_err(dev,...) do {(void)(dev);} while(0)
 static void msleep(unsigned int ms) {if(verbose)printf("W %u\n",ms);}
@@ -96,14 +103,18 @@ static void gpiod_set_value_cansleep(struct gpio_desc *g,int value) {
  if(verbose)printf("G %d %d\n",g->id,value);
  g->value=value;
 }
-static ssize_t mipi_dsi_dcs_write_buffer(struct mipi_dsi_device *d,const void *p,size_t n) {
- const unsigned char *b=p;++tx;
- if(verbose){printf("P %d ",!!(d->mode_flags&MIPI_DSI_MODE_LPM));
- for(size_t i=0;i<n;i++)printf("%02x",b[i]);
- puts("");}
- if(tx==fail_tx)return -EIO;
- if(tx==short_tx)return n-1;
- return n;
+static int mipi_dsi_transfer_batch(struct mipi_dsi_device *d,const struct mipi_dsi_msg *m,size_t n) {
+ if(!n||n>64)abort();
+ if(verbose)printf("B %zu %d\n",n,!!(m[0].flags&MIPI_DSI_MSG_USE_LPM));
+ for(size_t j=0;j<n;j++) {
+   const u8 *b=m[j].tx_buf;++tx;
+   if(m[j].channel!=d->channel || m[j].flags!=m[0].flags || m[j].rx_len || m[j].rx_buf)abort();
+   if(m[j].type!=(m[j].tx_len==1?5:m[j].tx_len==2?21:57))abort();
+   if(verbose){printf("P %d ",!!(m[j].flags&MIPI_DSI_MSG_USE_LPM));
+     for(size_t i=0;i<m[j].tx_len;i++)printf("%02x",b[i]);
+     puts("");}
+ }
+ return ++groups==fail_group?-EIO:0;
 }
 '''
     main_c = r'''
@@ -115,7 +126,7 @@ static void fresh(struct aa569 *c) {
  memset(c,0,sizeof(*c));io.on=ci.on=io.load=ci.load=0;rst.value=1;dr.value=0;
  c->dsc=aa569_dsc;
  dsi.mode_flags=0x10;c->dsi=&dsi;c->vddio=&io;c->vci=&ci;c->reset=&rst;c->vddr=&dr;
- op=tx=fail_op=fail_tx=short_tx=fail_disable_id=warnings=0;
+ op=tx=groups=fail_op=fail_group=fail_disable_id=warnings=alloc_fail=0;
 }
 static bool off(const struct aa569 *c) {
  return !c->vci_on&&!c->vddr_on&&!c->vddio_on&&!io.on&&!ci.on&&!dr.value&&rst.value==1;
@@ -127,22 +138,26 @@ int main(void) {
  CHECK(!aa569_disable(&c.panel)&&!c.enabled&&tx==153);
  CHECK(!aa569_unprepare(&c.panel)&&off(&c)&&!c.prepared&&tx==154);
  CHECK(dsi.mode_flags==0x10);verbose=0;
- /* Every init packet failure must stop I/O and unwind all enabled rails. */
- for(int i=1;i<=149;i++) {
-   fresh(&c);fail_tx=i;
-   CHECK(aa569_prepare(&c.panel)==-EIO && tx==i && off(&c) && !c.prepared);
+ /* Each of the twelve init DMA group failures unwinds all enabled rails. */
+ for(int i=1;i<=12;i++) {
+   fresh(&c);fail_group=i;
+   CHECK(aa569_prepare(&c.panel)==-EIO && groups==i && off(&c) && !c.prepared);
    CHECK(dsi.mode_flags==0x10 && !c.lock.held);
  }
- /* Both enable failures and a short transfer still permit safe teardown. */
- for(int i=150;i<=151;i++) {
-   fresh(&c);CHECK(!aa569_prepare(&c.panel));fail_tx=i;
+ /* Both enable failures still permit safe teardown. */
+ for(int i=13;i<=14;i++) {
+   fresh(&c);CHECK(!aa569_prepare(&c.panel));fail_group=i;
    CHECK(aa569_enable(&c.panel)==-EIO);
    /* A later enable must retry the failed starting brightness. */
    CHECK(!aa569_enable(&c.panel)&&c.enabled);
    CHECK(!aa569_unprepare(&c.panel)&&off(&c)&&!c.prepared);
  }
- fresh(&c);short_tx=75;
- CHECK(aa569_prepare(&c.panel)==-EIO&&tx==75&&off(&c)&&dsi.mode_flags==0x10);
+ fresh(&c);alloc_fail=1;
+ CHECK(aa569_prepare(&c.panel)==-ENOMEM&&groups==0&&off(&c)&&dsi.mode_flags==0x10);
+ /* Reject a truncated pending group or delay before submission. */
+ fresh(&c);CHECK(aa569_send(&c,aa569_on,aa569_on_bytes,1,true)==-EINVAL&&groups==0);
+ struct aa569_cmd invalid={.length=1,.type=5,.batch=true,.delay_ms=1};
+ CHECK(aa569_send(&c,&invalid,aa569_on_bytes,1,true)==-EINVAL&&groups==0);
  /* Each load/enable failure before reset restores balanced supply ownership. */
  for(int i=1;i<=6;i++) {
    fresh(&c);fail_op=i;
@@ -161,9 +176,9 @@ int main(void) {
  CHECK(!aa569_disable(&c.panel));CHECK(!aa569_enable(&c.panel));
  CHECK(tx==155);CHECK(!aa569_unprepare(&c.panel)&&off(&c));
  /* Off-command errors still reset/power down; a retry is balanced. */
- for(int i=152;i<=154;i++) {
+ for(int i=15;i<=17;i++) {
    fresh(&c);CHECK(!aa569_prepare(&c.panel));CHECK(!aa569_enable(&c.panel));
-   fail_tx=i;int first=aa569_disable(&c.panel);int last=aa569_unprepare(&c.panel);
+   fail_group=i;int first=aa569_disable(&c.panel);int last=aa569_unprepare(&c.panel);
    CHECK(!first&&!last&&warnings>0&&off(&c)&&!c.prepared&&!c.enabled);
    CHECK(!aa569_unprepare(&c.panel)&&off(&c));
  }
@@ -186,6 +201,16 @@ int main(void) {
     expected += [('0','510599')]+[('0',v['payload']) for v in fixture['off_packets']]
     if [(x[1],x[2]) for x in packets] != expected:
         raise ValueError('Actual C sender differs from public packet payload/order/LP-HS')
+    expected_groups = []
+    n = 0
+    for packet in fixture['on_packets']:
+        n += 1
+        if packet['vendor_flags'] == 0:
+            expected_groups.append((n, 1))
+            n = 0
+    expected_groups += [(1, 0)] * 4  # brightness and three off packets
+    if [tuple(map(int, line.split()[1:])) for line in output if line.startswith('B ')] != expected_groups:
+        raise ValueError('Real panel callback lost a vendor group boundary')
     power = [line for line in output if line[0] in 'WLEDGV']
     expected_power = ['W 1','L 1 220000','V 1 1800000','E 1','W 3','G 4 1','W 3',
                       'L 2 10000','V 2 3000000','E 2','W 10','G 3 0','W 10','G 3 1','W 5','G 3 0','W 30',
@@ -199,7 +224,8 @@ int main(void) {
               'sanitizers': a.sanitize, 'public_on_packets_match': 150,
               'public_off_packets_match': 3, 'fixed_brightness_dbv': 1433,
               'on_lp_off_and_brightness_hs': True, 'power_reset_delays_match': True,
-              'init_failure_positions_checked': 149, 'short_transfer_rejected': True,
+              'init_dma_failure_groups_checked': 12, 'on_vendor_groups_match': 13,
+              'allocation_and_split_group_controls': True,
               'supply_failure_controls': 8, 'disable_enable_cycle_checked': True,
               'off_command_failure_positions_checked': 3,
               'off_command_errors_do_not_wedge_framework_state': True,
