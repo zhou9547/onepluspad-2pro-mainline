@@ -100,6 +100,8 @@ class Trace(unittest.TestCase):
         self.assertEqual(result['error_lines'],2)
         self.assertEqual(result['write_refusals'],1)
         self.assertEqual(result['missing_file_lookups'],1)
+        self.assertEqual(len(result['missing_file_lookup_sha256']),1)
+        self.assertNotEqual(result['missing_file_lookup_sha256'][0],private)
         self.assertEqual(result['unsupported_or_refused_dispatches'],1)
         self.assertNotIn(private,json.dumps(result))
     def test_success_evidence_keeps_remote_release_unclaimed(self):

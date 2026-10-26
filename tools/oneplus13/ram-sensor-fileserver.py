@@ -139,8 +139,17 @@ def daemon_error_summary(log):
     lines=log.splitlines()
     writes=sum(bool(re.match(r'Tried to open .+ for writing$',x)) for x in lines)
     errors=sum(bool(re.search(r'Could not|Unsupported|Refused request|Unable to|Error|failed|Unknown search directory',x,re.I)) for x in lines)
+    missing_hashes=set()
+    for line in lines:
+        prefix='Could not open '
+        suffix=': No such file or directory'
+        if line.startswith(prefix) and line.endswith(suffix):
+            path=line[len(prefix):-len(suffix)]
+            if path:
+                missing_hashes.add(hashlib.sha256(path.encode('utf-8')).hexdigest())
     return {'error_lines':errors,'write_refusals':writes,
             'missing_file_lookups':sum(x.startswith('Could not open ') and x.endswith(': No such file or directory') for x in lines),
+            'missing_file_lookup_sha256':sorted(missing_hashes)[:64],
             'unsupported_or_refused_dispatches':sum(bool(re.search(r'Unsupported|Refused request',x,re.I)) for x in lines),
             'unknown_search_directories':sum(x.startswith('Unknown search directory ') for x in lines),
             'arbitrary_paths_or_file_contents_in_summary':False}

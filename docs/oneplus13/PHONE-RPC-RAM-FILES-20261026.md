@@ -34,6 +34,10 @@ are collected; an already failed or early-exited unit is then rejected
 explicitly. This closes the run74 path where `CalledProcessError` bypassed the
 diagnostic summary.
 
+Diagnostic output also carries up to64 SHA256 fingerprints of missing lookup
+names. The hashes can be compared with saved vendor and request inventories
+without copying private paths or file contents into public evidence.
+
 Native ARM64 Actions40263745661 at
 `19c7ea18ea2a6f87db0b400c1ca7a9bd300066ed` passes the expanded13 release,
 13 ASan/UBSan and six Python checks plus the300-byte listener fixture.
