@@ -1,5 +1,19 @@
 # Technical debt (single register for the phone)
 
+CORRECTION: the earlier SSC QEMU-user -L link result used host ARM64 fallback
+libraries and is not an exact-rootfs pass. Full VM exposed missing protobuf-c,
+qmi, qrtr and mbim runtime libraries. Old evidence is retained and superseded;
+the gate stays closed, with no phone attempt. The isolated archive now records
+four generic runtime libraries plus package/source versions and copyright.
+Native rebuild and full-VM sandbox/deadline checks are pending. Do not use a
+successful loader trace without checking every dependency exists in the target.
+
+The camera local fixes retain all23 upstream patch hashes, remove two obsolete
+locals and propagate timing/mode errors before PHY configure/power. Seven
+actual extracted-function failure/success controls pass host release and
+ASan/UBSan. Native joint camera/amplifier compilation, now including CAMBIST,
+is still pending; no phone graph or sensor support is implied.
+
 The camera component draft stages23 original, source-pinned patches: standalone
 PHY, external-PHY CAMSS plumbing, Kaanapali dependencies and SM8750 RDI support.
 All apply with fuzz=0 to fresh affected files at the phone kernel pin. Native

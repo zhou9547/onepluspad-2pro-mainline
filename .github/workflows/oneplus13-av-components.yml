@@ -36,10 +36,13 @@ jobs:
             out/av-components/verification.json
             out/av-components/kernel.config
             out/av-components/audio-synthetic/verification.json
+            out/av-components/camera-synthetic/verification.json
+            out/av-components/camera-synthetic/*.log
             out/av-components/linux/drivers/media/platform/qcom/camss/*.o
             out/av-components/linux/drivers/phy/qualcomm/phy-qcom-mipi-csi2*.o
             out/av-components/linux/drivers/i2c/busses/i2c-qcom-cci.o
             out/av-components/linux/drivers/clk/qcom/camcc-sm8750.o
+            out/av-components/linux/drivers/clk/qcom/cambistmclkcc-sm8750.o
             out/av-components/linux/sound/soc/codecs/aw88461.o
           if-no-files-found: error
           retention-days: 14

@@ -1,8 +1,18 @@
 # Isolated SSC metadata discovery
 
+Correction from full VM validation: the initial QEMU-user loader check could
+fall back to host ARM64 libraries. It does not establish an exact-rootfs pass.
+The target lacks four runtime dependencies; the isolated export now includes
+protobuf-c, qmi, qrtr and mbim libraries with package/source identities and
+copyright files, rather than replacing system libraries. New native and full
+VM checks remain pending. The earlier three-executable native checks passed;
+13 additional wrapper failure/control checks also pass locally. No phone query
+or new hardware qualification follows from these source changes.
+
 This phone-only overlay reuses original libssc 0.4.4 discovery and attribute
 constructors. The original two delivery patches and Pad packaging remain
-unchanged. It exports a separate probe and library, without a service,
+unchanged. It exports a separate probe, library and explicit generic dependency
+closure, without an enabled service,
 firmware, registry, calibration, installer or phone integration.
 
 Before constructing any sensor, the probe sets a process-wide, one-way guard.

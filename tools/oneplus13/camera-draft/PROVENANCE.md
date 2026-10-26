@@ -9,6 +9,12 @@ The first native W=1/-Werror build found an unused local left by the external
 PHY conversion. A separate Codex correction removes that single declaration;
 the original23 patches retain their hashes. The compiler gate stays enabled.
 
+A second correction removes another obsolete local and checks the fallible
+DPHY timing/mode calls before configure or power-on. The test builder extracts
+that actual staged function, uses explicit hardware-free doubles and tests
+seven success/failure boundaries with release and ASan/UBSan. This does not
+validate electrical sequencing, generic-PHY implementation or real captures.
+
 The sequence is X1E PHY v13 (two patches), CAMSS external PHY v12 (six),
 Kaanapali v15 (eight), then SM8750 v6 (seven). All23 apply with fuzz=0 on
 fresh affected source files from the actual phone kernel pin. Native object

@@ -33,7 +33,7 @@ def main():
     run(['git','-C',kernel,'fetch','--depth','1','origin',PIN],timeout=240)
     run(['git','-C',kernel,'checkout','--detach','FETCH_HEAD'],timeout=180)
     if run(['git','-C',kernel,'rev-parse','HEAD']).strip()!=PIN:raise ValueError('Kernel pin mismatch')
-    if len(lock.get('local_fixes',[]))!=1:raise ValueError('Missing reviewed compiler correction')
+    if len(lock.get('local_fixes',[]))!=2:raise ValueError('Missing reviewed compiler/error corrections')
     for entry in lock['patches']+lock['local_fixes']:
         name=Path(entry['file'])
         if name.is_absolute() or '..' in name.parts:raise ValueError('Unsafe patch name')
@@ -46,6 +46,7 @@ def main():
     for name in ('aw88461.c','aw88461-profile.h'):
         (kernel/'sound/soc/codecs'/name).write_bytes((audio/name).read_bytes())
     run(['python3',audio/'check.py','--output',out/'audio-synthetic'])
+    run(['python3',HERE/'check-phy-errors.py','--kernel',kernel,'--output',out/'camera-synthetic'])
     run(['make','-C',kernel,'ARCH=arm64','defconfig'],timeout=120)
     config=kernel/'scripts/config'
     for name in ('MEDIA_SUPPORT','MEDIA_CONTROLLER','VIDEO_DEV','MEDIA_PLATFORM_SUPPORT','V4L_PLATFORM_DRIVERS','PM_OPP'):
@@ -59,8 +60,9 @@ def main():
     targets=['drivers/media/platform/qcom/camss/',
              'drivers/phy/qualcomm/phy-qcom-mipi-csi2.o',
              'drivers/i2c/busses/i2c-qcom-cci.o','drivers/clk/qcom/camcc-sm8750.o',
+             'drivers/clk/qcom/cambistmclkcc-sm8750.o',
              'sound/soc/codecs/aw88461.o','sound/soc/codecs/aw88395/aw88395_lib.o']
-    run(['make','-C',kernel,'ARCH=arm64','-j'+str(min(os.cpu_count() or 2,8)),
+    run(['make','-C',kernel,'ARCH=arm64','-j'+str(min(os.cpu_count() or 2,8)),'-k',
          'W=1','KCFLAGS=-Werror',*targets],timeout=600)
     expected=['drivers/media/platform/qcom/camss/camss-csid-980.o',
               'drivers/media/platform/qcom/camss/camss-vfe-gen4.o',

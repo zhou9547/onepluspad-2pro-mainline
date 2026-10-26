@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 """Build an isolated metadata-only SSC probe, never an enabled sensor service."""
-import argparse,hashlib,json,os,platform,shutil,struct,subprocess,tarfile,urllib.request
+import argparse,hashlib,json,os,platform,re,shutil,struct,subprocess,tarfile,urllib.request
 from pathlib import Path
 REPO=Path(__file__).resolve().parents[2]
 ARCHIVE_SHA='716d6bd6b34d2d753060c6b54c9a87e34fae75b724c763bf9ef487efa3621587'
 SOURCE_COMMIT='0cf77b93b55752da34dca2dcecc06fca8665184b'
 EXTRA='0001-add-metadata-only-discovery-guard.patch'
 EXTRA_SHA='50811cc82d6f221abce333731d50ff3d8d0355bb002f7aea850c4d1f30538bb5'
+RUNTIME_LIBRARIES={'libprotobuf-c.so.1','libqmi-glib.so.5','libqrtr-glib.so.0','libmbim-glib.so.4'}
 
 def sha(path):
     with Path(path).open('rb') as stream:return hashlib.file_digest(stream,'sha256').hexdigest()
@@ -71,11 +72,27 @@ def main():
     imported=[x.split()[-1].split('@')[0] for x in symbols.splitlines() if len(x.split())>=8 and x.split()[6]=='UND']
     if any('ssc_sensor_' in name and ('_open' in name or '_close' in name) for name in imported):raise ValueError('Probe imports measurement APIs')
     if not {'ssc_sensor_new','ssc_phone_lock_metadata_only','ssc_phone_metadata_only_locked'}<=set(imported):raise ValueError('Probe lacks guarded API imports')
-    files={}
+    files={};runtime_libraries={}
     if native and not a.host_check:
         entries={'probe/phone-ssc-metadata-probe':probe,'probe/libssc.so.2':out/'release/src/libssc.so.2',
                  'tests/phone-probe-policy':out/'release/tests/phone-probe-policy',
                  'tests/phone-probe-send-guard':out/'release/tests/phone-probe-send-guard'}
+        linked=run(['ldd',probe],log)
+        paths={match[1]:Path(match[2]).resolve() for match in re.finditer(r'^\s*(\S+) => (/\S+) ',linked,re.M)}
+        if not RUNTIME_LIBRARIES<=set(paths):raise ValueError('Missing reviewed SSC dependency closure')
+        for name in sorted(RUNTIME_LIBRARIES):
+            path=paths[name];entries['probe/'+name]=path
+            owners=run(['dpkg-query','-S',path],log).strip().splitlines()
+            if len(owners)!=1:raise ValueError('Ambiguous runtime package owner')
+            package=owners[0].rsplit(': ',1)[0]
+            record=run(['dpkg-query','-W','-f=${binary:Package}\t${Version}\t${source:Package}\t${source:Version}\n',package],log).strip().split('\t')
+            if len(record)!=4:raise ValueError('Missing corresponding source package identity')
+            copyright_path=Path('/usr/share/doc')/package.split(':')[0]/'copyright'
+            target=out/('LICENSE-runtime-'+name);shutil.copy2(copyright_path,target)
+            runtime_libraries[name]={'binary_package':record[0],'binary_version':record[1],
+               'source_package':record[2],'source_version':record[3],
+               'source_url':'https://launchpad.net/ubuntu/+source/'+record[2]+'/'+record[3],
+               'copyright_file':target.name,'copyright_sha256':sha(target),'library_sha256':sha(path)}
         archive_out=out/'phone-ssc-probe-arm64.tar.gz'
         with tarfile.open(archive_out,'x:gz') as tf:
             for name,path in entries.items():
@@ -86,7 +103,8 @@ def main():
                 files[name]={'bytes':len(data),'sha256':sha(path),'mode':info.mode}
         (out/'phone-ssc-probe-manifest.json').write_text(json.dumps({'scope':'PUBLIC_PHONE_SSC_METADATA_ONLY_PROBE',
            'files':files,'archive_sha256':sha(archive_out),'samples_or_streams_allowed':False,
-           'one_way_send_guard':True,'private_inputs_included':False,'hardware_qualified':False},indent=2)+'\n')
+           'one_way_send_guard':True,'private_inputs_included':False,'hardware_qualified':False,
+           'runtime_libraries':runtime_libraries,'runtime_library_namespace':'probe directory only'},indent=2)+'\n')
     for name in ['COPYING','LICENSE']:
         if (source/name).is_file():shutil.copy2(source/name,out/('LICENSE-'+name))
     shutil.copy2('/usr/share/common-licenses/GPL-3',out/'LICENSE-GPL-3')
@@ -98,6 +116,6 @@ def main():
         'original_delivery_encoding_regression_pass':True,'original_qrtr_service_tests_run':False,
         'no_measurement_api_imported_by_probe':True,'lock_only_cli_pass':True,'leak_testing_claimed':False,
         'private_inputs_included':False,'services_or_installers_included':False,'hardware_eligible':False,
-        'artifact_files':files}
+        'artifact_files':files,'runtime_libraries':runtime_libraries}
     (out/'verification.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))
 if __name__=='__main__':main()

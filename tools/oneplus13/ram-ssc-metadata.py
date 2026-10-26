@@ -6,7 +6,9 @@ from pathlib import Path
 
 STATE=Path('/run/oneplus13/ssc-metadata')
 NAMES={'probe/phone-ssc-metadata-probe','probe/libssc.so.2',
-       'tests/phone-probe-policy','tests/phone-probe-send-guard'}
+       'tests/phone-probe-policy','tests/phone-probe-send-guard',
+       'probe/libprotobuf-c.so.1','probe/libqmi-glib.so.5','probe/libqrtr-glib.so.0','probe/libmbim-glib.so.4'}
+RUNTIME_LIBRARIES={'libprotobuf-c.so.1','libqmi-glib.so.5','libqrtr-glib.so.0','libmbim-glib.so.4'}
 TYPES={'accel','ambient_light','gyro','mag'}
 
 def sha(path):
@@ -19,13 +21,15 @@ def entries(archive,manifest):
         or manifest.get('private_inputs_included') is not False or manifest.get('hardware_qualified') is not False):
         raise ValueError('Unreviewed probe capability')
     if sha(archive)!=manifest['archive_sha256']:raise ValueError('Probe archive changed')
-    result={}
+    if set(manifest.get('runtime_libraries',{}))!=RUNTIME_LIBRARIES:raise ValueError('Incomplete runtime library closure')
+    result={};total=0
     with tarfile.open(archive) as tf:
         for member in tf:
             if member.name not in NAMES or member.name in result or not member.isfile() or member.mode!=0o755:
                 raise ValueError('Unexpected probe member')
             info=manifest['files'][member.name]
-            if not 20<=member.size<=2*1024*1024 or member.size!=info['bytes'] or info['mode']!=0o755:
+            total+=member.size
+            if not 20<=member.size<=8*1024*1024 or total>16*1024*1024 or member.size!=info['bytes'] or info['mode']!=0o755:
                 raise ValueError('Probe member bound/mode mismatch')
             value=tf.extractfile(member).read()
             if (value[:6]!=b'\x7fELF\x02\x01' or struct.unpack_from('<H',value,18)[0]!=183
@@ -78,7 +82,9 @@ def run_probe(mode,state=STATE,run=subprocess.run):
             inactive=run(['/usr/bin/systemctl','is-active',unit],capture_output=True,text=True,timeout=4)
         if stopped.returncode not in (0,5) or inactive.returncode not in (3,4) or inactive.stdout.strip() not in ('inactive','unknown'):
             raise ValueError('SSC metadata unit did not stop cleanly')
-    if result.returncode:raise ValueError('SSC metadata process failed')
+    if result.returncode:
+        detail=(result.stdout+result.stderr)[-1800:] if mode=='verify' else 'private discovery output withheld'
+        raise ValueError('SSC metadata process failed, exit='+str(result.returncode)+': '+detail)
     facts=interpret(mode,result.stdout+result.stderr)
     return {'scope':'BOUNDED_SSC_METADATA_ONLY','mode':mode,'uid':65534,'unit_inactive':True,
             'measurement_commands_allowed':False,'peripheral_hardware_qualification_implied':False,**facts}
@@ -90,7 +96,7 @@ def main():
     for name in ('archive-sha256','manifest-sha256'):p.add_argument('--'+name,required=True)
     a=p.parse_args()
     if os.geteuid()!=0:raise ValueError('Root installs the low-privilege probe')
-    if a.manifest.stat().st_size>65536 or a.archive.stat().st_size>4*1024*1024:raise ValueError('Delivery bound exceeded')
+    if a.manifest.stat().st_size>65536 or a.archive.stat().st_size>8*1024*1024:raise ValueError('Delivery bound exceeded')
     if sha(a.archive)!=a.archive_sha256 or sha(a.manifest)!=a.manifest_sha256:raise ValueError('Delivery hash mismatch')
     files=entries(a.archive,json.loads(a.manifest.read_text()))
     if STATE.exists() or STATE.is_symlink():raise ValueError('Preserve prior probe evidence')

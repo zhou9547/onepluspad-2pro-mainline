@@ -68,7 +68,8 @@ class ControlTests(unittest.TestCase):
 class ArchiveTests(unittest.TestCase):
     def fixture(self,root,symlink=False):
         manifest={'scope':'PUBLIC_PHONE_SSC_METADATA_ONLY_PROBE','files':{},'one_way_send_guard':True,
-          'samples_or_streams_allowed':False,'private_inputs_included':False,'hardware_qualified':False}
+          'samples_or_streams_allowed':False,'private_inputs_included':False,'hardware_qualified':False,
+          'runtime_libraries':{n:{} for n in m.RUNTIME_LIBRARIES}}
         archive=root/'synthetic.tar.gz'
         with tarfile.open(archive,'w:gz') as tf:
             for n in sorted(m.NAMES):
