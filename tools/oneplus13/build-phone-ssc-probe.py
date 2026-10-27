@@ -8,6 +8,8 @@ ARCHIVE_SHA='716d6bd6b34d2d753060c6b54c9a87e34fae75b724c763bf9ef487efa3621587'
 SOURCE_COMMIT='0cf77b93b55752da34dca2dcecc06fca8665184b'
 EXTRA='0001-add-metadata-only-discovery-guard.patch'
 EXTRA_SHA='9b4ff3c7b998eba366f7c29efcfcf84fd860974ccc237ea9a64c455356440212'
+PROPERTY_PATCH='0002-fix-sensor-property-value-types.patch'
+PROPERTY_SHA='7ed350b5a98f8e6c6e04e707746beafe8337ad0daf3d596a55f92c35b72e7f1c'
 RUNTIME_LIBRARIES={'libprotobuf-c.so.1','libqmi-glib.so.5','libqrtr-glib.so.0','libmbim-glib.so.4'}
 
 def sha(path):
@@ -28,6 +30,8 @@ def main():
     out=a.output.resolve()
     if out.exists():raise ValueError('Preserve previous build output')
     out.mkdir(parents=True);log=out/'build.log';log.write_text('PHONE_SSC_METADATA_PROBE_OFFLINE_ONLY\n')
+    integration_commit=run(['git','-C',REPO,'rev-parse','HEAD'],log).strip()
+    if not re.fullmatch(r'[0-9a-f]{40}',integration_commit):raise ValueError('Missing integration identity')
     lock=json.loads((REPO/'packaging/sensors/sources.json').read_text())
     entry=next(x for x in lock['sources'] if x['name']=='libssc')
     if entry['sha256']!=ARCHIVE_SHA or entry['upstream_commit']!=SOURCE_COMMIT or len(entry['patches'])!=2:raise ValueError('Original recipe changed')
@@ -52,6 +56,9 @@ def main():
     extra=REPO/'tools/oneplus13/ssc-patches'/EXTRA
     if sha(extra)!=EXTRA_SHA:raise ValueError('Phone overlay changed')
     patches.append(extra)
+    properties=REPO/'tools/oneplus13/ssc-patches'/PROPERTY_PATCH
+    if sha(properties)!=PROPERTY_SHA:raise ValueError('Phone property correction changed')
+    patches.append(properties)
     for patch in patches:run(['patch','-d',source,'-p1','--batch','--fuzz=0','-i',patch],log)
     counts={}
     for kind,options in [('release',['--buildtype=release']),('sanitized',['--buildtype=debug','-Db_sanitize=address,undefined','-Db_lundef=false'])]:
@@ -61,9 +68,9 @@ def main():
         env=environment();env['ASAN_OPTIONS']='detect_leaks=0:abort_on_error=1';env['UBSAN_OPTIONS']='halt_on_error=1:print_stacktrace=1'
         run([a.meson,'test','-C',build,'--setup','phoneoffline','--suite','phone-probe','--suite','delivery','--print-errorlogs'],log,env)
         tests=[json.loads(line) for line in (build/'meson-logs/testlog-phoneoffline.json').read_text().splitlines() if line.strip()]
-        if len(tests)!=3 or not all(x['result']=='OK' for x in tests):raise ValueError('Missing actual guard/encoding results')
+        if len(tests)!=4 or not all(x['result']=='OK' for x in tests):raise ValueError('Missing actual guard/property/encoding results')
         names={x['name'].split(':')[-1] for x in tests}
-        if names!={'phone-probe-policy','phone-probe-send-guard','tests-delivery'}:raise ValueError('Wrong tested scope')
+        if names!={'phone-probe-policy','phone-probe-send-guard','phone-sensor-properties','tests-delivery'}:raise ValueError('Wrong tested scope')
         counts[kind]=len(tests)
         answer=run([build/'src/phone-ssc-metadata-probe','--verify-lock'],log,env)
         if 'SSC_PHONE_METADATA_LOCK_VERIFIED_NO_QRTR' not in answer:raise ValueError('Probe policy not linked')
@@ -103,6 +110,7 @@ def main():
                 files[name]={'bytes':len(data),'sha256':sha(path),'mode':info.mode}
         (out/'phone-ssc-probe-manifest.json').write_text(json.dumps({'scope':'PUBLIC_PHONE_SSC_METADATA_ONLY_PROBE',
            'files':files,'archive_sha256':sha(archive_out),'samples_or_streams_allowed':False,
+           'integration_commit':integration_commit,
            'one_way_send_guard':True,'private_inputs_included':False,'hardware_qualified':False,
            'runtime_libraries':runtime_libraries,'runtime_library_namespace':'probe directory only'},indent=2)+'\n')
     for name in ['COPYING','LICENSE']:
@@ -111,9 +119,10 @@ def main():
     (out/'COPYRIGHT.txt').write_text('Original libssc 0.4.4 retains Dylan Van Assche and original contributor notices.\nPhone-only metadata guard/probe: Codex <codex@openai.com>, GPL-3.0-or-later.\nSource commit '+SOURCE_COMMIT+'; original recipe patches and phone overlay recorded in verification.json.\nNo firmware, calibration, registry, service integration or installer included.\n')
     result={'scope':'PHONE_SSC_METADATA_ONLY_OFFLINE_BUILD','phone_operations':0,'native_arm64':native,
         'host_check_only':a.host_check,'source_commit':SOURCE_COMMIT,'source_archive_sha256':ARCHIVE_SHA,
+        'integration_commit':integration_commit,
         'patches':[{'name':x.name,'sha256':sha(x)} for x in patches],
         'test_counts':counts,'one_way_metadata_policy_and_real_send_guard_tests_pass':True,
-        'original_delivery_encoding_regression_pass':True,'original_qrtr_service_tests_run':False,
+        'original_delivery_encoding_regression_pass':True,'typed_sensor_properties_regression_pass':True,'original_qrtr_service_tests_run':False,
         'no_measurement_api_imported_by_probe':True,'lock_only_cli_pass':True,'leak_testing_claimed':False,
         'private_inputs_included':False,'services_or_installers_included':False,'hardware_eligible':False,
         'artifact_files':files,'runtime_libraries':runtime_libraries}

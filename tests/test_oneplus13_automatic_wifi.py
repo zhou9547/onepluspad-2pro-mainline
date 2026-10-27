@@ -55,13 +55,15 @@ class Fake:
             return 0, json.dumps([{'dst': 'default', 'gateway': '192.0.2.1'}])
         if args[0]=='curl':
             return 0,'http_code=200\nssl_verify_result=0\n'
+        if args[0]=='iw' and args[-1]=='link':
+            return 0, 'Connected to 02:00:00:00:00:01\n\tfreq: 5180\n'
         return 0, ''
 
 
 class Checks(unittest.TestCase):
-    def call(self, fake):
+    def call(self, fake, credentials=None):
         with tempfile.TemporaryDirectory() as d, contextlib.redirect_stdout(io.StringIO()) as output, patch.object(wifi.time, 'sleep'):
-            result = wifi.check({'ssid': 'offline-network', 'password': 'offline-secret-value'},
+            result = wifi.check(credentials or {'ssid': 'offline-network', 'password': 'offline-secret-value', 'external_diagnostics': True},
                                 'wlan-test', execute=fake, runtime=Path(d))
             self.assertNotIn('offline-secret-value', output.getvalue())
             self.assertNotIn('offline-secret-value', repr(fake.calls))
@@ -71,6 +73,50 @@ class Checks(unittest.TestCase):
     def test_full_success_requires_target_profile_dhcp_http(self):
         r = self.call(Fake())
         self.assertTrue(all(r[k] for k in ['association_pass', 'dhcp_pass', 'http_pass', 'https_pass', 'automatic_acceptance_pass']))
+
+    def test_5ghz_profile_and_actual_frequency_are_both_required(self):
+        fake=Fake()
+        result=self.call(fake,{'ssid':'offline-network','password':'offline-secret-value','band':'a'})
+        self.assertEqual(result['associated_band'],'5GHz')
+        self.assertEqual(result['link_frequency_mhz'],5180)
+        self.assertTrue(result['band_pass'] and result['automatic_acceptance_pass'])
+        profile=next(c for c in fake.calls if 'add' in c)
+        self.assertEqual(profile[-2:],['802-11-wireless.band','a'])
+        self.assertFalse(any(c[0] in ('ping','getent') or 'https://example.com/' in c for c in fake.calls))
+        self.assertNotIn('02:00:00:00:00:01',json.dumps(result))
+
+    def test_wrong_or_unproven_frequency_never_reaches_traffic_acceptance(self):
+        for output in ('freq: 2437\n','freq: 5975\n','Not connected.\n','freq: 5180\nfreq: 5240\n','freq: private\n'):
+            base=Fake()
+            def link(args,seconds):
+                if args[0]=='iw': return 0,output
+                return base(args,seconds)
+            link.calls=base.calls
+            with self.subTest(output=output):
+                result=self.call(link,{'ssid':'offline-network','password':'offline-secret-value','band':'a'})
+                self.assertFalse(result['band_pass'] or result['http_pass'])
+                self.assertFalse(any(c[0]=='curl' for c in base.calls))
+
+    def test_24ghz_is_preserved_with_explicit_band(self):
+        base=Fake()
+        def link(args,seconds):
+            if args[0]=='iw':return 0,'freq: 2437\n'
+            return base(args,seconds)
+        link.calls=base.calls
+        result=self.call(link,{'ssid':'offline-network','password':'offline-secret-value','band':'bg'})
+        self.assertTrue(result['band_pass'] and result['automatic_acceptance_pass'])
+        self.assertEqual(result['associated_band'],'2.4GHz')
+
+    def test_link_query_failure_cannot_pass(self):
+        result=self.call(Fake(fail='iw',fail_status=127))
+        self.assertFalse(result['band_pass'] or result['http_pass'])
+
+    def test_invalid_band_rejected_before_any_network_command(self):
+        for band in ('5','6GHz',False,42):
+            fake=Fake()
+            with self.assertRaises(ValueError):
+                self.call(fake,{'ssid':'offline-network','password':'offline-secret-value','band':band})
+            self.assertEqual(fake.calls,[])
 
     def test_ipv6_first_activation_waits_for_delayed_ipv4_on_same_connection(self):
         base=Fake();observations=0
@@ -292,7 +338,7 @@ class Checks(unittest.TestCase):
         self.assertFalse(r['https_pass'])
 
     def test_missing_core_tool_preflight_stops_before_network_commands(self):
-        for missing in ['nmcli','busctl','ip','curl']:
+        for missing in ['nmcli','busctl','ip','curl','iw']:
             with self.subTest(missing=missing), tempfile.TemporaryDirectory() as d:
                 credentials=Path(d)/'credentials.json'
                 credentials.write_text(json.dumps({'ssid':'offline-network','password':'offline-secret-value'}))

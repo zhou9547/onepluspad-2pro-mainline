@@ -6,7 +6,7 @@
 --private-inputs preserves local-only packaging for unreviewed owner datasets.
 Neither mode contacts a phone or consumes an old kernel/rootfs/script overlay.
 """
-import argparse,gzip,json,os,secrets,shutil,struct,subprocess,sys,tarfile,tempfile
+import argparse,gzip,importlib,json,os,secrets,shutil,struct,subprocess,sys,tarfile,tempfile
 from pathlib import Path
 from common import boot_sections,read_cpio,sha256
 from native import build_initramfs
@@ -69,9 +69,31 @@ def main():
     shutil.copyfile(REPO/'devices/oneplus13/desktop/qualified-bringup',dest);dest.chmod(0o755)
     # These scripts are repository source, installed in the image rather than
     # supplied by old host overlays during the hardware test.
-    for name in ['automatic-wifi-check.py','ram-clock-bridge.py','ram-desktop-check.py','ram-platform-prerequisites.sh','ram-display-prerequisites.py']:
+    for name in ['automatic-wifi-check.py','wifi-radio-report.py','ram-clock-bridge.py','ram-desktop-check.py','ram-platform-prerequisites.sh','ram-display-prerequisites.py']:
         dest=stage/'usr/libexec'/('oneplus13-'+name)
         shutil.copyfile(REPO/'tools/oneplus13'/name,dest);dest.chmod(0o755)
+    # A source-bound probe is available for an explicitly reviewed metadata
+    # test. It is never auto-started and contains no registry or measurement API.
+    ssc=REPO/'out/phone-ssc'
+    evidence=json.loads((ssc/'verification.json').read_text())
+    ssc_manifest=ssc/'phone-ssc-probe-manifest.json'
+    ssc_archive=ssc/'phone-ssc-probe-arm64.tar.gz'
+    metadata=json.loads(ssc_manifest.read_text())
+    if (evidence.get('integration_commit')!=km['integration_commit']
+        or metadata.get('integration_commit')!=km['integration_commit']
+        or evidence.get('native_arm64') is not True or evidence.get('host_check_only') is not False
+        or evidence.get('typed_sensor_properties_regression_pass') is not True
+        or evidence.get('test_counts')!={'release':4,'sanitized':4}):
+        raise ValueError('SSC probe must pass native checks at this source commit')
+    importlib.import_module('ram-ssc-metadata').entries(ssc_archive,metadata)
+    ssc_root=stage/'usr/lib/oneplus13-ssc';ssc_root.mkdir()
+    ssc_hashes={}
+    for path in [ssc_archive,ssc_manifest,ssc/'verification.json']:
+        dest=ssc_root/path.name;shutil.copyfile(path,dest);dest.chmod(0o644)
+        ssc_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    dest=stage/'usr/libexec/oneplus13-ram-ssc-metadata.py'
+    shutil.copyfile(REPO/'tools/oneplus13/ram-ssc-metadata.py',dest);dest.chmod(0o755)
+    ssc_hashes[str(dest.relative_to(stage))]=sha256(dest)
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
@@ -121,7 +143,8 @@ def main():
         'full_qualified_python_display_helper':True,
         'initial_watchdog_seconds':600,'post_handoff_deadline_seconds':300,
         'initial_watchdog_survives_switch_root':False,'phone_operations':0,'partition_writes':0,
-        'hardware_tested':False}
+        'hardware_tested':False,'ssc_probe_files':ssc_hashes,'ssc_probe_auto_started':False,
+        'ssc_sensor_property_types_corrected':True}
     (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({k:result[k] for k in ['scope','source_commit','kernel_release','boot_image_sha256','rootfs_sha256','firmware_files','old_kernel_or_rootfs_used']},indent=2))
 

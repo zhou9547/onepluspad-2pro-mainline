@@ -1,4 +1,16 @@
-## Current: complete CI image data included, 2026-10-27
+## Continuation: joint 5 GHz and SSC metadata candidate, 2026-10-27
+
+Based on run91's complete qualified image. WiFi now constrains an explicitly
+requested band and verifies the actual connected frequency before accepting
+traffic. A read-only channel/domain report supports 5 GHz diagnosis. A separate
+phone-only libssc patch fixes the boolean/uint/float property declarations
+behind run81's availability assertion. The full source workflow builds and
+packages a source-bound, dormant metadata-only probe. Native Actions and joint
+hardware acceptance are pending; no 5 GHz or sensor-stream success is claimed.
+Display/GPU/touch/GNOME/Bluetooth/battery inputs are preserved. See
+DUALBAND-SSC-20261027.md for scope and the combined test requirements.
+
+## Previous: complete CI image data included, 2026-10-27
 
 Run90 passed actual RAM WiFi scan/authentication/DHCP/default-route and
 interface-bound LAN HTTP 200. It automatically returned to Android in 109.2s;

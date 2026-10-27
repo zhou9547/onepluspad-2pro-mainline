@@ -19,6 +19,8 @@ concurrency:
   group: oneplus13-source-image-${{ github.ref }}
   cancel-in-progress: false
 jobs:
+  ssc:
+    uses: ./.github/workflows/oneplus13-phone-ssc.yml
   kernel:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 135
@@ -79,7 +81,7 @@ jobs:
           path: out/mesa-debs/
           retention-days: 14
   image:
-    needs: [kernel, rootfs, mesa]
+    needs: [kernel, rootfs, mesa, ssc]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 45
     steps:
@@ -102,6 +104,10 @@ jobs:
         with:
           name: source-mesa-${{ github.sha }}
           path: out/mesa-debs
+      - uses: actions/download-artifact@v4
+        with:
+          name: oneplus13-phone-ssc-${{ github.sha }}
+          path: out/phone-ssc
       - run: bash tools/oneplus13/source-image.sh assemble
       - run: bash tools/oneplus13/source-image.sh complete
       - uses: actions/upload-artifact@v4

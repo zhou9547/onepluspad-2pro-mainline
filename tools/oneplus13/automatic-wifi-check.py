@@ -65,6 +65,9 @@ def run(argv, seconds=6):
 def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None):
     ssid, password = credentials['ssid'], credentials['password']
     probe_url = credentials.get('http_probe_url', 'http://example.com/')
+    band = credentials.get('band')
+    if band not in (None, 'a', 'bg'):
+        raise ValueError('Invalid requested WiFi band')
     if not isinstance(ssid, str) or not 1 <= len(ssid.encode()) <= 32:
         raise ValueError('Invalid SSID length')
     if not isinstance(password, str) or not 8 <= len(password) <= 63 or '\n' in password or '\r' in password:
@@ -74,6 +77,8 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     result = {'scope': 'ONE_NETWORK_RAM_ONLY', 'interface_found': True,
               'association_pass': False, 'dhcp_pass': False, 'http_pass': False, 'https_pass': False,
               'password_logged': False, 'low_level_scan_or_reset': False}
+    result['requested_band'] = {'a': '5GHz', 'bg': '2.4GHz'}.get(band, 'any')
+    result['band_pass'] = False
 
     def command(label, args, seconds):
         rc, output = execute(args, seconds)
@@ -161,10 +166,13 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     if rc or not result['target_seen']:
         return result
     ident = str(uuid.uuid4())
-    rc, _ = command('profile', ['nmcli', '--wait', '4', 'connection', 'add', 'type', 'wifi',
+    profile = ['nmcli', '--wait', '4', 'connection', 'add', 'type', 'wifi',
                                'ifname', iface, 'con-name', 'oneplus13-ram-acceptance',
                                'connection.uuid', ident, 'ssid', ssid,
-                               'connection.autoconnect', 'no', 'wifi-sec.key-mgmt', 'wpa-psk'], 6)
+                               'connection.autoconnect', 'no', 'wifi-sec.key-mgmt', 'wpa-psk']
+    if band:
+        profile += ['802-11-wireless.band', band]
+    rc, _ = command('profile', profile, 6)
     if rc:
         return result
     fd, name = tempfile.mkstemp(prefix='oneplus13-wifi-', dir=runtime)
@@ -182,6 +190,19 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
                                           'device', 'show', iface], 6)
     result['association_pass'] = rc == 0 and active.strip() == ident
     if not result['association_pass']:
+        return result
+    # Profile identity and SSID do not prove the actual RF band. Read the
+    # connected link through nl80211; never accept a 2.4GHz fallback as 5GHz.
+    rc, link = command('link_frequency', ['iw', 'dev', iface, 'link'], 4)
+    frequencies = re.findall(r'^\s*freq:\s*([0-9]+)\s*$', link, re.M)
+    frequency = int(frequencies[0]) if len(frequencies) == 1 and not rc else None
+    actual_band = ('2.4GHz' if frequency and 2400 <= frequency <= 2500 else
+                   '5GHz' if frequency and 4900 <= frequency < 5925 else
+                   '6GHz' if frequency and 5925 <= frequency <= 7125 else None)
+    result['link_frequency_mhz'] = frequency
+    result['associated_band'] = actual_band
+    result['band_pass'] = actual_band is not None and (band is None or actual_band == result['requested_band'])
+    if not result['band_pass']:
         return result
     # Activation can complete on IPv6 before DHCPv4 finishes. Observe the same
     # connection for at most 15 seconds; do not reconnect or invent a lease.
@@ -214,25 +235,29 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
         return result
     # These are diagnostics, not prerequisites: curl resolves the hostname and
     # proves traffic on the selected WiFi interface even in a minimal rootfs.
-    rc, _ = command('gateway', ['ping', '-I', iface, '-c', '2', '-W', '2', defaults[0]['gateway']], 6)
-    result['gateway_probe_skipped'] = rc in (126, 127)
-    rc, _ = command('dns', ['getent', 'ahostsv4', 'example.com'], 5)
-    result['dns_probe_skipped'] = rc in (126, 127)
+    diagnostics = credentials.get('external_diagnostics', False) is True
+    if diagnostics:
+        rc, _ = command('gateway', ['ping', '-I', iface, '-c', '2', '-W', '2', defaults[0]['gateway']], 6)
+        result['gateway_probe_skipped'] = rc in (126, 127)
+        rc, _ = command('dns', ['getent', 'ahostsv4', 'example.com'], 5)
+        result['dns_probe_skipped'] = rc in (126, 127)
     rc, output = command('http', ['curl', '--ipv4', '--noproxy', '*', '--interface', iface,
                              '--connect-timeout', '4', '--max-time', '7', '--fail', '--silent',
                              '--output', '/dev/null', '--write-out', HTTP_WRITE_OUT, probe_url], 9)
     result['http_probe_endpoint_class'] = 'owner-supplied-private-LAN'
     result['http_metrics'] = https_metrics(output)
     result['http_pass'] = rc == 0 and result['http_metrics'].get('http_code') == 200
-    rc, output = command('https', ['curl', '--ipv4', '--noproxy', '*', '--interface', iface, '--connect-timeout', '4',
+    if diagnostics:
+        rc, output = command('https', ['curl', '--ipv4', '--noproxy', '*', '--interface', iface, '--connect-timeout', '4',
                              '--max-time', '7', '--fail', '--silent', '--output', '/dev/null',
                              '--write-out', HTTPS_WRITE_OUT,
                              'https://example.com/'], 9)
-    result['https_address_family'] = 'IPv4'
-    result['https_metrics'] = https_metrics(output)
-    result['https_pass'] = (rc == 0 and result['https_metrics'].get('http_code') == 200
+        result['https_address_family'] = 'IPv4'
+        result['https_metrics'] = https_metrics(output)
+        result['https_pass'] = (rc == 0 and result['https_metrics'].get('http_code') == 200
                             and result['https_metrics'].get('ssl_verify_result') == 0)
-    result['automatic_acceptance_pass'] = all(result.get(k) for k in ['association_pass', 'dhcp_pass', 'http_pass'])
+    result['external_diagnostics_requested'] = diagnostics
+    result['automatic_acceptance_pass'] = all(result.get(k) for k in ['association_pass', 'band_pass', 'dhcp_pass', 'http_pass'])
     if isinstance(host_epoch, int) and host_epoch > 0:
         result['guest_epoch'] = int(time.time())
         result['clock_delta_seconds'] = result['guest_epoch'] - host_epoch
@@ -249,7 +274,7 @@ def main():
         raise SystemExit('Refusing WiFi credential staging outside RAM overlay')
     credentials = json.loads(args.credentials.read_text())
     args.credentials.unlink()  # Remove transport copy before invoking any subprocess.
-    required=['nmcli','busctl','ip','curl']
+    required=['nmcli','busctl','ip','curl','iw']
     missing=[name for name in required if shutil.which(name) is None]
     interfaces = [p.name for p in Path('/sys/class/net').iterdir()
                   if (p/'phy80211').exists() or (p/'wireless').is_dir()]

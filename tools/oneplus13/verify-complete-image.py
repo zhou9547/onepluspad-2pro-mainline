@@ -22,9 +22,20 @@ def main():
     for name,digest in data.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'usr/lib/firmware/'+name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered firmware changed: '+name)
+    ssc_files=m.get('ssc_probe_files',{})
+    required_ssc={'usr/lib/oneplus13-ssc/phone-ssc-probe-arm64.tar.gz',
+                  'usr/lib/oneplus13-ssc/phone-ssc-probe-manifest.json',
+                  'usr/lib/oneplus13-ssc/verification.json',
+                  'usr/libexec/oneplus13-ram-ssc-metadata.py'}
+    if set(ssc_files)!=required_ssc or m.get('ssc_probe_auto_started') is not False:
+        raise ValueError('Missing isolated SSC metadata probe')
+    for name,digest in ssc_files.items():
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered SSC input changed')
     static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION','pass':True,'source_commit':m['source_commit'],
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
+            'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')
     if a.static_only:

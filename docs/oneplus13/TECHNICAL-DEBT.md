@@ -1,4 +1,15 @@
-## Current: complete CI image data included, 2026-10-27
+## Continuation debt, 2026-10-27
+
+5 GHz still needs actual association, frequency, DHCP and LAN HTTP evidence;
+the old verifier did not distinguish actual bands. Regulatory/channel facts
+must be collected before changing the driver. Run81's available=no is affected
+by a real string-versus-boolean GObject declaration bug; the phone-only patch
+also corrects the adjacent uint/float declarations. True hardware availability,
+matrix correctness and sample streams remain independent gates. The new probe
+is dormant in the full image; private registry staging and a bounded joint
+plan remain necessary. See DUALBAND-SSC-20261027.md.
+
+## Previous: complete CI image data included, 2026-10-27
 
 Run90 passed actual RAM WiFi scan/authentication/DHCP/default-route and
 interface-bound LAN HTTP 200. It automatically returned to Android in 109.2s;

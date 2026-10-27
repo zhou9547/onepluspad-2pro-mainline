@@ -19,7 +19,7 @@ class SourceImageTests(unittest.TestCase):
         self.assertNotIn('github-token:',workflow)
         for value in ['source-kernel-${{ github.sha }}','source-gnome-${{ github.sha }}','source-mesa-${{ github.sha }}']:
             self.assertIn(value,workflow)
-        self.assertIn('needs: [kernel, rootfs, mesa]',workflow)
+        self.assertIn('needs: [kernel, rootfs, mesa, ssc]',workflow)
 
     def test_native_entry_is_full_qualified_python_implementation(self):
         helper=(ROOT/'devices/oneplus13/start-native-display').read_text()
