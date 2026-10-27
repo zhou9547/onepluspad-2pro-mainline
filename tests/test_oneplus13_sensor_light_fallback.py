@@ -17,6 +17,11 @@ class SensorLightFallback(unittest.TestCase):
         source = next(item for item in self.sources['sources'] if item['name'] == 'libssc')
         patch = next(item for item in source['patches'] if Path(item['file']).name == PATCH.name)
         self.assertEqual(hashlib.sha256(PATCH.read_bytes()).hexdigest(), patch['sha256'])
+        self.assertEqual([Path(item['file']).name for item in source['patches']], [
+            '0001-libssc-select-the-delivery-and-batching-of-streams-at-run-time.patch',
+            '0002-libssc-choose-the-stream-delivery-by-sensor-type.patch',
+            PATCH.name,
+        ])
         self.assertIn('gboolean light_discover_all;', self.text)
         self.assertIn('g_strcmp0 (priv->data_type, "ambient_light")', self.text)
         self.assertIn('!priv->light_discover_all', self.text)

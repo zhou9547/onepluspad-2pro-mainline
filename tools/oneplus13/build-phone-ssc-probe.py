@@ -6,6 +6,11 @@ from pathlib import Path
 REPO=Path(__file__).resolve().parents[2]
 ARCHIVE_SHA='716d6bd6b34d2d753060c6b54c9a87e34fae75b724c763bf9ef487efa3621587'
 SOURCE_COMMIT='0cf77b93b55752da34dca2dcecc06fca8665184b'
+BASE_PATCHES=(
+    '0001-libssc-select-the-delivery-and-batching-of-streams-at-run-time.patch',
+    '0002-libssc-choose-the-stream-delivery-by-sensor-type.patch',
+    '0003-libssc-retry-light-discovery-with-non-default-uids.patch',
+)
 EXTRA='0001-add-metadata-only-discovery-guard.patch'
 EXTRA_SHA='9b4ff3c7b998eba366f7c29efcfcf84fd860974ccc237ea9a64c455356440212'
 PROPERTY_PATCH='0002-fix-sensor-property-value-types.patch'
@@ -36,7 +41,9 @@ def main():
     if not re.fullmatch(r'[0-9a-f]{40}',integration_commit):raise ValueError('Missing integration identity')
     lock=json.loads((REPO/'packaging/sensors/sources.json').read_text())
     entry=next(x for x in lock['sources'] if x['name']=='libssc')
-    if entry['sha256']!=ARCHIVE_SHA or entry['upstream_commit']!=SOURCE_COMMIT or len(entry['patches'])!=2:raise ValueError('Original recipe changed')
+    if (entry['sha256']!=ARCHIVE_SHA or entry['upstream_commit']!=SOURCE_COMMIT or
+        tuple(Path(item['file']).name for item in entry['patches'])!=BASE_PATCHES):
+        raise ValueError('Original recipe changed')
     archive=a.archive.resolve() if a.archive else out/entry['archive']
     if not a.archive:
         request=urllib.request.Request(entry['mirror_url'].replace('http:','https:',1),headers={'User-Agent':'OnePlus13-offline-source-build'})
