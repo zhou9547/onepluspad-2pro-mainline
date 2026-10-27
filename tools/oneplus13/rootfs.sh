@@ -17,7 +17,7 @@ print(' '.join(s['packages']))
 PY
 )
 base="$repo/cache/oneplus13-ubuntu-base.tar.gz"
-curl --fail --location --output "$base" "${pin[0]}"
+curl --fail --location --retry 5 --retry-delay 10 --retry-max-time 180 --output "$base" "${pin[0]}"
 printf '%s  %s\n' "${pin[1]}" "$base" | sha256sum --check -
 tar --extract --gzip --numeric-owner --preserve-permissions --file "$base" --directory "$root"
 # Ubuntu Base intentionally omits ca-certificates. Bootstrap HTTPS using the
@@ -26,10 +26,11 @@ tar --extract --gzip --numeric-owner --preserve-permissions --file "$base" --dir
 install -D -m 0644 /etc/ssl/certs/ca-certificates.crt "$root/etc/ssl/certs/ca-certificates.crt"
 # Diagnose transport before entering the chroot, then name the trust file
 # explicitly: Ubuntu Base's TLS backend has no ca-certificates configuration yet.
-curl --fail --silent --show-error --output /dev/null "${pin[2]}dists/resolute/InRelease"
+curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-max-time 180 --output /dev/null "${pin[2]}dists/resolute/InRelease"
 test -r "$root/etc/ssl/certs/ca-certificates.crt"
 cat > "$root/etc/apt/apt.conf.d/80bootstrap-ca" <<'EOF'
 Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";
+Acquire::Retries "5";
 EOF
 # The archive's symlink layout is preserved; never copy the host machine identity.
 printf 'nameserver 1.1.1.1\n' > "$root/etc/resolv.conf"

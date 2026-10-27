@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
-"""Build a PRIVATE complete RAM image from fresh public outputs + local data.
+"""Package a complete RAM image from fresh builds and verified hardware data.
 
-This never contacts a phone. Never run this step in public CI or upload output.
-The input manifest contains data only: firmware, display profile, calibrated
-DTB and boot address geometry. No old kernel/rootfs/executable scripts are used.
+--qualified-data uses the owner-authorized, scrubbed repository dataset in CI.
+--private-inputs preserves local-only packaging for unreviewed owner datasets.
+Neither mode contacts a phone or consumes an old kernel/rootfs/script overlay.
 """
 import argparse,gzip,json,os,secrets,shutil,struct,subprocess,sys,tarfile,tempfile
 from pathlib import Path
@@ -17,18 +17,30 @@ REPO=Path(__file__).resolve().parents[2]
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    for n in ['kernel','desktop','rootfs','private-inputs','output']:p.add_argument('--'+n,required=True,type=Path)
-    a=p.parse_args();kernel=a.kernel.resolve();desktop=a.desktop.resolve();rootfs=a.rootfs.resolve();private=a.private_inputs.resolve();out=a.output.resolve()
-    if os.geteuid()!=0:raise ValueError('Root required for private filesystem packing')
-    if out.exists() or out.is_relative_to(REPO):raise ValueError('Fresh PRIVATE output outside source checkout required')
-    pin=json.loads((private/'manifest.private.json').read_text())
-    if pin['format']!='ONEPLUS13_PRIVATE_DATA_V1':raise ValueError('Private data manifest required')
+    for n in ['kernel','desktop','rootfs','output']:p.add_argument('--'+n,required=True,type=Path)
+    group=p.add_mutually_exclusive_group(required=True)
+    group.add_argument('--private-inputs',type=Path)
+    group.add_argument('--qualified-data',type=Path)
+    p.add_argument('--runtime-checks',choices=['qemu','static'],default='qemu',help='static is the owner-approved default for unchanged qualified runtime inputs in CI')
+    a=p.parse_args();kernel=a.kernel.resolve();desktop=a.desktop.resolve();rootfs=a.rootfs.resolve();private=(a.qualified_data or a.private_inputs).resolve();out=a.output.resolve()
+    public=a.qualified_data is not None
+    if os.geteuid()!=0:raise ValueError('Root required for filesystem packing')
+    if out.exists() or (not public and out.is_relative_to(REPO)):raise ValueError('Fresh output required; unreviewed private output must stay outside checkout')
+    manifest_name='manifest.json' if public else 'manifest.private.json'
+    pin=json.loads((private/manifest_name).read_text())
+    expected='ONEPLUS13_QUALIFIED_DATA_V1' if public else 'ONEPLUS13_PRIVATE_DATA_V1'
+    if pin['format']!=expected:raise ValueError('Wrong data manifest format')
+    if public:
+        if private!=(REPO/'devices/oneplus13/qualified-data').resolve():raise ValueError('CI accepts only the reviewed repository dataset')
+        from verify_qualified_data import verify
+        verify(private)
     for name,item in pin['files'].items():
         if Path(name).is_absolute() or '..' in Path(name).parts or (private/name).is_symlink():raise ValueError('Unsafe private data path')
         if sha256(private/name)!=item['sha256'] or (private/name).stat().st_size!=item['bytes']:raise ValueError('Changed private input')
     km=json.loads((kernel/'manifest.json').read_text());dm=json.loads((desktop/'manifest.json').read_text());rm=json.loads((rootfs/'manifest.json').read_text())
     if len({km['integration_commit'],dm['integration_commit'],rm['integration_commit']})!=1:raise ValueError('Public components must share one source commit')
-    if not all(dm.get(k) is True for k in ['qemu_handoff_verified','qemu_deadline_expiry_verified','qemu_native_preflight_runtime_guards_verified']):raise ValueError('Fresh complete-rootfs QEMU handoff/recovery required')
+    if a.runtime_checks=='static' and not public:raise ValueError('Static-only packaging is limited to the reviewed repository dataset')
+    if a.runtime_checks=='qemu' and not all(dm.get(k) is True for k in ['qemu_handoff_verified','qemu_deadline_expiry_verified','qemu_native_preflight_runtime_guards_verified']):raise ValueError('Fresh complete-rootfs QEMU handoff/recovery required')
     for name in ['Image','Image.gz','initramfs.cpio.gz','modules.tar.gz','sm8750-oneplus-dodge-native.dtb']:
         if sha256(kernel/name)!=km['files'][name]['sha256']:raise ValueError('Kernel artifact changed')
     if sha256(rootfs/'rootfs.squashfs')!=rm['rootfs_sha256'] or sha256(rootfs/'rootfs.squashfs')!=dm['rootfs_sha256']:raise ValueError('QEMU rootfs differs')
@@ -96,13 +108,15 @@ def main():
             '--kernel',str(kernel/'Image.gz'),'--ramdisk',str(out/'initramfs-desktop.cpio.gz'),'--dtb',str(dtb),
             '--cmdline',cmdline,'--output',str(image)],check=True)
     if boot_sections(image.read_bytes())!={'kernel':(kernel/'Image.gz').read_bytes(),'ramdisk':packed,'dtb':dtb.read_bytes()}:raise ValueError('Independent boot section readback mismatch')
-    result={'scope':'PRIVATE_FRESH_SOURCE_COMPLETE_RAM_IMAGE_NEVER_FLASH','source_commit':km['integration_commit'],
+    result={'scope':'QUALIFIED_FRESH_SOURCE_COMPLETE_RAM_IMAGE_NEVER_FLASH' if public else 'PRIVATE_FRESH_SOURCE_COMPLETE_RAM_IMAGE_NEVER_FLASH','source_commit':km['integration_commit'],
         'kernel_release':release,'cmdline':cmdline,'session_identity_nonce':nonce,
         'boot_image_sha256':sha256(image),'boot_image_bytes':image.stat().st_size,
         'rootfs_sha256':sha256(image_rootfs),'rootfs_bytes':image_rootfs.stat().st_size,
-        'firmware_files':len(firmware_hashes),'private_inputs_sha256':sha256(private/'manifest.private.json'),
+        'firmware_files':len(firmware_hashes),'hardware_data_manifest_sha256':sha256(private/manifest_name),
+        'qualified_repository_data':public,'private_owner_inputs_required':not public,
+        'runtime_checks_requested':a.runtime_checks,'prerequisite_qemu_handoff_pass':dm.get('qemu_handoff_verified',False),
         'public_rootfs_sha256':rm['rootfs_sha256'],'modules_sha256':sha256(kernel/'modules.tar.gz'),
-        'kernel_sha256':sha256(kernel/'Image.gz'),'private_profile_from_existing_qualified_data':True,
+        'kernel_sha256':sha256(kernel/'Image.gz'),'profile_from_existing_qualified_data':True,
         'old_kernel_or_rootfs_used':False,'old_runtime_package_overlay_used':False,
         'full_qualified_python_display_helper':True,
         'initial_watchdog_seconds':600,'post_handoff_deadline_seconds':300,

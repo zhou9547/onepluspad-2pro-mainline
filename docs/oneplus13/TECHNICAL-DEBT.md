@@ -1,3 +1,32 @@
+## Current: complete CI image data included, 2026-10-27
+
+Run90 passed actual RAM WiFi scan/authentication/DHCP/default-route and
+interface-bound LAN HTTP 200. It automatically returned to Android in 109.2s;
+seven baseline properties matched, with zero partition writes. The 316 Linux
+unit checks pass (one root-only case skipped in the non-root invocation).
+
+The owner now explicitly authorizes publishing firmware and calibration, while
+excluding credentials, keys, personal data and device identifiers. The reviewed
+74-file qualified-data set is included in Git; old DTB boot arguments were
+removed, and hashes and identifier exclusions were checked. Actions builds the
+kernel, GNOME and Mesa at one commit, packages all hardware data, and emits the
+complete RAM boot image plus matching rootfs. No local owner data or secrets
+are needed for the build. Firmware remains proprietary prebuilt data.
+
+By owner request, QEMU is optional and disabled by default. Static image,
+firmware, module, profile and boot-section checks remain required. The new CI
+run is pending; compilation is never relabeled as a new phone test. See
+SOURCE-IMAGE-20261027.md for the artifact, exact variant and runtime procedure.
+
+Display, GPU, touch, GNOME/settings/keyboard, Bluetooth/OBEX and battery support
+are retained. Audio/camera/sensor streams, suspend and new SAR transport remain
+unqualified. No flashing, partition changes or persistent install are involved.
+
+### Archived earlier records
+
+The entries below describe historical intermediate states and their previous
+privacy boundary. The current publication scope and WiFi result are above.
+
 ## Full native entry restored before any new phone boot
 
 The first fresh private package still inherited the obsolete shell diagnostics

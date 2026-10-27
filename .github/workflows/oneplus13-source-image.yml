@@ -1,9 +1,20 @@
 name: OnePlus 13 fresh source image
 on:
   workflow_dispatch:
+    inputs:
+      runtime_qemu:
+        description: Optional runtime QEMU diagnostics (normally unnecessary for qualified unchanged inputs)
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      runtime_qemu:
+        type: boolean
+        default: false
 permissions:
   contents: read
+env:
+  ONEPLUS13_SOURCE_QEMU: ${{ inputs.runtime_qemu && 'true' || 'false' }}
 concurrency:
   group: oneplus13-source-image-${{ github.ref }}
   cancel-in-progress: false
@@ -15,7 +26,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio qemu-system-arm
+      - run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio
+      - if: inputs.runtime_qemu
+        run: sudo apt-get install -y qemu-system-arm
       - uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
@@ -68,12 +81,14 @@ jobs:
   image:
     needs: [kernel, rootfs, mesa]
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools qemu-system-arm
+      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools
+      - if: inputs.runtime_qemu
+        run: sudo apt-get install -y qemu-system-arm
       # Only same-workflow, same-commit build products are downloaded here.
       - uses: actions/download-artifact@v4
         with:
@@ -88,6 +103,14 @@ jobs:
           name: source-mesa-${{ github.sha }}
           path: out/mesa-debs
       - run: bash tools/oneplus13/source-image.sh assemble
+      - run: bash tools/oneplus13/source-image.sh complete
+      - uses: actions/upload-artifact@v4
+        with:
+          name: complete-ram-image-${{ github.sha }}
+          path: out/oneplus13-complete-image/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:

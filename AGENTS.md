@@ -1,3 +1,15 @@
+# Current owner authorization, 2026-10-27
+
+The owner explicitly authorizes uploading the qualified firmware and calibration
+needed to build the complete RAM image in Actions. Exclude WiFi credentials,
+network identities, device serials/MACs/IMEIs, tokens, private keys, personal
+data, raw private records and unreviewed datasets. Publish only the scrubbed,
+hash-bound `devices/oneplus13/qualified-data` allowlist and preserve provenance.
+This supersedes the older blanket calibration exclusion below. The owner also
+requests QEMU be optional, disabled by default for unchanged qualified inputs.
+Historical authorizations below are a record, not a revocation of later direct
+owner instructions. Never flash, repartition or persistently install the phone.
+
 # OnePlus 13 adaptation
 
 Target: OnePlus 13 (dodge / SM8750), not OnePlus 13R/13T/13s or the Pad.

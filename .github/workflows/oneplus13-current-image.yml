@@ -1,8 +1,15 @@
 name: OnePlus 13 current image from source
 on:
   workflow_dispatch:
+    inputs:
+      runtime_qemu:
+        description: Optional runtime QEMU diagnostics
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   source:
     uses: ./.github/workflows/oneplus13-source-image.yml
+    with:
+      runtime_qemu: ${{ inputs.runtime_qemu }}

@@ -3,10 +3,16 @@
 # Fresh source builds only. No Actions run IDs or old binary image inputs.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+qemu_args=()
+runtime_checks=static
+if [[ ${ONEPLUS13_SOURCE_QEMU:-false} == true ]]; then
+  qemu_args+=(--qemu)
+  runtime_checks=qemu
+fi
 case "${1:-}" in
   kernel)
     bash tools/oneplus13/build.sh
-    python3 tools/oneplus13/verify.py --artifacts out/oneplus13 --qemu
+    python3 tools/oneplus13/verify.py --artifacts out/oneplus13 "${qemu_args[@]}"
     ;;
   rootfs)
     sudo bash tools/oneplus13/rootfs.sh
@@ -22,7 +28,14 @@ case "${1:-}" in
     ;;
   assemble)
     sudo python3 tools/oneplus13/assemble-source-image.py --base out/oneplus13-rootfs-artifacts --kernel out/oneplus13 --mesa out/mesa-debs --output out/oneplus13-source-image
-    sudo python3 tools/oneplus13/desktop.py --source-build --kernel out/oneplus13 --rootfs out/oneplus13-source-image/rootfs.squashfs --output out/oneplus13-source-desktop --qemu
+    sudo python3 tools/oneplus13/desktop.py --source-build --kernel out/oneplus13 --rootfs out/oneplus13-source-image/rootfs.squashfs --output out/oneplus13-source-desktop "${qemu_args[@]}"
     ;;
-  *) echo 'Usage: source-image.sh {kernel|rootfs|mesa|assemble}' >&2; exit 2 ;;
+  complete)
+    python3 tools/oneplus13/verify_qualified_data.py devices/oneplus13/qualified-data
+    sudo python3 tools/oneplus13/package-source-local.py --kernel out/oneplus13 --desktop out/oneplus13-source-desktop --rootfs out/oneplus13-source-image --qualified-data devices/oneplus13/qualified-data --runtime-checks "$runtime_checks" --output out/oneplus13-complete-image
+    complete_args=(--static-only)
+    if [[ $runtime_checks == qemu ]]; then complete_args=(); fi
+    sudo python3 tools/oneplus13/verify-complete-image.py --kernel out/oneplus13 --image out/oneplus13-complete-image "${complete_args[@]}"
+    ;;
+  *) echo 'Usage: source-image.sh {kernel|rootfs|mesa|assemble|complete}' >&2; exit 2 ;;
 esac
