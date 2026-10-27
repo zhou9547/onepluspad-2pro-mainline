@@ -120,6 +120,8 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     country=credentials.get('stock_country_code')
     if country is not None and (not isinstance(country,str) or not re.fullmatch('[A-Z]{2}',country)):
         raise ValueError('Invalid stock country code')
+    if country is not None:
+        raise ValueError('Country transitions are held after a runtime WLAN restart; use the unchanged firmware regulatory state')
     if not isinstance(ssid, str) or not 1 <= len(ssid.encode()) <= 32:
         raise ValueError('Invalid SSID length')
     if not isinstance(password, str) or not 8 <= len(password) <= 63 or '\n' in password or '\r' in password:

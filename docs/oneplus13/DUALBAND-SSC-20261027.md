@@ -7,16 +7,38 @@ evidence. They remain regression requirements for a new candidate.
 
 ## WiFi
 
-The refreshed owner stock observation confirms that the current 5 GHz target
-is actually connected on 5240 MHz and provides its country code. The older
-Linux PHY dump advertises 25 enabled 5 GHz channels with no-IR, including
-5240 MHz; this is a real regulatory-state difference, not proof that the driver
-has no 5 GHz hardware support. Private runtime input `stock_country_code`
-can request that stock code once, only after two disconnected-link checks.
-The selected self-managed PHY must acknowledge it. A changed global domain,
-another PHY, a failed command or a mere request acknowledgement cannot pass.
-No country change is made on an associated link, and no channel flags or
-SAR/power tables are overridden. This hypothesis still requires a joint test.
+The first joint RAM boot used the immutable run91 image and source-bound
+new helpers, not a newly assembled complete Actions image. It returned to
+Android in 268.1 seconds, with seven baseline properties equal and no partition
+writes. Stock Android confirmed the target on 5240 MHz before and after it.
+The 5 GHz target was absent from the Linux directed scan. The 2.4 GHz target
+was seen, but activation timed out; neither band passed traffic acceptance.
+
+Post-return audit of the retained kernel tail found IOMMU context faults,
+WLAN hardware restarts, invalid runtime IDs and vdev failures. The original
+selected-signature screen missed these; its zero count is not a clean health
+verdict. Hold this candidate. A disconnected stock-country transition was
+acknowledged by the selected PHY, but has been withdrawn from the active
+verifier. No new country/channel/SAR transition or IOMMU bypass is enabled.
+
+The same WCN7860 hw2.0 / single-pdev firmware configuration has a reviewed
+community scan fix in [Armada PR 594](https://github.com/armada-os/armada/pull/594),
+head `9b2654ceeb3be0a2a8dd6bf5d6b0d3272175885f`. Its first single-pdev
+frequency-range fix already exists in the pinned kernel. Preserve danyi's
+attribution and import only its remaining two unchanged GPL kernel patches:
+firmware-derived range batching, then associated-scan TX drain/home-channel
+rest and recovery pause ownership. They apply cleanly to the exact pinned
+kernel; other hardware/modes retain their existing path. Firmware bytes and
+qualified board inputs are unchanged. This is a candidate fix, not proof of
+the cause of every observed IOMMU fault or of hardware success.
+
+`check-wcn7860-scan.py` compiles seven actual patched helpers, with release
+and ASan/UBSan checks for hardware scope, malformed ranges, request order,
+allocation errors, cleanup and TX failure paths. It cannot simulate firmware
+or kernel event scheduling. Full kernel compilation and joint acceptance are
+still required. `ram-kernel-health.py` reads bounded full kernel history and
+rejects DMA faults, restarts, invalid runtime IDs and vdev failures; subsequent
+RF phases must not continue after such a fault.
 
 The parser accepts the real `iw` whole-MHz decimal format (`5240.0`) as well
 as integer output. Archived PHY output exposed this before a phone boot.
@@ -54,8 +76,14 @@ false/true/false availability, numeric property reads and adjacent memory
 canaries without QRTR, measurement commands or a device.
 
 The original two libssc packaging patches and the one-way metadata send guard
-are unchanged. This explains why the previous availability observation was
-unreliable; it does not prove that all sensors or a mount matrix are correct.
+are unchanged. The first joint boot discovered accel, gyro and mag metadata after this fix;
+ambient_light remained unavailable. Evidence is a unique exact SHA256 match
+of saved stdout to the deterministic public four-type output template, because
+the raw RAM stdout was not retrieved before recovery. Do not relabel that as
+a directly captured stdout transcript. The wrapper now emits a strict public
+four-type inventory even on failure, while withholding raw diagnostics.
+No sample/stream command was sent. These results do not qualify sensor axes,
+rates, matrix or applications.
 The all-zero mount-matrix warning is separate and remains unresolved.
 
 The complete-image workflow builds the isolated probe at the same integration

@@ -125,6 +125,17 @@ def interpret(mode,output):
     return {'metadata_available':sorted(TYPES),'qrtr_query_requested':True,'cleanup_returned':True,
             'sample_data_or_axes_accepted':False,'dsp_release_acknowledgement_claimed':False}
 
+def partial_inventory(output):
+    """Expose only the four exact public result rows on a failed discovery."""
+    if len(output)>32768:return {'availability':'oversized'}
+    rows=re.findall(r'^SSC_PHONE_METADATA type=(\w+) available=(yes|no) completed=(yes|no)$',output,re.M)
+    if len(rows)!=4 or {r[0] for r in rows}!=TYPES:
+        return {'availability':'incomplete_or_unrecognized'}
+    return {'availability':'observed', 'types':{
+        name:{'available':available=='yes','completed':completed=='yes'}
+        for name,available,completed in rows},'samples_requested':False,
+        'all_types_accepted':all(r[1:]==('yes','yes') for r in rows)}
+
 def run_probe(mode,state=STATE,run=subprocess.run):
     unit,args=command(mode,state)
     status=None
@@ -150,6 +161,7 @@ def run_probe(mode,state=STATE,run=subprocess.run):
         else:
             private=save_private_failure(state,result)
             detail=json.dumps({'probe':diagnostics(result.stdout+result.stderr),
+                               'metadata_inventory':partial_inventory(result.stdout),
                                'execution':status,'private_output':private},sort_keys=True)
         raise ValueError('SSC metadata process failed, exit='+str(result.returncode)+': '+detail)
     facts=interpret(mode,result.stdout+result.stderr)

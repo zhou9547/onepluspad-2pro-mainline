@@ -6,6 +6,8 @@ cd "$repo"
 src="$repo/out/oneplus13-linux"
 kout="$repo/out/oneplus13-kbuild"
 dest="$repo/out/oneplus13"
+jobs=${ONEPLUS13_BUILD_JOBS:-$(nproc)}
+[[ $jobs =~ ^[1-9][0-9]*$ ]] || { echo "Invalid build job count" >&2; exit 2; }
 mkdir -p "$kout" "$dest"
 exec 9>"$kout/.build.lock"
 flock -n 9 || { echo 'Build already running' >&2; exit 1; }
@@ -41,6 +43,8 @@ for patch in "$repo"/devices/oneplus13/kernel-patches/*.patch; do
   git -C "$src" apply --check "$patch"
   git -C "$src" apply "$patch"
 done
+python3 tools/oneplus13/check-wcn7860-scan.py --kernel-source "$src" \
+  --output "$dest/wcn7860-scan-verification.json"
 python3 tools/oneplus13/dsc.py \
   --panel-json devices/oneplus13/panel-aa569-120hz.json \
   --output "$dest/aa569-dsc.json" --c-output "$dest/aa569-dsc.h"
@@ -120,31 +124,31 @@ config_id=$(sha256sum "$kout/.config" | cut -c1-12)
 phone_id=$(sha256sum "$dest/phone-kernel.patch" | cut -c1-12)
 args+=("LOCALVERSION=-g${pin[1]:0:12}-c$config_id-p$phone_id")
 # DTB first: reject unresolved phandles before the expensive kernel build.
-make "${args[@]}" -j"$(nproc)" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference-dtb.log"
-make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
-make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-touch.dtb 2>&1 | tee "$kout/touch-dtb.log"
-make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-native.dtb 2>&1 | tee "$kout/native-dtb.log"
+make "${args[@]}" -j"$jobs" qcom/sm8750-erhai.dtb 2>&1 | tee "$kout/reference-dtb.log"
+make "${args[@]}" -j"$jobs" qcom/sm8750-oneplus-dodge.dtb 2>&1 | tee "$kout/dtb.log"
+make "${args[@]}" -j"$jobs" qcom/sm8750-oneplus-dodge-touch.dtb 2>&1 | tee "$kout/touch-dtb.log"
+make "${args[@]}" -j"$jobs" qcom/sm8750-oneplus-dodge-native.dtb 2>&1 | tee "$kout/native-dtb.log"
 python3 tools/oneplus13/check-command-budget.py --kernel-source "$src" \
   --native-dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-native.dtb" \
   --output "$dest/command-budget-verification.json" --sanitize
 python3 tools/oneplus13/check-native-dtb.py \
   --dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-native.dtb" \
   --output "$dest/native-dtb-verification.json" --negative-controls
-make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-wlan.dtb 2>&1 | tee "$kout/wlan-dtb.log"
+make "${args[@]}" -j"$jobs" qcom/sm8750-oneplus-dodge-wlan.dtb 2>&1 | tee "$kout/wlan-dtb.log"
 python3 tools/oneplus13/check-wlan-dtb.py \
   --dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-wlan.dtb" \
   --config "$kout/.config" --output "$dest/wlan-dtb-verification.json"
-make "${args[@]}" -j"$(nproc)" qcom/sm8750-oneplus-dodge-gpu.dtb 2>&1 | tee "$kout/gpu-dtb.log"
+make "${args[@]}" -j"$jobs" qcom/sm8750-oneplus-dodge-gpu.dtb 2>&1 | tee "$kout/gpu-dtb.log"
 python3 tools/oneplus13/check-gpu-dtb.py \
   --dtb "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-gpu.dtb" \
   --config "$kout/.config" --kernel-source "$src" --output "$dest/gpu-dtb-verification.json"
 # Fail API compilation of the isolated components before the full kernel build.
-make "${args[@]}" -j"$(nproc)" drivers/gpu/drm/panel/panel-aa569/ \
+make "${args[@]}" -j"$jobs" drivers/gpu/drm/panel/panel-aa569/ \
   drivers/input/touchscreen/synaptics-dodge/ \
   drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr.o \
   drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr_runtime.o 2>&1 | tee "$kout/component-api.log"
-time make "${args[@]}" -j"$(nproc)" Image Image.gz modules 2>&1 | tee "$kout/build.log"
-make "${args[@]}" -j"$(nproc)" modules_install INSTALL_MOD_PATH="$dest/modules" INSTALL_MOD_STRIP=1 \
+time make "${args[@]}" -j"$jobs" Image Image.gz modules 2>&1 | tee "$kout/build.log"
+make "${args[@]}" -j"$jobs" modules_install INSTALL_MOD_PATH="$dest/modules" INSTALL_MOD_STRIP=1 \
   2>&1 | tee "$kout/modules.log"
 find "$dest/modules" -type l -name build -delete
 find "$dest/modules" -type l -name source -delete

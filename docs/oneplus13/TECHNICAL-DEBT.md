@@ -1,13 +1,20 @@
-## Continuation debt, 2026-10-27
+## Continuation: scan recovery and SSC metadata, 2026-10-27
 
-5 GHz still needs actual association, frequency, DHCP and LAN HTTP evidence;
-the old verifier did not distinguish actual bands. Regulatory/channel facts
-must be collected before changing the driver. Run81's available=no is affected
-by a real string-versus-boolean GObject declaration bug; the phone-only patch
-also corrects the adjacent uint/float declarations. True hardware availability,
-matrix correctness and sample streams remain independent gates. The new probe
-is dormant in the full image; private registry staging and a bounded joint
-plan remain necessary. See DUALBAND-SSC-20261027.md.
+First joint RAM round returned to Android in 268.1s; seven baseline keys
+matched and no partition writes occurred. 5 GHz target absent, 2.4 GHz
+activation timed out. Full retained-log audit found IOMMU faults and WLAN
+restarts missed by the initial narrow signature screen. Candidate held;
+country-transition experiment withdrawn. Two attributed WCN7860 firmware-range
+scan/TX patches are now a build candidate with actual-helper host checks.
+No 5 GHz acceptance or clean hardware result is claimed.
+
+SSC property fix exposed accel/gyro/mag metadata; ambient_light remains
+unavailable, based on an exact saved-stdout SHA256/public-template match.
+No sensor streams. Failure summaries now preserve only exact public type
+results. Full-source kernel/Mesa/SSC Actions builds passed; GNOME snapshot
+provider failures still prevent a fresh complete image. See
+DUALBAND-SSC-20261027.md for evidence limits and combined acceptance.
+Display/GPU/touch/GNOME/Bluetooth/battery inputs remain regression requirements.
 
 ## Previous: complete CI image data included, 2026-10-27
 

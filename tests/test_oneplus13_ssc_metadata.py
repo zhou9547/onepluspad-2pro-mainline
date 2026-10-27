@@ -10,6 +10,16 @@ GOOD='\n'.join('SSC_PHONE_METADATA type='+t+' available=yes completed=yes' for t
 VERIFY='SSC_PHONE_METADATA_LOCK_VERIFIED_NO_QRTR\nok 6 /phone/06-one-way-lock\nPHONE_METADATA_SEND_GUARD_BLOCKED_ALL_UNREVIEWED_REQUESTS_BEFORE_QMI\n'
 
 class ControlTests(unittest.TestCase):
+    def test_partial_sensor_inventory_is_explicit_and_raw_text_is_withheld(self):
+        output=GOOD.replace('type=ambient_light available=yes','type=ambient_light available=no')+'private device text\n'
+        facts=m.partial_inventory(output)
+        self.assertEqual(facts['availability'],'observed')
+        self.assertFalse(facts['types']['ambient_light']['available'])
+        self.assertTrue(facts['types']['accel']['available'])
+        self.assertFalse(facts['all_types_accepted'])
+        self.assertNotIn('private',json.dumps(facts))
+        self.assertNotEqual(m.partial_inventory(GOOD.replace('type=gyro','type=mag'))['availability'],'observed')
+
     def runner(self,output=GOOD,fail=None,active=False):
         self.calls=[]
         def run(command,**kw):

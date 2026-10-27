@@ -37,6 +37,7 @@ jobs:
           path: ~/.cache/ccache
           key: oneplus13-source-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/**') }}
           restore-keys: |
+            oneplus13-source-${{ runner.arch }}-
             oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-
       - run: python3 -m unittest discover -s tests -p 'test_oneplus13*.py' -v
       - run: bash tools/oneplus13/source-image.sh kernel

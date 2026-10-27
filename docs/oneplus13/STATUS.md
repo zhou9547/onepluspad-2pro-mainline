@@ -1,16 +1,20 @@
-## Continuation: joint 5 GHz and SSC metadata candidate, 2026-10-27
+## Continuation: scan recovery and SSC metadata, 2026-10-27
 
-Based on run91's complete qualified image. WiFi now constrains an explicitly
-requested band and verifies the actual connected frequency before accepting
-traffic. A stock-country hint is allowed once while disconnected, with an
-acknowledgement from the selected self-managed PHY; channel/SAR checks remain.
-A read-only channel/domain report supports 5 GHz diagnosis. A separate
-phone-only libssc patch fixes the boolean/uint/float property declarations
-behind run81's availability assertion. The full source workflow builds and
-packages a source-bound, dormant metadata-only probe. Native Actions and joint
-hardware acceptance are pending; no 5 GHz or sensor-stream success is claimed.
-Display/GPU/touch/GNOME/Bluetooth/battery inputs are preserved. See
-DUALBAND-SSC-20261027.md for scope and the combined test requirements.
+First joint RAM round returned to Android in 268.1s; seven baseline keys
+matched and no partition writes occurred. 5 GHz target absent, 2.4 GHz
+activation timed out. Full retained-log audit found IOMMU faults and WLAN
+restarts missed by the initial narrow signature screen. Candidate held;
+country-transition experiment withdrawn. Two attributed WCN7860 firmware-range
+scan/TX patches are now a build candidate with actual-helper host checks.
+No 5 GHz acceptance or clean hardware result is claimed.
+
+SSC property fix exposed accel/gyro/mag metadata; ambient_light remains
+unavailable, based on an exact saved-stdout SHA256/public-template match.
+No sensor streams. Failure summaries now preserve only exact public type
+results. Full-source kernel/Mesa/SSC Actions builds passed; GNOME snapshot
+provider failures still prevent a fresh complete image. See
+DUALBAND-SSC-20261027.md for evidence limits and combined acceptance.
+Display/GPU/touch/GNOME/Bluetooth/battery inputs remain regression requirements.
 
 ## Previous: complete CI image data included, 2026-10-27
 

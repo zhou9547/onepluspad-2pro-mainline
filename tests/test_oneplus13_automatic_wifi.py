@@ -61,6 +61,12 @@ class Fake:
 
 
 class Checks(unittest.TestCase):
+    def test_country_transition_is_held_before_any_command(self):
+        fake=Fake()
+        with self.assertRaisesRegex(ValueError,'held'):
+            self.call(fake,{'ssid':'offline-network','password':'offline-secret-value','stock_country_code':'CN'})
+        self.assertEqual(fake.calls,[])
+
     def call(self, fake, credentials=None):
         with tempfile.TemporaryDirectory() as d, contextlib.redirect_stdout(io.StringIO()) as output, patch.object(wifi.time, 'sleep'):
             result = wifi.check(credentials or {'ssid': 'offline-network', 'password': 'offline-secret-value', 'external_diagnostics': True},
