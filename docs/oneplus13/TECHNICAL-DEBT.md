@@ -1,3 +1,10 @@
+## Fresh source build replaces historical artifact retrieval
+
+The source-image workflow builds the kernel, GNOME and Mesa at one commit.
+The qualified touch SPI handling and both ADSP patches have been restored.
+No source-image hardware acceptance is claimed until its own RAM WiFi/HTTP test.
+See SOURCE-IMAGE-20261027.md for public/private input boundaries.
+
 <!-- CURRENT-IMAGE-BRANCH-20261026 -->
 ## Current image branch qualification debt
 

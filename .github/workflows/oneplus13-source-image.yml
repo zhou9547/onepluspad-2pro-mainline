@@ -1,0 +1,99 @@
+name: OnePlus 13 fresh source image
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: oneplus13-source-image-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  kernel:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 135
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio qemu-system-arm
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/ccache
+          key: oneplus13-source-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/**') }}
+          restore-keys: |
+            oneplus13-v1-${{ runner.os }}-${{ runner.arch }}-
+      - run: python3 -m unittest discover -s tests -p 'test_oneplus13*.py' -v
+      - run: bash tools/oneplus13/source-image.sh kernel
+        env:
+          CCACHE_MAXSIZE: 3G
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-kernel-${{ github.sha }}
+          path: out/oneplus13/
+          if-no-files-found: error
+          retention-days: 14
+  rootfs:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools zstd
+      - run: bash tools/oneplus13/source-image.sh rootfs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-gnome-${{ github.sha }}
+          path: out/oneplus13-rootfs-artifacts/
+          compression-level: 0
+          retention-days: 14
+  mesa:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential meson ninja-build pkg-config libdrm-dev libexpat1-dev python3-mako python3-ply python3-yaml bison flex zlib1g-dev libzstd-dev libelf-dev libwayland-dev libwayland-egl-backend-dev wayland-protocols libx11-dev libx11-xcb-dev libxcb-dri2-0-dev libxcb-dri3-dev libxcb-present-dev libxcb-randr0-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-glx0-dev libxcb-shm0-dev libxshmfence-dev libxxf86vm-dev libxrandr-dev libglvnd-dev glslang-tools python3-packaging libvulkan-dev vulkan-tools
+          sudo pip3 install --break-system-packages 'meson==1.9.1'
+      - run: bash tools/oneplus13/source-image.sh mesa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source-mesa-${{ github.sha }}
+          path: out/mesa-debs/
+          retention-days: 14
+  image:
+    needs: [kernel, rootfs, mesa]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools qemu-system-arm
+      # Only same-workflow, same-commit build products are downloaded here.
+      - uses: actions/download-artifact@v4
+        with:
+          name: source-kernel-${{ github.sha }}
+          path: out/oneplus13
+      - uses: actions/download-artifact@v4
+        with:
+          name: source-gnome-${{ github.sha }}
+          path: out/oneplus13-rootfs-artifacts
+      - uses: actions/download-artifact@v4
+        with:
+          name: source-mesa-${{ github.sha }}
+          path: out/mesa-debs
+      - run: bash tools/oneplus13/source-image.sh assemble
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-image-${{ github.sha }}
+          path: |
+            out/oneplus13-source-image/
+            out/oneplus13-source-desktop/
+          compression-level: 0
+          retention-days: 14

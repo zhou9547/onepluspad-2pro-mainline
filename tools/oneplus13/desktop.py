@@ -82,13 +82,15 @@ def main():
     p.add_argument('--output', required=True, type=Path)
     p.add_argument('--qemu', action='store_true')
     p.add_argument('--qemu-http', action='store_true', help='Exercise the production chunk fetch via an emulator-only virtual link')
+    p.add_argument('--source-build', action='store_true', help='Require a fresh kernel compiled at this exact checkout commit')
     a = p.parse_args()
     if a.qemu_http and not a.qemu:
         p.error('--qemu-http requires --qemu')
     kernel, rootfs, out = a.kernel.resolve(), a.rootfs.resolve(), a.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     manifest = json.loads((kernel/'manifest.json').read_text())
-    if manifest['integration_commit'] != PIN or manifest['hardware_tested'] is not False:
+    expected_pin = subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip() if a.source_build else PIN
+    if manifest['integration_commit'] != expected_pin or manifest['hardware_tested'] is not False:
         raise ValueError('Wrong pinned kernel integration')
     for name in ['Image', 'initramfs.cpio.gz']:
         if sha256(kernel/name) != manifest['files'][name]['sha256']:
@@ -100,7 +102,7 @@ def main():
                ' oneplus13.rootfs.bytes='+str(rootfs.stat().st_size))
     (out/'desktop-cmdline.txt').write_text(cmdline+'\n')
     report.update(scope='RAM_DESKTOP_INITRAMFS_NOT_DEVICE_TESTED', hardware_tested=False,
-                  kernel_integration_commit=PIN, kernel_release=manifest['kernel_release'],
+                  kernel_integration_commit=expected_pin, kernel_release=manifest['kernel_release'],
                   integration_commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
                   rootfs_sha256=sha256(rootfs), rootfs_bytes=rootfs.stat().st_size,
                   initramfs_sha256=sha256(ramdisk), absolute_boot_deadline_seconds=900,
