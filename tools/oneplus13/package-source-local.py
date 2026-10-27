@@ -35,7 +35,10 @@ def main():
     if sha256(kernel/'sm8750-oneplus-dodge-native.dtb')!=pin['compatible_public_native_dtb_sha256']:raise ValueError('Private calibration must be re-reviewed for this new DTB')
     if km['kernel_release']!=rm['kernel_release']:raise ValueError('Kernel/rootfs module mismatch')
     release=km['kernel_release'];out.mkdir(parents=True)
-    stage=out/'rootfs-stage'
+    # Ubuntu contains case-distinct paths (for example Perl Sys and sys).
+    # Never unpack a Linux rootfs onto a case-insensitive Windows/DrvFS tree.
+    staging=tempfile.TemporaryDirectory(prefix='oneplus13-private-rootfs-',dir='/var/tmp')
+    stage=Path(staging.name)/'rootfs'
     subprocess.run(['unsquashfs','-no-progress','-processors','2','-d',str(stage),str(rootfs/'rootfs.squashfs')],check=True)
     for name,item in pin['files'].items():
         if not name.startswith('firmware/'):continue
@@ -59,6 +62,7 @@ def main():
         shutil.copyfile(REPO/'tools/oneplus13'/name,dest);dest.chmod(0o755)
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
+    staging.cleanup()
     packed,_=build_initramfs((kernel/'initramfs.cpio.gz').read_bytes(),(kernel/'modules.tar.gz').read_bytes(),release,None,
         (REPO/'devices/oneplus13/start-native-display').read_bytes(),encoded_profile=(private/'display-profile.bin').read_bytes())
     packed,derive_report=derive(packed)

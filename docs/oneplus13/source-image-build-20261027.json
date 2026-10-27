@@ -1,0 +1,18 @@
+{
+  "scope": "FRESH_SOURCE_BUILD_AND_LOCAL_PRIVATE_PACKAGING_QUALIFICATION",
+  "source_build_commit": "06fcb43fcaac24a932b9880b5df3097a2d37f686",
+  "actions_run": 40428687718,
+  "actions_url": "https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40428687718",
+  "kernel_source_build_pass": true,
+  "gnome_source_build_pass": true,
+  "mesa_source_build_pass": true,
+  "assembled_public_rootfs_qemu_handoff_and_deadline_pass": true,
+  "old_actions_images_as_build_inputs": false,
+  "kernel_config_patch_and_native_dtb_match_run88": true,
+  "linux_unit_checks": 311,
+  "local_private_complete_image_qemu_pass": true,
+  "local_private_qemu_seconds": 123.6,
+  "private_data_uploaded": false,
+  "new_phone_wifi_acceptance": "PENDING_REGISTERED_USB_DEVICE_ABSENT",
+  "limitation": "Proprietary firmware and private calibration remain mandatory local data inputs; they cannot be compiled from Linux source."
+}

@@ -1,3 +1,23 @@
+## Fresh source build qualified, 2026-10-27
+
+Actions 40428687718 at 06fcb43fcaac24a932b9880b5df3097a2d37f686 passed
+fresh kernel, GNOME, Mesa, matching-image assembly and complete rootfs QEMU
+handoff/deadline. Kernel configuration, full patch and native DTB match run88.
+The complete locally packaged private image also passed its actual data
+handoff and deadline in QEMU (123.6s). All 311 Linux unit checks passed.
+Linux filesystem staging uses native temporary storage so case-distinct
+paths are preserved when output is on Windows/DrvFS.
+
+Hardware acceptance of the newly compiled image is pending: the registered
+phone is absent from both ADB and Fastboot, and host PnP shows no matching USB
+root. No reboot or RAM boot was sent. The prepared unattended acceptance checks
+WiFi association, DHCP/route and private HTTP 200 only. Previous run88 hardware
+results are preserved, not relabeled as tests of this source-built image.
+
+The source builds every system software component; proprietary firmware and
+calibration are mandatory local data inputs. This is not a claim that Linux
+source can reproduce those binaries or that private data was published.
+
 ## Fresh source build replaces historical artifact retrieval
 
 The source-image workflow builds the kernel, GNOME and Mesa at one commit.
