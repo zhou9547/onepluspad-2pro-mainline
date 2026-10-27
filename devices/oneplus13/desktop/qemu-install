@@ -64,7 +64,26 @@ fi
 [ ! -d /sys/module/panel_oneplus_aa569 ]
 [ ! -d /sys/module/msm ]
 echo ONEPLUS13_NATIVE_PREFLIGHT_OFFLINE_OK
-/run/oneplus13/native-handoff-selftest
+if [ -f /etc/oneplus13-native-candidate ]; then
+    # A local private-image check validates the actual data-only handoff.
+    # The generic public image still exercises all synthetic failure cases.
+    /usr/bin/python3 - <<'PY'
+import hashlib,os,pathlib
+p=pathlib.Path
+marker=p('/etc/oneplus13-native-handoff').read_text().splitlines()
+assert marker[:2]==['ONEPLUS13_NATIVE_HANDOFF_V1',os.uname().release]
+assert p('/etc/oneplus13-native-candidate').read_text()==os.uname().release+'\n'
+for name,digest in zip(['/usr/lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin','/run/oneplus13/native/start-native-display'],marker[2:]):
+    assert hashlib.sha256(p(name).read_bytes()).hexdigest()==digest
+assert len(marker)==4
+assert p('/run/oneplus13/native/start-native-display').stat().st_mode & 0o111 == 0
+assert not p('/run/oneplus13/native/activation-attempted').exists()
+print('ONEPLUS13_PRIVATE_NATIVE_HANDOFF_OK')
+PY
+    echo ONEPLUS13_NATIVE_HANDOFF_OFFLINE_OK
+else
+    /run/oneplus13/native-handoff-selftest
+fi
 echo ONEPLUS13_DESKTOP_HANDOFF_OK
 trap - EXIT
 EOF
