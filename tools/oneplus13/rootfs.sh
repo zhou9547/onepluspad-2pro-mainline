@@ -74,8 +74,29 @@ python3 tools/oneplus13/prefetch-rootfs-debs.py \
   --archives "$root/var/cache/apt/archives" --report "$dest/deb-prefetch.json"
 time chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
   apt-get install --no-download -y --no-install-recommends "${packages[@]}"
-chroot "$root" locale-gen en_US.UTF-8
-echo 'LANG=en_US.UTF-8' > "$root/etc/default/locale"
+chroot "$root" locale-gen en_US.UTF-8 zh_CN.UTF-8
+cat > "$root/etc/default/locale" <<'EOF'
+LANG=zh_CN.UTF-8
+LANGUAGE=zh_CN:zh
+LC_MESSAGES=zh_CN.UTF-8
+EOF
+cat > "$root/etc/profile.d/90-oneplus13-locale.sh" <<'EOF'
+export LANG=zh_CN.UTF-8
+export LANGUAGE=zh_CN:zh
+export LC_MESSAGES=zh_CN.UTF-8
+export GTK_IM_MODULE=ibus
+export QT_IM_MODULE=ibus
+export XMODIFIERS=@im=ibus
+EOF
+cat > "$root/etc/environment" <<'EOF'
+LANG=zh_CN.UTF-8
+LANGUAGE=zh_CN:zh
+LC_MESSAGES=zh_CN.UTF-8
+GTK_IM_MODULE=ibus
+QT_IM_MODULE=ibus
+XMODIFIERS=@im=ibus
+GSK_RENDERER=cairo
+EOF
 echo oneplus13-linux > "$root/etc/hostname"
 printf '127.0.0.1 localhost\n127.0.1.1 oneplus13-linux\n::1 localhost ip6-localhost\n' > "$root/etc/hosts"
 mkdir -p "$root/etc/systemd/system" "$root/etc/systemd/logind.conf.d"
@@ -91,6 +112,36 @@ for unit in sleep.target suspend.target hibernate.target hybrid-sleep.target; do
   ln -sfn /dev/null "$root/etc/systemd/system/$unit"
 done
 chroot "$root" passwd -l root
+mkdir -p "$root/etc/ssh/sshd_config.d"
+cat > "$root/etc/ssh/sshd_config.d/60-oneplus13.conf" <<'EOF'
+PasswordAuthentication yes
+KbdInteractiveAuthentication no
+PubkeyAuthentication yes
+PermitRootLogin no
+AllowUsers a
+EOF
+cat > "$root/usr/lib/systemd/system/oneplus13-ssh-host-keys.service" <<'EOF'
+[Unit]
+Description=Generate volatile OnePlus 13 SSH host keys
+RequiresMountsFor=/etc/ssh
+Before=ssh.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/ssh-keygen -A
+ExecStartPost=/usr/sbin/sshd -t
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+mkdir -p "$root/etc/systemd/system/multi-user.target.wants"
+ln -sfn /usr/lib/systemd/system/oneplus13-ssh-host-keys.service \
+  "$root/etc/systemd/system/multi-user.target.wants/oneplus13-ssh-host-keys.service"
+ln -sfn /usr/lib/systemd/system/ssh.service \
+  "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
+# Host keys generated while building must never become shared image identity.
+rm -f "$root"/etc/ssh/ssh_host_*
 desktop_args=("$root")
 if [[ -n ${ONEPLUS13_KERNEL_ARTIFACT:-} ]]; then
   desktop_args+=(--kernel "$ONEPLUS13_KERNEL_ARTIFACT")
@@ -103,12 +154,18 @@ chroot "$root" /usr/bin/systemd-analyze verify \
   oneplus13-ram-guard.service oneplus13-ram-deadline.timer \
   oneplus13-ram-evidence.service oneplus13-ram-usb.service \
   oneplus13-ram-dhcp.service oneplus13-ram-http.service \
-  oneplus13-ram-shell.service oneplus13-ram-serial.service
+  oneplus13-ram-shell.service oneplus13-ram-serial.service \
+  ssh.service oneplus13-ssh-host-keys.service
 udevadm verify "$root/usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules"
 chroot "$root" dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' > "$dest/packages.tsv"
 chroot "$root" /usr/bin/gnome-shell --version > "$dest/gnome-version.txt"
 chroot "$root" /usr/bin/env bash -n /etc/profile
 chroot "$root" dpkg-query -W systemd-resolved > /dev/null
+chroot "$root" locale -a | grep -qx 'zh_CN.utf8'
+test -x "$root/usr/sbin/sshd"
+grep -qx 'PermitRootLogin no' "$root/etc/ssh/sshd_config.d/60-oneplus13.conf"
+test ! -e "$root/etc/ssh/ssh_host_rsa_key"
+test -L "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
 chroot "$root" apt-get clean
 rm -f "$root/etc/apt/apt.conf.d/80bootstrap-ca"
 rm -f "$root/usr/sbin/policy-rc.d"

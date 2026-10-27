@@ -60,6 +60,18 @@ if [ "$mode" = --all ]; then
     python3 /run/oneplus13/native/start-native-display --check
     python3 /run/oneplus13/native/start-native-display --activate
     getent passwd a >/dev/null || { useradd -m -s /bin/bash -G adm,sudo a; echo 'a:a' | chpasswd; }
+    install -d -m 0755 /var/lib/AccountsService/users
+    cat > /var/lib/AccountsService/users/a <<'EOF'
+[User]
+Language=zh_CN.UTF-8
+XSession=ubuntu
+SystemAccount=false
+EOF
+    chmod 0600 /var/lib/AccountsService/users/a
+    printf 'run_im ibus\n' > /home/a/.xinputrc
+    chown a:a /home/a/.xinputrc
+    runuser -u a -- dbus-run-session -- gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('ibus', 'libpinyin')]"
+    runuser -u a -- dbus-run-session -- gsettings set org.gnome.system.locale region 'zh_CN'
     grep -q '^GSK_RENDERER=cairo$' /etc/environment || echo GSK_RENDERER=cairo >> /etc/environment
     python3 /usr/libexec/oneplus13-ram-desktop-check.py --configure
     timeout -k 1 6 systemctl restart gdm

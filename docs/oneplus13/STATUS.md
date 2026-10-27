@@ -1,3 +1,19 @@
+## Chinese desktop and SSH defaults, 2026-10-27
+
+The image now pins Ubuntu's Simplified Chinese language packs, GNOME Chinese
+translations, Noto CJK fonts, IBus and libpinyin. System and user-session locale
+defaults are `zh_CN.UTF-8`; the qualified RAM user receives a Chinese
+AccountsService locale and an XKB US plus `libpinyin` input-source pair. The
+input method libraries and environment are installed by default rather than
+requiring a post-install download.
+
+OpenSSH Server is installed and enabled at boot. Password and public-key login
+remain available to the ordinary test user, while root login is prohibited.
+Host keys are removed from the image and generated again at runtime before sshd
+starts, so the public artifact carries no shared SSH identity. Verification
+requires the actual built package set, locale generation, service configuration,
+live service readiness and host input before acceptance.
+
 ## GNOME rotation re-login root cause, 2026-10-27
 
 Owner rotation testing exposed two reproducible GNOME Shell exits. The GDM
