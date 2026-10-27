@@ -1,0 +1,46 @@
+{
+  "source_commit": "2218dcaaf2f55c4a5505f54e5c63d2f3a41f7e1b",
+  "actions_run": 40491459981,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "elapsed_seconds": 225.1,
+  "partition_writes": 0,
+  "candidate_held": true,
+  "wifi_connection_attempted": false,
+  "preserved_features_accepted": false,
+  "ssc_types_available": [
+    "accel",
+    "gyro",
+    "mag"
+  ],
+  "ssc_types_unavailable": [
+    "ambient_light"
+  ],
+  "sensor_samples_requested": false,
+  "fault_before_manual_wifi_test": true,
+  "scan_audit": {
+    "scope": "RETAINED_KERNEL_TAIL_AUDIT",
+    "counts": {
+      "kernel_bug_or_panic": 0,
+      "iommu_context_fault": 0,
+      "cpu_stall": 0,
+      "gpu_fault": 0,
+      "firmware_crash": 0,
+      "wifi_hardware_restart": 0,
+      "wifi_invalid_runtime_id": 0,
+      "wifi_vdev_failure": 0,
+      "wifi_driver_failure": 3,
+      "out_of_memory": 0
+    },
+    "pass": false,
+    "raw_kernel_text_published": false,
+    "full_history": false,
+    "retained_start_range_failures": 3,
+    "next_failed_frequency_range_mhz": [
+      5180,
+      5320
+    ],
+    "firmware_event_type": 16,
+    "firmware_event_reason": 1
+  }
+}

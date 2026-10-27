@@ -2,6 +2,10 @@ name: OnePlus 13 current image from source
 on:
   workflow_dispatch:
     inputs:
+      use_server:
+        description: Use the owner's trusted ARM64 server for kernel, Mesa and SSC
+        type: boolean
+        default: false
       runtime_qemu:
         description: Optional runtime QEMU diagnostics
         type: boolean
@@ -12,4 +16,5 @@ jobs:
   source:
     uses: ./.github/workflows/oneplus13-source-image.yml
     with:
+      use_server: ${{ inputs.use_server }}
       runtime_qemu: ${{ inputs.runtime_qemu }}

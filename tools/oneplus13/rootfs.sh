@@ -63,8 +63,17 @@ chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -o APT::Updat
 # Read the exact package set from the locked JSON. Package versions are fixed by
 # the signed Ubuntu snapshot and recorded in the delivered manifest.
 read -r -a packages <<< "${pin[3]}"
+# Resolve using the validated snapshot indexes, then fetch eight packages at a
+# time. Cached bytes are accepted only against this plan's size and SHA256.
+chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+  apt-get -o Acquire::ForceHash=SHA256 --print-uris --download-only \
+  install -y --no-install-recommends "${packages[@]}" > "$dest/apt-package-plan.txt"
+python3 tools/oneplus13/prefetch-rootfs-debs.py \
+  --plan "$dest/apt-package-plan.txt" --apt-uri "${pin[2]}" \
+  --cache "$repo/cache/oneplus13-rootfs-debs" \
+  --archives "$root/var/cache/apt/archives" --report "$dest/deb-prefetch.json"
 time chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
-  apt-get install -y --no-install-recommends "${packages[@]}"
+  apt-get install --no-download -y --no-install-recommends "${packages[@]}"
 chroot "$root" locale-gen en_US.UTF-8
 echo 'LANG=en_US.UTF-8' > "$root/etc/default/locale"
 echo oneplus13-linux > "$root/etc/hostname"

@@ -14,7 +14,16 @@ on:
       - tools/oneplus13/qemu-sensor-discovery-selftest.py
       - tests/test_oneplus13_sensor_discovery.py
   workflow_dispatch:
+    inputs:
+      use_server:
+        description: Use the owner's trusted ARM64 component runner
+        type: boolean
+        default: false
   workflow_call:
+    inputs:
+      use_server:
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -22,7 +31,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   ssc:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ inputs.use_server && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -30,18 +39,18 @@ jobs:
           persist-credentials: false
       - name: Prepare native offline build dependencies
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y --no-install-recommends gcc binutils ninja-build patch pkg-config python3-dev python3-venv libglib2.0-dev libqmi-glib-dev libmbim-glib-dev libqrtr-glib-dev libprotobuf-c-dev protobuf-c-compiler protobuf-compiler ca-certificates
+          flock /tmp/oneplus13-apt-update.lock sudo apt-get update -q
+          flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y --no-install-recommends gcc binutils ninja-build patch pkg-config python3-dev python3-venv libglib2.0-dev libqmi-glib-dev libmbim-glib-dev libqrtr-glib-dev libprotobuf-c-dev protobuf-c-compiler protobuf-compiler ca-certificates
           pkg-config --exists glib-2.0 gio-unix-2.0 qmi-glib qrtr-glib libprotobuf-c
-          python3 -m venv /tmp/phone-ssc-meson
-          /tmp/phone-ssc-meson/bin/pip install meson==1.10.1
+          python3 -m venv "$RUNNER_TEMP/phone-ssc-meson"
+          "$RUNNER_TEMP/phone-ssc-meson/bin/pip" install meson==1.10.1
           test "$(uname -m)" = aarch64
       - name: Build guarded probe and test without QRTR or hardware
         run: |
           python3 -m unittest discover -s tests -p test_oneplus13_ssc_metadata.py -v
           python3 -m unittest discover -s tests -p test_oneplus13_sensor_fileserver.py -v
           python3 -m unittest discover -s tests -p test_oneplus13_sensor_discovery.py -v
-          python3 tools/oneplus13/build-phone-ssc-probe.py --meson /tmp/phone-ssc-meson/bin/meson --output out/phone-ssc
+          python3 tools/oneplus13/build-phone-ssc-probe.py --meson "$RUNNER_TEMP/phone-ssc-meson/bin/meson" --output out/phone-ssc
       - name: Preserve public source evidence and isolated probe
         if: always()
         uses: actions/upload-artifact@v4

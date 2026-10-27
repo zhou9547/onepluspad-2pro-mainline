@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: GPL-2.0-only
+import importlib.util
+from pathlib import Path
+import unittest
+from unittest.mock import patch
+helper_path=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-wifi-quiescent.py'
+helper_spec=importlib.util.spec_from_file_location('quiescent',helper_path)
+draft=importlib.util.module_from_spec(helper_spec);helper_spec.loader.exec_module(draft)
+
+path=Path(__file__).resolve().parents[1]/'tools/oneplus13/automatic-wifi-check.py'
+spec=importlib.util.spec_from_file_location('real_wifi_country',path)
+wifi=importlib.util.module_from_spec(spec);spec.loader.exec_module(wifi)
+
+class Fake:
+    def __init__(self,states=None,associated=False,global_only=False):
+        self.states=list(states or []);self.associated=associated;self.global_only=global_only
+        self.calls=[];self.sets=0
+    def __call__(self,args,seconds):
+        self.calls.append(args)
+        if args[0]=='nmcli':return 0,str(self.states.pop(0) if self.states else 10)+' (state)\n'
+        if args[-1]=='link':return 0,'Connected to synthetic peer\n' if self.associated else 'Not connected.\n'
+        if args[-1]=='info':return 0,'\twiphy 0\n'
+        if args[:3]==['iw','reg','set']:self.sets+=1;return 0,''
+        if args==['iw','reg','get']:
+            global_code='CN' if self.sets and self.global_only else '00'
+            phy_code='CN' if self.sets and not self.global_only else '00'
+            return 0,'global\ncountry '+global_code+': DFS-UNSET\nphy#0 (self-managed)\ncountry '+phy_code+': DFS-UNSET\n'
+        raise AssertionError('Unexpected command')
+
+class Idle(unittest.TestCase):
+    def test_managed_device_cannot_reach_country_hint(self):
+        fake=Fake(states=[30])
+        with self.assertRaisesRegex(ValueError,'unmanaged'):draft.country_when_quiescent(wifi,'wlan-test','CN',fake)
+        self.assertEqual(fake.sets,0)
+    def test_management_race_refuses_even_first_link_query(self):
+        fake=Fake(states=[10,30])
+        with self.assertRaisesRegex(ValueError,'unmanaged'):draft.country_when_quiescent(wifi,'wlan-test','CN',fake)
+        self.assertEqual(fake.sets,0);self.assertTrue(all(c[0]=='nmcli' for c in fake.calls))
+    def test_association_refuses_hint(self):
+        fake=Fake(associated=True)
+        with self.assertRaisesRegex(ValueError,'acknowledge'):draft.country_when_quiescent(wifi,'wlan-test','CN',fake)
+        self.assertEqual(fake.sets,0)
+    def test_actual_country_helper_requires_selected_phy_ack_and_sends_once(self):
+        fake=Fake();facts=draft.country_when_quiescent(wifi,'wlan-test','CN',fake)
+        self.assertTrue(facts['country_phy_acknowledged']);self.assertEqual(fake.sets,1)
+        for i,args in enumerate(fake.calls):
+            if args[0]=='iw':self.assertEqual(fake.calls[i-1][0],'nmcli')
+    def test_global_domain_alone_does_not_release_hold(self):
+        fake=Fake(global_only=True)
+        with patch.object(wifi.time,'sleep'),self.assertRaisesRegex(ValueError,'acknowledge'):
+            draft.country_when_quiescent(wifi,'wlan-test','CN',fake)
+        self.assertEqual(fake.sets,1)
+    def test_effective_config_must_preserve_usb_and_have_no_wifi_exception(self):
+        for value in ['type:wifi',draft.USB_TOKEN+';except:type:wifi',draft.USB_TOKEN]:
+            with self.subTest(value=value),self.assertRaises(ValueError):
+                draft.effective_config(lambda *a:(0,'[keyfile]\nunmanaged-devices='+value+'\n'))
+
+if __name__=='__main__':unittest.main()

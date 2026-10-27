@@ -1,3 +1,47 @@
+## Rootfs transport and third joint round, 2026-10-27
+
+Full Actions [40491459981](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40491459981)
+at `2218dcaaf2f55c4a5505f54e5c63d2f3a41f7e1b` passed all jobs.
+Its rootfs log records 364 MB downloaded in 38m23s (158 kB/s), about 72s
+installation and 30s compression. Transport dominated the 41m18s job.
+The fixed, signed Ubuntu snapshot and all package choices remain unchanged.
+An APT SHA256 URI plan now drives eight bounded concurrent HTTPS downloads;
+only verified bytes enter the archive directory, followed by APT --no-download.
+Public deb caches survive transient failures and are rehashed against each
+fresh signed plan. Logs emit bounded progress every ten seconds. A real
+snapshot package, cache reuse and native APT archive-filename acceptance pass;
+seven host checks cover malformed plans, bad bytes and links. Full CI timing
+at the new implementation remains to be measured.
+
+Same-commit build steps measured hosted/server: kernel 625/367s, Mesa 172/43s,
+SSC 29/6s. The complete workflow now has an opt-in `use_server` input for
+kernel/Mesa/SSC. Rootfs and final assembly remain on hosted native ARM64.
+Shared APT locks, four kernel jobs and a job-local SSC venv avoid conflicts.
+All image dependencies remain same-workflow and same-commit artifacts.
+
+The third joint RAM boot returned to Android in 225.1s, with seven baseline
+properties equal and zero partition writes. SSC again found accel/gyro/mag,
+but not ambient_light; no measurements were requested. During qualified
+feature startup, NetworkManager's automatic scan triggered the health gate
+before any manual WiFi connection. Retained numeric trace shows successful
+2.4 GHz completion, then a 5180--5320 MHz request, firmware event type16
+reason1 and next-range start timeout -110 (three failures in the retained
+tail). No IOMMU fault or hardware restart appears in that tail. Hold this
+candidate; mutex and matrix corrections do not establish 5 GHz acceptance.
+Desktop/touch/Bluetooth regression was not completed; do not promote it.
+
+A default-off, explicitly invoked RAM helper now prepares NetworkManager
+before any WLAN PHY exists. It appends a strict WiFi unmanaged rule while
+preserving the USB exclusion, checks effective config, binds a fresh exact
+stock 5 GHz/country observation, checks disconnected state before a single
+normal country hint, and requires acknowledgment from the selected self-managed
+PHY. Each command is health-gated; any failure requires recovery. It does not
+override channel flags, firmware, SAR or calibration and never retries/reset.
+Six source tests and the real native NetworkManager config parser pass. This
+is a hypothesis for the next combined test, not a working 5 GHz claim. The
+ordinary WiFi checker continues to refuse country transitions; no autostart
+or previously qualified default behavior is changed by this opt-in tool.
+
 ## Scan timeout lifecycle follow-up
 
 The community range fix was subsequently reconciled with an upstream v4 scan
