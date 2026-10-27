@@ -27,6 +27,8 @@ class SensorLightFallback(unittest.TestCase):
         self.assertIn('g_strcmp0 (priv->data_type, "ambient_light")', self.text)
         self.assertIn('!priv->light_discover_all', self.text)
         self.assertIn('msg.only_default_values = !priv->light_discover_all;', self.text)
+        self.assertIn('priv->light_uid_index + 1 < priv->light_uid_count', self.text)
+        self.assertIn('attribute (ctx->sensor, ctx->task);', self.text)
         self.assertNotIn('SSC_MSG_REPORT_MEASUREMENT', self.text)
         guard = GUARD.read_text()
         self.assertIn('!msg->only_default_values && g_str_equal(msg->data_type,"ambient_light")', guard)
