@@ -46,6 +46,8 @@ for patch in "$repo"/devices/oneplus13/kernel-patches/*.patch; do
 done
 python3 tools/oneplus13/check-wcn7860-scan.py --kernel-source "$src" \
   --output "$dest/wcn7860-scan-verification.json"
+python3 tools/oneplus13/check-wcn7860-priority.py --kernel-source "$src" \
+  --output "$dest/wcn7860-priority-verification.json"
 python3 tools/oneplus13/dsc.py \
   --panel-json devices/oneplus13/panel-aa569-120hz.json \
   --output "$dest/aa569-dsc.json" --c-output "$dest/aa569-dsc.h"

@@ -1,3 +1,29 @@
+## Scan priority serialization and exact event meaning, 2026-10-27
+
+The pinned wmi.h defines event16 as DEQUEUED and reason1 as CANCELLED.
+The third round therefore observed a firmware queue cancellation followed by
+the driver's start wait timeout, not event64 START_FAILED / reason4 INTERNAL_FAILURE.
+Do not infer firmware crash or a regulatory root cause from those numbers.
+
+Inspecting the actual scan-start function exposed a separate concrete bug:
+it computes LOW/MEDIUM priority but never assigns cmd->scan_priority. The
+one-line fix from [ROCKNIX PR3189](https://github.com/ROCKNIX/distribution/pull/3189),
+head `8638e1d190de05ec0fd518b7cb9a886aa77dbd20`, applies unchanged.
+Preserve Edouard Durand's original attribution and sign-off. This sends the
+existing driver policy; it does not raise priorities beyond that policy or
+disable 11d. The primary WCN7860 issue398 reports that this fix alone did not
+eliminate early missing 5 GHz, so it is not a complete solution claim.
+
+A host test compiles the actual scan-start header block and actual enum
+definitions, preserving header IDs/flags and checking LOW/MEDIUM little-endian
+values. Release and ASan/UBSan pass. Removing the actual assignment reproduces
+SIGABRT in a required negative control. This compiles a block, not the entire
+function or a firmware scheduler. Full ARM64 compilation remains mandatory.
+A second phone-only diagnostic shares the existing 32-row numeric budget and
+records the serialized header priority and 11d state for the joint boot.
+Combine this with the default-off quiescent initialization, SSC metadata and
+all preserved-feature regressions; no isolated priority-only phone test.
+
 ## Measured transport speed and complete server integration, 2026-10-27
 
 Actions [40500971360](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40500971360)
