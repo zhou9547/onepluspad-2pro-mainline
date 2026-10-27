@@ -1,0 +1,122 @@
+{
+  "scope": "ONE_JOINT_RAM_BOOT_DUALBAND_DESKTOP_SSC_NO_FLASH",
+  "source_commit": "976718cb9ef7007235d161f7deaaec5cbf55a258",
+  "actions_run": 40510928607,
+  "actions_url": "https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40510928607",
+  "boot_image_sha256": "2a6f009d4f1430d2c006bf81fd9e38dcecbd89473619c2762f0cdfa0e3ad2485",
+  "rootfs_sha256": "c8ccf6744ec80f8587ad257c8fa8aaf061f3a6d6ea18382fffc8013d2b73a341",
+  "kernel_release": "7.2.0-oneplus13-g7a81d184e309-ce4be480ca7e6-p553416de96be",
+  "phone_operations": 0,
+  "partition_writes": 0,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "elapsed_seconds": 276.7,
+  "runtime_watchdog_seconds": 600,
+  "wifi": {
+    "five_ghz": {
+      "associated_band": "5GHz",
+      "association_pass": true,
+      "band_pass": true,
+      "dhcp_pass": true,
+      "http_pass": true,
+      "automatic_acceptance_pass": true,
+      "link_frequency_mhz": 5240,
+      "ipv4_default_route_present": true,
+      "scan_completed": true,
+      "target_seen": true,
+      "scan_observations": 2,
+      "visible_ssid_rows": 37,
+      "unique_visible_ssids": 34,
+      "low_level_scan_or_reset": false,
+      "password_logged": false,
+      "http_code": 200,
+      "http_total_seconds": 0.008948
+    },
+    "two_point_four_ghz": {
+      "associated_band": "2.4GHz",
+      "association_pass": true,
+      "band_pass": true,
+      "dhcp_pass": true,
+      "http_pass": true,
+      "automatic_acceptance_pass": true,
+      "link_frequency_mhz": 2437,
+      "ipv4_default_route_present": true,
+      "scan_completed": true,
+      "target_seen": true,
+      "scan_observations": 5,
+      "visible_ssid_rows": 39,
+      "unique_visible_ssids": 37,
+      "low_level_scan_or_reset": false,
+      "password_logged": false,
+      "http_code": 200,
+      "http_total_seconds": 0.044894
+    },
+    "dualband_pass": true
+  },
+  "wifi_initialization": {
+    "channel_flags_or_sar_overridden": false,
+    "country": "CN",
+    "country_ack_observations": 1,
+    "country_hint_sent": true,
+    "country_phy_acknowledged": true,
+    "networkmanager_hold_released": true,
+    "scope": "QUIESCENT_STOCK_COUNTRY_PREPARATION",
+    "selected_phy_acknowledged": true
+  },
+  "kernel_health_all_zero_by_phase": {
+    "ssc-joint": true,
+    "ssc-cleanup": true,
+    "qualified-features": true,
+    "preserved-features": true,
+    "radio-facts": true,
+    "wifi-a": true,
+    "wifi-bg": true,
+    "health-final": true
+  },
+  "ssc_metadata": {
+    "accel": {
+      "available": true,
+      "completed": true
+    },
+    "ambient_light": {
+      "available": false,
+      "completed": true
+    },
+    "gyro": {
+      "available": true,
+      "completed": true
+    },
+    "mag": {
+      "available": true,
+      "completed": true
+    },
+    "samples_requested": false,
+    "units_cleanup_completed": true
+  },
+  "preserved_features": {
+    "gpu_check_returncode": 0,
+    "desktop_check_returncode": 0,
+    "touch_device_present": true,
+    "battery_telemetry_present": true,
+    "battery_readings": [
+      {
+        "capacity_percent": 80,
+        "temperature_deci_c": 291
+      }
+    ],
+    "bluetooth_powered": true,
+    "obex_sender_preserved": true,
+    "physical_touch_tested": false,
+    "bluetooth_peer_receipt_tested": false
+  },
+  "unverified": [
+    "physical pixels",
+    "physical touch response",
+    "Bluetooth peer receipt",
+    "SSC ambient-light availability",
+    "HTTPS transport"
+  ],
+  "overall_joint_acceptance_pass": false,
+  "overall_false_reason": "ambient_light metadata unavailable; physical tests not observed",
+  "hardware_tested": true
+}

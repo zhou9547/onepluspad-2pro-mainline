@@ -1,3 +1,38 @@
+## Dual-band WiFi and joint hardware regression, 2026-10-27
+
+Source `976718cb9ef7007235d161f7deaaec5cbf55a258`, complete Actions
+[40510928607](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40510928607).
+The single joint RAM boot returned to Android in 276.7s, with all seven baseline
+properties equal and zero partition writes. All recorded phase health checks
+contained zero IOMMU, panic, OOM, firmware crash, WLAN restart, invalid runtime
+ID, VDEV and ath12k failure counts.
+
+The pre-PHY hold preserved the USB exclusion, kept all WiFi unmanaged until the
+PHY appeared, and prevented the earlier automatic-scan race. Only then did the
+helper apply the fresh stock CN observation; the selected self-managed PHY
+acknowledged CN, the hold was released, and no SAR/channel override occurred.
+The received source-current scan-priority serialization remained active.
+
+5 GHz passed a real directed scan, association at 5240 MHz, IPv4 address,
+default route and interface-bound owner LAN HTTP 200. 2.4 GHz passed the same
+pipeline at 2437 MHz. The read-only cached list concurrently contained both
+targets and 44/45 AP rows across 2.4 and 5 GHz. This establishes the two bands
+for this image and test location; it does not claim every band, DFS channel,
+rate or regulatory domain.
+
+The same boot passed Adreno 830 render/readback with project Mesa, an ordinary
+user Wayland GNOME session with repeated settings-process/bus samples, touch
+input device discovery, powered Bluetooth with address and OBEX sender,
+regulatory channel enumeration, and valid battery level/temperature. Physical
+pixels and touch response were not observed remotely; Bluetooth peer receipt was
+also not exercised. Those remain explicit hardware acceptance gaps.
+
+SSC again enumerated accel, gyro and magnetometer, while ambient_light remained
+unavailable; all four metadata operations completed, no samples were requested,
+and both units stopped. Therefore `joint_acceptance_pass` remains false even
+though `wifi_dualband_pass` is true. Do not rewrite the older failed runs: they
+remain the evidence history for the scan timeout and host-clock correction.
+
 ## Host-clock freshness correction after first combined round, 2026-10-27
 
 The current `1dd42257...` image completed a RAM boot and returned to Android in
