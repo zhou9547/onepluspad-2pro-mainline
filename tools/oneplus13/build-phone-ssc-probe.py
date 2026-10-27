@@ -12,7 +12,7 @@ BASE_PATCHES=(
     '0003-libssc-retry-light-discovery-with-non-default-uids.patch',
 )
 EXTRA='0001-add-metadata-only-discovery-guard.patch'
-EXTRA_SHA='9b4ff3c7b998eba366f7c29efcfcf84fd860974ccc237ea9a64c455356440212'
+EXTRA_SHA='d2c913814a2011fe5e5009c065d45423b6e43c595f538f0249b6fb066dea7cee'
 PROPERTY_PATCH='0002-fix-sensor-property-value-types.patch'
 PROPERTY_SHA='7ed350b5a98f8e6c6e04e707746beafe8337ad0daf3d596a55f92c35b72e7f1c'
 MATRIX_PATCH='0003-preserve-nonzero-mount-matrices.patch'

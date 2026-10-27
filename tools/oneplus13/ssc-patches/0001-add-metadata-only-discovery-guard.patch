@@ -123,7 +123,7 @@ remain. This is offline source work, not sensor sample/hardware acceptance.
 +#endif
 --- /dev/null
 +++ b/src/libssc-phone-probe.c
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,41 @@
 +/* SPDX-License-Identifier: GPL-3.0-or-later */
 +/* Phone discovery guard: no measurement/enable/disable/report subscription. */
 +#include "libssc-phone-probe-private.h"
@@ -144,7 +144,9 @@ remain. This is offline source work, not sensor sample/hardware acceptance.
 +        msg=ssc_suid_request__unpack(NULL,payload->len,(const uint8_t*)payload->data);
 +        if(!msg) return FALSE;
 +        if(msg->base.n_unknown_fields==0 && msg->has_enable_updates && !msg->enable_updates &&
-+           msg->has_only_default_values && msg->only_default_values && msg->data_type) {
++           msg->has_only_default_values && msg->data_type &&
++           (msg->only_default_values ||
++            (!msg->only_default_values && g_str_equal(msg->data_type,"ambient_light")))) {
 +            for(gsize i=0;i<G_N_ELEMENTS(names);i++)
 +                if(g_str_equal(msg->data_type,names[i])) accepted=TRUE;
 +        }

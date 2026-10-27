@@ -6,6 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PATCH = ROOT / 'packaging/sensors/patches/libssc/0003-libssc-retry-light-discovery-with-non-default-uids.patch'
+GUARD = ROOT / 'tools/oneplus13/ssc-patches/0001-add-metadata-only-discovery-guard.patch'
 
 
 class SensorLightFallback(unittest.TestCase):
@@ -27,6 +28,9 @@ class SensorLightFallback(unittest.TestCase):
         self.assertIn('!priv->light_discover_all', self.text)
         self.assertIn('msg.only_default_values = !priv->light_discover_all;', self.text)
         self.assertNotIn('SSC_MSG_REPORT_MEASUREMENT', self.text)
+        guard = GUARD.read_text()
+        self.assertIn('!msg->only_default_values && g_str_equal(msg->data_type,"ambient_light")', guard)
+        self.assertNotIn('names[]={"registry","accel","ambient_light","gyro","mag","all"}', guard)
 
 
 if __name__ == '__main__':
