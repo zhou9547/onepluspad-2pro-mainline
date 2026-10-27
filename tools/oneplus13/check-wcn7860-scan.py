@@ -10,11 +10,13 @@ import json
 from pathlib import Path
 import subprocess
 import tempfile
+import resource
+import signal
 
 
 def function(source, name):
     import re
-    match = re.search(r'\nstatic [^;{}]*\b' + name + r'\([^;{}]*\)\n\{', source)
+    match = re.search(r'\n(?:static )?[^;{}]*\b' + name + r'\([^;{}]*\)\n\{', source)
     if not match:
         raise ValueError('Missing actual implementation: ' + name)
     start = match.start() + 1
@@ -44,6 +46,10 @@ typedef uint32_t u32;
 #define lockdep_assert_wiphy(x) ((void)(x))
 #define spin_lock_bh(x) ((void)(x))
 #define spin_unlock_bh(x) ((void)(x))
+#define lockdep_assert_held(x) ((void)(x))
+#define fallthrough __attribute__((fallthrough))
+#define ath12k_warn(...) ((void)0)
+enum {ATH12K_SCAN_IDLE,ATH12K_SCAN_STARTING,ATH12K_SCAN_RUNNING,ATH12K_SCAN_ABORTING};
 struct ath12k_svc_ext_mac_phy_info {
  u32 phy_id, hw_mode_config_type, supported_bands;
  struct {u32 low_5ghz_freq, high_5ghz_freq;} hw_freq_range;
@@ -63,16 +69,22 @@ struct ath12k_wmi_scan_req_arg {
 };
 struct ath12k {
  struct ath12k_base *ab;
- struct {int num_radio;} *ah;
+ struct {int num_radio; struct ieee80211_hw *hw;} *ah;
  int data_lock;
  struct {int tx_empty_waitq, num_tx_pending;} dp;
  struct {struct ath12k_wmi_scan_req_arg *range_req;
  u32 range_next, range_split_freq; bool range_tx_paused; int range_trace_count;
+ int state,completed,vdev_clean_wk; bool is_roc,roc_notify,finish_queued;
  struct {bool is_up;} *arvif;} scan;
 };
 static struct ieee80211_hw hw;
 static int alloc_fail, allocations, frees, stopped, wakes, pauses, waits;
 static int start_rc, starts, observed_n; static u32 observed[32];
+static int stops,queued;
+static void complete_all(int *c) {(*c)++;}
+static void wiphy_work_queue(void *w,int *work) {(void)w;(void)work;queued++;}
+static void ieee80211_remain_on_channel_expired(struct ieee80211_hw *h) {(void)h;}
+static int ath12k_scan_stop(struct ath12k *ar) {(void)ar;stops++;return 0;}
 static struct ieee80211_hw *ath12k_ar_to_hw(struct ath12k *ar) {(void)ar; return &hw;}
 static void *allocate(size_t n) {if (alloc_fail) return NULL; allocations++; return calloc(1,n);}
 #define kzalloc_flex(obj,member,n) allocate(sizeof(obj)+sizeof((obj).member[0])*(n))
@@ -99,7 +111,7 @@ MAIN = r'''
 int main(void) {
  struct ath12k_base ab={0}; struct ath12k ar={.ab=&ab};
  typeof(*ab.hw_params) params={.single_pdev_only=true}; ab.hw_params=&params;
- typeof(*ar.ah) ah={.num_radio=1}; ar.ah=&ah;
+ typeof(*ar.ah) ah={.num_radio=1,.hw=&hw}; ar.ah=&ah;
  typeof(*ar.scan.arvif) vif={0}; ar.scan.arvif=&vif;
  ab.hw_rev=20;ab.num_radios=1;ab.wmi_ab.preferred_hw_mode=4;
  for(int i=0;i<2;i++) {
@@ -151,6 +163,16 @@ int main(void) {
  start_rc=-EIO;assert(ath12k_mac_scan_range_start(&ar)==-EIO);
  assert(!ar.scan.range_tx_paused&&!stopped);
  ath12k_mac_scan_range_free(&ar);assert(pauses==wakes&&waits>0);
+ req=calloc(1,sizeof(*req)+8);req->num_chan=2;
+ ar.scan.range_req=req;ar.scan.state=ATH12K_SCAN_RUNNING;ar.scan.range_next=1;
+ __ath12k_mac_scan_finish(&ar);
+ assert(queued==1&&!ar.scan.finish_queued&&ar.scan.completed==1);
+ ar.scan.range_next=2;__ath12k_mac_scan_finish(&ar);
+ assert(queued==2&&ar.scan.finish_queued&&ar.scan.completed==2);
+ ath12k_scan_abort(&ar);assert(stops==0&&ar.scan.state==ATH12K_SCAN_RUNNING);
+ ar.scan.finish_queued=false;ath12k_scan_abort(&ar);
+ assert(stops==1&&ar.scan.state==ATH12K_SCAN_ABORTING);
+ ath12k_mac_scan_range_free(&ar);
  return 0;
 }
 '''
@@ -164,19 +186,30 @@ def main():
     source=(args.kernel_source/'drivers/net/wireless/ath/ath12k/mac.c').read_text()
     names=['ath12k_mac_scan_split_freq','ath12k_mac_scan_range_class',
            'ath12k_mac_scan_range_count','ath12k_mac_scan_range_tx_resume',
-           'ath12k_mac_scan_range_tx_pause','ath12k_mac_scan_range_free','ath12k_mac_scan_range_start']
+           'ath12k_mac_scan_range_tx_pause','ath12k_mac_scan_range_free','ath12k_mac_scan_range_start',
+           '__ath12k_mac_scan_finish','ath12k_scan_abort']
     with tempfile.TemporaryDirectory(prefix='ath12k-scan-check-') as tmp:
         path=Path(tmp); unit=path/'check.c'
-        unit.write_text(SHIM+'\n'+'\n'.join(function(source,n) for n in names)+'\n'+MAIN)
+        actual=SHIM+'\n'+'\n'.join(function(source,n) for n in names)+'\n'+MAIN
+        unit.write_text(actual)
         for label,flags in [('release',['-O2']),('sanitized',['-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer'])]:
             binary=path/label
             subprocess.run(['gcc','-std=gnu11','-Wall','-Wextra','-Werror','-Wno-sign-compare',*flags,str(unit),'-o',str(binary)],check=True)
             subprocess.run([str(binary)],check=True,timeout=10)
+        negative=actual.replace('\t\tif (ar->scan.finish_queued)\n\t\t\tbreak;','',1)
+        if negative==actual:raise ValueError('Missing completion-race guard')
+        unit.write_text(negative)
+        binary=path/'negative'
+        subprocess.run(['gcc','-std=gnu11','-O2',str(unit),'-o',str(binary)],check=True)
+        result=subprocess.run([str(binary)],timeout=10,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                              preexec_fn=lambda:resource.setrlimit(resource.RLIMIT_CORE,(0,0)))
+        if result.returncode!=-signal.SIGABRT:raise ValueError('Completion-race negative control failed to detect regression')
     report={'scope':'ACTUAL_ATH12K_SCAN_HELPERS_HOST_FAULT_INJECTION','pass':True,
             'release_and_asan_ubsan':True,'functions_compiled':names,
+            'completion_race_negative_control_rejected':True,
             'checks':['hardware/mode isolation','malformed frequency ranges','channel/SSID/IE order',
                       'associated single-channel batches','allocation failure','owned request cleanup',
-                      'TX busy/drain timeout/start failure and resume'],
+                      'TX busy/drain timeout/start failure and resume','final-completion versus timeout race'],
             'firmware_or_event_scheduler_validated':False,'hardware_acceptance':False}
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(report,indent=2)+'\n')

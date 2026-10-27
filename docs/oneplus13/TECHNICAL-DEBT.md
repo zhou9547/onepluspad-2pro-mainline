@@ -1,3 +1,29 @@
+## Scan timeout lifecycle follow-up
+
+The community range fix was subsequently reconciled with an upstream v4 scan
+timeout correction in [Armada PR 736](https://github.com/armada-os/armada/pull/736),
+head `21316f049f1424f621a79d08981af831f8339588`. Its prerequisite is
+[PR 601](https://github.com/armada-os/armada/pull/601), head
+`163886ffbe1cc44f400540d1ffd0b8d235a03f6f`: synchronous cancellation while
+holding the wiphy mutex can wait for a timeout worker blocked on that mutex.
+Preserve Runyu Xiao's patch attribution and use the reconciled range/TX patches.
+All three primary-source patches apply cleanly to the pinned ath12k files;
+the numeric diagnostic patch needs only a context refresh in core.h.
+
+The source check now compiles nine actual helpers, including completion and
+abort. Intermediate range completion retains the overall timeout; final queued
+completion suppresses a racing abort. Release and ASan/UBSan pass, and removing
+the actual finish guard reproduces the failure in a negative control. Native
+kernel compilation and a joint phone test remain required. This is a real
+lock-lifecycle correction, not proof of the cause of the observed start timeout.
+
+The owner's ARM64 server handoff has been read. Its trusted self-hosted
+component workflow is retained and runs at the same branch commits. It builds
+kernel/Mesa/SSC, while mount-dependent GNOME and final image jobs remain on
+hosted native ARM64 runners. Use measured warm-cache timings when choosing;
+the earlier cold-build comparison does not guarantee every rebuild is faster.
+Server addresses, passwords, proxies and private handoff text are not published.
+
 ## Complete Actions image and second joint round, 2026-10-27
 
 Source `18f59c902bb3912dbd1912ece99a03fe4f4e9884`, Actions
