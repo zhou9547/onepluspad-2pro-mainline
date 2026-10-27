@@ -2,7 +2,6 @@ name: OnePlus 13 server component builds
 on:
   push:
     branches: [oneplus13-dualband-ssc-20261027]
-    paths: [.github/workflows/oneplus13-server-components.yml]
   workflow_dispatch:
     inputs:
       runtime_qemu:
@@ -13,7 +12,7 @@ permissions:
   contents: read
 concurrency:
   group: oneplus13-server-components-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   kernel:
     runs-on: [self-hosted, Linux, ARM64, oneplus13-arm64]
@@ -58,7 +57,7 @@ jobs:
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential meson ninja-build pkg-config libdrm-dev libexpat1-dev python3-mako python3-ply python3-yaml bison flex zlib1g-dev libzstd-dev libelf-dev libwayland-dev libwayland-egl-backend-dev wayland-protocols libx11-dev libx11-xcb-dev libxcb-dri2-0-dev libxcb-dri3-dev libxcb-present-dev libxcb-randr0-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-glx0-dev libxcb-shm0-dev libxshmfence-dev libxxf86vm-dev libxrandr-dev libglvnd-dev glslang-tools python3-packaging libvulkan-dev vulkan-tools
-          sudo pip3 install --break-system-packages 'meson==1.9.1'
+          sudo --preserve-env=http_proxy,https_proxy,HTTP_PROXY,HTTPS_PROXY pip3 install --break-system-packages 'meson==1.9.1'
       - run: bash tools/oneplus13/source-image.sh mesa
       - uses: actions/upload-artifact@v4
         with:
