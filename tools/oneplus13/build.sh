@@ -8,6 +8,7 @@ kout="$repo/out/oneplus13-kbuild"
 dest="$repo/out/oneplus13"
 jobs=${ONEPLUS13_BUILD_JOBS:-$(nproc)}
 [[ $jobs =~ ^[1-9][0-9]*$ ]] || { echo "Invalid build job count" >&2; exit 2; }
+depmod_tool=$(command -v depmod) || { echo 'Install kmod: depmod is required to package usable modules' >&2; exit 1; }
 mkdir -p "$kout" "$dest"
 exec 9>"$kout/.build.lock"
 flock -n 9 || { echo 'Build already running' >&2; exit 1; }
@@ -149,6 +150,7 @@ make "${args[@]}" -j"$jobs" drivers/gpu/drm/panel/panel-aa569/ \
   drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr_runtime.o 2>&1 | tee "$kout/component-api.log"
 time make "${args[@]}" -j"$jobs" Image Image.gz modules 2>&1 | tee "$kout/build.log"
 make "${args[@]}" -j"$jobs" modules_install INSTALL_MOD_PATH="$dest/modules" INSTALL_MOD_STRIP=1 \
+  DEPMOD="$depmod_tool" \
   2>&1 | tee "$kout/modules.log"
 find "$dest/modules" -type l -name build -delete
 find "$dest/modules" -type l -name source -delete

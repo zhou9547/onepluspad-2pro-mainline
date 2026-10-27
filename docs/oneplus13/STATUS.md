@@ -1,3 +1,29 @@
+## Measured transport speed and complete server integration, 2026-10-27
+
+Actions [40500971360](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40500971360)
+at `e3c4c8369fef4d71b2234db2632fcd2cc700ecf8` built kernel, rootfs,
+Mesa and SSC. The cold parallel prefetch downloaded 364427236 bytes / 727 debs
+in 108.8s, with zero cache hits, compared with 38m23s in the earlier APT log.
+Installation took 70.217s and compression 29.532s; the public cache saved.
+
+Assembly exposed a server environment dependency: `make modules_install`
+only warned that depmod was absent, returned success and omitted module indexes.
+The server kernel archive was therefore unusable and no phone boot was made.
+All phone kernel workflows now explicitly install kmod, the builder requires
+depmod before compiling and passes its exact path, and artifact verification
+requires text/binary dependency and alias indexes plus a complete in-payload
+dependency graph. The actual failed server archive is rejected; native depmod
+regeneration on those actual ARM64 modules passes the corrected verifier.
+Three regression tests cover missing indexes and invalid/incomplete graphs.
+The corrected complete Actions build remains required before a new phone boot.
+
+The owner suggested a longer live diagnostic window. The next single-use
+combined RAM plan has a fixed 600-second cap, with explicit clearing of inherited
+timer triggers and D-Bus readback of the actual merged timer. It never renews
+the deadline. Kernel/network/desktop evidence is read while Linux is running;
+critical DMA/panic/restart faults require early recovery. Only the volatile
+test override changes: the delivered image's default remains 300 seconds.
+
 ## Full snapshot URI compatibility, 2026-10-27
 
 The first accelerated CI trial rejected APT's legitimate percent-escaped `+`

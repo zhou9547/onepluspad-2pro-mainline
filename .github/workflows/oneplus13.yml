@@ -77,7 +77,7 @@ jobs:
             fi
           done
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio
+          sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev ccache rsync device-tree-compiler cpio kmod
       - name: Check phone tooling
         run: |
           python3 -m unittest discover -s tests -p 'test_oneplus13*.py' -v

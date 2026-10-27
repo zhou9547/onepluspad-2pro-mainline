@@ -33,6 +33,28 @@ def check_config(path):
         raise ValueError(f'Unrelated platform families enabled by mistake: {enabled}')
 
 
+def check_module_indexes(archive, release):
+    prefix = 'lib/modules/' + release + '/'
+    members = {m.name.removeprefix('./'): m for m in archive.getmembers()}
+    for name in ['modules.dep', 'modules.dep.bin', 'modules.alias', 'modules.alias.bin']:
+        item = members.get(prefix + name)
+        if item is None or not item.isfile() or not 0 < item.size <= 16 * 1024 * 1024:
+            raise ValueError('Missing usable module index: ' + name)
+    payloads = {name[len(prefix):] for name, item in members.items()
+                if name.startswith(prefix) and item.isfile() and
+                name.endswith(('.ko', '.ko.zst', '.ko.xz', '.ko.gz'))}
+    rows = {}
+    for line in archive.extractfile(members[prefix + 'modules.dep']).read().decode().splitlines():
+        key, separator, dependencies = line.partition(':')
+        if not separator or key in rows or key not in payloads:
+            raise ValueError('Invalid module dependency index')
+        rows[key] = dependencies.split()
+        if not set(rows[key]) <= payloads:
+            raise ValueError('Module dependency points outside the delivered payload')
+    if not payloads or set(rows) != payloads:
+        raise ValueError('Module dependency index does not cover every delivered module')
+
+
 def verify_artifacts(out):
     manifest = json.loads((out / 'manifest.json').read_text())
     if manifest['device'] != 'oneplus,dodge' or manifest['hardware_tested'] is not False:
@@ -280,6 +302,7 @@ def verify_artifacts(out):
     if stat.S_IFMT(console['mode']) != stat.S_IFCHR or (console['major'], console['minor']) != (5, 1):
         raise ValueError('Wrong console device in initramfs')
     with tarfile.open(out / 'modules.tar.gz') as archive:
+        check_module_indexes(archive, manifest['kernel_release'])
         names = [member.name for member in archive.getmembers()]
         config = (out / 'kernel.config').read_text().splitlines()
         for setting, filename in [('CONFIG_TOUCHSCREEN_DODGE_S3910=m', 'dodge-s3910.ko'),
