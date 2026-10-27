@@ -20,6 +20,8 @@ class LocalizationAndSsh(unittest.TestCase):
         self.assertIn('LANG=zh_CN.UTF-8',self.rootfs)
         self.assertIn('Language=zh_CN.UTF-8',self.bringup)
         self.assertIn("('ibus', 'libpinyin')",self.bringup)
+        self.assertLess(self.bringup.index('systemctl restart gdm'),
+                        self.bringup.index('gsettings set org.gnome.desktop.input-sources'))
 
     def test_ssh_server_is_enabled_without_root_or_shared_host_keys(self):
         self.assertIn('openssh-server',self.image['packages'])

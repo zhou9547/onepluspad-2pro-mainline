@@ -70,10 +70,20 @@ EOF
     chmod 0600 /var/lib/AccountsService/users/a
     printf 'run_im ibus\n' > /home/a/.xinputrc
     chown a:a /home/a/.xinputrc
-    runuser -u a -- dbus-run-session -- gsettings set org.gnome.desktop.input-sources sources "[('xkb', 'us'), ('ibus', 'libpinyin')]"
-    runuser -u a -- dbus-run-session -- gsettings set org.gnome.system.locale region 'zh_CN'
     grep -q '^GSK_RENDERER=cairo$' /etc/environment || echo GSK_RENDERER=cairo >> /etc/environment
     python3 /usr/libexec/oneplus13-ram-desktop-check.py --configure
     timeout -k 1 6 systemctl restart gdm
+    for attempt in $(seq 1 15); do
+        test -S /run/user/1000/bus && break
+        sleep 1
+    done
+    test -S /run/user/1000/bus
+    runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+        gsettings set org.gnome.desktop.input-sources sources \
+        "[('xkb', 'us'), ('ibus', 'libpinyin')]"
+    runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+        gsettings set org.gnome.system.locale region zh_CN
     echo QUALIFIED_DESKTOP_TOUCH_BLUETOOTH_STARTED
 fi
