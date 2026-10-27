@@ -1,3 +1,24 @@
+## GNOME rotation re-login root cause, 2026-10-27
+
+Owner rotation testing exposed two reproducible GNOME Shell exits. The GDM
+journal identifies a fatal Mesa 26.2.3 release-build assertion:
+`src/compiler/glsl/ir.cpp`, `ir_constant::is_value(float, int)`, followed by
+signal6. Autologin itself was configured correctly. GDM therefore recovered to
+a greeter, which looked like a re-login rather than a compositor crash.
+
+Disabling Ubuntu Dock and animations did not stop the crash. A RAM-only control
+using the distribution's Mesa 26.0.8 kept the Wayland user session active after
+another owner rotation. The temporary control disabled Ubuntu Dock so its
+temporarily absent sidebar was expected and is not part of the fix.
+
+Installed desktop Mesa builds now use `b_ndebug=true`, matching Mesa's normal
+production release semantics: the existing unsupported-constant fallback
+returns false instead of aborting the graphical session. Probe and GPU diagnosis
+profiles remain assertion-enabled. The Freedreno A830 device support and the
+project Mesa payload remain present. Packaging rejects a desktop build without
+the release flag. A new exact image and repeated owner rotation are still
+required before accepting this fix.
+
 ## Dual-band WiFi and joint hardware regression, 2026-10-27
 
 Source `976718cb9ef7007235d161f7deaaec5cbf55a258`, complete Actions

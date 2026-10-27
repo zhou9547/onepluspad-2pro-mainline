@@ -57,7 +57,11 @@ def main():
         libdir = 'lib/aarch64-linux-gnu' if content else 'lib'
         drivers = 'freedreno,softpipe' if content else 'freedreno'
         flags = [f'--prefix={prefix}', f'--libdir={libdir}', '--buildtype=release',
-                 '--wrap-mode=nofallback', '-Db_ndebug=false',
+                 '--wrap-mode=nofallback',
+                 # Keep assertion-enabled diagnostics in probe builds. Installed
+                 # desktop builds use Mesa's production release semantics: the
+                 # GLSL fallback returns false instead of aborting GNOME Shell.
+                 '-Db_ndebug=' + ('true' if args.profile in ('desktop', 'gpu-2404') else 'false'),
                  f'-Dgallium-drivers={drivers}', '-Degl=enabled',
                  '-Dgbm=enabled', '-Dgles1=disabled', '-Dgles2=enabled',
                  '-Dllvm=disabled', '-Dgallium-va=disabled', '-Dvideo-codecs=[]',

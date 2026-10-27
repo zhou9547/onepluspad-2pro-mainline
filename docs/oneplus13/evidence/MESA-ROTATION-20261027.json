@@ -1,0 +1,18 @@
+{
+  "scope": "OWNER_INTERACTIVE_ROTATION_REGRESSION",
+  "source_commit_before_fix": "976718cb9ef7007235d161f7deaaec5cbf55a258",
+  "source_commit_without_fix": "ed6cd58539226af3ceff1524ddb2bff47819440b",
+  "observed_failures": 2,
+  "failure": "gnome-shell SIGABRT in Mesa 26.2.3 GLSL ir_constant::is_value assertion after monitor rotation",
+  "gnome_shell_signal": 6,
+  "autologin_configuration_present": true,
+  "root_cause": "runtime Mesa assertion abort, followed by GDM returning to greeter",
+  "dock_disabled_and_animations_disabled": "still reproduced; not caused by Ubuntu Dock animation",
+  "distribution_mesa_control": "Mesa 26.0.8 remained in an active Wayland session after owner rotation",
+  "control_limitation": "Ubuntu Dock was disabled during the control, so sidebar absence was expected",
+  "fix": "build installed desktop Mesa with b_ndebug=true while retaining assertion-enabled probe/gpu diagnostics",
+  "preserves_freedreno_a830_build": true,
+  "phone_operations": 0,
+  "partition_writes": 0,
+  "new_image_hardware_test": "pending"
+}

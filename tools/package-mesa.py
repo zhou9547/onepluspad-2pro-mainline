@@ -35,6 +35,7 @@ def main():
     if (result['input_sha256'] != sha(build / 'input.json')
             or result['profile'] != 'desktop'
             or result['prefix'] != '/usr/lib/erhai/mesa'
+            or '-Db_ndebug=true' not in identity['flags']
             or identity['source']['sha256'] != source['sha256']
             or identity['source']['version'] != source['version']
             or [p['upstream_commit'] for p in identity['source']['patches']]
