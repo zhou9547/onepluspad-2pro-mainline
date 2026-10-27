@@ -13,8 +13,8 @@ radio=importlib.util.module_from_spec(spec);spec.loader.exec_module(radio)
 class RadioFacts(unittest.TestCase):
     def test_distinguishes_disabled_passive_dfs_and_6ghz(self):
         text='''Wiphy private-radio
-        * 2437 MHz [6] (20.0 dBm)
-        * 5180 MHz [36] (23.0 dBm) (no IR)
+        * 2437.0 MHz [6] (20.0 dBm)
+        * 5180.0 MHz [36] (23.0 dBm) (no IR)
         * 5260 MHz [52] (20.0 dBm) (radar detection)
         * 5745 MHz [149] (disabled)
         * 5975 MHz [5] (23.0 dBm)

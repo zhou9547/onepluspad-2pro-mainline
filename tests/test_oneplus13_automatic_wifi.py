@@ -107,6 +107,16 @@ class Checks(unittest.TestCase):
         self.assertTrue(result['band_pass'] and result['automatic_acceptance_pass'])
         self.assertEqual(result['associated_band'],'2.4GHz')
 
+    def test_iw_decimal_whole_mhz_link_output_is_supported(self):
+        base=Fake()
+        def link(args,seconds):
+            if args[0]=='iw':return 0,'freq: 5180.0\n'
+            return base(args,seconds)
+        link.calls=base.calls
+        result=self.call(link,{'ssid':'offline-network','password':'offline-secret-value','band':'a'})
+        self.assertTrue(result['band_pass'] and result['automatic_acceptance_pass'])
+        self.assertEqual(result['link_frequency_mhz'],5180)
+
     def test_link_query_failure_cannot_pass(self):
         result=self.call(Fake(fail='iw',fail_status=127))
         self.assertFalse(result['band_pass'] or result['http_pass'])

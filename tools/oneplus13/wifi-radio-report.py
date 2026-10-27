@@ -11,7 +11,7 @@ def channel_facts(text):
     radios=[]
     for block in re.split(r'^Wiphy ', text, flags=re.M)[1:]:
         bands={'2.4GHz': [], '5GHz': [], '6GHz': []}
-        for match in re.finditer(r'^\s*\* ([0-9]{4}) MHz \[[0-9]+\]([^\n]*)$', block, re.M):
+        for match in re.finditer(r'^\s*\* ([0-9]{4})(?:\.0+)? MHz \[[0-9]+\]([^\n]*)$', block, re.M):
             frequency=int(match[1]); flags=match[2].lower()
             band=('2.4GHz' if 2400 <= frequency <= 2500 else
                   '5GHz' if 4900 <= frequency < 5925 else

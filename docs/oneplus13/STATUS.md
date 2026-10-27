@@ -2,7 +2,9 @@
 
 Based on run91's complete qualified image. WiFi now constrains an explicitly
 requested band and verifies the actual connected frequency before accepting
-traffic. A read-only channel/domain report supports 5 GHz diagnosis. A separate
+traffic. A stock-country hint is allowed once while disconnected, with an
+acknowledgement from the selected self-managed PHY; channel/SAR checks remain.
+A read-only channel/domain report supports 5 GHz diagnosis. A separate
 phone-only libssc patch fixes the boolean/uint/float property declarations
 behind run81's availability assertion. The full source workflow builds and
 packages a source-bound, dormant metadata-only probe. Native Actions and joint

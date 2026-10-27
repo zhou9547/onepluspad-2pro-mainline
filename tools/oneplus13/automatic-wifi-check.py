@@ -62,12 +62,64 @@ def run(argv, seconds=6):
         return 126, 'executable unavailable'
 
 
+def set_stock_country(iface, country, command):
+    """One disconnected user hint; require the selected self-managed PHY ack.
+
+    The private input must come from the owner's stock device in the same
+    location. This never clears channel flags or changes SAR/power tables.
+    """
+    if not isinstance(country,str) or not re.fullmatch('[A-Z]{2}',country):
+        raise ValueError('Invalid stock country code')
+    result={'country_hint_sent':False,'country_phy_acknowledged':False}
+    rc,link=command('country_link_guard',['iw','dev',iface,'link'],4)
+    if rc or link.strip()!='Not connected.':
+        result['country_refused_associated_or_unknown']=True
+        return result
+    rc,info=command('country_phy',['iw','dev',iface,'info'],4)
+    phys=re.findall(r'^\s*wiphy ([0-9]+)\s*$',info,re.M)
+    if rc or len(phys)!=1:return result
+    phy=phys[0]
+    def acknowledged(text):
+        blocks=re.split(r'(?m)^phy#',text)
+        selected=[b for b in blocks[1:] if re.match(re.escape(phy)+r' \(self-managed\)\s*\n',b)]
+        return len(selected)==1 and re.findall(r'(?m)^country ([A-Z0-9]{2}):',selected[0])==[country]
+    rc,reg=command('country_before',['iw','reg','get'],4)
+    if rc:return result
+    if acknowledged(reg):
+        result['country_phy_acknowledged']=True
+        return result
+    # Recheck immediately before the mutation; a GUI/autoconnect race is a
+    # refusal, never permission to change country on an associated link.
+    rc,link=command('country_link_recheck',['iw','dev',iface,'link'],4)
+    if rc or link.strip()!='Not connected.':
+        result['country_refused_associated_or_unknown']=True
+        return result
+    rc,_=command('country_hint',['iw','reg','set',country],4)
+    result['country_hint_sent']=rc==0
+    if rc:return result
+    deadline=time.monotonic()+8
+    for observation in range(6):
+        remaining=deadline-time.monotonic()
+        if remaining<=0:break
+        rc,reg=command('country_ack',['iw','reg','get'],min(3,remaining))
+        result['country_ack_observations']=observation+1
+        if rc:return result
+        if acknowledged(reg):
+            result['country_phy_acknowledged']=True
+            break
+        time.sleep(min(.5,max(0,deadline-time.monotonic())))
+    return result
+
+
 def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None):
     ssid, password = credentials['ssid'], credentials['password']
     probe_url = credentials.get('http_probe_url', 'http://example.com/')
     band = credentials.get('band')
     if band not in (None, 'a', 'bg'):
         raise ValueError('Invalid requested WiFi band')
+    country=credentials.get('stock_country_code')
+    if country is not None and (not isinstance(country,str) or not re.fullmatch('[A-Z]{2}',country)):
+        raise ValueError('Invalid stock country code')
     if not isinstance(ssid, str) or not 1 <= len(ssid.encode()) <= 32:
         raise ValueError('Invalid SSID length')
     if not isinstance(password, str) or not 8 <= len(password) <= 63 or '\n' in password or '\r' in password:
@@ -114,6 +166,9 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     rc, _ = command('managed', ['nmcli', '--wait', '4', 'device', 'set', iface, 'managed', 'yes'], 6)
     if rc:
         return result
+    if country is not None:
+        result.update(set_stock_country(iface,country,command))
+        if not result['country_phy_acknowledged']:return result
     rc, device_path = command('device_path', ['nmcli', '--wait', '4', '-g', 'GENERAL.DBUS-PATH', 'device', 'show', iface], 6)
     device_path = device_path.strip()
     if rc or not re.fullmatch(r'/org/freedesktop/NetworkManager/Devices/[0-9]+',device_path):
@@ -194,7 +249,7 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     # Profile identity and SSID do not prove the actual RF band. Read the
     # connected link through nl80211; never accept a 2.4GHz fallback as 5GHz.
     rc, link = command('link_frequency', ['iw', 'dev', iface, 'link'], 4)
-    frequencies = re.findall(r'^\s*freq:\s*([0-9]+)\s*$', link, re.M)
+    frequencies = re.findall(r'^\s*freq:\s*([0-9]{4})(?:\.0+)?\s*$', link, re.M)
     frequency = int(frequencies[0]) if len(frequencies) == 1 and not rc else None
     actual_band = ('2.4GHz' if frequency and 2400 <= frequency <= 2500 else
                    '5GHz' if frequency and 4900 <= frequency < 5925 else

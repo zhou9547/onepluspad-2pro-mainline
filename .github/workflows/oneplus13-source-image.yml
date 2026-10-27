@@ -32,6 +32,7 @@ jobs:
       - if: inputs.runtime_qemu
         run: sudo apt-get install -y qemu-system-arm
       - uses: actions/cache/restore@v4
+        id: kernel-cache
         with:
           path: ~/.cache/ccache
           key: oneplus13-source-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/**') }}
@@ -41,6 +42,11 @@ jobs:
       - run: bash tools/oneplus13/source-image.sh kernel
         env:
           CCACHE_MAXSIZE: 3G
+      - uses: actions/cache/save@v4
+        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/.cache/ccache
+          key: ${{ steps.kernel-cache.outputs.cache-primary-key }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:

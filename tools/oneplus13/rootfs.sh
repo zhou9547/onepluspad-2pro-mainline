@@ -31,6 +31,8 @@ test -r "$root/etc/ssl/certs/ca-certificates.crt"
 cat > "$root/etc/apt/apt.conf.d/80bootstrap-ca" <<'EOF'
 Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";
 Acquire::Retries "5";
+Acquire::Languages "none";
+Acquire::https::Timeout "30";
 EOF
 # The archive's symlink layout is preserved; never copy the host machine identity.
 printf 'nameserver 1.1.1.1\n' > "$root/etc/resolv.conf"

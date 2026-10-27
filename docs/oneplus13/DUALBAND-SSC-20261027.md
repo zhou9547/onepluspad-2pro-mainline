@@ -7,6 +7,20 @@ evidence. They remain regression requirements for a new candidate.
 
 ## WiFi
 
+The refreshed owner stock observation confirms that the current 5 GHz target
+is actually connected on 5240 MHz and provides its country code. The older
+Linux PHY dump advertises 25 enabled 5 GHz channels with no-IR, including
+5240 MHz; this is a real regulatory-state difference, not proof that the driver
+has no 5 GHz hardware support. Private runtime input `stock_country_code`
+can request that stock code once, only after two disconnected-link checks.
+The selected self-managed PHY must acknowledge it. A changed global domain,
+another PHY, a failed command or a mere request acknowledgement cannot pass.
+No country change is made on an associated link, and no channel flags or
+SAR/power tables are overridden. This hypothesis still requires a joint test.
+
+The parser accepts the real `iw` whole-MHz decimal format (`5240.0`) as well
+as integer output. Archived PHY output exposed this before a phone boot.
+
 Private runtime credentials may select `band: "a"` for 5 GHz or `band: "bg"`
 for 2.4 GHz. NetworkManager receives the matching band constraint. The verifier
 then reads the actual link frequency with `iw dev <interface> link`; a missing,
@@ -22,6 +36,12 @@ to diagnose an invisible 5 GHz target before choosing a driver change. No
 unproven firmware swap, channel-flag bypass or power-policy SET is introduced.
 External DNS/ping/HTTPS diagnostics now require explicit runtime opt-in;
 the current owner's default remains LAN HTTP only.
+
+The first full run built kernel/Mesa/SSC successfully; its GNOME job failed
+on the signed Ubuntu snapshot provider's 502/503 responses. New builds avoid
+unneeded APT translation indexes, retain finite transport retries and TLS,
+and save the populated kernel ccache after a cache miss. The snapshot date and
+archive-signature requirements are unchanged.
 
 ## SSC
 
