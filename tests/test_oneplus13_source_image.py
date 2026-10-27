@@ -21,4 +21,13 @@ class SourceImageTests(unittest.TestCase):
             self.assertIn(value,workflow)
         self.assertIn('needs: [kernel, rootfs, mesa]',workflow)
 
+    def test_native_entry_is_full_qualified_python_implementation(self):
+        helper=(ROOT/'devices/oneplus13/start-native-display').read_text()
+        runtime=(ROOT/'devices/oneplus13/native-desktop.py').read_text()
+        self.assertTrue(helper.startswith('#!/usr/bin/python3\n'))
+        self.assertEqual(helper.count('@KERNEL_RELEASE@'),1)
+        self.assertEqual(helper.replace('# kernel release: @KERNEL_RELEASE@\n',''),runtime)
+        self.assertIn('ONEPLUS13_NATIVE_PREFLIGHT_OK_NOT_ACTIVATED',helper)
+        self.assertIn("['/usr/sbin/modprobe','--ignore-install',module]",helper)
+
 if __name__=='__main__':unittest.main()

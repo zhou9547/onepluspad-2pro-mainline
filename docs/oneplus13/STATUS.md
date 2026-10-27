@@ -1,3 +1,14 @@
+## Full native entry restored before any new phone boot
+
+The first fresh private package still inherited the obsolete shell diagnostics
+entry. It was detected offline: no phone reboot or RAM boot was sent. Run89's
+unused ledger is explicitly halted and preserved. The public entry now uses
+the complete Python native-desktop implementation plus its kernel-release
+stamp, matching the run88 helper body. Packaging rejects a diagnostic stub.
+The identity fixture matrix now exercises this actual Python entry point.
+A new complete candidate and exact private QEMU check are prepared as run90;
+hardware WiFi/HTTP acceptance still requires the registered USB phone to appear.
+
 ## Fresh source build qualified, 2026-10-27
 
 Actions 40428687718 at 06fcb43fcaac24a932b9880b5df3097a2d37f686 passed

@@ -63,8 +63,12 @@ def main():
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
+    native_helper=(REPO/'devices/oneplus13/start-native-display').read_bytes()
+    canonical=(REPO/'devices/oneplus13/native-desktop.py').read_bytes()
+    if not native_helper.startswith(b'#!/usr/bin/python3\n') or native_helper.replace(b'# kernel release: @KERNEL_RELEASE@\n',b'')!=canonical:
+        raise ValueError('Complete image requires the full qualified Python display helper, not a diagnostic stub')
     packed,_=build_initramfs((kernel/'initramfs.cpio.gz').read_bytes(),(kernel/'modules.tar.gz').read_bytes(),release,None,
-        (REPO/'devices/oneplus13/start-native-display').read_bytes(),encoded_profile=(private/'display-profile.bin').read_bytes())
+        native_helper,encoded_profile=(private/'display-profile.bin').read_bytes())
     packed,derive_report=derive(packed)
     from common import make_cpio
     files=read_cpio(gzip.decompress(packed))
@@ -100,6 +104,7 @@ def main():
         'public_rootfs_sha256':rm['rootfs_sha256'],'modules_sha256':sha256(kernel/'modules.tar.gz'),
         'kernel_sha256':sha256(kernel/'Image.gz'),'private_profile_from_existing_qualified_data':True,
         'old_kernel_or_rootfs_used':False,'old_runtime_package_overlay_used':False,
+        'full_qualified_python_display_helper':True,
         'initial_watchdog_seconds':600,'post_handoff_deadline_seconds':300,
         'initial_watchdog_survives_switch_root':False,'phone_operations':0,'partition_writes':0,
         'hardware_tested':False}
