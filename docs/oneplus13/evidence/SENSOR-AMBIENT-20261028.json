@@ -1,0 +1,67 @@
+{
+  "scope": "SANITIZED_JOINT_RAM_AMBIENT_LIGHT_BOUNDARY",
+  "source_commit": "5d1fa4f8254870c59858225c3b1f9da98b8058a8",
+  "actions_run": 40558128204,
+  "boot": {
+    "returned_to_android": true,
+    "elapsed_seconds": 225.1,
+    "baseline_metadata_match": true,
+    "partition_writes": 0,
+    "kernel_health_pass": true,
+    "kernel_fault_counts_all_zero": true
+  },
+  "wifi": {
+    "dualband_pass": true,
+    "five_ghz": {
+      "frequency_mhz": 5240,
+      "association": true,
+      "dhcp": true,
+      "default_route": true,
+      "lan_http_status": 200
+    },
+    "two_point_four_ghz": {
+      "frequency_mhz": 2437,
+      "association": true,
+      "dhcp": true,
+      "default_route": true,
+      "lan_http_status": 200
+    }
+  },
+  "preserved_features": {
+    "project_mesa_render_and_readback": true,
+    "ordinary_user_wayland_gnome": true,
+    "settings_process_and_bus": true,
+    "touch_device_present": true,
+    "bluetooth_powered": true,
+    "obex_sender_present": true,
+    "battery_telemetry_present": true,
+    "physical_touch_tested": false,
+    "bluetooth_peer_receipt_tested": false
+  },
+  "ssc": {
+    "metadata_only": true,
+    "sample_or_stream_requested": false,
+    "default_ambient_light_lookup": "empty",
+    "non_default_uid_lookup": "nonempty",
+    "all_returned_ambient_light_candidates_enumerated": true,
+    "ambient_light_available_candidate_found": false,
+    "types": {
+      "accel": "available",
+      "gyro": "available",
+      "mag": "available",
+      "ambient_light": "unavailable"
+    }
+  },
+  "android_observation": {
+    "active_android_light_type": "OPLUS Fusion Light Sensor Next Gen",
+    "underlying_phone_als_rgb_family": "tcs3720",
+    "vendor_sensor_types_observed": [
+      "qti.sensor.high_pwm_rgb",
+      "qti.sensor.wise_rgb",
+      "qti.sensor.light_rear"
+    ]
+  },
+  "classification": "VENDOR_FUSED_LIGHT_REQUIRES_SEPARATE_LINUX_ADAPTER",
+  "joint_acceptance_pass": false,
+  "next_step": "Implement and offline-qualify the exact OPLUS fused-light or high-PWM measurement ABI; never enable a stream until calibration, units and cleanup are reviewed."
+}

@@ -1,3 +1,30 @@
+## Joint WiFi, desktop, and fused ambient-light boundary, 2026-10-28
+
+Source `5d1fa4f8254870c59858225c3b1f9da98b8058a8`, complete Actions
+[40558128204](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40558128204).
+The single joint RAM boot returned to Android in 225.1 seconds with matching
+baseline metadata and zero partition writes. The complete kernel history had
+zero IOMMU faults, panics, OOMs, GPU faults, WLAN restarts, ath12k failures,
+invalid runtime IDs and VDEV failures.
+
+5 GHz passed a directed scan, association at 5240 MHz, IPv4 addressing, default
+route and interface-bound owner LAN HTTP 200. 2.4 GHz passed the same pipeline
+at 2437 MHz. The read-only cache simultaneously contained both targets. The
+project Mesa 26.2.3 renderer, ordinary user Wayland GNOME session, settings
+process/bus, touch-device discovery, Bluetooth power and OBEX sender, battery
+telemetry and regulatory facts were retained.
+
+The libssc default-only light lookup was followed by a non-default UID lookup;
+that response was non-empty, so the probe enumerated every returned UID and
+read its metadata without enabling a stream. Every fused-light UID still
+reported `available=false`. The Android SensorService independently exposes the
+active `android.sensor.light` as `OPLUS Fusion Light Sensor Next Gen`, while
+`tcs3720` high-PWM light/RGB remain separate vendor sensors. The remaining work
+is a reviewed Linux implementation of the vendor fused-light input, not another
+country/SAR toggle. The failed metadata inventory is immutable evidence; do not
+mark SSC or overall joint acceptance as passed. See
+`evidence/SENSOR-AMBIENT-20261028.json`.
+
 ## Chinese desktop and SSH defaults, 2026-10-27
 
 The image now pins Ubuntu's Simplified Chinese language packs, GNOME Chinese

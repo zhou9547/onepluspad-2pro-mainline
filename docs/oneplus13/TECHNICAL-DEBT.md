@@ -1,3 +1,21 @@
+## Fused ambient light remains unavailable, 2026-10-28
+
+Source `5d1fa4f8254870c59858225c3b1f9da98b8058a8` passed the complete Actions
+build and one joint RAM regression. Dual-band WiFi, Mesa/GNOME, touch-device
+discovery, Bluetooth, battery and kernel-health gates passed again. SSC
+enumerated non-default `ambient_light` UIDs after the default lookup was empty,
+but every returned candidate was unavailable; no stream was opened. Android
+shows the active light as `OPLUS Fusion Light Sensor Next Gen`, with `tcs3720`
+high-PWM light/RGB exposed as separate vendor sensor types. Generic libssc's
+`ambient_light` driver therefore cannot by itself reproduce this phone's fused
+light path.
+
+The next implementation must consume the exact vendor fused-light or high-PWM
+measurement ABI, preserve calibration and wake-up semantics, and remain
+offline-tested before a stream is enabled. Do not substitute the rear light,
+hardcode lux, or relabel SSC/a joint run as accepted while ambient light remains
+unavailable.
+
 ## Chinese desktop and SSH defaults, 2026-10-27
 
 The image now pins Ubuntu's Simplified Chinese language packs, GNOME Chinese
