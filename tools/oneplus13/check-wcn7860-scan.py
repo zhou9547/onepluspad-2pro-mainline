@@ -67,7 +67,7 @@ struct ath12k {
  int data_lock;
  struct {int tx_empty_waitq, num_tx_pending;} dp;
  struct {struct ath12k_wmi_scan_req_arg *range_req;
- u32 range_next, range_split_freq; bool range_tx_paused;
+ u32 range_next, range_split_freq; bool range_tx_paused; int range_trace_count;
  struct {bool is_up;} *arvif;} scan;
 };
 static struct ieee80211_hw hw;
@@ -83,6 +83,8 @@ static void ieee80211_wake_queues(struct ieee80211_hw *h) {(void)h;stopped=0;wak
 static void synchronize_net(void) {}
 static void msleep(u32 n) {assert(n==7); waits++;}
 #define atomic_read(p) (*(p))
+#define atomic_inc_return(p) (++(*(p)))
+#define ath12k_info(...) ((void)0)
 #define wait_event_timeout(q,condition,timeout) ((void)(q),(void)(timeout),(condition)?1:0)
 static int ath12k_start_scan(struct ath12k *ar,struct ath12k_wmi_scan_req_arg *arg) {
  assert(ar->scan.range_req); assert(arg!=ar->scan.range_req);

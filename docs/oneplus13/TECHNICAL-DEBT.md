@@ -1,3 +1,37 @@
+## Complete Actions image and second joint round, 2026-10-27
+
+Source `18f59c902bb3912dbd1912ece99a03fe4f4e9884`, Actions
+[40467791503](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40467791503)
+built all kernel/GNOME/Mesa/SSC/image jobs successfully. Downloaded final bytes,
+all 71 firmware files, module release, qualified DTB and full native helper
+were independently read back and verified. Actions is the faster current path.
+
+Its single joint RAM boot returned to Android in 258.1s, with seven baseline
+properties equal and zero partition writes. 5 GHz target remained absent.
+2.4 GHz associated at 2437 MHz and obtained IPv4/default route. LAN HTTP timed
+out; post-return host preflight found the owner's host endpoint was not running.
+That is a missing test prerequisite, not evidence that RF data transport failed.
+The next runner must establish and self-check a bounded host LAN HTTP fixture.
+
+SSC directly captured accel/gyro/mag available, ambient_light unavailable, all
+four completed, and both units stopped. No samples. Hardware Adreno 830 render
+readback passed; the ordinary user Wayland/settings session exited during its
+stability check. Do not inherit historical full desktop acceptance for this image.
+
+No IOMMU faults or hardware restart signatures were found in full-history
+checks, but retained logs show repeated `failed to start next scan range: -110`.
+The previous health classifier missed this new scan error; its zero counts do
+not qualify the scan. Hold this candidate. Generic ath12k failure and OOM gates
+now supplement the earlier signatures. Keep firmware/regulatory/DTB inputs fixed.
+The next phone-only patch retains at most 32 numeric scan request/event rows
+per radio to establish the first failing range and firmware event sequence.
+
+An independent SSC draft demonstrated another actual bug: integer accumulation
+misclassifies valid floating mount matrices as all zero. A regression injects
+synthetic protobuf attributes into the real receive callback. The old code fails;
+the correction preserves nonzero matrices and retains the genuine zero fallback.
+Release and ASan/UBSan pass. This neither establishes phone axes nor enables streams.
+
 ## Continuation: scan recovery and SSC metadata, 2026-10-27
 
 First joint RAM round returned to Android in 268.1s; seven baseline keys

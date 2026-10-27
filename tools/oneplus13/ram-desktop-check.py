@@ -164,8 +164,10 @@ def check(check_wifi=True):
     for index in range(3):
         if index:
             time.sleep(5)
-        if not user_session(uid) or not process_ids(uid, 'gnome-control-center'):
-            raise ValueError('user session or settings application exited')
+        if not user_session(uid):
+            raise ValueError('ordinary user session exited')
+        if not process_ids(uid, 'gnome-control-center'):
+            raise ValueError('settings application exited')
         command(user + ['gdbus', 'call', '--session', '--dest', 'org.gnome.Settings',
                         '--object-path', '/org/gnome/Settings', '--method', 'org.freedesktop.DBus.Peer.Ping'])
         COMPLETED['settings_bus_replied'] = True

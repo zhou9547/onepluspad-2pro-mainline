@@ -14,6 +14,8 @@ PATTERNS={
     'wifi_hardware_restart':r'Hardware restart was requested',
     'wifi_invalid_runtime_id':r'invalid pdev_id[^\n]*mgmt_rx_event|invalid vdev id',
     'wifi_vdev_failure':r'failed to (?:start vdev|delete WMI vdev|submit WMI_VDEV_DELETE)',
+    'wifi_driver_failure':r'ath12k[^\n]*(?:failed|timed out|timeout|invalid|crash|error)',
+    'out_of_memory':r'Out of memory:|oom-kill:|Killed process [0-9]+',
 }
 
 def classify(text):

@@ -8,6 +8,12 @@ spec=importlib.util.spec_from_file_location('health',path)
 health=importlib.util.module_from_spec(spec);spec.loader.exec_module(health)
 
 class Health(unittest.TestCase):
+    def test_range_timeout_and_oom_are_not_clean_health(self):
+        result=health.classify('ath12k_wifi7_pci: failed to start next scan range: -110\nOut of memory: Killed process 12 (gnome-shell)\n')
+        self.assertFalse(result['pass'])
+        self.assertEqual(result['counts']['wifi_driver_failure'],1)
+        self.assertEqual(result['counts']['out_of_memory'],2)
+
     def test_dma_fault_and_recovery_cannot_be_labeled_healthy(self):
         text='''[ 175.3] arm-smmu 15000000.iommu: Unhandled context fault: fsr=0x402
 [ 176.2] ieee80211 phy0: Hardware restart was requested

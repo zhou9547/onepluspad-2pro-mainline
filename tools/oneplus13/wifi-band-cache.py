@@ -12,6 +12,9 @@ def classify(text,config):
                             and (normalized:=freq.strip().removesuffix('MHz').strip()).isdecimal()})
         result['targets'].append({'seen':bool(frequencies),'frequencies_mhz':frequencies})
     result['cache_rows']=len(rows)
+    frequencies=[int(value) for _,sep,freq in rows if sep and (value:=freq.strip().removesuffix('MHz').strip()).isdecimal()]
+    result['band_rows']={name:sum(low<=f<high for f in frequencies)
+                         for name,low,high in [('2.4GHz',2400,2501),('5GHz',4900,5925),('6GHz',5925,7126)]}
     return result
 
 def main():

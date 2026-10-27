@@ -10,6 +10,8 @@ EXTRA='0001-add-metadata-only-discovery-guard.patch'
 EXTRA_SHA='9b4ff3c7b998eba366f7c29efcfcf84fd860974ccc237ea9a64c455356440212'
 PROPERTY_PATCH='0002-fix-sensor-property-value-types.patch'
 PROPERTY_SHA='7ed350b5a98f8e6c6e04e707746beafe8337ad0daf3d596a55f92c35b72e7f1c'
+MATRIX_PATCH='0003-preserve-nonzero-mount-matrices.patch'
+MATRIX_SHA='58e297539e90562165e12fe5c6924ae7f65ce062eb71e82759881fbc4b2f02d3'
 RUNTIME_LIBRARIES={'libprotobuf-c.so.1','libqmi-glib.so.5','libqrtr-glib.so.0','libmbim-glib.so.4'}
 
 def sha(path):
@@ -59,6 +61,9 @@ def main():
     properties=REPO/'tools/oneplus13/ssc-patches'/PROPERTY_PATCH
     if sha(properties)!=PROPERTY_SHA:raise ValueError('Phone property correction changed')
     patches.append(properties)
+    matrix=REPO/'tools/oneplus13/ssc-patches'/MATRIX_PATCH
+    if sha(matrix)!=MATRIX_SHA:raise ValueError('Phone matrix correction changed')
+    patches.append(matrix)
     for patch in patches:run(['patch','-d',source,'-p1','--batch','--fuzz=0','-i',patch],log)
     counts={}
     for kind,options in [('release',['--buildtype=release']),('sanitized',['--buildtype=debug','-Db_sanitize=address,undefined','-Db_lundef=false'])]:
@@ -122,7 +127,7 @@ def main():
         'integration_commit':integration_commit,
         'patches':[{'name':x.name,'sha256':sha(x)} for x in patches],
         'test_counts':counts,'one_way_metadata_policy_and_real_send_guard_tests_pass':True,
-        'original_delivery_encoding_regression_pass':True,'typed_sensor_properties_regression_pass':True,'original_qrtr_service_tests_run':False,
+        'original_delivery_encoding_regression_pass':True,'typed_sensor_properties_regression_pass':True,'actual_attribute_matrix_regression_pass':True,'original_qrtr_service_tests_run':False,
         'no_measurement_api_imported_by_probe':True,'lock_only_cli_pass':True,'leak_testing_claimed':False,
         'private_inputs_included':False,'services_or_installers_included':False,'hardware_eligible':False,
         'artifact_files':files,'runtime_libraries':runtime_libraries}

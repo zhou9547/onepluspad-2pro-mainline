@@ -69,7 +69,7 @@ def main():
     shutil.copyfile(REPO/'devices/oneplus13/desktop/qualified-bringup',dest);dest.chmod(0o755)
     # These scripts are repository source, installed in the image rather than
     # supplied by old host overlays during the hardware test.
-    for name in ['automatic-wifi-check.py','wifi-radio-report.py','ram-kernel-health.py','ram-clock-bridge.py','ram-desktop-check.py','ram-platform-prerequisites.sh','ram-display-prerequisites.py']:
+    for name in ['automatic-wifi-check.py','wifi-radio-report.py','wifi-band-cache.py','ram-kernel-health.py','ram-clock-bridge.py','ram-desktop-check.py','ram-platform-prerequisites.sh','ram-display-prerequisites.py']:
         dest=stage/'usr/libexec'/('oneplus13-'+name)
         shutil.copyfile(REPO/'tools/oneplus13'/name,dest);dest.chmod(0o755)
     # A source-bound probe is available for an explicitly reviewed metadata
