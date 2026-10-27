@@ -1,3 +1,15 @@
+## Full snapshot URI compatibility, 2026-10-27
+
+The first accelerated CI trial rejected APT's legitimate percent-escaped `+`
+and `~` in package versions before downloads. It did not weaken package hashes.
+Decode paths for validation while still rejecting traversal, encoded separators,
+foreign origins and unsupported hashes. A metadata-only isolated APT resolution
+using all twelve SHA256-verified indexes from three GPG-verified InRelease files
+now accepts all 727 resolved package rows, including 86 escaped URLs. No packages
+were installed. Eight prefetch tests and a new actual-health-classifier control
+pass. CI retains its public URI plan and timing report even when the job fails.
+Full rootfs performance remains pending the corrected Actions run.
+
 ## Rootfs transport and third joint round, 2026-10-27
 
 Full Actions [40491459981](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40491459981)

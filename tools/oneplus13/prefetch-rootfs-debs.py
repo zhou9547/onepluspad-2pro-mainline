@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 
 OWNER = b'oneplus13-rootfs-debs-v1\n'
 
@@ -37,9 +37,12 @@ def plan(text, base):
             raise ValueError('Malformed APT URI row')
         uri, name, size, checksum = fields
         parsed = urlsplit(uri)
+        decoded_path = unquote(parsed.path, errors='strict')
         if (not uri.startswith(base + 'pool/') or parsed.scheme != 'https' or
                 parsed.netloc != origin.netloc or parsed.query or parsed.fragment or
-                any(p in parsed.path for p in ('..', '%', '\\'))):
+                not re.fullmatch(r'/[A-Za-z0-9/._+~:-]+', decoded_path) or
+                any(part in ('.', '..') for part in decoded_path.split('/')) or
+                re.search(r'%(?:2f|5c)', parsed.path, re.I)):
             raise ValueError('Package outside pinned archive pool')
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.+%_~:-]*\.deb', name):
             raise ValueError('Unsafe package filename')

@@ -1,3 +1,11 @@
+## Full snapshot URI compatibility, 2026-10-27
+
+APT legitimately percent-escapes `+` and `~` in snapshot pool URLs. The first
+parallel-fetch trial rejected these before downloading; decode before validating
+safe paths, retain origin/traversal/separator/SHA256 checks. All 727 rows of a
+fresh isolated resolution from verified snapshot indexes now parse, including
+86 escaped URLs. Full corrected Actions build and timing are still required.
+
 ## Rootfs transport and third joint round, 2026-10-27
 
 Full Actions [40491459981](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40491459981)

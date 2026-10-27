@@ -51,8 +51,21 @@ class Idle(unittest.TestCase):
             draft.country_when_quiescent(wifi,'wlan-test','CN',fake)
         self.assertEqual(fake.sets,1)
     def test_effective_config_must_preserve_usb_and_have_no_wifi_exception(self):
-        for value in ['type:wifi',draft.USB_TOKEN+';except:type:wifi',draft.USB_TOKEN]:
+        for value in ['type:wifi',draft.USB_TOKEN+';except:type:wifi',draft.USB_TOKEN,
+                      draft.USB_TOKEN+';type:wifi;except:interface-name:wlan-test']:
             with self.subTest(value=value),self.assertRaises(ValueError):
                 draft.effective_config(lambda *a:(0,'[keyfile]\nunmanaged-devices='+value+'\n'))
+
+    def test_new_kernel_fault_stops_before_country_hint(self):
+        health_path=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-kernel-health.py'
+        health_spec=importlib.util.spec_from_file_location('quiescent_health',health_path)
+        health=importlib.util.module_from_spec(health_spec);health_spec.loader.exec_module(health)
+        fake=Fake();histories=iter(['healthy\n','ath12k_wifi7_pci: failed to start next scan range: -110\n'])
+        def run(args,seconds):
+            if args==['dmesg']:return 0,next(histories)
+            return fake(args,seconds)
+        with self.assertRaisesRegex(ValueError,'fault'):
+            draft.country_when_quiescent(wifi,'wlan-test','CN',run,health)
+        self.assertEqual(fake.sets,0)
 
 if __name__=='__main__':unittest.main()

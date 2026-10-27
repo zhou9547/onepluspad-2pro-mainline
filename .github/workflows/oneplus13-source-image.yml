@@ -88,6 +88,15 @@ jobs:
           path: cache/oneplus13-rootfs-debs
           key: ${{ steps.deb-cache.outputs.cache-primary-key }}
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rootfs-transport-${{ github.sha }}
+          path: |
+            out/oneplus13-rootfs-artifacts/apt-package-plan.txt
+            out/oneplus13-rootfs-artifacts/deb-prefetch.json
+          if-no-files-found: ignore
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
         with:
           name: source-gnome-${{ github.sha }}
           path: out/oneplus13-rootfs-artifacts/

@@ -23,6 +23,10 @@ class Prefetch(unittest.TestCase):
     def test_real_apt_epoch_filename_and_human_output(self):
         self.assertEqual(MOD.plan('Reading package lists...\n' + self.line(), BASE), [ROW])
 
+    def test_apt_percent_escaped_version_is_accepted(self):
+        row = (BASE + 'pool/main/x/x/x_1%2b2%7e3_arm64.deb', *ROW[1:])
+        self.assertEqual(MOD.plan(self.line(row), BASE), [row])
+
     def test_reject_untrusted_origin_paths_and_hashes(self):
         for uri in [ROW[0].replace('https:', 'http:'), ROW[0] + '?token=x',
                     ROW[0].replace('/pool/', '/pool/../'),
