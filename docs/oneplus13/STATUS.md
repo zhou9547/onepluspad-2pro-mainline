@@ -1,3 +1,25 @@
+## Host-clock freshness correction after first combined round, 2026-10-27
+
+The current `1dd42257...` image completed a RAM boot and returned to Android in
+199.8s with matched baseline metadata and zero partition writes. The 600-second
+timer was verified at runtime. SSC metadata and cleanup completed. Before WLAN
+PHY creation, the quiescent helper installed and reloaded the strict hold; the
+kernel remained free of DMA, panic, WCN7860 failure and restart signatures.
+
+The stage stopped because the RAM guest's wall clock is not synchronized. Its
+local `time.time()` compared the new Android observation with the wrong epoch
+and called it stale. The country hint and every manual WiFi command still did
+not run. Bind observation freshness to the validated host epoch already used by
+the ordinary WiFi checker, require that clock explicitly, and add a regression
+that rejects missing, future and over-one-hour-old host clocks. The failed trace
+also confirms the hold exists before the PHY and that both USB and all WiFi are
+excluded from NetworkManager while the PHY appears.
+
+The next single joint plan uses a separate evidence directory so the consumed
+single-use ledger remains immutable. Preserve the first round's clean kernel
+and hold evidence. Rebuild from the corrected source so the installed helper
+matches online Actions before retrying the combined WiFi/SSC/desktop round.
+
 ## Scan priority serialization and exact event meaning, 2026-10-27
 
 The pinned wmi.h defines event16 as DEQUEUED and reason1 as CANCELLED.

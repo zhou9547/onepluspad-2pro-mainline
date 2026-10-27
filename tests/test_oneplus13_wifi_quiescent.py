@@ -68,4 +68,13 @@ class Idle(unittest.TestCase):
             draft.country_when_quiescent(wifi,'wlan-test','CN',run,health)
         self.assertEqual(fake.sets,0)
 
+    def test_freshness_uses_host_clock_not_unsynchronized_guest_clock(self):
+        value='2026-10-27T12:47:07.193247+00:00'
+        imported=__import__('datetime').datetime
+        stamp=int(imported.fromisoformat(value).timestamp())
+        draft.stock_observation_fresh(value,stamp+60)
+        for rejected in [None,stamp-1,stamp+3601]:
+            with self.subTest(host_epoch=rejected),self.assertRaises(ValueError):
+                draft.stock_observation_fresh(value,rejected)
+
 if __name__=='__main__':unittest.main()

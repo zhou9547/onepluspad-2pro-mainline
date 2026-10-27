@@ -7,7 +7,7 @@ observation and an unmanaged, disconnected PHY permit a normal country hint.
 Failures before acknowledgment retain the hold. Any failure after release
 requires immediate recovery; this tool never retries or resets the driver.
 """
-import argparse,configparser,hashlib,importlib.util,json,os,re,subprocess
+import argparse,configparser,datetime,hashlib,importlib.util,json,os,re,subprocess
 from pathlib import Path
 
 CONFIG=b'[keyfile]\nunmanaged-devices+=type:wifi\n'
@@ -83,6 +83,13 @@ def owned(path):
         raise ValueError('Unexpected RAM preparation file')
 
 
+def stock_observation_fresh(captured_utc,host_epoch):
+    if not isinstance(host_epoch,int) or host_epoch<=0:raise ValueError('Host observation clock required')
+    try:stamp=datetime.datetime.fromisoformat(captured_utc).timestamp()
+    except (TypeError,ValueError):raise ValueError('Invalid stock observation time') from None
+    if not 0<=host_epoch-stamp<=3600:raise ValueError('Stock observation is stale')
+
+
 def hold(root,release,run=execute):
     guard(root,release,run)
     phy=root/'sys/class/ieee80211'
@@ -104,7 +111,7 @@ def hold(root,release,run=execute):
     return {'scope':'PRE_PHY_NETWORKMANAGER_HOLD','no_phy_before_hold':True,'country_hint_sent':False}
 
 
-def initialize(root,release,observation,observation_sha256,wifi,health,run=execute):
+def initialize(root,release,observation,observation_sha256,wifi,health,host_epoch=None,run=execute):
     guard(root,release,run);conf=root/REL;marker=root/MARKER
     owned(conf);owned(marker)
     if conf.read_bytes()!=CONFIG or json.loads(marker.read_text())!={'release':release,'config_sha256':digest(conf),'usb_policy_sha256':digest(root/USB_POLICY)}:
@@ -116,9 +123,7 @@ def initialize(root,release,observation,observation_sha256,wifi,health,run=execu
         not facts.get('target_5ghz_ssid_exact_match') or facts.get('scan_or_setting_change') is not False or
         len(facts.get('country_codes',[]))!=1 or len(facts.get('frequency_mhz',[]))!=1 or
         not 4900<=facts['frequency_mhz'][0]<5925):raise ValueError('Fresh matching stock 5 GHz observation required')
-    import datetime,time
-    stamp=datetime.datetime.fromisoformat(facts['captured_utc']).timestamp()
-    if not 0<=time.time()-stamp<=3600:raise ValueError('Stock observation is stale')
+    stock_observation_fresh(facts['captured_utc'],host_epoch)
     interfaces=[p.parent.name for p in (root/'sys/class/net').glob('*/phy80211')]
     if len(interfaces)!=1:raise ValueError('Exactly one WLAN interface required')
     iface=interfaces[0]
@@ -143,6 +148,7 @@ def module(name,path):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--mode',choices=['hold','initialize'],required=True)
     p.add_argument('--release',required=True);p.add_argument('--stock-observation',type=Path);p.add_argument('--stock-observation-sha256')
+    p.add_argument('--host-epoch',type=int)
     a=p.parse_args()
     if os.geteuid()!=0:raise ValueError('Root RAM orchestration required')
     if a.mode=='hold':result=hold(Path('/'),a.release)
@@ -150,5 +156,5 @@ if __name__=='__main__':
         if not a.stock_observation or not re.fullmatch('[a-f0-9]{64}',a.stock_observation_sha256 or ''):raise ValueError('Bound stock observation required')
         result=initialize(Path('/'),a.release,a.stock_observation,a.stock_observation_sha256,
             module('installed_wifi','/usr/libexec/oneplus13-automatic-wifi-check.py'),
-            module('installed_health','/usr/libexec/oneplus13-ram-kernel-health.py'))
+            module('installed_health','/usr/libexec/oneplus13-ram-kernel-health.py'),a.host_epoch)
     print('QUIESCENT_WIFI_PREPARATION '+json.dumps(result,sort_keys=True),flush=True)
