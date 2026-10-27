@@ -6,7 +6,9 @@ from io import BytesIO
 from pathlib import PurePosixPath
 import re
 import stat
+import struct
 import tarfile
+import zlib
 
 from common import make_cpio, read_cpio
 from spr import encode_profile
@@ -80,13 +82,23 @@ def module_closure(blob, release):
         return files, sorted(chosen)
 
 
-def build_initramfs(original, modules, release, xml, helper):
+def build_initramfs(original, modules, release, xml, helper, *, encoded_profile=None):
     entries = read_cpio(gzip.decompress(original))
     if ('bin/modprobe' not in entries or 'init' not in entries or
             b'sleep 300' not in entries['init']['data'] or b'protect_storage' not in entries['init']['data']):
         raise ValueError('Missing original diagnostics/recovery/modprobe')
     files, closure = module_closure(modules, release)
-    profile = encode_profile(xml)
+    if encoded_profile is None:
+        profile = encode_profile(xml)
+    else:
+        if xml is not None:
+            raise ValueError('Supply either XML or a previously verified private profile')
+        profile = encoded_profile
+        if len(profile) != 176 or profile[:8] != b'AA569S2\0':
+            raise ValueError('Invalid private profile framing')
+        version,width,height,hz,words,crc,r1,r2 = struct.unpack_from('<8I',profile,8)
+        if (version,width,height,hz,words,r1,r2) != (1,1440,3168,120,34,0,0) or zlib.crc32(profile[40:]) != crc:
+            raise ValueError('Invalid private profile header or checksum')
     if helper.count(b'@KERNEL_RELEASE@') != 1:
         raise ValueError('Missing/duplicate native kernel guard template')
     files['lib/firmware/qcom/sm8750/oneplus/dodge/aa569-spr-v1.bin'] = profile

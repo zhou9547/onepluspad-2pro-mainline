@@ -34,6 +34,27 @@ that the public source tree alone can compile those private/proprietary inputs
 would be false. The reproducible portion is the complete system software build;
 the final hardware-specific image additionally needs the private local inputs.
 
+Local packaging, on Linux with SquashFS tools and root permissions:
+
+```sh
+sudo python3 tools/oneplus13/package-source-local.py \
+  --kernel /build/source-kernel --desktop /build/source-desktop \
+  --rootfs /build/source-image --private-inputs /private/phone-data \
+  --output /private/fresh-ram-candidate
+```
+
+The private data manifest (`ONEPLUS13_PRIVATE_DATA_V1`) binds every firmware
+file, the 176-byte checked display profile, calibrated DTB, boot addresses and
+the compatible public DTB hash. No historical kernel, rootfs or package overlay
+is accepted by this packaging step. It verifies that the public components
+share a source commit and passed the complete rootfs QEMU handoff/deadline.
+The output includes matching modules, fresh Mesa, authentication/OBEX services
+and the qualified firmware; the boot image includes the matching native module
+closure. An explicit RAM-only `oneplus13-qualified-bringup --all` starts the
+previously qualified desktop, touch, radio and Bluetooth path; `--wifi` selects
+only the automated network test. Neither command flashes or installs anything
+persistently. Calibration compatibility is refused when the public DTB changes.
+
 Build success and QEMU checks do not prove hardware WiFi. The next acceptance
 uses the newly built image in temporary RAM: association, DHCP/route and an
 interface-bound HTTP response from an owner-supplied private endpoint. HTTPS is

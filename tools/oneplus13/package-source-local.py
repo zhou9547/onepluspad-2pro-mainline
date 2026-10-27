@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-2.0-only
+"""Build a PRIVATE complete RAM image from fresh public outputs + local data.
+
+This never contacts a phone. Never run this step in public CI or upload output.
+The input manifest contains data only: firmware, display profile, calibrated
+DTB and boot address geometry. No old kernel/rootfs/executable scripts are used.
+"""
+import argparse,gzip,json,os,secrets,shutil,struct,subprocess,sys,tarfile,tempfile
+from pathlib import Path
+from common import boot_sections,read_cpio,sha256
+from native import build_initramfs
+from desktop import derive
+from stock import Fdt
+
+REPO=Path(__file__).resolve().parents[2]
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__)
+    for n in ['kernel','desktop','rootfs','private-inputs','output']:p.add_argument('--'+n,required=True,type=Path)
+    a=p.parse_args();kernel=a.kernel.resolve();desktop=a.desktop.resolve();rootfs=a.rootfs.resolve();private=a.private_inputs.resolve();out=a.output.resolve()
+    if os.geteuid()!=0:raise ValueError('Root required for private filesystem packing')
+    if out.exists() or out.is_relative_to(REPO):raise ValueError('Fresh PRIVATE output outside source checkout required')
+    pin=json.loads((private/'manifest.private.json').read_text())
+    if pin['format']!='ONEPLUS13_PRIVATE_DATA_V1':raise ValueError('Private data manifest required')
+    for name,item in pin['files'].items():
+        if Path(name).is_absolute() or '..' in Path(name).parts or (private/name).is_symlink():raise ValueError('Unsafe private data path')
+        if sha256(private/name)!=item['sha256'] or (private/name).stat().st_size!=item['bytes']:raise ValueError('Changed private input')
+    km=json.loads((kernel/'manifest.json').read_text());dm=json.loads((desktop/'manifest.json').read_text());rm=json.loads((rootfs/'manifest.json').read_text())
+    if len({km['integration_commit'],dm['integration_commit'],rm['integration_commit']})!=1:raise ValueError('Public components must share one source commit')
+    if not all(dm.get(k) is True for k in ['qemu_handoff_verified','qemu_deadline_expiry_verified','qemu_native_preflight_runtime_guards_verified']):raise ValueError('Fresh complete-rootfs QEMU handoff/recovery required')
+    for name in ['Image','Image.gz','initramfs.cpio.gz','modules.tar.gz','sm8750-oneplus-dodge-native.dtb']:
+        if sha256(kernel/name)!=km['files'][name]['sha256']:raise ValueError('Kernel artifact changed')
+    if sha256(rootfs/'rootfs.squashfs')!=rm['rootfs_sha256'] or sha256(rootfs/'rootfs.squashfs')!=dm['rootfs_sha256']:raise ValueError('QEMU rootfs differs')
+    if sha256(kernel/'sm8750-oneplus-dodge-native.dtb')!=pin['compatible_public_native_dtb_sha256']:raise ValueError('Private calibration must be re-reviewed for this new DTB')
+    if km['kernel_release']!=rm['kernel_release']:raise ValueError('Kernel/rootfs module mismatch')
+    release=km['kernel_release'];out.mkdir(parents=True)
+    stage=out/'rootfs-stage'
+    subprocess.run(['unsquashfs','-no-progress','-processors','2','-d',str(stage),str(rootfs/'rootfs.squashfs')],check=True)
+    for name,item in pin['files'].items():
+        if not name.startswith('firmware/'):continue
+        dest=stage/'usr/lib/firmware'/name.removeprefix('firmware/')
+        if not dest.resolve().is_relative_to(stage):raise ValueError('Firmware target escapes private staging')
+        dest.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(private/name,dest);dest.chmod(0o644)
+    firmware_hashes={name.removeprefix('firmware/'):item['sha256'] for name,item in pin['files'].items() if name.startswith('firmware/')}
+    (stage/'usr/lib/oneplus13-desktop/private-firmware.json').write_text(json.dumps(firmware_hashes,indent=2)+'\n')
+    bindings={'kernel_release':release,'firmware_sha256':firmware_hashes}
+    for key,name in {'CPUCP_MODULE_SHA256':'mailbox/qcom-cpucp-mbox.ko','SOCINFO_MODULE_SHA256':'soc/qcom/socinfo.ko',
+        'CEC_MODULE_SHA256':'media/cec/core/cec.ko','UBWC_MODULE_SHA256':'soc/qcom/ubwc_config.ko'}.items():
+        bindings[key]=sha256(stage/'usr/lib/modules'/release/'kernel/drivers'/name)
+    bindings['MODULE_POLICY_SHA256']=sha256(stage/'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf')
+    (stage/'usr/lib/oneplus13-desktop/runtime-bindings.private.json').write_text(json.dumps(bindings,indent=2)+'\n')
+    dest=stage/'usr/libexec/oneplus13-qualified-bringup'
+    shutil.copyfile(REPO/'devices/oneplus13/desktop/qualified-bringup',dest);dest.chmod(0o755)
+    # These scripts are repository source, installed in the image rather than
+    # supplied by old host overlays during the hardware test.
+    for name in ['automatic-wifi-check.py','ram-clock-bridge.py','ram-desktop-check.py','ram-platform-prerequisites.sh','ram-display-prerequisites.py']:
+        dest=stage/'usr/libexec'/('oneplus13-'+name)
+        shutil.copyfile(REPO/'tools/oneplus13'/name,dest);dest.chmod(0o755)
+    image_rootfs=out/'rootfs.squashfs'
+    subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
+    packed,_=build_initramfs((kernel/'initramfs.cpio.gz').read_bytes(),(kernel/'modules.tar.gz').read_bytes(),release,None,
+        (REPO/'devices/oneplus13/start-native-display').read_bytes(),encoded_profile=(private/'display-profile.bin').read_bytes())
+    packed,derive_report=derive(packed)
+    from common import make_cpio
+    files=read_cpio(gzip.decompress(packed))
+    init=files['init']['data'];old=b'  sleep 900 &\n'
+    if init.count(old)!=1:raise ValueError('Unrecognized pre-handoff watchdog')
+    files['init']['data']=init.replace(old,b'  sleep 600 &\n')
+    packed=gzip.compress(make_cpio([(n,e['mode'],e['data'],e['major'],e['minor']) for n,e in sorted(files.items())]),mtime=0)
+    (out/'initramfs-desktop.cpio.gz').write_bytes(packed)
+    nonce=secrets.token_hex(12)
+    cmdline='rdinit=/init panic=15 oneplus13.desktop=1 oneplus13.rootfs.sha256='+sha256(image_rootfs)+' oneplus13.rootfs.bytes='+str(image_rootfs.stat().st_size)+' oneplus13.session='+nonce
+    tree=Fdt((private/'calibrated.dtb').read_bytes());tree.nodes['/chosen']['bootargs']=(cmdline+'\0').encode()
+    dtb=out/'sm8750-oneplus-dodge-abl.dtb';dtb.write_bytes(tree.to_blob())
+    geometry=json.loads((private/'boot-geometry.json').read_text())
+    tool=json.loads((REPO/'kernel/source.json').read_text())['tool_inputs']['mkbootimg.py']
+    archive=REPO/tool['bundled_archive']
+    if sha256(archive)!=tool['archive_sha256']:raise ValueError('Boot packer archive mismatch')
+    image=out/'boot-desktop-ram-experimental.img'
+    with tempfile.TemporaryDirectory() as tmp:
+        with tarfile.open(archive) as tf:tf.extractall(tmp,filter='data')
+        mk=Path(tmp)/'mkbootimg.py'
+        if sha256(mk)!=tool['sha256']:raise ValueError('Boot packer script mismatch')
+        subprocess.run([sys.executable,str(mk),'--header_version','2','--pagesize','4096','--base','0',
+            '--kernel_offset',str(geometry['kernel_addr']),'--ramdisk_offset',str(geometry['ramdisk_addr']),
+            '--tags_offset',str(geometry['tags_addr']),'--dtb_offset',str(geometry['dtb_addr']),
+            '--kernel',str(kernel/'Image.gz'),'--ramdisk',str(out/'initramfs-desktop.cpio.gz'),'--dtb',str(dtb),
+            '--cmdline',cmdline,'--output',str(image)],check=True)
+    if boot_sections(image.read_bytes())!={'kernel':(kernel/'Image.gz').read_bytes(),'ramdisk':packed,'dtb':dtb.read_bytes()}:raise ValueError('Independent boot section readback mismatch')
+    result={'scope':'PRIVATE_FRESH_SOURCE_COMPLETE_RAM_IMAGE_NEVER_FLASH','source_commit':km['integration_commit'],
+        'kernel_release':release,'cmdline':cmdline,'session_identity_nonce':nonce,
+        'boot_image_sha256':sha256(image),'boot_image_bytes':image.stat().st_size,
+        'rootfs_sha256':sha256(image_rootfs),'rootfs_bytes':image_rootfs.stat().st_size,
+        'firmware_files':len(firmware_hashes),'private_inputs_sha256':sha256(private/'manifest.private.json'),
+        'public_rootfs_sha256':rm['rootfs_sha256'],'modules_sha256':sha256(kernel/'modules.tar.gz'),
+        'kernel_sha256':sha256(kernel/'Image.gz'),'private_profile_from_existing_qualified_data':True,
+        'old_kernel_or_rootfs_used':False,'old_runtime_package_overlay_used':False,
+        'initial_watchdog_seconds':600,'post_handoff_deadline_seconds':300,
+        'initial_watchdog_survives_switch_root':False,'phone_operations':0,'partition_writes':0,
+        'hardware_tested':False}
+    (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps({k:result[k] for k in ['scope','source_commit','kernel_release','boot_image_sha256','rootfs_sha256','firmware_files','old_kernel_or_rootfs_used']},indent=2))
+
+if __name__=='__main__':main()
