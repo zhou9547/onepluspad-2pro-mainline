@@ -80,6 +80,7 @@ jobs:
           key: oneplus13-gnome-debs-v1-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/ubuntu.json') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             oneplus13-gnome-debs-v1-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/ubuntu.json') }}-
+            oneplus13-gnome-debs-v1-${{ runner.arch }}-
       - run: bash tools/oneplus13/source-image.sh rootfs
       # Keep completed downloads even if the snapshot transport later fails.
       - uses: actions/cache/save@v4

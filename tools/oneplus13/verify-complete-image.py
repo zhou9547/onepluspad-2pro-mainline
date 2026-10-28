@@ -33,6 +33,10 @@ def main():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered SSC input changed')
     audio_files=m.get('experimental_audio_files',{})
+    for name in ['usr/bin/aplay','usr/bin/amixer']:
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if blob[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(blob[18:20],'little')!=183:
+            raise ValueError('Delivered native ALSA tool missing: '+name)
     if len(audio_files)!=4 or m.get('audio_auto_started') is not False or m.get('audio_hardware_qualified') is not False:
         raise ValueError('Missing gated audio candidate')
     for name,digest in audio_files.items():
