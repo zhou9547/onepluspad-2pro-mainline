@@ -10,6 +10,7 @@ CARD='OnePlus13-Audio-Probe'
 UNITS=['pipewire.service','pipewire-pulse.service','wireplumber.service']
 STATE=Path('/run/oneplus13/desktop-audio')
 MODULE=STATE/'pause-module-id'
+NODE=STATE/'pipewire-node-id'
 
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -75,7 +76,7 @@ def desktop_sinks(objects,card):
     return sinks
 
 
-def load_explicit_sink(card):
+def prepare_explicit_route(card):
     STATE.mkdir(mode=0o700,parents=True,exist_ok=True)
     # UCM remains the route/control source when WirePlumber declines to expose
     # an unqualified ALSA device. The fallback sink still traverses that PCM.
@@ -85,6 +86,24 @@ def load_explicit_sink(card):
     mixer(card,'Amp0 Playback Volume','896')
     mixer(card,'Amp1 Playback Volume','896')
     mixer(card,'Secondary MI2S Audio Mixer MultiMedia1','on,on')
+
+
+def load_native_sink(card):
+    prepare_explicit_route(card)
+    run(['pw-cli','create-node','api.alsa.pcm.sink',
+         'api.alsa.path=hw:'+card+',0','node.name=oneplus13_speakers',
+         'node.description=OnePlus 13 speakers','media.class=Audio/Sink',
+         'object.linger=true'],8,user=True)
+    time.sleep(1)
+    sinks=desktop_sinks(json.loads(run(['pw-dump'],user=True)),card)
+    if len(sinks)!=1:raise ValueError('Native ALSA sink did not appear')
+    with NODE.open('x') as stream:stream.write(str(sinks[0]['id'])+'\n')
+    NODE.chmod(0o600)
+    return int(sinks[0]['id'])
+
+
+def load_pulse_sink(card):
+    prepare_explicit_route(card)
     module=run(['pactl','load-module','module-alsa-sink',
                 'device=hw:'+card+',0','sink_name=oneplus13_speakers',
                 'rate=48000','channels=2','format=s16le'],8,user=True).strip()
@@ -102,6 +121,11 @@ def disable(card):
             if not re.fullmatch(r'[0-9]{1,8}',module):raise ValueError('Unknown desktop audio module')
             run(['pactl','unload-module',module],8,user=True)
             MODULE.unlink()
+        if NODE.exists():
+            node=NODE.read_text().strip()
+            if not re.fullmatch(r'[0-9]{1,8}',node):raise ValueError('Unknown desktop audio node')
+            run(['pw-cli','destroy',node],8,user=True)
+            NODE.unlink()
         if RULE.exists():
             if RULE.is_symlink() or RULE.read_bytes()!=(ROOT/RULE.name).read_bytes():raise ValueError('Unknown desktop rule')
             RULE.unlink()
@@ -124,12 +148,16 @@ def enable(card):
     shutil.copyfile(ROOT/RULE.name,RULE)
     run(['systemctl','--user','restart',*UNITS],timeout=15,user=True)
     until=time.monotonic()+8
+    sink_method='wireplumber'
     while True:
         objects=json.loads(run(['pw-dump'],user=True))
         sinks=desktop_sinks(objects,card)
         if len(sinks)==1:break
         if time.monotonic()>until:
-            load_explicit_sink(card)
+            try:
+                load_native_sink(card);sink_method='pipewire-native'
+            except ValueError:
+                load_pulse_sink(card);sink_method='pulse-module'
             until=time.monotonic()+8
             objects=json.loads(run(['pw-dump'],user=True))
             sinks=desktop_sinks(objects,card)
@@ -143,7 +171,7 @@ def enable(card):
     run(['wpctl','set-volume','--limit','1',str(sink['id']),'0.5'],user=True)
     run(['wpctl','set-mute',str(sink['id']),'0'],user=True)
     return {'scope':'EXPLICIT_RAM_PIPEWIRE_SPEAKER_CANDIDATE','sink_id':sink['id'],'sink_name':sink['name'],
-            'ucm_speakers':True,'desktop_software_volume':True,'initial_volume':0.5,
+            'sink_method':sink_method,'ucm_speakers':True,'desktop_software_volume':True,'initial_volume':0.5,
             'hardware_test_level':896,'extra_profile_attenuation_db':11.921875,
             'dynamic_protection_qualified':False,'normal_desktop_playback_qualified':False}
 
