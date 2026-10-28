@@ -39,6 +39,21 @@ def main():
     for name,digest in sample_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered sample input changed')
+    container_files=m.get('container_files',{})
+    if set(container_files)!={'usr/lib/oneplus13-container/kernel.config',
+            'usr/libexec/oneplus13-container-kernel.py','usr/libexec/oneplus13-ram-container-check.py'} or m.get('container_daemon_auto_started') is not False:
+        raise ValueError('Missing gated container support')
+    for name,digest in container_files.items():
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered container input changed')
+    config=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),
+                                   'usr/lib/oneplus13-container/kernel.config'],text=True)
+    import importlib
+    importlib.import_module('container-kernel').check_config(config)
+    for name in ['usr/bin/docker','usr/bin/dockerd','usr/sbin/xtables-nft-multi','usr/sbin/xtables-legacy-multi']:
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if blob[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(blob[18:20],'little')!=183:
+            raise ValueError('Missing native container binary: '+name)
     audio_files=m.get('experimental_audio_files',{})
     for name in ['usr/bin/aplay','usr/bin/amixer']:
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
@@ -56,6 +71,7 @@ def main():
     static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION','pass':True,'source_commit':m['source_commit'],
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
+            'container_files_verified':len(container_files),'container_daemon_auto_started':False,
             'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
             'ssc_sample_files_verified':len(sample_files),'ssc_samples_auto_started':False,
             'experimental_audio_files_verified':len(audio_files),'audio_auto_started':False,

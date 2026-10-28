@@ -1,3 +1,13 @@
+## Container acceptance and original-feature gaps, 2026-10-28
+
+Do not infer firewall support from IP_NF_IPTABLES=m alone on this kernel: the
+legacy evaluator is separately gated. Check resolved options and matching
+delivered modules. The new real Docker test uses VFS and isolated namespaces;
+it does not yet qualify overlay2, IPv6 traffic, rootless or Swarm. Keep the
+daemon stopped by default until joint regression. Speakers still need audible
+qualification/protection; SSC still needs continuous consumer integration,
+phone axes and a reviewed self-contained runtime dataset. See CONTAINERS-20261028.md.
+
 ## Native amplifier inventory and exact I2S mapping, 2026-10-28
 
 Complete Actions40615700391 passes at e539f11e. One RAM boot confirms both

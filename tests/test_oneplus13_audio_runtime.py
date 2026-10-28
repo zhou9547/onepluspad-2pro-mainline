@@ -1,10 +1,21 @@
 # SPDX-License-Identifier: GPL-2.0-only
-import importlib.util,unittest
+import importlib.util,struct,unittest
 from pathlib import Path
 P=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-audio-check.py'
 s=importlib.util.spec_from_file_location('ram_audio',P);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
 
 class AudioRuntime(unittest.TestCase):
+    def test_bounded_nonzero_signal_has_stereo_ramps_and_quiet_peak(self):
+        blob=m.quiet_tone();values=struct.unpack('<'+str(len(blob)//2)+'h',blob)
+        self.assertEqual(len(blob),48000*2*2*2)
+        self.assertEqual(values[::2],values[1::2])
+        self.assertEqual(values[0],0);self.assertEqual(values[-1],0)
+        self.assertLessEqual(max(abs(v) for v in values),4125)
+        self.assertGreater(max(values),4000);self.assertLess(min(values),-4000)
+        row='id=2308 channel=0 volume=256 powered=1 faulted=0 sysst=0311 sysctrl=2000 attenuation=767\n'
+        self.assertTrue(m.active_state(m.amp_state(row,256)))
+        for old,new in [('attenuation=767','attenuation=766'),('volume=256','volume=257')]:
+            with self.assertRaises(ValueError):m.amp_state(row.replace(old,new),256)
     def test_real_state_parser_waits_for_bounded_dapm_stop(self):
         now=[0.0]
         def clock():return now[0]

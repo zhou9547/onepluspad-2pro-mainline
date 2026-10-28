@@ -175,6 +175,9 @@ find "$dest/modules" -type l -name source -delete
 tar --sort=name --mtime="@$(( $(git -C "$repo" show -s --format=%ct HEAD) ))" \
   --owner=0 --group=0 --numeric-owner -C "$dest/modules" -czf "$dest/modules.tar.gz" .
 rm -rf -- "$dest/modules"
+python3 tools/oneplus13/container-kernel.py --config "$kout/.config" \
+  --modules "$dest/modules.tar.gz" --release "$(cat "$kout/include/config/kernel.release")" \
+  --output "$dest/container-kernel-verification.json"
 cp "$kout/arch/arm64/boot/Image" "$kout/arch/arm64/boot/Image.gz" "$dest/"
 cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb" "$dest/"
 cp "$kout/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge-touch.dtb" "$dest/"

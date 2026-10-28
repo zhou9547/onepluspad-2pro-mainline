@@ -308,14 +308,18 @@ class PhoneFormats(unittest.TestCase):
         self.assertEqual(fields[1] & stat.S_IFMT(0o170000), stat.S_IFCHR)
 
     def test_missing_builtin_dependency_is_fatal(self):
+        import importlib
+        container = importlib.import_module('container-kernel')
+        full = '\n'.join(f'CONFIG_{name}=y' for name in
+                         dict.fromkeys(REQUIRED + container.BUILTIN + container.BOOLS + list(container.MODULES)))
         with tempfile.TemporaryDirectory() as tmp:
             config = pathlib.Path(tmp) / '.config'
-            config.write_text('\n'.join(f'CONFIG_{name}=y' for name in REQUIRED))
+            config.write_text(full)
             check_config(config)
             config.write_text(config.read_text().replace('CONFIG_USB_DWC3=y', 'CONFIG_USB_DWC3=m'))
             with self.assertRaisesRegex(ValueError, 'USB_DWC3'):
                 check_config(config)
-            config.write_text('\n'.join(f'CONFIG_{name}=y' for name in REQUIRED) + '\nCONFIG_ARCH_MEDIATEK=y\n')
+            config.write_text(full + '\nCONFIG_ARCH_MEDIATEK=y\n')
             with self.assertRaisesRegex(ValueError, 'Unrelated platform'):
                 check_config(config)
 

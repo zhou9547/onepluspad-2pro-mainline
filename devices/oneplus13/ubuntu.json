@@ -14,7 +14,8 @@
     "mesa-utils", "systemd-resolved", "sudo", "locales", "console-setup", "busybox-static", "curl",
     "ca-certificates", "openssh-client", "openssh-server", "kmod", "zstd",
     "language-pack-zh-hans", "language-pack-gnome-zh-hans", "fonts-noto-cjk",
-    "ibus", "ibus-libpinyin", "im-config", "alsa-utils", "pipewire", "pipewire-pulse", "wireplumber"
+    "ibus", "ibus-libpinyin", "im-config", "alsa-utils", "pipewire", "pipewire-pulse", "wireplumber",
+    "docker.io", "iptables", "nftables", "iproute2"
   ],
   "hardware_status": "NOT_DEVICE_TESTED",
   "accounts": "No default password or autologin. Create a user before deployment.",

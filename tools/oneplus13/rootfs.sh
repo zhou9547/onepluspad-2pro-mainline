@@ -112,6 +112,10 @@ for unit in sleep.target suspend.target hibernate.target hybrid-sleep.target; do
   ln -sfn /dev/null "$root/etc/systemd/system/$unit"
 done
 chroot "$root" passwd -l root
+# Supply the real engine and both firewall frontends, but do not create a
+# docker0 bridge or modify the phone's forwarding policy during qualification.
+# The owner can start docker.service explicitly in the RAM desktop.
+chroot "$root" systemctl disable docker.service docker.socket containerd.service
 mkdir -p "$root/etc/ssh/sshd_config.d"
 cat > "$root/etc/ssh/sshd_config.d/60-oneplus13.conf" <<'EOF'
 PasswordAuthentication yes
@@ -163,6 +167,10 @@ chroot "$root" /usr/bin/env bash -n /etc/profile
 chroot "$root" dpkg-query -W systemd-resolved > /dev/null
 chroot "$root" locale -a | grep -qx 'zh_CN.utf8'
 test -x "$root/usr/sbin/sshd"
+test -x "$root/usr/bin/docker"
+test -x "$root/usr/bin/dockerd"
+test -x "$root/usr/sbin/iptables-nft"
+test -x "$root/usr/sbin/iptables-legacy"
 grep -qx 'PermitRootLogin no' "$root/etc/ssh/sshd_config.d/60-oneplus13.conf"
 test ! -e "$root/etc/ssh/ssh_host_rsa_key"
 test -L "$root/etc/systemd/system/multi-user.target.wants/ssh.service"

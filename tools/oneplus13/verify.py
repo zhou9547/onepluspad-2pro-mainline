@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import stat
 import tarfile
+import importlib
 
 from common import boot_sections, read_cpio, sha256
 
@@ -22,6 +23,7 @@ REQUIRED = ['ARCH_QCOM', 'ARCH_VEXPRESS', 'BLK_DEV_INITRD', 'RD_GZIP',
 
 
 def check_config(path):
+    importlib.import_module('container-kernel').check_config(path.read_text())
     settings = set(path.read_text().splitlines())
     missing = [name for name in REQUIRED if f'CONFIG_{name}=y' not in settings]
     if missing:
@@ -303,6 +305,8 @@ def verify_artifacts(out):
         raise ValueError('Wrong console device in initramfs')
     with tarfile.open(out / 'modules.tar.gz') as archive:
         check_module_indexes(archive, manifest['kernel_release'])
+        importlib.import_module('container-kernel').check_payload(
+            (out / 'kernel.config').read_text(), archive, manifest['kernel_release'])
         names = [member.name for member in archive.getmembers()]
         config = (out / 'kernel.config').read_text().splitlines()
         for setting, filename in [('CONFIG_TOUCHSCREEN_DODGE_S3910=m', 'dodge-s3910.ko'),

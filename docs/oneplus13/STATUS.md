@@ -1,3 +1,15 @@
+## Container dependency closure and quiet PCM candidate, 2026-10-28
+
+The actual previous kernel lacks NF_NAT, NF_TABLES and the new legacy evaluator
+switch. The phone fragment now enables both legacy and nft-based IPv4/IPv6
+Docker bridge dependency paths. Resolved Kconfig and delivery checks are added,
+along with the real engine and an isolated RAM bridge/DNS/NAT/port-mapping test.
+The speaker checker can additionally generate a fixed two-second -18dBFS tone
+within the existing quiet256 ceiling and restores both amplifier volumes.
+No audible-output or dynamic-protection acceptance is claimed. The original
+Pad feature comparison and pending phone-specific steps are recorded in
+CONTAINERS-20261028.md. Full Actions and a combined phone boot are pending.
+
 ## Joint speaker, sensor, WiFi, desktop, and localization pass, 2026-10-28
 
 One RAM boot at image source54fdf46f completed every requested target and

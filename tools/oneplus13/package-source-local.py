@@ -128,6 +128,16 @@ def main():
     dest.parent.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(REPO/'devices/oneplus13/audio/90-oneplus13-manual-audio.conf',dest)
     dest.chmod(0o644);audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    container_hashes={}
+    container=import_module('container-kernel')
+    with tarfile.open(kernel/'modules.tar.gz') as archive:
+        container.check_payload((kernel/'kernel.config').read_text(),archive,release)
+    for source,name in [(kernel/'kernel.config','usr/lib/oneplus13-container/kernel.config'),
+                        (REPO/'tools/oneplus13/container-kernel.py','usr/libexec/oneplus13-container-kernel.py'),
+                        (REPO/'tools/oneplus13/ram-container-check.py','usr/libexec/oneplus13-ram-container-check.py')]:
+        dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,dest);dest.chmod(0o755 if name.endswith('.py') else 0o644)
+        container_hashes[name]=sha256(dest)
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
@@ -184,6 +194,8 @@ def main():
         'ssc_sensor_property_types_corrected':True,
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
+    result.update(container_files=container_hashes,container_daemon_auto_started=False,
+                  container_hardware_qualified=False)
     (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({k:result[k] for k in ['scope','source_commit','kernel_release','boot_image_sha256','rootfs_sha256','firmware_files','old_kernel_or_rootfs_used']},indent=2))
 
