@@ -86,6 +86,28 @@ EOF
         sleep 1
     done
     pgrep -u a -x gnome-shell >/dev/null
+    # Keep the Ubuntu Dock visible across window and orientation changes. The
+    # distro override enables the extension but leaves intellihide active, so
+    # the dock can appear absent when a window is focused or maximized.
+    runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+        gnome-extensions enable ubuntu-dock@ubuntu.com
+    for item in \
+        'dock-fixed true' \
+        'autohide false' \
+        'intellihide false' \
+        "dock-position 'LEFT'" \
+        'extend-height true'; do
+        runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+            DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+            gsettings set org.gnome.shell.extensions.dash-to-dock $item
+    done
+    session_env='XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus'
+    test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock dock-fixed)" = true
+    test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock autohide)" = false
+    test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock intellihide)" = false
+    test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock dock-position)" = "'LEFT'"
+    test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock extend-height)" = true
     # IBus/GNOME finish loading their session sources asynchronously. Let that
     # one-time initialization settle before applying the user preference.
     sleep 8

@@ -142,6 +142,13 @@ def check(check_wifi=True):
     COMPLETED['user_shell_project_mesa'] = True
     user = ['runuser', '-u', 'a', '--', 'env', 'XDG_RUNTIME_DIR='+str(runtime),
             'DBUS_SESSION_BUS_ADDRESS=unix:path='+str(runtime/'bus')]
+    dock_expected={'dock-fixed':'true','autohide':'false','intellihide':'false',
+                   'dock-position':"'LEFT'",'extend-height':'true'}
+    dock_actual={key:command(user+['gsettings','get',
+        'org.gnome.shell.extensions.dash-to-dock',key]).strip() for key in dock_expected}
+    if dock_actual!=dock_expected:
+        raise ValueError('Ubuntu Dock is not configured to remain visible')
+    COMPLETED['ubuntu_dock_always_visible']=True
     command(user + ['systemd-run', '--user', '--collect', '--unit=oneplus13-ram-settings',
                     '--property=RuntimeMaxSec=90s', '--setenv=WAYLAND_DISPLAY='+displays[0].name,
                     '--setenv=GSK_RENDERER=cairo', '/usr/bin/gnome-control-center', 'network'], 6)
@@ -192,6 +199,7 @@ def completed_result(check_wifi):
             'wifi_tested': check_wifi,
             'combined_pass': wifi_pass, 'ordinary_user_wayland_session': True,
             'user_shell_project_mesa': True, 'settings_network_process_and_bus': True,
+            'ubuntu_dock_always_visible': True,
             'session_observations': OBSERVATIONS,
             'samples': SAMPLES, 'completed_gates': COMPLETED,
             'physical_touch_tested': False, 'visual_screen_tested': False}

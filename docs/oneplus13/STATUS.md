@@ -12,6 +12,16 @@ including SensorProxy, quiet PCM, Docker, both WiFi bands, desktop/Chinese/SSH
 and the live Ubuntu Dock gate. Android returned in424.5s, baselines matched and
 physical writes remained zero. Normal desktop audio is still disabled.
 
+The owner-reported missing side taskbar is now addressed explicitly. Live
+inspection found `ubuntu-dock@ubuntu.com` enabled/running without an error, but
+the distribution defaults retain `intellihide=true`; focused/maximized windows
+and rotation can therefore make the dock appear absent. Session bring-up now
+enables the extension, sets `dock-fixed=true`,
+`autohide=false`, `intellihide=false`, left position and extended height, and
+the desktop checker reads all four keys back exactly before accepting the
+session. The contract is tested in source; physical post-rotation appearance
+still needs the next RAM boot.
+
 The firstf37017bc microphone-alternative round stopped before loading the WCD
 drivers: ABL rewrites the root compatible/model to the exact C.93 Sun MTP,dodge
 pair, whereas the new check expected the source DT's OnePlus identity. A guarded

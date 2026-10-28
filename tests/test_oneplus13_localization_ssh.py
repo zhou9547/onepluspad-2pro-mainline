@@ -27,6 +27,11 @@ class LocalizationAndSsh(unittest.TestCase):
         self.assertIn('mru-sources',self.bringup)
         self.assertIn('sleep 8',self.bringup)
         self.assertIn('test "$actual_sources" = "$expected_sources"',self.bringup)
+        for setting in ['dock-fixed true','autohide false','intellihide false',
+                        "dock-position 'LEFT'",'extend-height true']:
+            self.assertIn(setting,self.bringup)
+        self.assertLess(self.bringup.index('pgrep -u a -x gnome-shell'),
+                        self.bringup.index('gnome-extensions enable ubuntu-dock@ubuntu.com'))
 
     def test_ssh_server_is_enabled_without_root_or_shared_host_keys(self):
         self.assertIn('openssh-server',self.image['packages'])
