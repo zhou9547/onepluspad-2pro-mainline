@@ -6,6 +6,31 @@ from pathlib import Path
 CARD='OnePlus13-Audio-Probe'
 STATE=Path('/run/oneplus13/microphone-check')
 POLICY=Path('/etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf')
+SOURCE_COMPAT=b'oneplus,dodge\0qcom,sm8750\0'
+SOURCE_MODEL=b'OnePlus 13 (AA569 native display experimental candidate)\0'
+ABL_COMPAT=b'qcom,sun-mtp\0qcom,sun\0qcom,sunp-mtp\0qcom,sunp\0qcom,mtp\0'
+ABL_MODEL=b'Qualcomm Technologies, Inc. Sun MTP,dodge\0'
+
+def validate_board(root=Path('/proc/device-tree')):
+    def read(path):return (root/path).read_bytes()
+    def cells(path):
+        raw=read(path)
+        if len(raw)%4:raise ValueError('Malformed live audio property')
+        return list(struct.unpack('>'+'I'*(len(raw)//4),raw))
+    identity=(read('compatible'),read('model'))
+    if identity==(SOURCE_COMPAT,SOURCE_MODEL):kind='SOURCE_ONEPLUS13'
+    elif identity==(ABL_COMPAT,ABL_MODEL):kind='C93_ABL_SUN_DODGE'
+    else:raise ValueError('Wrong board identity pair')
+    supply='soc@0/rsc@16500000/regulators-4/ldo2/'
+    if cells('wcd939x/vdd-px-supply')!=cells(supply+'phandle'):raise ValueError('Wrong live WCD PX provider')
+    for key in ('regulator-min-microvolt','regulator-max-microvolt'):
+        if cells(supply+key)!=[1200000]:raise ValueError('Wrong live WCD PX voltage')
+    for n in range(1,5):
+        if cells(f'wcd939x/qcom,micbias{n}-microvolt')!=[2700000]:raise ValueError('Wrong live microphone bias')
+    reset=cells('wcd939x/reset-gpios')
+    if reset!=cells('soc@0/pinctrl@f100000/phandle')+[101,1]:raise ValueError('Wrong live WCD reset')
+    if cells('sound/wcd-capture-dai-link/cpu/sound-dai')[1:]!=[120]:raise ValueError('Wrong live TX3 port')
+    return kind
 ROUTES=[('ADC1 MUX','CH1_AMIC1'),('ADC4 MUX','CH4_AMIC5'),
     ('TX0 MODE','ADC_HIFI'),('TX3 MODE','ADC_HIFI'),
     ('ADC1 Volume','6'),('ADC4 Volume','6'),('ADC1 Switch','1'),('ADC4 Switch','1'),
@@ -46,7 +71,7 @@ def main():
     for unit in ['oneplus13-ram-guard.service','oneplus13-ram-deadline.timer']:
         audio.run(['systemctl','is-active','--quiet',unit])
     if hashlib.sha256(POLICY.read_bytes()).hexdigest()!=a.policy_sha256:raise ValueError('Changed peripheral policy')
-    if Path('/proc/device-tree/compatible').read_bytes().split(b'\0')[:2]!=[b'oneplus,dodge',b'qcom,sm8750']:raise ValueError('Wrong board')
+    board_identity=validate_board()
     if Path('/proc/device-tree/sound/model').read_bytes().rstrip(b'\0').decode()!=CARD:raise ValueError('Separate microphone boot required')
     STATE.mkdir(mode=0o700,exist_ok=False)
     roots=['snd_soc_lpass_va_macro','snd_soc_lpass_rx_macro','snd_soc_lpass_tx_macro',
@@ -93,7 +118,7 @@ def main():
         if errors:raise ValueError('Capture control restoration failed: '+','.join(errors))
     report={'scope':'BOUNDED_NATIVE_MICROPHONE_CAPTURE_CANDIDATE',
         'raw_audio_deleted':True,'controls_restored':True,'format':'S24_LE','rate_hz':48000,
-        'seconds':2,'adc_gain':6,'tx_dec_gain':84,**answer}
+        'seconds':2,'adc_gain':6,'tx_dec_gain':84,'board_identity':board_identity,**answer}
     (STATE/'result.json').write_text(json.dumps(report,sort_keys=True)+'\n')
     print('RAM_MICROPHONE_RESULT '+json.dumps(report,sort_keys=True),flush=True)
 if __name__=='__main__':main()

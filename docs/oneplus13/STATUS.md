@@ -1,5 +1,17 @@
 ## Self-contained sensor samples and D-Bus joint pass, 2026-10-28
 
+The firstf37017bc microphone-alternative round stopped before loading the WCD
+drivers: ABL rewrites the root compatible/model to the exact C.93 Sun MTP,dodge
+pair, whereas the new check expected the source DT's OnePlus identity. A guarded
+live read confirms the alternate sound-card model is correct. The check now
+accepts these two exact identity pairs and independently validates live1.2V PX,
+2.7V biases, GPIO101 reset/provider and TX3 port before driver activation.
+Negative controls reject the Pad identity and altered power/reset/port wiring.
+The round retained sensors/D-Bus, Docker, both WiFi bands, desktop/Chinese/SSH;
+Ubuntu Dock is running/enabled with no extension error. Android returned in
+405.3s with matching baselines and zero physical writes. This was not a microphone
+or acoustic pass;81262980 remains the fully accepted joint image.
+
 Complete Actions40650704909 at source81262980 passed all five jobs, then one
 joint RAM boot passed the image's own922 reviewed text inputs and fresh native
 runtime, three-vector samples, and actual SensorProxy D-Bus claims, updates

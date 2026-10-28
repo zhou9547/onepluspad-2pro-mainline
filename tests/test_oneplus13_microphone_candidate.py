@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-import importlib.util,math,struct,sys,unittest
+import importlib.util,math,struct,sys,tempfile,unittest
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
 REPO=HERE.parent
@@ -12,6 +12,32 @@ def load(name):
 dtb=load('microphone-dtb');capture=load('ram-microphone-check')
 acoustic=load('ram-acoustic-check')
 class MicrophoneCandidate(unittest.TestCase):
+ def test_exact_abl_identity_and_live_power_wiring_are_required(self):
+  base=(REPO/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes()
+  tree=Fdt(dtb.derive(base)[0])
+  files={'compatible':tree.nodes['/']['compatible'],'model':tree.nodes['/']['model']}
+  for path,keys in {
+    '/wcd939x':['vdd-px-supply','reset-gpios',*[f'qcom,micbias{n}-microvolt' for n in range(1,5)]],
+    dtb.SUPPLY:['phandle','regulator-min-microvolt','regulator-max-microvolt'],
+    dtb.audio.TLMM:['phandle'],dtb.CAPTURE+'/cpu':['sound-dai']}.items():
+   for k in keys:files[(path+'/'+k).lstrip('/')]=tree.nodes[path][k]
+  for scenario in ('source','abl','other-board','missing-compatible','wrong-px','wrong-bias','wrong-reset','wrong-port'):
+   with self.subTest(scenario=scenario),tempfile.TemporaryDirectory() as temp:
+    values=dict(files)
+    if scenario!='source':values.update(compatible=capture.ABL_COMPAT,model=capture.ABL_MODEL)
+    if scenario=='other-board':values['model']=capture.ABL_MODEL.replace(b'dodge',b'erhai')
+    if scenario=='missing-compatible':values['compatible']=capture.ABL_COMPAT.replace(b'qcom,sunp\0',b'')
+    if scenario=='wrong-px':values[dtb.SUPPLY.lstrip('/')+'/regulator-min-microvolt']=struct.pack('>I',1800000)
+    if scenario=='wrong-bias':values['wcd939x/qcom,micbias1-microvolt']=struct.pack('>I',1800000)
+    if scenario=='wrong-reset':values['wcd939x/reset-gpios']=values['wcd939x/reset-gpios'][:-8]+struct.pack('>II',102,1)
+    if scenario=='wrong-port':values[(dtb.CAPTURE+'/cpu/sound-dai').lstrip('/')]=struct.pack('>II',1,119)
+    root=Path(temp)
+    for path,raw in values.items():
+     target=root/path;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(raw)
+    if scenario in ('source','abl'):
+     self.assertEqual(capture.validate_board(root),'SOURCE_ONEPLUS13' if scenario=='source' else 'C93_ABL_SUN_DODGE')
+    else:
+     with self.assertRaises(ValueError):capture.validate_board(root)
  def test_acoustic_signal_separates_channels_and_requires_volume_contrast(self):
   wave=acoustic.signal();values=struct.unpack('<'+str(len(wave)//2)+'h',wave)
   self.assertEqual(len(wave),48000*2*2*2)
