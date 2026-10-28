@@ -26,6 +26,13 @@ combined silent PCM/sample/preserved-feature boot remain required.
 The original implementation description follows; its first metadata-only
 round is historical and does not authorize or claim successful streaming.
 
+The silent checker allows the normal ASoC5-second DAPM power-down delay and
+requires actual power-off within a fixed6-second bound. It never unloads or
+resets the amplifier to manufacture a stop result. A real state-parser test
+covers delayed success and bounded failure. Trusted server builds now retain
+their persistent ccache directly instead of re-downloading the Actions cache;
+hosted ephemeral runners retain the original restore/save path.
+
 The owner prioritizes speakers over conflicting sensor work. Temporary RAM
 testing is authorized for this session; no flashing or persistent installation.
 Existing display, touch, project Mesa/GNOME, dual-band WiFi, Bluetooth transfer

@@ -56,6 +56,14 @@ def active_state(state):
     return bool(state['powered'] and state['sysst']&required==required and
                 not state['sysst']&faults and not state['sysctrl']&3)
 
+def wait_off(paths,clock=time.monotonic,sleep=time.sleep):
+    until=clock()+6
+    while True:
+        after=[amp_state(x.read_text()) for x in paths]
+        if not any(s['powered'] for s in after):return after
+        if clock()>=until:raise ValueError('Amplifiers did not stop')
+        sleep(.2)
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--release',required=True)
@@ -115,9 +123,9 @@ def main():
             try:player.communicate(timeout=3)
             except subprocess.TimeoutExpired:player.kill();player.communicate(timeout=2)
         run(['amixer','-q','-c',card,'cset','name='+route,old[1]])
-    time.sleep(.2)
-    after=[amp_state(x.read_text()) for x in paths]
-    if any(s['powered'] for s in after):raise ValueError('Amplifiers did not stop')
+    # ASoC may retain a playback DAPM path for its normal5s pmdown delay.
+    # Observe the actual off state within a fixed bound; never unload/reset it.
+    after=wait_off(paths)
     print('RAM_AUDIO_SILENCE_RESULT '+json.dumps({'source':'NATIVE_AW88461_SECONDARY_MI2S',
         'card_registered':True,'format':'S16_LE','rate_hz':48000,'channels':2,
         'amplifier_ids':[s['id'] for s in before],'active_state_samples':active,

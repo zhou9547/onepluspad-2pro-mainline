@@ -41,6 +41,7 @@ jobs:
       - if: inputs.runtime_qemu
         run: flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y qemu-system-arm
       - uses: actions/cache/restore@v4
+        if: ${{ !inputs.use_server }}
         id: kernel-cache
         with:
           path: ~/.cache/ccache
@@ -54,7 +55,7 @@ jobs:
           CCACHE_MAXSIZE: 3G
           ONEPLUS13_BUILD_JOBS: ${{ inputs.use_server && '4' || '' }}
       - uses: actions/cache/save@v4
-        if: steps.kernel-cache.outputs.cache-hit != 'true'
+        if: ${{ !inputs.use_server && steps.kernel-cache.outputs.cache-hit != 'true' }}
         with:
           path: ~/.cache/ccache
           key: ${{ steps.kernel-cache.outputs.cache-primary-key }}

@@ -5,6 +5,19 @@ P=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-audio-check.py'
 s=importlib.util.spec_from_file_location('ram_audio',P);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
 
 class AudioRuntime(unittest.TestCase):
+    def test_real_state_parser_waits_for_bounded_dapm_stop(self):
+        now=[0.0]
+        def clock():return now[0]
+        def sleep(seconds):now[0]+=seconds
+        row='id=2308 channel=0 volume=0 powered=1 faulted=0 sysst=0211 sysctrl=2000 attenuation=1023\n'
+        class Status:
+            def __init__(self,off_at):self.off_at=off_at
+            def read_text(self):return row.replace('powered=1','powered=0') if clock()>=self.off_at else row
+        result=m.wait_off([Status(5)],clock,sleep)
+        self.assertFalse(result[0]['powered']);self.assertGreaterEqual(clock(),5)
+        now[0]=0
+        with self.assertRaises(ValueError):m.wait_off([Status(10)],clock,sleep)
+        self.assertLess(clock(),6.3)
     def test_dependency_order_and_missing_or_cyclic_inventory(self):
         text='kernel/a.ko: kernel/b.ko kernel/c.ko\nkernel/b.ko: kernel/c.ko\nkernel/c.ko:\n'
         self.assertEqual(m.module_order(text,['a']),['c','b','a'])
