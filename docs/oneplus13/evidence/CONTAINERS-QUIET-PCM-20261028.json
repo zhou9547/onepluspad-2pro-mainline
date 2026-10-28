@@ -1,0 +1,165 @@
+{
+  "scope": "ONE_JOINT_DOCKER_QUIET_PCM_SSC_PRESERVED_FEATURES_RAM_BOOT",
+  "source_commit_under_test": "46f34674ef35bfbbb9ae0a30475461ee0968c37d",
+  "actions_run": 40641271075,
+  "actions_component_runner": "owner ARM64 runner; final image on GitHub-hosted ARM64",
+  "boot_image_sha256": "483412919658aefbad5d751f2d5b41f967425aa9fc9e0c0dc199c2fa4493360e",
+  "rootfs_sha256": "2ad4fc18e2fb49ec70cd6778611805659a143b34a00356d84f8830469c3578b4",
+  "android_return_confirmed": true,
+  "android_return_seconds": 349.6,
+  "seven_baseline_keys_match": true,
+  "physical_partition_writes": 0,
+  "joint_acceptance_pass": true,
+  "full_history_kernel_health_pass": true,
+  "docker": {
+    "bridge_container_http": true,
+    "busybox_sha256": "c2f279d1d5640a0f327890d41cad594c0f059f3fed3f96dd72fdcc4f5e18ec02",
+    "embedded_dns_http": true,
+    "external_registry_used": false,
+    "iptables_backend": "iptables v1.8.11 (nf_tables)",
+    "legacy_filter_nat_rules": true,
+    "masquerade_off_bridge_http": true,
+    "overlay2_tested": false,
+    "pass": true,
+    "physical_network_rules_modified": false,
+    "published_port_peer_http": true,
+    "scope": "REAL_DOCKER_ISOLATED_RAM_BRIDGE",
+    "storage_driver": "vfs"
+  },
+  "speaker": {
+    "active_state_samples": [
+      [
+        {
+          "attenuation": 831,
+          "channel": 0,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        },
+        {
+          "attenuation": 815,
+          "channel": 1,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        }
+      ],
+      [
+        {
+          "attenuation": 831,
+          "channel": 0,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        },
+        {
+          "attenuation": 815,
+          "channel": 1,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        }
+      ]
+    ],
+    "amplifier_ids": [
+      8968,
+      8968
+    ],
+    "amplifiers_stopped": true,
+    "audible_playback_tested": false,
+    "audio_accepted": false,
+    "bounded_nonzero_pcm_pass": true,
+    "card_registered": true,
+    "channels": 2,
+    "default_attenuation_preserved": false,
+    "digital_zero_pcm_pass": false,
+    "dynamic_protection_qualified": false,
+    "format": "S16_LE",
+    "rate_hz": 48000,
+    "route_restored": true,
+    "source": "NATIVE_AW88461_SECONDARY_MI2S",
+    "test_signal_peak_dbfs": -18,
+    "test_volume": 256,
+    "volume_restored_to_zero": true
+  },
+  "sensor_samples": {
+    "accel": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 9.81656,
+      "norm_min": 9.73041,
+      "samples": 64
+    },
+    "gyro": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 0.0101252,
+      "norm_min": 0.00599191,
+      "samples": 64
+    },
+    "mag": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 95.966,
+      "norm_min": 81.1006,
+      "samples": 15
+    }
+  },
+  "wifi": {
+    "a": {
+      "automatic_acceptance_pass": true,
+      "associated_band": "5GHz",
+      "link_frequency_mhz": 5240,
+      "association_pass": true,
+      "dhcp_pass": true,
+      "ipv4_default_route_present": true,
+      "http_pass": true
+    },
+    "bg": {
+      "automatic_acceptance_pass": true,
+      "associated_band": "2.4GHz",
+      "link_frequency_mhz": 2437,
+      "association_pass": true,
+      "dhcp_pass": true,
+      "ipv4_default_route_present": true,
+      "http_pass": true
+    }
+  },
+  "preserved": {
+    "gpu_check_returncode": 0,
+    "desktop_check_returncode": 0,
+    "touch_device_present": true,
+    "battery_telemetry_present": true,
+    "battery_readings": [
+      {
+        "capacity_percent": 80,
+        "temperature_deci_c": 314
+      }
+    ],
+    "bluetooth_powered": true,
+    "obex_sender_preserved": true,
+    "physical_touch_tested": false,
+    "bluetooth_peer_receipt_tested": false
+  },
+  "chinese_locale_and_clean_input_sources_pass": true,
+  "actual_ssh_password_login_chinese_locale_pass": true,
+  "limitations": [
+    "Docker VFS and IPv4 bridge qualified; overlay2 and IPv6 traffic untested",
+    "Amplifier switching and bounded quiet PCM qualified; audible output and dynamic protection unqualified",
+    "Three-second vectors qualified; desktop proxy and physical axes still unqualified"
+  ],
+  "kernel_health_phase_count": 12,
+  "kernel_health_counts_all_zero": true
+}

@@ -39,9 +39,18 @@ def main():
     for name,digest in sample_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered sample input changed')
+    runtime_files=m.get('sensor_runtime_files',{})
+    required_runtime={'usr/lib/oneplus13-sensors/'+n for n in ('phone-sensor-inputs.tar.gz','phone-sensor-inputs-manifest.json','runtime-bindings.json')}
+    required_runtime|={'usr/libexec/oneplus13-'+n for n in ('ram-sensor-attach-only.py','ram-sensor-fileserver.py','ram-sensor-discovery.py','ram-ssc-proxy.py','image-sensors-check.py')}
+    required_runtime.add('usr/bin/strace')
+    if set(runtime_files)!=required_runtime or m.get('sensor_runtime_host_private_inputs_required') is not False or m.get('sensor_runtime_auto_started') is not False:
+        raise ValueError('Missing self-contained sensor runtime')
+    for name,digest in runtime_files.items():
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered sensor runtime changed')
     container_files=m.get('container_files',{})
     if set(container_files)!={'usr/lib/oneplus13-container/kernel.config',
-            'usr/libexec/oneplus13-container-kernel.py','usr/libexec/oneplus13-ram-container-check.py'} or m.get('container_daemon_auto_started') is not False:
+            'usr/libexec/oneplus13-container-kernel.py','usr/libexec/oneplus13-ram-container-check.py','etc/docker/daemon.json'} or m.get('container_daemon_auto_started') is not False:
         raise ValueError('Missing gated container support')
     for name,digest in container_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
@@ -72,6 +81,7 @@ def main():
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
             'container_files_verified':len(container_files),'container_daemon_auto_started':False,
+            'sensor_runtime_files_verified':len(runtime_files),'sensor_runtime_host_private_inputs_required':False,
             'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
             'ssc_sample_files_verified':len(sample_files),'ssc_samples_auto_started':False,
             'experimental_audio_files_verified':len(audio_files),'audio_auto_started':False,

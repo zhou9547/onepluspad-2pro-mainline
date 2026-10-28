@@ -1,3 +1,36 @@
+## Docker bridge and quiet nonzero PCM qualified, 2026-10-28
+
+Image source46f34674, complete Actions40641271075, passed one combined RAM
+boot and returned to Android in349.6s with seven matching baseline properties
+and zero partition writes. Real Docker containers passed bridge HTTP,
+embedded DNS, off-bridge masqueraded HTTP and a peer's published-port HTTP
+with userland-proxy disabled. Both legacy tables and the distribution's nft
+backend worked. VFS/IPv4 is qualified; overlay2 and IPv6 traffic are not.
+
+Both AW88461 amplifiers switched during a fixed two-second -18dBFS PCM within
+the existing256 ceiling, then returned to volume0 and powered off. This
+qualifies bounded nonzero transport, not audible output or dynamic protection.
+Three-vector samples, both WiFi bands, project Mesa/GNOME, touch discovery,
+Bluetooth/OBEX, battery, Chinese/input-source defaults and actual SSH login
+were retained. Every full-history health gate passed. See
+evidence/CONTAINERS-QUIET-PCM-20261028.json.
+
+## Self-contained sensor runtime and D-Bus candidate, 2026-10-28
+
+New Actions steps build the original hexagonrpcd and SSC-enabled SensorProxy
+with corrected phone libssc, plus a bounded persistent-connection D-Bus client.
+Native and sanitized fake-bus tests exercise actual GIO requests, streaming
+properties and three matching releases, including a stationary face-up phone
+and malformed vectors. No metadata executable gains a stream capability.
+
+An explicitly reviewed922-file text dataset excludes the import ledger and
+serial records. The complete image now carries the fresh native runtime,
+data, tracer and bound helper inputs; image-sensors-check.py can select
+metadata, samples or a bounded proxy test without a private host archive.
+The proxy leaves autostart off, uses temporary RAM integration and requires
+real hardware validation. Docker also receives explicit VFS defaults for the
+RAM root. A new complete Actions build and joint boot remain required.
+
 ## Container dependency closure and quiet PCM candidate, 2026-10-28
 
 The actual previous kernel lacks NF_NAT, NF_TABLES and the new legacy evaluator

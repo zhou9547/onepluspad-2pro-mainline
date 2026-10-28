@@ -13,7 +13,7 @@ def load(name,path,digest):
     spec=importlib.util.spec_from_file_location(name,path)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
-def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.sleep,sample_mode=False):
+def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.sleep,sample_mode=False,proxy=None,proxy_manifest=None):
     # The probe is installed BEFORE the reverse-service window. Bound the
     # Query/status/stop/transient reset/state: 16+1+3+1+2s; <=3s readiness.
     # Keep the original independent 20s systemd cap and 28s service window.
@@ -47,6 +47,9 @@ def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.
     if sample_mode:
         if answer.get('mode')!='sample' or set(answer.get('samples',{}))!={'accel','gyro','mag'} or answer.get('unit_inactive') is not True or answer.get('cleanup_returned') is not True:
             raise ValueError('Incomplete bounded sample result')
+        if proxy is not None:
+            print('RAM_SSC_PRE_PROXY_SAMPLES_RESULT '+json.dumps(answer,sort_keys=True),flush=True)
+            answer['proxy']=proxy.run_proxy(proxy_manifest)
         return answer
     if (answer.get('mode')!='discover' or answer.get('metadata_available')!=sorted(ssc.TYPES) or
         answer.get('unit_inactive') is not True or answer.get('cleanup_returned') is not True or
@@ -56,7 +59,8 @@ def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--probe-mode',choices=['metadata','samples'],default='metadata')
+    p.add_argument('--probe-mode',choices=['metadata','samples','proxy'],default='metadata')
+    p.add_argument('--proxy-helper');p.add_argument('--proxy-helper-sha256')
     for name in ('release','module-sha256','policy-sha256','attach-helper','attach-helper-sha256',
                  'fileserver-helper','fileserver-helper-sha256','archive','archive-sha256','manifest','manifest-sha256',
                  'trace-tool','trace-sha256','ssc-helper','ssc-helper-sha256','ssc-archive','ssc-archive-sha256',
@@ -69,6 +73,10 @@ def main():
     guard=load('reviewed_attach_guard',a.attach_helper,a.attach_helper_sha256)
     ssc=load('reviewed_metadata_guard',a.ssc_helper,a.ssc_helper_sha256)
     samples=load('reviewed_samples_guard',a.ssc_samples_helper,a.ssc_samples_helper_sha256)
+    proxy=None
+    if a.probe_mode=='proxy':
+        if not a.proxy_helper or not a.proxy_helper_sha256:p.error('proxy mode requires its bound helper')
+        proxy=load('reviewed_sensor_proxy',a.proxy_helper,a.proxy_helper_sha256)
     root=Path('/')
     guard.validate(root,a.release,a.module_sha256,a.policy_sha256)
     for path,digest in [(a.archive,a.archive_sha256),(a.manifest,a.manifest_sha256),
@@ -78,14 +86,16 @@ def main():
         if Path(path).is_symlink() or not re.fullmatch('[0-9a-f]{64}',digest) or sha(path)!=digest:raise ValueError('Composite input mismatch')
     probe_files=ssc.entries(a.ssc_archive,json.loads(Path(a.ssc_manifest).read_text()))
     sample_files=samples.entries(a.ssc_samples_archive,json.loads(Path(a.ssc_samples_manifest).read_text()))
-    files=fs.archive_entries(a.archive,json.loads(Path(a.manifest).read_text()))
+    runtime_manifest=json.loads(Path(a.manifest).read_text())
+    files=fs.archive_entries(a.archive,runtime_manifest)
+    if proxy is not None and runtime_manifest.get('scope')!='PUBLIC_REVIEWED_PHONE_SENSOR_RUNTIME_INPUTS':raise ValueError('Proxy requires freshly built public native inputs')
     fs.install(root,files)
     ssc.install(probe_files)
     samples.install(sample_files)
     for name,(data,mode,target) in files.items():
         if data is not None and sha(root/name)!=hashlib.sha256(data).hexdigest():raise ValueError('Reverse input changed before attach')
     guard.guard(root,guard.command)
-    sample_mode=a.probe_mode=='samples'
+    sample_mode=a.probe_mode in ('samples','proxy')
     diagnostic=samples if sample_mode else ssc
     with (root/guard.MARKER).open('x') as stream:stream.write('ONE_REVERSE_ATTACH_THREE_VECTOR_SAMPLE_DIAGNOSTIC\n' if sample_mode else 'ONE_REVERSE_ATTACH_FOUR_METADATA_QUERIES_NO_STREAM_NO_RETRY\n')
     for unit in guard.UNITS:
@@ -97,8 +107,8 @@ def main():
     os.chown('/dev/fastrpc-adsp-secure',fs.UID,fs.UID);os.chmod('/dev/fastrpc-adsp-secure',0o600)
     state=Path(fs.STATE);state.mkdir(mode=0o700);os.chown(state,fs.UID,fs.UID)
     metadata=[]
-    def callback():metadata.append(metadata_callback(fs,diagnostic,sample_mode=sample_mode))
-    try:worker=fs.serve(a.trace_tool,diagnostic=True,during_active=callback,samples_requested=sample_mode)
+    def callback():metadata.append(metadata_callback(fs,diagnostic,sample_mode=sample_mode,proxy=proxy,proxy_manifest=runtime_manifest))
+    try:worker=fs.serve(a.trace_tool,diagnostic=True,during_active=callback,samples_requested=sample_mode,**({'proxy_mode':True} if proxy is not None else {}))
     finally:
         guard.guard(root,guard.command)
         if sha(root/guard.POLICY)!=a.policy_sha256:raise ValueError('Module policy changed')
@@ -108,9 +118,10 @@ def main():
               'file_service_and_metadata_cleanup_required':True,'samples_accepted':False}),flush=True)
     if len(metadata)!=1:raise ValueError('Metadata callback count mismatch')
     result={'scope':'ONE_REVERSE_ATTACH_THREE_VECTOR_SAMPLES' if sample_mode else 'ONE_REVERSE_ATTACH_FOUR_METADATA_TYPES_NO_SAMPLES','worker':worker,'metadata':metadata[0],
-      'private_data_bytes_unchanged':True,'module_policy_unchanged':True,'data_files':len(files)-len(fs.LINKS)-5,
+      'private_data_bytes_unchanged':True,'module_policy_unchanged':True,'data_files':len(files)-len(fs.LINKS)-(10 if runtime_manifest.get('scope')=='PUBLIC_REVIEWED_PHONE_SENSOR_RUNTIME_INPUTS' else 5),
       'sensor_stream_requested':sample_mode,'audio_camera_or_radio_activated':False,
       'adsp_restarted':False,'dsp_release_acknowledgement_claimed':False,'file_server_fully_accepted':False}
+    if proxy is not None:result['scope']='ONE_REVERSE_ATTACH_THREE_VECTOR_SAMPLES_AND_DBUS'
     print('RAM_SENSOR_DISCOVERY_RESULT '+json.dumps(result,sort_keys=True),flush=True)
 
 if __name__=='__main__':main()

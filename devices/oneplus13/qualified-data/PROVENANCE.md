@@ -2,7 +2,7 @@
 
 The owner explicitly authorized publication of the firmware and calibration on
 2026-10-27, excluding credentials, keys, personal data and device identifiers.
-These 74 payloads are the unchanged hardware data used by the successful run90
+The original 74 payloads are the unchanged hardware data used by the successful run90
 RAM WiFi/HTTP acceptance, except that old `/chosen/bootargs` were removed from
 the calibrated DTB. The packager generates new image hashes and session
 parameters; no old test session, network configuration or USB serial is needed.
@@ -31,3 +31,20 @@ not private signing keys. Every payload has a size and SHA-256 in the manifest.
 This dataset reproduces the qualified experimental RAM configuration. It is not
 a generic image for other RAM variants and does not qualify audio, cameras,
 sensor streams, suspend or a new SAR transport. It does not authorize flashing.
+
+## Reviewed sensor runtime text, 2026-10-28
+
+The additional `sensors/reviewed-runtime-data.json` is a hash-bound text
+container of922 configuration/registry/support files. It derives from the
+owner's C.93 ROM configuration and owner-authorized per-unit sensor calibration
+already exercised by the bounded vector diagnostics. It excludes the private
+import ledger and both serial-related registry files. Key and content checks
+reject serial/UUID/IMEI/IMSI/MAC/network credential fields, credentials and key
+material. Six socinfo selectors are hardware model/revision choices, not a
+device serial. No userspace binary, service hook or partition image is in it.
+
+This data remains vendor configuration/calibration rather than GPL code.
+Publication does not qualify copying this unit's calibration to another phone.
+The sensor userspace is built separately from pinned public sources in Actions,
+then joined to this allowlist. Its hardware revalidation remains required;
+no sensor service or radio is automatically started by the dataset.

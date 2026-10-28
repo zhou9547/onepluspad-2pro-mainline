@@ -116,6 +116,7 @@ chroot "$root" passwd -l root
 # docker0 bridge or modify the phone's forwarding policy during qualification.
 # The owner can start docker.service explicitly in the RAM desktop.
 chroot "$root" systemctl disable docker.service docker.socket containerd.service
+install -D -m 0644 devices/oneplus13/docker/daemon.json "$root/etc/docker/daemon.json"
 mkdir -p "$root/etc/ssh/sshd_config.d"
 cat > "$root/etc/ssh/sshd_config.d/60-oneplus13.conf" <<'EOF'
 PasswordAuthentication yes

@@ -128,6 +128,31 @@ def main():
     dest.parent.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(REPO/'devices/oneplus13/audio/90-oneplus13-manual-audio.conf',dest)
     dest.chmod(0o644);audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    # Same-workflow native userspace and reviewed text data. The complete image
+    # no longer needs a private host file-server archive for sensor diagnostics.
+    sensor_runtime=REPO/'out/phone-ssc/sensor-inputs'
+    runtime_manifest=json.loads((sensor_runtime/'phone-sensor-inputs-manifest.json').read_text())
+    if runtime_manifest.get('integration_commit')!=km['integration_commit']:raise ValueError('Wrong sensor runtime commit')
+    fs=import_module('ram-sensor-fileserver')
+    fs.archive_entries(sensor_runtime/'phone-sensor-inputs.tar.gz',runtime_manifest)
+    runtime_hashes={}
+    for name in ('phone-sensor-inputs.tar.gz','phone-sensor-inputs-manifest.json'):
+        dest=stage/'usr/lib/oneplus13-sensors'/name;dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(sensor_runtime/name,dest);dest.chmod(0o644)
+        runtime_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    for name in ('ram-sensor-attach-only.py','ram-sensor-fileserver.py','ram-sensor-discovery.py','ram-ssc-proxy.py','image-sensors-check.py'):
+        dest=stage/'usr/libexec'/('oneplus13-'+name)
+        shutil.copyfile(REPO/'tools/oneplus13'/name,dest);dest.chmod(0o755)
+        runtime_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    image_sensors=import_module('image-sensors-check')
+    defaults={'format':'ONEPLUS13_IMAGE_SENSOR_INPUTS_V1','kernel_release':release,
+        'module_sha256':sha256(stage/'usr/lib/modules'/release/'kernel/drivers/misc/fastrpc.ko'),
+        'policy_sha256':bindings['MODULE_POLICY_SHA256'],
+        'inputs':{name:{'path':path,'sha256':sha256(stage/path.lstrip('/'))} for name,path in image_sensors.PATHS.items()}}
+    dest=stage/'usr/lib/oneplus13-sensors/runtime-bindings.json'
+    dest.write_text(json.dumps(defaults,indent=2)+'\n');dest.chmod(0o644)
+    runtime_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    runtime_hashes['usr/bin/strace']=sha256(stage/'usr/bin/strace')
     container_hashes={}
     container=import_module('container-kernel')
     with tarfile.open(kernel/'modules.tar.gz') as archive:
@@ -138,6 +163,8 @@ def main():
         dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(source,dest);dest.chmod(0o755 if name.endswith('.py') else 0o644)
         container_hashes[name]=sha256(dest)
+    if (stage/'etc/docker/daemon.json').read_bytes()!=(REPO/'devices/oneplus13/docker/daemon.json').read_bytes():raise ValueError('Docker RAM defaults changed')
+    container_hashes['etc/docker/daemon.json']=sha256(stage/'etc/docker/daemon.json')
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
@@ -196,6 +223,8 @@ def main():
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
     result.update(container_files=container_hashes,container_daemon_auto_started=False,
                   container_hardware_qualified=False)
+    result.update(sensor_runtime_files=runtime_hashes,sensor_runtime_host_private_inputs_required=False,
+                  sensor_runtime_auto_started=False,sensor_proxy_hardware_qualified=False)
     (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({k:result[k] for k in ['scope','source_commit','kernel_release','boot_image_sha256','rootfs_sha256','firmware_files','old_kernel_or_rootfs_used']},indent=2))
 

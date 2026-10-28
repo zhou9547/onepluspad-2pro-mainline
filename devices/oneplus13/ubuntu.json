@@ -15,7 +15,8 @@
     "ca-certificates", "openssh-client", "openssh-server", "kmod", "zstd",
     "language-pack-zh-hans", "language-pack-gnome-zh-hans", "fonts-noto-cjk",
     "ibus", "ibus-libpinyin", "im-config", "alsa-utils", "pipewire", "pipewire-pulse", "wireplumber",
-    "docker.io", "iptables", "nftables", "iproute2"
+    "docker.io", "iptables", "nftables", "iproute2", "strace",
+    "libgudev-1.0-0", "libpolkit-gobject-1-0", "polkitd"
   ],
   "hardware_status": "NOT_DEVICE_TESTED",
   "accounts": "No default password or autologin. Create a user before deployment.",

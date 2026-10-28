@@ -85,9 +85,14 @@ def inside(outer_net):
         run(['iptables-legacy', '-w', '2', '-A', 'OP13_TEST', '-m', 'addrtype', '--dst-type', 'LOCAL', '-j', 'ACCEPT'])
         run(['iptables-legacy', '-w', '2', '-t', 'nat', '-A', 'OP13_TEST', '-j', 'MASQUERADE'])
         log = (ROOT/'dockerd.log').open('wb')
-        daemon = subprocess.Popen(['dockerd', '--host=unix://' + str(ROOT/'docker.sock'),
+        # Exercise the delivered RAM storage defaults in the private daemon.
+        config=Path('/etc/docker/daemon.json').read_bytes()
+        if json.loads(config)!={'storage-driver':'vfs','log-driver':'local','log-opts':{'max-size':'5m','max-file':'2'}}:
+            raise ValueError('Unexpected RAM Docker defaults')
+        (ROOT/'daemon.json').write_bytes(config)
+        daemon = subprocess.Popen(['dockerd', '--config-file='+str(ROOT/'daemon.json'), '--host=unix://' + str(ROOT/'docker.sock'),
              '--data-root=' + str(ROOT/'data'), '--exec-root=' + str(ROOT/'exec'),
-             '--pidfile=' + str(ROOT/'docker.pid'), '--storage-driver=vfs',
+             '--pidfile=' + str(ROOT/'docker.pid'),
              '--exec-opt=native.cgroupdriver=cgroupfs', '--iptables=true', '--ip6tables=true', '--userland-proxy=false',
              '--bip=10.243.13.1/24', '--default-address-pool=base=10.244.0.0/16,size=24'],
              stdout=log, stderr=subprocess.STDOUT, env={**os.environ, 'DOCKER_TMPDIR': str(ROOT/'tmp')})

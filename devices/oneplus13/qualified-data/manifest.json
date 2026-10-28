@@ -298,6 +298,10 @@
     "firmware/qcom/sm8750/oneplus/dodge/gen80000_zap.mbn": {
       "sha256": "a694df58b82343e58e52745da31c3b88e569a2eeae5e7755e0d9bf14d93f5046",
       "bytes": 12088
+    },
+    "sensors/reviewed-runtime-data.json": {
+      "bytes": 1166001,
+      "sha256": "3af3939c859d7f6cd115214c11a80a38170ab7daa5b10de0dbcd4711e2413b2f"
     }
   },
   "removed_fields": [

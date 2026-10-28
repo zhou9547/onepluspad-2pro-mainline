@@ -29,7 +29,16 @@ def canonical(name):
     return name
 
 def archive_entries(archive,manifest):
-    if manifest.get('scope')!='PRIVATE_PHONE_SENSOR_FILESERVER_INPUTS':raise ValueError('Wrong manifest scope')
+    public=manifest.get('scope')=='PUBLIC_REVIEWED_PHONE_SENSOR_RUNTIME_INPUTS'
+    if not public and manifest.get('scope')!='PRIVATE_PHONE_SENSOR_FILESERVER_INPUTS':raise ValueError('Wrong manifest scope')
+    if public:
+        if manifest.get('native_elf_count')!=10 or manifest.get('text_data_files')!=922 or manifest.get('owner_identifiers_included') is not False or sha(archive)!=manifest.get('archive_sha256'):
+            raise ValueError('Unreviewed public sensor capability or archive')
+        expected_native={'bin/hexagonrpcd','bin/ssccli','bin/phone-sensor-bus-check','libexec/iio-sensor-proxy',
+            'lib/libssc.so.2','lib/libhexagonrpc.so.0.5','lib/libmbim-glib.so.4','lib/libprotobuf-c.so.1',
+            'lib/libqmi-glib.so.5','lib/libqrtr-glib.so.0'}
+        if {n.removeprefix(PREFIX) for n in manifest['files'] if n.startswith(PREFIX)}!=expected_native:
+            raise ValueError('Unreviewed public native inventory')
     if manifest.get('links')!=LINKS:raise ValueError('Wrong path mappings')
     expected=manifest['files']
     if not 5<len(expected)<=1024:raise ValueError('Unexpected file count')
@@ -45,7 +54,8 @@ def archive_entries(archive,manifest):
             binary=name.startswith(PREFIX)
             if not binary and not name.startswith(DATA):raise ValueError('Unreviewed destination')
             info=expected[name]
-            if member.size!=info['bytes'] or not 0<=member.size<=4*1024*1024:raise ValueError('Invalid member size')
+            limit=8*1024*1024 if public and name==PREFIX+'lib/libqmi-glib.so.5' else 4*1024*1024
+            if member.size!=info['bytes'] or not 0<=member.size<=limit:raise ValueError('Invalid member size')
             value=tf.extractfile(member).read();total+=len(value)
             if total>16*1024*1024:raise ValueError('Archive too large')
             if hashlib.sha256(value).hexdigest()!=info['sha256'] or member.mode!=info['mode']:
@@ -59,7 +69,8 @@ def archive_entries(archive,manifest):
             entries[name]=(value,member.mode,None)
     if {n for n,v in entries.items() if v[0] is not None}!=set(expected) or {n for n,v in entries.items() if v[2] is not None}!=set(LINKS):
         raise ValueError('Incomplete archive')
-    if binary_count!=5:raise ValueError('Expected five reviewed userspace ELF files')
+    if binary_count!=(10 if public else 5):raise ValueError('Wrong reviewed userspace ELF count')
+    if public and len(entries)!=935:raise ValueError('Incomplete public data allowlist')
     # No file/link may become another member's parent during extraction.
     for name in entries:
         if any(str(p) in entries for p in PurePosixPath(name).parents if str(p)!='.'):
@@ -114,7 +125,7 @@ def trace_facts(text):
             'registry_mapping_open_observed':registry,'config_mapping_open_observed':config,
             'raw_rpc_arguments_or_samples_saved':False}
 
-def service_command(trace):
+def service_command(trace,proxy_mode=False):
     props=['Type=exec','User=65534','Group=65534','Restart=no','RuntimeMaxSec=40s',
       'TimeoutStartSec=8s','TimeoutStopSec=12s','KillMode=control-group','SendSIGKILL=yes',
       'NoNewPrivileges=yes','CapabilityBoundingSet=','ProtectSystem=strict','ProtectHome=yes',
@@ -124,6 +135,7 @@ def service_command(trace):
       'LockPersonality=yes','MemoryDenyWriteExecute=yes','DevicePolicy=closed',
       'DeviceAllow=/dev/fastrpc-adsp-secure rw','ReadWritePaths='+STATE,
       'StandardOutput=append:'+STATE+'/daemon.log','StandardError=append:'+STATE+'/daemon.log']
+    if proxy_mode:props=[p.replace('RuntimeMaxSec=40s','RuntimeMaxSec=70s') for p in props]
     result=['/usr/bin/systemd-run','--quiet','--unit='+UNIT]
     result+=['--property='+p for p in props]
     result += [str(trace),'-f','-qq','-T','-s','160','-e','trace=openat,ioctl,close','-e','raw=ioctl',
@@ -154,7 +166,8 @@ def daemon_error_summary(log):
             'unknown_search_directories':sum(x.startswith('Unknown search directory ') for x in lines),
             'arbitrary_paths_or_file_contents_in_summary':False}
 
-def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=False,during_active=None,samples_requested=False):
+def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=False,during_active=None,samples_requested=False,proxy_mode=False):
+    window=55 if proxy_mode else 28
     started=False
     launch_failed=False
     exited_early=False
@@ -166,10 +179,10 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
         # A launch timeout can occur after systemd created the unit.
         started=True
         try:
-            run(service_command(trace))
+            run(service_command(trace,proxy_mode=proxy_mode) if proxy_mode else service_command(trace))
         except (subprocess.CalledProcessError,OSError,subprocess.TimeoutExpired):
             launch_failed=True
-        until=clock()+28
+        until=clock()+window
         while clock()<until:
             try:
                 active=run(['/usr/bin/systemctl','is-active',UNIT])
@@ -241,7 +254,7 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
             raise ValueError('Unclassified daemon error during diagnostic run')
         if summary['missing_file_lookups']>64 or summary['unsupported_or_refused_dispatches']>16 or summary['unknown_search_directories']:
             raise ValueError('Diagnostic error counts exceed reviewed bounds')
-        return {**result,'bounded_observation_seconds':28,'file_server_cleanly_stopped':True,
+        return {**result,'bounded_observation_seconds':window,'file_server_cleanly_stopped':True,
                 'file_server_accepted':False,'write_refusals':0,
                 'diagnostic_missing_file_lookups':summary['missing_file_lookups'],
                 'diagnostic_unsupported_dispatches':summary['unsupported_or_refused_dispatches'],
@@ -251,7 +264,7 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
     if trace_failure is not None:raise ValueError(trace_failure)
     if not result['registry_mapping_open_observed'] or not result['config_mapping_open_observed'] or result['successful_invoke_calls_observed']<3:
         raise ValueError('No successful phone configuration/registry reverse service evidence')
-    return {**result,'bounded_observation_seconds':28,'file_server_cleanly_stopped':True,
+    return {**result,'bounded_observation_seconds':window,'file_server_cleanly_stopped':True,
             'file_server_accepted':True,'write_refusals':0,
             'dsp_release_acknowledgement_observed':False}
 

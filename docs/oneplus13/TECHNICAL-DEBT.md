@@ -1,3 +1,23 @@
+## Self-contained sensor runtime pending hardware, 2026-10-28
+
+The previous private host runtime dependency is replaced by an Actions-built
+native runtime and reviewed922-file dataset. This is a candidate until a
+new exact image passes discovery/samples, real SensorProxy claims and releases,
+and cleanup with all retained features. The compass uses its separate
+/net/hadess/SensorProxy/Compass object. A flat phone may have undefined
+in-plane orientation while valid face-up/down tilt and live updates prove
+data delivery; do not count that as an absent accelerometer. Physical axes,
+ambient light and ordinary persistent desktop integration remain unqualified.
+
+## Docker bridge and quiet PCM acceptance, 2026-10-28
+
+Image46f34674 passes real Docker bridge/DNS/NAT/published-port HTTP using VFS
+and IPv4, plus legacy table rules and nft frontend. It retains both WiFi bands,
+GPU/GNOME, Chinese/SSH and bounded three-vector samples. Both amplifiers switch
+during the bounded quiet nonzero PCM and restore to zero/off. This does not
+establish audible output, dynamic protection, overlay2 or IPv6 traffic. Android
+returned in349.6s, every health gate passed and physical writes remained zero.
+
 ## Container acceptance and original-feature gaps, 2026-10-28
 
 Do not infer firewall support from IP_NF_IPTABLES=m alone on this kernel: the
