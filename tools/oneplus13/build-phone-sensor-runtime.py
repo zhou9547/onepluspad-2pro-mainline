@@ -7,6 +7,7 @@ Consumes only the guarded SSC build from this exact integration source commit.
 """
 import argparse,hashlib,io,json,os,platform,shlex,shutil,struct,subprocess,sys,tarfile,urllib.request
 from pathlib import Path
+from verified_download import fetch
 REPO=Path(__file__).resolve().parents[2]
 PREFIX='/usr/lib/erhai/sensors'
 
@@ -83,7 +84,7 @@ def main():
     for name in ('hexagonrpc','iio-sensor-proxy'):
         entry=sources[name];archive=out/entry['archive']
         url=entry.get('mirror_url',entry['url']).replace('http:','https:',1)
-        with urllib.request.urlopen(url,timeout=45) as response,archive.open('xb') as f:shutil.copyfileobj(response,f)
+        fetch(url,entry['sha256'],archive)
         if sha(archive)!=entry['sha256']:raise ValueError('Original source archive changed')
         if name=='hexagonrpc':
             built[name],rpc_proof=build_phone_rpc(archive,out,a.meson,log)

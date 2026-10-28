@@ -1,5 +1,14 @@
 ## Desktop volume candidate held after joint regression, 2026-10-28
 
+The first follow-up build atb4f423de failed while downloading BusyBox and
+the RPC source archive: both reported TLS unexpected EOF before the affected
+compile stages. Pinned downloads now retry transport failures at most three
+times and use a persistent SHA256-addressed cache. Cache bytes are rehashed,
+downloads and destination replacement are atomic, and a checksum mismatch
+does not replace the prior destination. TLS and archive checks remain enabled.
+404 local checks completed without failures (one environment skip). A fresh
+complete Actions run is required for this build-transport change.
+
 Actions40685517582 at13bfebfe passed all five jobs. The single RAM round
 returned to Android in444.3s with seven matching baselines, no physical writes
 and clean full-history kernel gates. Microphone, quiet PCM, Docker, both WiFi

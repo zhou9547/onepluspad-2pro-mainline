@@ -14,6 +14,7 @@ import tarfile
 import urllib.request
 
 from common import make_cpio, read_cpio, sha256
+from verified_download import fetch
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -37,8 +38,7 @@ def main():
     deb = cache / bb['archive']
     if not deb.is_file() or sha256(deb) != bb['archive_sha256']:
         url = bb['url'].replace('http://', 'https://', 1)
-        with urllib.request.urlopen(url, timeout=120) as stream, deb.open('wb') as target:
-            shutil.copyfileobj(stream, target)
+        fetch(url,bb['archive_sha256'],deb)
     if sha256(deb) != bb['archive_sha256']:
         raise SystemExit('BusyBox archive checksum mismatch')
     subprocess.run(['dpkg-deb', '-x', str(deb), str(cache / 'busybox-root')], check=True)
