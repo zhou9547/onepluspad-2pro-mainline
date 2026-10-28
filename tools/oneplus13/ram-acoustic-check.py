@@ -8,6 +8,7 @@ CARD='OnePlus13-Audio-Probe'
 RATE=48000
 VOLUME=640
 FREQUENCIES=(1000,1500)
+PHASES=(('muted',(0,0)),('amp0_only',(VOLUME,0)),('amp1_only',(0,VOLUME)),('both',(VOLUME,VOLUME)))
 def load(name,path):
  s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
 def signal():
@@ -15,10 +16,13 @@ def signal():
  for i in range(RATE*2):
   t=i%RATE;level=min(1.,t/(RATE*.02),(RATE-1-t)/(RATE*.02))
   value=round(peak*level*math.sin(2*math.pi*FREQUENCIES[i//RATE]*t/RATE))
-  result.extend(struct.pack('<hh',value if i<RATE else 0,value if i>=RATE else 0))
+  # Duplicate the fixture to both I2S channels so amplifier isolation does not
+  # depend on an unqualified frontend channel-to-slot mapping.
+  result.extend(struct.pack('<hh',value,value))
  return bytes(result)
-def analyze(raw,muted_frame,live_frame):
- if len(raw)!=RATE*8*2*4:raise ValueError('Incomplete eight-second stereo S24 capture')
+def analyze(raw,phase_frames):
+ if len(raw)!=RATE*9*2*4:raise ValueError('Incomplete nine-second stereo S24 capture')
+ if len(phase_frames)!=len(PHASES) or any(not isinstance(x,int) for x in phase_frames):raise ValueError('Wrong phase markers')
  channels=[[],[]]
  for n,(v,) in enumerate(struct.iter_unpack('<i',raw)):
   v&=0xffffff
@@ -33,27 +37,27 @@ def analyze(raw,muted_frame,live_frame):
   c=sum(v*w for v,w in zip(data,basis[freq][0]))
   s=sum(v*w for v,w in zip(data,basis[freq][1]))
   return 2*math.hypot(c,s)/n
- result=[]
- for speaker,freq in enumerate(FREQUENCIES):
-  observations=[]
-  for channel,values in enumerate(channels):
-   quiet=amplitude(values,muted_frame+int((speaker+.25)*RATE),freq)
-   live=amplitude(values,live_frame+int((speaker+.25)*RATE),freq)
-   ratio=live/max(quiet,1e-9)
-   observations.append({'microphone_channel':channel,'muted_amplitude':quiet,'live_amplitude':live,
-                        'live_to_muted_ratio':ratio,'pass':live>3e-6 and ratio>=8})
-  result.append({'speaker_channel':speaker,'frequency_hz':freq,'observations':observations,
-                 'pass':any(v['pass'] for v in observations)})
+ profile=[];isolated=[]
+ for phase,(phase_name,volumes) in enumerate(PHASES):
+  for freq in FREQUENCIES:
+   observations=[]
+   offset=.25 if freq==FREQUENCIES[0] else 1.25
+   for channel,values in enumerate(channels):
+    live=amplitude(values,phase_frames[phase]+int(offset*RATE),freq)
+    quiet=amplitude(values,phase_frames[0]+int(offset*RATE),freq)
+    ratio=live/max(quiet,1e-9)
+    observations.append({'microphone_channel':channel,'muted_amplitude':quiet,'live_amplitude':live,
+                         'live_to_muted_ratio':ratio,'pass':live>3e-6 and ratio>=8})
+   profile.append({'phase':phase_name,'volumes':volumes,'frequency_hz':freq,'observations':observations,
+                   'response_pass':any(v['pass'] for v in observations)})
+ for amp,freq,phase_name in ((0,FREQUENCIES[0],'amp0_only'),(1,FREQUENCIES[1],'amp1_only')):
+  row=next(v for v in profile if v['phase']==phase_name and v['frequency_hz']==freq)
+  isolated.append({'amplifier':amp,'frequency_hz':freq,'observations':row['observations'],'pass':row['response_pass']})
  clipping=[sum(abs(v)>=.999999 for v in values) for values in channels]
- profile=[]
- for freq in FREQUENCIES:
-  for channel,values in enumerate(channels):
-   profile.append({'frequency_hz':freq,'microphone_channel':channel,
-       'half_second_windows':[{'center_seconds':round((start+n/2)/RATE,3),'amplitude':amplitude(values,start,freq)}
-                              for start in range(0,len(values)-n+1,RATE//4)]})
- return {'speaker_responses':result,'clipped_samples':clipping,'spectrum_profile':profile,
-         'recorded_frame_markers':{'muted_start':muted_frame,'live_start':live_frame},
-         'correlated_two_speaker_response_pass':all(v['pass'] for v in result) and not any(clipping),
+ return {'amp_isolation':isolated,'clipped_samples':clipping,'phase_spectrum':profile,
+         'recorded_frame_markers':dict(zip((x[0] for x in PHASES),phase_frames)),
+         'correlated_two_speaker_response_pass':all(v['pass'] for v in isolated) and not any(clipping) and
+             all(v['response_pass'] for v in profile if v['phase']=='both'),
          'human_listening_performed':False,'dynamic_protection_qualified':False}
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('--release',required=True);p.add_argument('--policy-sha256',required=True);a=p.parse_args()
@@ -93,30 +97,30 @@ def main():
  try:
   for name,old,target in saved:
    changed.append((name,old));audio.run(['amixer','-q','-c',card,'cset','name='+name,target])
-  recorder=subprocess.Popen(['arecord','-q','-D','hw:'+card+',2','-t','raw','-f','S24_LE','-r','48000','-c','2','-d','8',str(raw)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+   recorder=subprocess.Popen(['arecord','-q','-D','hw:'+card+',2','-t','raw','-f','S24_LE','-r','48000','-c','2','-d','9',str(raw)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
   until=time.monotonic()+3
   while not raw.exists() or raw.stat().st_size<RATE*8//4:
    if recorder.poll() is not None or time.monotonic()>=until:raise ValueError('Microphone did not deliver initial frames')
    time.sleep(.05)
   time.sleep(.2)
-  for volume in (0,VOLUME):
-   if volume:
-    for name in controls:audio.run(['amixer','-q','-c',card,'cset','name='+name,str(volume)])
+  for phase_name,volumes in PHASES:
+   for name,volume in zip(controls,volumes):
+    audio.run(['amixer','-q','-c',card,'cset','name='+name,str(volume)])
    frames.append(raw.stat().st_size//8)
    player=subprocess.Popen(['aplay','-q','-D','hw:'+card+',0','-t','raw','-f','S16_LE','-r','48000','-c','2','-d','2',str(tone)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
    for _ in range(2):
     time.sleep(.75)
-    states=[audio.amp_state(p.read_text(),volume) for p in paths]
+    states=[audio.amp_state(p.read_text(),ffi_volume) for p,ffi_volume in zip(paths,volumes)]
     if not all(audio.active_state(s) for s in states):raise ValueError('Acoustic amplifier state failed')
-    amp_samples.append({'volume':volume,'states':states})
+    amp_samples.append({'phase':phase_name,'volumes':volumes,'states':states})
    _,err=player.communicate(timeout=3)
    if player.returncode:raise ValueError('Native tone playback failed')
-   player=None;time.sleep(.2)
+   player=None;time.sleep(.1)
   _,err=recorder.communicate(timeout=6)
   if recorder.returncode:raise ValueError('Acoustic capture failed')
   recorder=None
   if raw.stat().st_size>4*1024*1024:raise ValueError('Acoustic RAM capture bound exceeded')
-  answer=analyze(raw.read_bytes(),*frames)
+  answer=analyze(raw.read_bytes(),frames)
  finally:
   for proc in (player,recorder):
    if proc is not None:
