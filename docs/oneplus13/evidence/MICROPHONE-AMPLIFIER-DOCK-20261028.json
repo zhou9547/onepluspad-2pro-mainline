@@ -1,0 +1,377 @@
+{
+  "scope": "ONE_JOINT_NATIVE_MICROPHONE_TWO_AMPLIFIER_DOCK_DOCKER_WIFI_RAM_BOOT",
+  "source_commit_under_test": "2457ac350c8b81d4d42e684b1a720be79cbe2530",
+  "actions_run": 40677232016,
+  "actions_url": "https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40677232016",
+  "actions_jobs_all_success": true,
+  "actions_image_components_verified": true,
+  "boot_image_sha256": "a4df5f8d004fbb2fc6965b0d29015d1f71f01eef333fcc9ff58c0eb4e7f39c25",
+  "rootfs_sha256": "347df7be6069f6562857b85beaf6ff0c92e0aff3877d4b7dd286cb96610955d8",
+  "android_return_confirmed": true,
+  "android_return_seconds": 435.4,
+  "seven_baseline_keys_match": true,
+  "physical_partition_writes": 0,
+  "joint_acceptance_pass": true,
+  "kernel_health_phase_count": 16,
+  "kernel_health_counts_all_zero": true,
+  "microphone": {
+    "format": "S24_LE",
+    "rate_hz": 48000,
+    "seconds": 2,
+    "board_identity": "C93_ABL_SUN_DODGE",
+    "channels": [
+      {
+        "clipped_samples": 0,
+        "distinct_values": 44523,
+        "frames": 96000,
+        "peak": 0.010269403457641602,
+        "rms": 0.002665828606411023
+      },
+      {
+        "clipped_samples": 0,
+        "distinct_values": 74485,
+        "frames": 96000,
+        "peak": 0.05248141288757324,
+        "rms": 0.006530755815354185
+      }
+    ],
+    "controls_restored": true,
+    "raw_audio_deleted": true,
+    "bounded_native_capture_accepted": true
+  },
+  "speaker_acoustic": {
+    "test_volume": 640,
+    "signal_peak_dbfs": -18,
+    "signal_sha256": "e7fc714d26f12006e5e3112ef0201498b819bc139117fb10a82e86e8f5a8d4a5",
+    "amp_isolation": [
+      {
+        "amplifier": 0,
+        "frequency_hz": 1000,
+        "observations": [
+          {
+            "live_amplitude": 9.242622755488818e-05,
+            "live_to_muted_ratio": 77.43397805403737,
+            "microphone_channel": 0,
+            "muted_amplitude": 1.1936133190831092e-06,
+            "pass": true
+          },
+          {
+            "live_amplitude": 0.0001270814869255472,
+            "live_to_muted_ratio": 9.274153133268335,
+            "microphone_channel": 1,
+            "muted_amplitude": 1.3702759173738377e-05,
+            "pass": true
+          }
+        ],
+        "pass": true
+      },
+      {
+        "amplifier": 1,
+        "frequency_hz": 1500,
+        "observations": [
+          {
+            "live_amplitude": 0.0002183323577202655,
+            "live_to_muted_ratio": 94.91982682274313,
+            "microphone_channel": 0,
+            "muted_amplitude": 2.300176528218784e-06,
+            "pass": true
+          },
+          {
+            "live_amplitude": 7.108900840404177e-05,
+            "live_to_muted_ratio": 6.864056363729447,
+            "microphone_channel": 1,
+            "muted_amplitude": 1.035670522457904e-05,
+            "pass": false
+          }
+        ],
+        "pass": true
+      }
+    ],
+    "both_amplifiers_enabled_phase": [
+      {
+        "frequency_hz": 1000,
+        "observations": [
+          {
+            "live_amplitude": 0.00017551667347284232,
+            "live_to_muted_ratio": 147.04651051285848,
+            "microphone_channel": 0,
+            "muted_amplitude": 1.1936133190831092e-06,
+            "pass": true
+          },
+          {
+            "live_amplitude": 2.9906976364399044e-05,
+            "live_to_muted_ratio": 2.1825514106470165,
+            "microphone_channel": 1,
+            "muted_amplitude": 1.3702759173738377e-05,
+            "pass": false
+          }
+        ],
+        "phase": "both",
+        "response_pass": true,
+        "volumes": [
+          640,
+          640
+        ]
+      },
+      {
+        "frequency_hz": 1500,
+        "observations": [
+          {
+            "live_amplitude": 0.00023317928444804454,
+            "live_to_muted_ratio": 101.37451695005969,
+            "microphone_channel": 0,
+            "muted_amplitude": 2.300176528218784e-06,
+            "pass": true
+          },
+          {
+            "live_amplitude": 0.00020529601428418516,
+            "live_to_muted_ratio": 19.822521722156058,
+            "microphone_channel": 1,
+            "muted_amplitude": 1.035670522457904e-05,
+            "pass": true
+          }
+        ],
+        "phase": "both",
+        "response_pass": true,
+        "volumes": [
+          640,
+          640
+        ]
+      }
+    ],
+    "controls_restored": true,
+    "raw_audio_deleted": true,
+    "amplifiers_stopped": true,
+    "bounded_acoustic_correlation_accepted": true,
+    "human_listening_performed": false,
+    "ordinary_desktop_playback_qualified": false,
+    "dynamic_protection_qualified": false
+  },
+  "sensor_proxy": {
+    "accelerometer_posture_available": true,
+    "accelerometer_posture_updates": 2,
+    "compass_heading_finite": true,
+    "compass_heading_updates": 9,
+    "continuous_autostart_accepted": false,
+    "gyro_property_updates": 102,
+    "physical_axes_or_calibration_accepted": false,
+    "same_connection_three_claims_and_releases": true,
+    "scope": "BOUNDED_THREE_SENSOR_DBUS_CANDIDATE",
+    "temporary_udev_and_bus_policy_removed": true,
+    "unit_inactive": true
+  },
+  "sensor_samples": {
+    "accel": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 9.81672,
+      "norm_min": 9.71619,
+      "samples": 64
+    },
+    "gyro": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 0.0124041,
+      "norm_min": 0.00537881,
+      "samples": 64
+    },
+    "mag": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 98.6698,
+      "norm_min": 81.9748,
+      "samples": 15
+    }
+  },
+  "docker": {
+    "bridge_container_http": true,
+    "busybox_sha256": "c2f279d1d5640a0f327890d41cad594c0f059f3fed3f96dd72fdcc4f5e18ec02",
+    "embedded_dns_http": true,
+    "external_registry_used": false,
+    "iptables_backend": "iptables v1.8.11 (nf_tables)",
+    "legacy_filter_nat_rules": true,
+    "masquerade_off_bridge_http": true,
+    "overlay2_tested": false,
+    "pass": true,
+    "physical_network_rules_modified": false,
+    "published_port_peer_http": true,
+    "scope": "REAL_DOCKER_ISOLATED_RAM_BRIDGE",
+    "storage_driver": "vfs"
+  },
+  "ubuntu_dock": {
+    "dbus_returncode": 0,
+    "enabled": true,
+    "running": true,
+    "no_error": true,
+    "settings_exact": true,
+    "settings": {
+      "dock-fixed": "true",
+      "autohide": "false",
+      "intellihide": "false",
+      "dock-position": "'LEFT'",
+      "extend-height": "true"
+    },
+    "physical_visibility_tested": false
+  },
+  "wifi": {
+    "5ghz": {
+      "active_profile_rc": 0,
+      "ap_list_observations": 1,
+      "ap_list_rc": 0,
+      "associated_band": "5GHz",
+      "association_pass": true,
+      "authentication_rc": 0,
+      "automatic_acceptance_pass": true,
+      "band_pass": true,
+      "device_path_rc": 0,
+      "dhcp_pass": true,
+      "directed_scan_requested": true,
+      "external_diagnostics_requested": false,
+      "http_metrics": {
+        "dns_s": 1.1e-05,
+        "first_byte_s": 0.009569,
+        "http_code": 200,
+        "tcp_s": 0.006505,
+        "total_s": 0.009591
+      },
+      "http_pass": true,
+      "http_probe_endpoint_class": "owner-supplied-private-LAN",
+      "http_rc": 0,
+      "https_pass": false,
+      "interface_found": true,
+      "ipv4_address_rc": 0,
+      "ipv4_default_route_present": true,
+      "ipv4_global_address_present": true,
+      "ipv4_observations": 3,
+      "ipv4_route_rc": 0,
+      "link_frequency_mhz": 5240,
+      "link_frequency_rc": 0,
+      "low_level_scan_or_reset": false,
+      "managed_rc": 0,
+      "maximum_visible_ssid_rows": 32,
+      "nm_device_ready": true,
+      "nm_device_state_code": 30,
+      "nm_ready_rc": 0,
+      "password_logged": false,
+      "profile_rc": 0,
+      "requested_band": "5GHz",
+      "rescan_rc": 0,
+      "scan_before_rc": 0,
+      "scan_completed": true,
+      "scan_completion_rc": 0,
+      "scan_observations": 2,
+      "scan_result_rows": 37,
+      "scope": "ONE_NETWORK_RAM_ONLY",
+      "supplicant_dbus_rc": 0,
+      "target_seen": true,
+      "unique_visible_ssids": 31,
+      "visible_ssid_rows": 32
+    },
+    "2_4ghz": {
+      "active_profile_rc": 0,
+      "ap_list_observations": 1,
+      "ap_list_rc": 0,
+      "associated_band": "2.4GHz",
+      "association_pass": true,
+      "authentication_rc": 0,
+      "automatic_acceptance_pass": true,
+      "band_pass": true,
+      "device_path_rc": 0,
+      "dhcp_pass": true,
+      "directed_scan_requested": true,
+      "external_diagnostics_requested": false,
+      "http_metrics": {
+        "dns_s": 2.6e-05,
+        "first_byte_s": 0.052125,
+        "http_code": 200,
+        "tcp_s": 0.047739,
+        "total_s": 0.052153
+      },
+      "http_pass": true,
+      "http_probe_endpoint_class": "owner-supplied-private-LAN",
+      "http_rc": 0,
+      "https_pass": false,
+      "interface_found": true,
+      "ipv4_address_rc": 0,
+      "ipv4_default_route_present": true,
+      "ipv4_global_address_present": true,
+      "ipv4_observations": 1,
+      "ipv4_route_rc": 0,
+      "link_frequency_mhz": 2437,
+      "link_frequency_rc": 0,
+      "low_level_scan_or_reset": false,
+      "managed_rc": 0,
+      "maximum_visible_ssid_rows": 39,
+      "nm_device_ready": true,
+      "nm_device_state_code": 100,
+      "nm_ready_rc": 0,
+      "password_logged": false,
+      "profile_rc": 0,
+      "requested_band": "2.4GHz",
+      "rescan_rc": 0,
+      "scan_before_rc": 0,
+      "scan_completed": true,
+      "scan_completion_rc": 0,
+      "scan_observations": 5,
+      "scan_result_rows": 43,
+      "scope": "ONE_NETWORK_RAM_ONLY",
+      "supplicant_dbus_rc": 0,
+      "target_seen": true,
+      "unique_visible_ssids": 38,
+      "visible_ssid_rows": 39
+    }
+  },
+  "preserved": {
+    "gpu_check_returncode": 0,
+    "desktop_check_returncode": 0,
+    "touch_device_present": true,
+    "battery_telemetry_present": true,
+    "battery_readings": [
+      {
+        "capacity_percent": 80,
+        "temperature_deci_c": 305
+      }
+    ],
+    "bluetooth_powered": true,
+    "obex_sender_preserved": true,
+    "physical_touch_tested": false,
+    "bluetooth_peer_receipt_tested": false
+  },
+  "locale": {
+    "gnome_session_locale": "zh_CN.UTF-8",
+    "session_languages": [
+      "zh_CN.UTF-8"
+    ],
+    "input_sources": [
+      [
+        "xkb",
+        "us"
+      ],
+      [
+        "ibus",
+        "libpinyin"
+      ]
+    ],
+    "expected_input_sources": [
+      [
+        "xkb",
+        "us"
+      ],
+      [
+        "ibus",
+        "libpinyin"
+      ]
+    ],
+    "input_sources_exact": true,
+    "duplicate_sources": false,
+    "sshd_active": true,
+    "libpinyin_installed": true
+  },
+  "ssh_chinese_login": true,
+  "limitations": [
+    "Physical microphone axes, ambient light and continuous SensorProxy autostart remain unqualified",
+    "Acoustic response used nearby microphones; human listening, normal desktop playback and dynamic protection remain unqualified",
+    "Docker VFS and IPv4 traffic qualified; overlay2 and IPv6 remain untested",
+    "Physical touch response, Bluetooth peer receipt and post-rotation visual inspection remain separate"
+  ]
+}

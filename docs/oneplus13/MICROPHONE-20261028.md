@@ -40,25 +40,21 @@ or success. Raw audio is deleted. Published output is limited to counts,
 levels and clipping statistics. A nonzero PCM result does not establish
 physical microphone response, speaker audibility or dynamic protection.
 
-Hardware validation remains required. A separate checker runs only after a
-successful native capture. It compares the same two-second PCM at volume0 and
-640: the left channel receives1kHz for one second, then the right1.5kHz for
-one second, both with20ms ramps. Eight seconds of RAM capture are analyzed at
-the matching frequencies; each speaker must produce at least an eightfold
-response increase over its muted control, without clipping. Both volumes,
-routes and capture controls restore afterward, and raw audio is deleted.
-The earlier440/880Hz round passed native capture and the880Hz response, while
-the440Hz response failed the unchanged8x threshold. No gain increase is made.
-The bounded test bypasses the frontend channel mapping: the same duplicated
-1000/1500Hz stereo fixture is captured once with both amplifiers muted, once
-with only Amp0 enabled, once with only Amp1 enabled and once with both enabled.
-Each independent two-second capture eliminates dependence on `arecord` flushing
-its output file. Each amp is accepted only if its designated frequency rises at
-least8x over the matching silent control. This isolates physical amplifier and
-speaker paths without raising gain. Each raw phase capture is deleted after its
-spectrum is computed, and no raw audio is retained.
-This measures a correlated microphone response; human listening, ordinary
-desktop playback and dynamic speaker protection remain separate acceptance.
+Hardware validation completed in Actions40677232016 with source2457ac35. The
+checker ran after successful native capture using the unchanged640 ceiling and
+a fixed-18dBFS duplicated1000/1500Hz stereo fixture, with20ms ramps. It
+captured the fixture once with both amplifiers muted, once with only Amp0,
+once with only Amp1 and once with both. Independent captures eliminate reliance
+on `arecord` flushing a live output file.
+
+Amp0's1kHz response passed both nearby microphones at77.4x and9.27x over the
+matching muted control. Amp1's1.5kHz response passed the required gate at
+94.9x on one nearby microphone and6.86x on the other; at least one valid
+near-field microphone is required. Both simultaneous responses passed. Neither
+capture clipped. No gain increase, raw-audio retention, persistent service or
+partition write occurred. Volumes, routes and capture controls restored, and
+all amplifiers stopped. Human listening, ordinary desktop playback and dynamic
+speaker protection remain separate acceptance.
 
 References are the pinned kernel's
 `Documentation/devicetree/bindings/sound/qcom,wcd939x.yaml`,

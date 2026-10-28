@@ -1,4 +1,31 @@
-## Self-contained sensor samples and D-Bus joint pass, 2026-10-28
+## Microphone, two-amplifier acoustics, Dock and sensor joint pass, 2026-10-28
+
+Complete Actions40677232016 at source2457ac35 passed all five jobs. One RAM
+boot then passed native WCD capture: both48kHz S24_LE channels delivered96,000
+frames without clipping, with route, gain and capture controls restored and raw
+audio deleted. ABL's exact C.93 Sun MTP,dodge identity and live1.2V PX,2.7V
+microphone bias, GPIO101 reset and TX3 wiring all validated before activation.
+
+The bounded acoustic test uses the unchanged640 ceiling and a fixed-18dBFS
+1kHz/1.5kHz stereo fixture. Independent captures prove Amp0 and Amp1 each
+produce a correlated response above the8x muted threshold: Amp0 reached
+77.4x/9.27x across the two microphones; Amp1 reached94.9x/6.86x with at least
+one valid near-field microphone. Both simultaneous-response frequencies also
+passed. Amplifier state sampling showed no faults, controls returned to mute,
+transports stopped, and no raw audio was retained. Human listening, ordinary
+desktop playback and dynamic protection remain unaccepted.
+
+SensorProxy passed the image's922 reviewed text inputs and10 native files,
+three-vector sampling, three D-Bus claims/releases and live updates (102 gyro,
+two accelerometer posture and nine compass). Docker passed real isolated bridge,
+DNS, NAT and published-port traffic; both WiFi bands completed DHCP, default
+route and HTTP200 (5240MHz and2437MHz). Project Mesa/GNOME, touch discovery,
+Bluetooth/OBEX, battery, Chinese/SSH and the visible-left Ubuntu Dock contract
+were retained. Android returned in435.4s with seven matching baselines, zero
+physical writes and all13 kernel-health phase gates passing. See
+evidence/MICROPHONE-AMPLIFIER-DOCK-20261028.json.
+
+## Prior self-contained sensor samples and D-Bus joint pass, 2026-10-28
 
 The d353ba17 joint round validates native WCD capture: both48kHz S24_LE
 channels delivered96,000 frames with no clipping, and every control restored.
