@@ -6,6 +6,15 @@ from pathlib import Path
 HERE=Path(__file__).resolve().parent
 REPO=HERE.parents[2]
 
+def verify_i2s(text):
+    # alsatplg emits a token declaration and one data tuple. Require the
+    # actual data tuple value, not a macro name or the token declaration.
+    matches=re.findall(r"'device18\.i2s_rx1:tuple0'\s*\{(.*?)\n\t\}",text,re.S)
+    if len(matches)!=1:raise ValueError('Missing unique Secondary I2S tuple')
+    values=dict(re.findall(r'^\s*token(\d+)\s+(\d+)\s*$',matches[0],re.M))
+    if any(values.get(k)!=v for k,v in {'250':'1','251':'0','256':'2'}.items()):
+        raise ValueError('Secondary I2S selector differs from phone OTA SD1')
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--output',type=Path,required=True)
@@ -43,6 +52,7 @@ def main():
         if required not in expanded or any(x in expanded for x in forbidden+['TDM','S32_LE']):raise ValueError('Wrong graph endpoint or copied Pad route')
         run([a.alsatplg,'-c',config,'-o',binary]);run([a.alsatplg,'-d',binary,'-o',decoded])
         text=decoded.read_text()
+        if name.startswith('speaker-'):verify_i2s(text)
         if required not in text:raise ValueError('Decoded graph lost required endpoint')
         # Check actual PCM capabilities, not numbers occurring elsewhere in
         # opaque vendor tuples. Reject broadened formats/rates/channels.

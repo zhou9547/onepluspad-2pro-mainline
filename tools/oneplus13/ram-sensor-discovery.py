@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
-"""One reviewed reverse service plus four metadata discoveries; never samples."""
+"""One reviewed reverse service and an explicitly selected SSC diagnostic."""
 import argparse,hashlib,importlib.util,json,os,re,subprocess,time
 from pathlib import Path
 
@@ -13,7 +13,7 @@ def load(name,path,digest):
     spec=importlib.util.spec_from_file_location(name,path)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
-def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.sleep):
+def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.sleep,sample_mode=False):
     # The probe is installed BEFORE the reverse-service window. Bound the
     # Query/status/stop/transient reset/state: 16+1+3+1+2s; <=3s readiness.
     # Keep the original independent 20s systemd cap and 28s service window.
@@ -33,16 +33,21 @@ def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.
         if ready:break
         if clock()>=until:raise ValueError('Reverse service was not ready for metadata queries')
         sleep(min(0.1,max(0,until-clock())))
+    selected_unit='oneplus13-ssc-samples-sample.service' if sample_mode else 'oneplus13-ssc-metadata-discover.service'
     def bounded_run(command,**kwargs):
         if command[0]=='/usr/bin/systemd-run':limit=16
-        elif command==['/usr/bin/systemctl','stop','oneplus13-ssc-metadata-discover.service']:limit=3
-        elif command==['/usr/bin/systemctl','is-active','oneplus13-ssc-metadata-discover.service']:limit=2
-        elif command[:3]==['/usr/bin/systemctl','show','oneplus13-ssc-metadata-discover.service']:limit=1
-        elif command==['/usr/bin/systemctl','reset-failed','oneplus13-ssc-metadata-discover.service']:limit=1
+        elif command==['/usr/bin/systemctl','stop',selected_unit]:limit=3
+        elif command==['/usr/bin/systemctl','is-active',selected_unit]:limit=2
+        elif command[:3]==['/usr/bin/systemctl','show',selected_unit]:limit=1
+        elif command==['/usr/bin/systemctl','reset-failed',selected_unit]:limit=1
         else:raise ValueError('Unreviewed metadata command')
         kwargs['timeout']=min(kwargs['timeout'],limit)
         return run(command,**kwargs)
-    answer=ssc.run_probe('discover',run=bounded_run)
+    answer=ssc.run_probe('sample' if sample_mode else 'discover',run=bounded_run)
+    if sample_mode:
+        if answer.get('mode')!='sample' or set(answer.get('samples',{}))!={'accel','gyro','mag'} or answer.get('unit_inactive') is not True or answer.get('cleanup_returned') is not True:
+            raise ValueError('Incomplete bounded sample result')
+        return answer
     if (answer.get('mode')!='discover' or answer.get('metadata_available')!=sorted(ssc.TYPES) or
         answer.get('unit_inactive') is not True or answer.get('cleanup_returned') is not True or
         answer.get('measurement_commands_allowed') is not False or answer.get('sample_data_or_axes_accepted') is not False):
@@ -51,6 +56,7 @@ def metadata_callback(fs,ssc,run=subprocess.run,clock=time.monotonic,sleep=time.
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
+    p.add_argument('--probe-mode',choices=['metadata','samples'],default='metadata')
     for name in ('release','module-sha256','policy-sha256','attach-helper','attach-helper-sha256',
                  'fileserver-helper','fileserver-helper-sha256','archive','archive-sha256','manifest','manifest-sha256',
                  'trace-tool','trace-sha256','ssc-helper','ssc-helper-sha256','ssc-archive','ssc-archive-sha256',
@@ -73,7 +79,9 @@ def main():
     for name,(data,mode,target) in files.items():
         if data is not None and sha(root/name)!=hashlib.sha256(data).hexdigest():raise ValueError('Reverse input changed before attach')
     guard.guard(root,guard.command)
-    with (root/guard.MARKER).open('x') as stream:stream.write('ONE_REVERSE_ATTACH_FOUR_METADATA_QUERIES_NO_STREAM_NO_RETRY\n')
+    sample_mode=a.probe_mode=='samples'
+    if sample_mode and ssc.TYPES!={'accel','gyro','mag'}:raise ValueError('Wrong isolated sample helper')
+    with (root/guard.MARKER).open('x') as stream:stream.write('ONE_REVERSE_ATTACH_THREE_VECTOR_SAMPLE_DIAGNOSTIC\n' if sample_mode else 'ONE_REVERSE_ATTACH_FOUR_METADATA_QUERIES_NO_STREAM_NO_RETRY\n')
     for unit in guard.UNITS:
         fs.execute(['/usr/bin/systemctl','mask','--runtime',unit])
         if (root/'run/systemd/system'/unit).resolve()!=root/'dev/null':raise ValueError('Automatic client mask ineffective')
@@ -83,8 +91,8 @@ def main():
     os.chown('/dev/fastrpc-adsp-secure',fs.UID,fs.UID);os.chmod('/dev/fastrpc-adsp-secure',0o600)
     state=Path(fs.STATE);state.mkdir(mode=0o700);os.chown(state,fs.UID,fs.UID)
     metadata=[]
-    def callback():metadata.append(metadata_callback(fs,ssc))
-    try:worker=fs.serve(a.trace_tool,diagnostic=True,during_active=callback)
+    def callback():metadata.append(metadata_callback(fs,ssc,sample_mode=sample_mode))
+    try:worker=fs.serve(a.trace_tool,diagnostic=True,during_active=callback,samples_requested=sample_mode)
     finally:
         guard.guard(root,guard.command)
         if sha(root/guard.POLICY)!=a.policy_sha256:raise ValueError('Module policy changed')
@@ -93,9 +101,9 @@ def main():
         print('RAM_SENSOR_DISCOVERY_POSTCONDITIONS '+json.dumps({'private_inputs_unchanged':True,'module_policy_unchanged':True,
               'file_service_and_metadata_cleanup_required':True,'samples_accepted':False}),flush=True)
     if len(metadata)!=1:raise ValueError('Metadata callback count mismatch')
-    result={'scope':'ONE_REVERSE_ATTACH_FOUR_METADATA_TYPES_NO_SAMPLES','worker':worker,'metadata':metadata[0],
+    result={'scope':'ONE_REVERSE_ATTACH_THREE_VECTOR_SAMPLES' if sample_mode else 'ONE_REVERSE_ATTACH_FOUR_METADATA_TYPES_NO_SAMPLES','worker':worker,'metadata':metadata[0],
       'private_data_bytes_unchanged':True,'module_policy_unchanged':True,'data_files':len(files)-len(fs.LINKS)-5,
-      'sensor_stream_requested':False,'audio_camera_or_radio_activated':False,
+      'sensor_stream_requested':sample_mode,'audio_camera_or_radio_activated':False,
       'adsp_restarted':False,'dsp_release_acknowledgement_claimed':False,'file_server_fully_accepted':False}
     print('RAM_SENSOR_DISCOVERY_RESULT '+json.dumps(result,sort_keys=True),flush=True)
 

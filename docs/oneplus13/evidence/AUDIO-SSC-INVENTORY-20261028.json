@@ -1,0 +1,137 @@
+{
+  "source_commit": "e539f11ef02798c5500f2656e7814e9c131508b5",
+  "actions_run": 40615700391,
+  "scope": "NATIVE_AMPLIFIER_INVENTORY_AND_SSC_DISCOVERY_STAGES",
+  "android_return_seconds": 168.4,
+  "baseline_seven_keys_match": true,
+  "partition_writes": 0,
+  "absolute_deadline_seconds": 600,
+  "amplifiers": {
+    "audible_playback_tested": false,
+    "audio_accepted": false,
+    "both_amplifiers_powered_down": true,
+    "both_pid2308_probes_and_profiles_loaded": true,
+    "gain_changed": false,
+    "maximum_attenuation": true,
+    "pcm_opened": false,
+    "states": [
+      {
+        "attenuation": 1023,
+        "channel": 0,
+        "faulted": 0,
+        "id": 8968,
+        "powered": 0,
+        "sysctrl": 54083,
+        "sysst": 0,
+        "volume": 0
+      },
+      {
+        "attenuation": 1023,
+        "channel": 1,
+        "faulted": 0,
+        "id": 8968,
+        "powered": 0,
+        "sysctrl": 54083,
+        "sysst": 0,
+        "volume": 0
+      }
+    ]
+  },
+  "ssc_discovery_stages": {
+    "attributes": [
+      {
+        "available": true,
+        "candidate": 1,
+        "mount_matrix_present": true,
+        "type": "accel"
+      },
+      {
+        "available": true,
+        "candidate": 1,
+        "mount_matrix_present": true,
+        "type": "mag"
+      },
+      {
+        "available": true,
+        "candidate": 1,
+        "mount_matrix_present": true,
+        "type": "gyro"
+      }
+    ],
+    "lookups": [
+      {
+        "default_only": true,
+        "type": "accel",
+        "uid_count": 1
+      },
+      {
+        "default_only": true,
+        "type": "mag",
+        "uid_count": 1
+      },
+      {
+        "default_only": true,
+        "type": "ambient_light",
+        "uid_count": 0
+      },
+      {
+        "default_only": true,
+        "type": "gyro",
+        "uid_count": 1
+      },
+      {
+        "default_only": false,
+        "type": "ambient_light",
+        "uid_count": 0
+      },
+      {
+        "default_only": true,
+        "type": "gyro",
+        "uid_count": 1
+      }
+    ]
+  },
+  "ssc_metadata_inventory": {
+    "all_types_accepted": false,
+    "availability": "observed",
+    "samples_requested": false,
+    "types": {
+      "accel": {
+        "available": true,
+        "completed": true
+      },
+      "ambient_light": {
+        "available": false,
+        "completed": true
+      },
+      "gyro": {
+        "available": true,
+        "completed": true
+      },
+      "mag": {
+        "available": true,
+        "completed": true
+      }
+    }
+  },
+  "full_history_health": {
+    "counts": {
+      "cpu_stall": 0,
+      "firmware_crash": 0,
+      "gpu_fault": 0,
+      "iommu_context_fault": 0,
+      "kernel_bug_or_panic": 0,
+      "out_of_memory": 0,
+      "wifi_driver_failure": 0,
+      "wifi_hardware_restart": 0,
+      "wifi_invalid_runtime_id": 0,
+      "wifi_vdev_failure": 0
+    },
+    "pass": true,
+    "raw_kernel_text_published": false,
+    "scope": "BOUNDED_KERNEL_HISTORY_HEALTH"
+  },
+  "stop_reason": "Host shell treated an already-collected successful transient unit as a stop failure",
+  "later_wifi_gpu_desktop_locale_ssh_regressions_executed": false,
+  "overall_acceptance": false
+}

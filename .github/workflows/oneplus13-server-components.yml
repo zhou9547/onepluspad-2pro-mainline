@@ -82,6 +82,7 @@ jobs:
       - name: Build guarded probe and test without QRTR or hardware
         run: |
           python3 -m unittest discover -s tests -p test_oneplus13_ssc_metadata.py -v
+          python3 -m unittest discover -s tests -p test_oneplus13_ssc_samples.py -v
           python3 -m unittest discover -s tests -p test_oneplus13_sensor_fileserver.py -v
           python3 -m unittest discover -s tests -p test_oneplus13_sensor_discovery.py -v
           python3 tools/oneplus13/build-phone-ssc-probe.py --meson /tmp/phone-ssc-meson/bin/meson --output out/phone-ssc
@@ -93,6 +94,8 @@ jobs:
           path: |
             out/phone-ssc/phone-ssc-probe-arm64.tar.gz
             out/phone-ssc/phone-ssc-probe-manifest.json
+            out/phone-ssc/phone-ssc-samples-arm64.tar.gz
+            out/phone-ssc/phone-ssc-samples-manifest.json
             out/phone-ssc/verification.json
             out/phone-ssc/build.log
             out/phone-ssc/LICENSE-*

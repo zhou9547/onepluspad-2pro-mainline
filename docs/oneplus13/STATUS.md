@@ -1,3 +1,28 @@
+## Native amplifier inventory and exact I2S mapping, 2026-10-28
+
+Complete Actions40615700391 passes at e539f11e. One RAM boot confirms both
+native AW88461 devices (PID0x2308), profile binding, channel0/1, power-off,
+volume0 and attenuation1023. No PCM or gain change occurred. Android returned
+in168.4s, seven baselines matched and physical partition writes remained zero.
+All recorded kernel health counts are zero. A host cleanup bug treated the
+successful transient audio unit's automatic collection as failure; later
+WiFi/GPU/desktop/Chinese/SSH regressions were therefore not executed.
+
+SSC numeric evidence now confirms default ambient_light UID count0 and the
+single non-default query count0. Accel/gyro/mag each have an available sensor
+with a mount matrix. This closes the discovery-stage ambiguity; it does not
+establish an ambient-light replacement or accept any samples.
+
+Host-only parsing of the exact C.93 ODM ACDB with Qualcomm's published table
+layout identifies Secondary playback SD1(enum2) and feedback SD0(enum1).
+The inherited speaker draft's zero selector was invalid. Both phone speaker
+graphs now use SD1; their decoded hardware tuples are checked. Separate5Hz,
+3-second three-vector diagnostic, guarded actual-send/decoder tests and image
+packaging are added. A new complete Actions build and combined PCM/sample/
+preserved-feature RAM boot are required. Ordinary playback, protection and
+ambient light remain unaccepted. See evidence/AUDIO-SSC-INVENTORY-20261028.json
+and evidence/AUDIO-I2S-OTA-20261028.json.
+
 ## Speaker and sensor joint candidate, 2026-10-28
 
 Both stock amplifier IDs are now observed as0x2308. The owner C.93 full-package

@@ -83,7 +83,8 @@ def main():
         or metadata.get('integration_commit')!=km['integration_commit']
         or evidence.get('native_arm64') is not True or evidence.get('host_check_only') is not False
         or evidence.get('typed_sensor_properties_regression_pass') is not True
-        or evidence.get('test_counts')!={'release':4,'sanitized':4}):
+        or evidence.get('test_counts')!={'release':5,'sanitized':5}
+        or evidence.get('bounded_three_vector_sample_policy_and_decoder_tests_pass') is not True):
         raise ValueError('SSC probe must pass native checks at this source commit')
     importlib.import_module('ram-ssc-metadata').entries(ssc_archive,metadata)
     ssc_root=stage/'usr/lib/oneplus13-ssc';ssc_root.mkdir()
@@ -94,6 +95,17 @@ def main():
     dest=stage/'usr/libexec/oneplus13-ram-ssc-metadata.py'
     shutil.copyfile(REPO/'tools/oneplus13/ram-ssc-metadata.py',dest);dest.chmod(0o755)
     ssc_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    sample_manifest=ssc/'phone-ssc-samples-manifest.json';sample_archive=ssc/'phone-ssc-samples-arm64.tar.gz'
+    sample_metadata=json.loads(sample_manifest.read_text())
+    if sample_metadata.get('integration_commit')!=km['integration_commit']:raise ValueError('Wrong sample source commit')
+    importlib.import_module('ram-ssc-samples').entries(sample_archive,sample_metadata)
+    sample_hashes={}
+    for path in [sample_manifest,sample_archive]:
+        dest=ssc_root/path.name;shutil.copyfile(path,dest);dest.chmod(0o644)
+        sample_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    dest=stage/'usr/libexec/oneplus13-ram-ssc-samples.py'
+    shutil.copyfile(REPO/'tools/oneplus13/ram-ssc-samples.py',dest);dest.chmod(0o755)
+    sample_hashes[str(dest.relative_to(stage))]=sha256(dest)
     # Audio is delivered as a manually gated candidate, not a qualified output.
     # The generic owner-version ACF contains no per-unit registry or identities.
     from importlib import import_module
@@ -168,6 +180,7 @@ def main():
         'initial_watchdog_seconds':600,'post_handoff_deadline_seconds':300,
         'initial_watchdog_survives_switch_root':False,'phone_operations':0,'partition_writes':0,
         'hardware_tested':False,'ssc_probe_files':ssc_hashes,'ssc_probe_auto_started':False,
+        'ssc_sample_files':sample_hashes,'ssc_samples_auto_started':False,
         'ssc_sensor_property_types_corrected':True,
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}

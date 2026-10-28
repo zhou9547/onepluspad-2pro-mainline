@@ -32,6 +32,13 @@ def main():
     for name,digest in ssc_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered SSC input changed')
+    sample_files=m.get('ssc_sample_files',{})
+    if set(sample_files)!={'usr/lib/oneplus13-ssc/phone-ssc-samples-arm64.tar.gz',
+        'usr/lib/oneplus13-ssc/phone-ssc-samples-manifest.json','usr/libexec/oneplus13-ram-ssc-samples.py'} or m.get('ssc_samples_auto_started') is not False:
+        raise ValueError('Missing separately gated SSC sample probe')
+    for name,digest in sample_files.items():
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered sample input changed')
     audio_files=m.get('experimental_audio_files',{})
     for name in ['usr/bin/aplay','usr/bin/amixer']:
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
@@ -50,6 +57,7 @@ def main():
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
             'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
+            'ssc_sample_files_verified':len(sample_files),'ssc_samples_auto_started':False,
             'experimental_audio_files_verified':len(audio_files),'audio_auto_started':False,
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')

@@ -1,0 +1,113 @@
+{
+  "scope": "GENERIC_OWNER_ROM_SECONDARY_MI2S_INTERFACE_METADATA_ONLY",
+  "acdb_sha256": "565675988fe3fc644156432bff1ad05ffaeecdd928f071c7d70241af7fc18a19",
+  "file": "odm/etc/acdbdata/acdb_cal.acdb",
+  "parser_reference": "AudioReach/audioreach-graphservices@c3ed9dd4544dc2a36f4e6d54af66105c9e3f18ff",
+  "format": "MTKT -> MTLU -> independent MTDE/MTDO -> POOL; uint32,uint32,uint16,uint16",
+  "parameter_id": "0x08001019",
+  "records": [
+    {
+      "lut_relative": 64,
+      "row": 0,
+      "values": [
+        1
+      ],
+      "definition_relative": 36,
+      "offsets_relative": 24,
+      "iid": "0x4023",
+      "size": 12,
+      "payload_hex": "000000000100000002000100",
+      "lpaif_interface_sd_ws": [
+        0,
+        1,
+        2,
+        1
+      ],
+      "subgraph_tags": [
+        {
+          "subgraph": "0xb0000002",
+          "tag": "0xc0000004"
+        }
+      ]
+    },
+    {
+      "lut_relative": 64,
+      "row": 1,
+      "values": [
+        2
+      ],
+      "definition_relative": 36,
+      "offsets_relative": 24,
+      "iid": "0x4023",
+      "size": 12,
+      "payload_hex": "000000000100000002000100",
+      "lpaif_interface_sd_ws": [
+        0,
+        1,
+        2,
+        1
+      ],
+      "subgraph_tags": [
+        {
+          "subgraph": "0xb0000002",
+          "tag": "0xc0000004"
+        }
+      ]
+    },
+    {
+      "lut_relative": 7360,
+      "row": 0,
+      "values": [
+        1
+      ],
+      "definition_relative": 2292,
+      "offsets_relative": 544,
+      "iid": "0x4026",
+      "size": 12,
+      "payload_hex": "000000000100000001000100",
+      "lpaif_interface_sd_ws": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "subgraph_tags": [
+        {
+          "subgraph": "0xb00000d5",
+          "tag": "0xc0000005"
+        }
+      ]
+    },
+    {
+      "lut_relative": 7360,
+      "row": 1,
+      "values": [
+        2
+      ],
+      "definition_relative": 2292,
+      "offsets_relative": 544,
+      "iid": "0x4026",
+      "size": 12,
+      "payload_hex": "000000000100000001000100",
+      "lpaif_interface_sd_ws": [
+        0,
+        1,
+        1,
+        1
+      ],
+      "subgraph_tags": [
+        {
+          "subgraph": "0xb00000d5",
+          "tag": "0xc0000005"
+        }
+      ]
+    }
+  ],
+  "playback_sd_line_enum": 2,
+  "playback_physical_line": "SD1",
+  "feedback_sd_line_enum": 1,
+  "feedback_physical_line": "SD0",
+  "old_zero_selector_valid": false,
+  "factory_or_personal_data_included": false,
+  "raw_acdb_uploaded": false
+}

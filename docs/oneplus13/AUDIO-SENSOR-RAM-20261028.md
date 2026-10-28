@@ -1,5 +1,31 @@
 # Speaker and sensor joint candidate
 
+The first e539f11e combined RAM round now confirms both native PID2308 probes
+and profiles, off at maximum attenuation. It intentionally opened no PCM.
+The host cleanup of an already-collected successful unit stopped the rest of
+the plan; Android returned in168.4s with seven matching baselines and zero
+partition writes. See `evidence/AUDIO-SSC-INVENTORY-20261028.json`.
+
+Exact C.93 ODM ACDB parsing now identifies Secondary RX SD1(enum2) and TX
+feedback SD0(enum1). The inherited zero selector was invalid and is corrected
+in both speaker graphs. The decoder check requires actual tuple tokens250=1,
+251=0,256=2. The twelve-byte interface metadata and parser provenance are in
+`evidence/AUDIO-I2S-OTA-20261028.json`; no raw ACDB/tuning is published.
+
+The sample diagnostic is a separate archive and executable. Its private send
+guard enrolls at most three discovered motion UIDs, permits one5Hz enable and
+one disable per UID, refuses unknown fields/rates/repeats, and collects three
+seconds of finite3-vectors. Metadata processes cannot upgrade their one-way
+lock. Release and ASan/UBSan tests exercise actual send calls at a mocked QMI
+boundary and the actual standard-event protobuf decoder. This does not accept
+physical axes, sensor calibration, ambient light or a continuous IIO service.
+An explicit `--probe-mode samples` selects this diagnostic within the same
+bounded reverse-service wrapper. It never auto-starts. Fresh Actions and one
+combined silent PCM/sample/preserved-feature boot remain required.
+
+The original implementation description follows; its first metadata-only
+round is historical and does not authorize or claim successful streaming.
+
 The owner prioritizes speakers over conflicting sensor work. Temporary RAM
 testing is authorized for this session; no flashing or persistent installation.
 Existing display, touch, project Mesa/GNOME, dual-band WiFi, Bluetooth transfer
