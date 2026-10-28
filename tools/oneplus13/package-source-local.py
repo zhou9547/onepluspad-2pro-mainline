@@ -165,6 +165,13 @@ def main():
         container_hashes[name]=sha256(dest)
     if (stage/'etc/docker/daemon.json').read_bytes()!=(REPO/'devices/oneplus13/docker/daemon.json').read_bytes():raise ValueError('Docker RAM defaults changed')
     container_hashes['etc/docker/daemon.json']=sha256(stage/'etc/docker/daemon.json')
+    microphone_hashes={}
+    for source,name in [(REPO/'out/phone-audio/speaker-microphone-probe.tplg','usr/lib/firmware/qcom/sm8750/OnePlus13-Audio-Probe-tplg.bin'),
+                        (REPO/'tools/oneplus13/ram-microphone-check.py','usr/libexec/oneplus13-ram-microphone-check.py'),
+                        (REPO/'tools/oneplus13/ram-acoustic-check.py','usr/libexec/oneplus13-ram-acoustic-check.py')]:
+        dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,dest);dest.chmod(0o755 if name.endswith('.py') else 0o644)
+        microphone_hashes[name]=sha256(dest)
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
@@ -221,6 +228,7 @@ def main():
         'ssc_sensor_property_types_corrected':True,
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
+    result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
     result.update(container_files=container_hashes,container_daemon_auto_started=False,
                   container_hardware_qualified=False)
     result.update(sensor_runtime_files=runtime_hashes,sensor_runtime_host_private_inputs_required=False,

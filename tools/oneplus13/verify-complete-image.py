@@ -73,6 +73,45 @@ def main():
     for name,digest in audio_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered audio input changed')
+    microphone_files=m.get('experimental_microphone_files',{})
+    if set(microphone_files)!={'usr/lib/firmware/qcom/sm8750/OnePlus13-Audio-Probe-tplg.bin',
+            'usr/libexec/oneplus13-ram-microphone-check.py','usr/libexec/oneplus13-ram-acoustic-check.py'} or m.get('microphone_auto_started') is not False:
+        raise ValueError('Missing manually gated alternative microphone runtime')
+    for name,digest in microphone_files.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Microphone runtime changed')
+    raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'usr/bin/arecord'])
+    if raw[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(raw[18:20],'little')!=183:raise ValueError('Native capture tool missing')
+    artifacts=m.get('microphone_probe_artifacts',{})
+    if set(artifacts)!={'boot-microphone-ram-experimental.img','sm8750-oneplus13-microphone-probe.dtb',
+        'microphone-probe-manifest.json','microphone-dtb-review.json'}:raise ValueError('Incomplete alternative microphone boot')
+    for name,digest in artifacts.items():
+        if sha256(root/name)!=digest:raise ValueError('Alternative microphone artifact changed')
+    probe=json.loads((root/'microphone-probe-manifest.json').read_text())
+    for key in ('source_commit','kernel_release','rootfs_sha256','modules_sha256','kernel_sha256','experimental_microphone_files'):
+        if probe[key]!=m[key]:raise ValueError('Alternative image component mismatch')
+    if probe['default_boot_image_sha256']!=m['boot_image_sha256'] or probe['microphone_hardware_qualified'] is not False:
+        raise ValueError('Alternative image changed default speaker identity or acceptance')
+    import re
+    nonce=probe['session_identity_nonce']
+    if not re.fullmatch('[a-f0-9]{24}',nonce) or nonce==m['session_identity_nonce']:
+        raise ValueError('Alternative image requires a separate session identity')
+    if probe['cmdline']!=m['cmdline'].replace('oneplus13.session='+m['session_identity_nonce'],'oneplus13.session='+nonce)+' oneplus13.audio_probe=1':
+        raise ValueError('Alternative image changed qualified boot arguments')
+    if sha256(root/'boot-microphone-ram-experimental.img')!=probe['boot_image_sha256'] or sha256(root/'sm8750-oneplus13-microphone-probe.dtb')!=probe['dtb_sha256']:
+        raise ValueError('Alternative image manifest hashes disagree')
+    from common import boot_sections
+    from stock import Fdt
+    default_sections=boot_sections((root/'boot-desktop-ram-experimental.img').read_bytes())
+    probe_sections=boot_sections((root/'boot-microphone-ram-experimental.img').read_bytes())
+    for key in ('kernel','ramdisk'):
+        if probe_sections[key]!=default_sections[key]:raise ValueError('Alternative kernel/initramfs changed')
+    import importlib
+    mic_dtb=importlib.import_module('microphone-dtb')
+    expected,_=mic_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    expected_tree=Fdt(expected);expected_tree.nodes['/chosen']['bootargs']=(probe['cmdline']+'\0').encode()
+    if probe_sections['dtb']!=(root/'sm8750-oneplus13-microphone-probe.dtb').read_bytes() or Fdt(probe_sections['dtb']).nodes!=expected_tree.nodes:
+        raise ValueError('Alternative microphone DTB mismatch')
     policy=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),
         'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf'],text=True)
     if 'install snd_soc_aw88461 /bin/false\n' not in policy:
@@ -85,6 +124,7 @@ def main():
             'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
             'ssc_sample_files_verified':len(sample_files),'ssc_samples_auto_started':False,
             'experimental_audio_files_verified':len(audio_files),'audio_auto_started':False,
+            'experimental_microphone_files_verified':len(microphone_files),'microphone_auto_started':False,
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')
     if a.static_only:

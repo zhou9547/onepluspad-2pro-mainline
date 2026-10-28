@@ -23,7 +23,11 @@ if [[ ! -d $src/.git ]]; then
   git init "$src"
   git -C "$src" remote add origin "${pin[0]}"
 fi
-git -C "$src" fetch --depth 1 origin "${pin[1]}"
+for fetch_attempt in 1 2 3; do
+  if git -C "$src" fetch --depth 1 origin "${pin[1]}"; then break; fi
+  if [[ $fetch_attempt == 3 ]]; then echo 'Pinned kernel fetch failed after three attempts' >&2; exit 1; fi
+  sleep "$((fetch_attempt * 2))"
+done
 git -C "$src" checkout --detach FETCH_HEAD
 [[ $(git -C "$src" rev-parse HEAD) == "${pin[1]}" ]]
 if [[ ${PHONE_WIFI_TRANSPORT_DRAFT:-0} == 1 ]]; then

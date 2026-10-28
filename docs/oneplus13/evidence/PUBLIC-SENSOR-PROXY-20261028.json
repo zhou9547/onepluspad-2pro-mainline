@@ -1,0 +1,177 @@
+{
+  "scope": "ONE_JOINT_SELF_CONTAINED_SENSOR_DBUS_DOCKER_AUDIO_RAM_BOOT",
+  "source_commit_under_test": "812629809a1834c596d1311bee016b1f5ed77014",
+  "actions_run": 40650704909,
+  "actions_component_runner": "owner ARM64 runner; final image on GitHub-hosted ARM64",
+  "boot_image_sha256": "352836f54cfe27620b7724fbea90d54943189c97181d3e43affff5eb1b8d4217",
+  "rootfs_sha256": "c0a2746635f27fee6de936a1f810635855cc254f3e6087b731280cd11a6a0c6a",
+  "android_return_confirmed": true,
+  "android_return_seconds": 382.9,
+  "seven_baseline_keys_match": true,
+  "physical_partition_writes": 0,
+  "joint_acceptance_pass": true,
+  "full_history_kernel_health_pass": true,
+  "docker": {
+    "bridge_container_http": true,
+    "busybox_sha256": "c2f279d1d5640a0f327890d41cad594c0f059f3fed3f96dd72fdcc4f5e18ec02",
+    "embedded_dns_http": true,
+    "external_registry_used": false,
+    "iptables_backend": "iptables v1.8.11 (nf_tables)",
+    "legacy_filter_nat_rules": true,
+    "masquerade_off_bridge_http": true,
+    "overlay2_tested": false,
+    "pass": true,
+    "physical_network_rules_modified": false,
+    "published_port_peer_http": true,
+    "scope": "REAL_DOCKER_ISOLATED_RAM_BRIDGE",
+    "storage_driver": "vfs"
+  },
+  "speaker": {
+    "active_state_samples": [
+      [
+        {
+          "attenuation": 831,
+          "channel": 0,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        },
+        {
+          "attenuation": 815,
+          "channel": 1,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        }
+      ],
+      [
+        {
+          "attenuation": 831,
+          "channel": 0,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        },
+        {
+          "attenuation": 815,
+          "channel": 1,
+          "faulted": 0,
+          "id": 8968,
+          "powered": 1,
+          "sysctrl": 29248,
+          "sysst": 789,
+          "volume": 256
+        }
+      ]
+    ],
+    "amplifier_ids": [
+      8968,
+      8968
+    ],
+    "amplifiers_stopped": true,
+    "audible_playback_tested": false,
+    "audio_accepted": false,
+    "bounded_nonzero_pcm_pass": true,
+    "card_registered": true,
+    "channels": 2,
+    "default_attenuation_preserved": false,
+    "digital_zero_pcm_pass": false,
+    "dynamic_protection_qualified": false,
+    "format": "S16_LE",
+    "rate_hz": 48000,
+    "route_restored": true,
+    "source": "NATIVE_AW88461_SECONDARY_MI2S",
+    "test_signal_peak_dbfs": -18,
+    "test_volume": 256,
+    "volume_restored_to_zero": true
+  },
+  "sensor_samples": {
+    "accel": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 19.7896,
+      "norm_min": 9.73058,
+      "samples": 64
+    },
+    "gyro": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 0.00790827,
+      "norm_min": 0.00270418,
+      "samples": 64
+    },
+    "mag": {
+      "disable_acknowledged": true,
+      "finite_vectors": true,
+      "norm_max": 97.4946,
+      "norm_min": 82.705,
+      "samples": 15
+    }
+  },
+  "wifi": {
+    "5ghz": {
+      "frequency_mhz": 5240,
+      "association_pass": true,
+      "dhcp_ipv4_present": true,
+      "ipv4_default_route_present": true,
+      "http_pass": true
+    },
+    "2_4ghz": {
+      "frequency_mhz": 2437,
+      "association_pass": true,
+      "dhcp_ipv4_present": true,
+      "ipv4_default_route_present": true,
+      "http_pass": true
+    }
+  },
+  "preserved": {
+    "gpu_check_returncode": 0,
+    "desktop_check_returncode": 0,
+    "touch_device_present": true,
+    "battery_telemetry_present": true,
+    "battery_readings": [
+      {
+        "capacity_percent": 80,
+        "temperature_deci_c": 311
+      }
+    ],
+    "bluetooth_powered": true,
+    "obex_sender_preserved": true,
+    "physical_touch_tested": false,
+    "bluetooth_peer_receipt_tested": false
+  },
+  "chinese_locale_and_clean_input_sources_pass": true,
+  "actual_ssh_password_login_chinese_locale_pass": true,
+  "limitations": [
+    "Continuous SensorProxy autostart and physical axes remain unqualified",
+    "Quiet nonzero PCM/amp switching qualified; audible output and dynamic protection remain unqualified",
+    "Docker VFS IPv4 bridge qualified; overlay2 and IPv6 traffic remain untested"
+  ],
+  "kernel_health_phase_count": 13,
+  "kernel_health_counts_all_zero": true,
+  "private_host_sensor_runtime_required": false,
+  "reviewed_text_data_files": 922,
+  "native_sensor_files": 10,
+  "sensor_proxy": {
+    "accelerometer_posture_available": true,
+    "accelerometer_posture_updates": 2,
+    "compass_heading_finite": true,
+    "compass_heading_updates": 9,
+    "continuous_autostart_accepted": false,
+    "gyro_property_updates": 101,
+    "physical_axes_or_calibration_accepted": false,
+    "same_connection_three_claims_and_releases": true,
+    "scope": "BOUNDED_THREE_SENSOR_DBUS_CANDIDATE",
+    "temporary_udev_and_bus_policy_removed": true,
+    "unit_inactive": true
+  }
+}

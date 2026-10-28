@@ -65,6 +65,31 @@ def main():
         if binary.read_bytes()[:4]!=b'CoSA':raise ValueError('Invalid ALSA topology magic')
         results.append({'name':name,'endpoint':required,'format':sample_format,'binary_sha256':sha(binary),
                         'source_sha256':sha(HERE/(name+'.m4')),'compile_and_decode_pass':True})
+    # This alternative leaves all three isolated graph outputs unchanged.
+    name='speaker-microphone-probe'
+    config=out/(name+'.conf');binary=out/(name+'.tplg');decoded=out/(name+'.decoded.conf')
+    config.write_text(run([a.m4,'-I',macros,HERE/(name+'.m4')]))
+    run([a.alsatplg,'-c',config,'-o',binary]);run([a.alsatplg,'-d',binary,'-o',decoded])
+    text=decoded.read_text();verify_i2s(text)
+    cap=re.search(r'^SectionPCMCapabilities\s*\{(.*?)^\}',text,re.M|re.S)
+    if not cap:raise ValueError('Missing combined PCM capabilities')
+    caps=re.findall(r"'([^']+)'\s*\{([^}]+)\}",cap[1])
+    if {n for n,v in caps}!={'MultiMedia1 Playback','MultiMedia3 Capture'} or len(caps)!=2:
+        raise ValueError('Wrong combined frontend capabilities')
+    for pcm,body in caps:
+        fields=dict(re.findall(r'^\s*(formats|rate_min|rate_max|channels_min|channels_max)\s+([^\n]+)',body,re.M))
+        expected={'formats':"'S16_LE'" if 'Playback' in pcm else "'S24_LE'",
+                  'rate_min':'48000','rate_max':'48000','channels_min':'2','channels_max':'2'}
+        if {k:v.strip() for k,v in fields.items()}!=expected:raise ValueError('Combined format/rate/channel changed')
+    matches=re.findall(r"'device120\.codec_dma_tx1:tuple0'\s*\{(.*?)\n\t\}",text,re.S)
+    if len(matches)!=1:raise ValueError('Missing unique TX3 DMA tuple')
+    values=dict(re.findall(r'^\s*token(\d+)\s+(\d+)\s*$',matches[0],re.M))
+    if any(values.get(k)!=v for k,v in {'250':'4','251':'1','253':'1'}.items()):
+        raise ValueError('Wrong phone TX3 DMA selectors')
+    if any(x in text for x in ['TDM','S32_LE','DISPLAY_PORT','WSA_CODEC']):raise ValueError('Unexpected combined endpoint')
+    if binary.read_bytes()[:4]!=b'CoSA':raise ValueError('Invalid combined topology magic')
+    results.append({'name':name,'binary_sha256':sha(binary),'source_sha256':sha(HERE/(name+'.m4')),
+                    'compile_and_decode_pass':True,'separate_manual_boot_only':True})
     result={'scope':'OFFLINE_PHONE_AUDIO_GRAPH_DRAFTS_ONLY','phone_operations':0,
        'original_macro_source_sha256':sha(archive),'graphs':results,
        'rate_hz':48000,'channels':2,'pad_tdm_or_wsa_route_included':False,

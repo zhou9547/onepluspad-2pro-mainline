@@ -1,4 +1,36 @@
-## Self-contained runtime integration regression corrected, 2026-10-28
+## Self-contained sensor samples and D-Bus joint pass, 2026-10-28
+
+Complete Actions40650704909 at source81262980 passed all five jobs, then one
+joint RAM boot passed the image's own922 reviewed text inputs and fresh native
+runtime, three-vector samples, and actual SensorProxy D-Bus claims, updates
+and releases. The connection observed101 gyro updates, two accelerometer
+posture updates and nine compass updates. Both services stopped cleanly and
+temporary integration was removed. No private host sensor archive was used.
+
+The same boot retained quiet nonzero PCM/amp switching, delivered Docker VFS
+defaults with real bridge/DNS/NAT/published-port traffic, both WiFi bands,
+project Mesa/GNOME, touch discovery, Bluetooth/OBEX, battery, Chinese and SSH.
+Android returned in382.9s with seven matching baselines, no physical writes
+and all13 kernel-health phase gates passing. This is the latest fully accepted
+joint image. See evidence/PUBLIC-SENSOR-PROXY-20261028.json. Continuous sensor
+autostart, physical axes and human acoustic acceptance remain separate work.
+
+## Separate microphone and acoustic candidate, 2026-10-28
+
+The complete build now additionally produces a manual microphone boot image
+with the same fresh kernel, initramfs and rootfs as its default speaker image.
+Only the audio DT changes: correct1.2V WCD PX, owner2.7V microphone biases,
+AMIC1/5 routes and S24_LE TX3 capture. A combined topology preserves S16_LE
+Secondary MI2S playback. New bounded checks restore controls and delete raw
+RAM audio. The acoustic checker requires successful independent capture, then
+compares left440Hz/right880Hz PCM with volume0 versus640; the -18dBFS stimulus
+retains at least54dB attenuation relative to the profile's full-scale signal.
+The existing256-level regression and default mute remain. Dynamic protection
+and ordinary desktop playback remain unaccepted. Full Actions and one combined
+microphone/acoustic/sensor/container/radio/desktop boot are required. See
+MICROPHONE-20261028.md.
+
+## Historical self-contained runtime regression, 2026-10-28
 
 Complete Actions40646323627 built source941d4eb7 successfully, but its joint
 RAM test rejected the sensor file server: it exited4 before a reverse attach.

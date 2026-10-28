@@ -42,7 +42,7 @@ def amp_state(text,expected_volume=0):
     v=match.groups()
     state=dict(zip(['id','channel','volume','powered','faulted','sysst','sysctrl','attenuation'],
                    [int(x,16) if i in (0,5,6) else int(x) for i,x in enumerate(v)]))
-    if expected_volume not in (0,256):raise ValueError('Unknown bounded test gain')
+    if expected_volume not in (0,256,640):raise ValueError('Unknown bounded test gain')
     if (state['id']!=0x2308 or state['volume']!=expected_volume or state['faulted'] or
             not 1023-expected_volume<=state['attenuation']<=1023):
         raise ValueError('Amplifier identity, mute or health condition failed')
@@ -83,9 +83,12 @@ def main():
     p.add_argument('--release',required=True)
     p.add_argument('--policy-sha256',required=True)
     p.add_argument('--quiet-tone',action='store_true',help='Fixed two-second, quiet nonzero PCM; restores both volume controls')
+    p.add_argument('--card',choices=[CARD,'OnePlus13-Audio-Probe'],default=CARD)
     a=p.parse_args()
     if os.geteuid()!=0 or os.uname().release!=a.release:raise ValueError('Wrong audio root/kernel')
     if not Path('/run/oneplus13/ram-session').is_file():raise ValueError('Not a protected RAM session')
+    if Path('/proc/device-tree/sound/model').read_bytes().rstrip(b'\0').decode()!=a.card:
+        raise ValueError('Selected audio card differs from the boot DTB')
     mounts=Path('/proc/mounts').read_text()
     if not re.search(r'^overlay / overlay ',mounts,re.M):raise ValueError('RAM overlay required')
     for d in Path('/sys/class/block').iterdir():
@@ -106,7 +109,7 @@ def main():
     until=time.monotonic()+12
     while True:
         cards=Path('/proc/asound/cards').read_text()
-        matches=re.findall(r'^\s*(\d+) \[.*\]: .* - '+re.escape(CARD)+r'$',cards,re.M)
+        matches=re.findall(r'^\s*(\d+) \[.*\]: .* - '+re.escape(a.card)+r'$',cards,re.M)
         if len(matches)==1:break
         if time.monotonic()>=until:raise ValueError('Speaker test card did not register')
         time.sleep(.2)

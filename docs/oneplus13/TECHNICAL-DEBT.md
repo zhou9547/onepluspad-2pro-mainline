@@ -1,3 +1,14 @@
+## Microphone/acoustic candidate pending, 2026-10-28
+
+Source81262980 now passes the self-contained sample/proxy path and all retained
+targets in one RAM boot; that closes the private host runtime dependency and
+bounded D-Bus acceptance gap. Continuous desktop integration and physical axes
+remain open. The new separate microphone boot corrects WCD PX/bias wiring and
+delivers native capture plus muted/live two-frequency correlation checks.
+Require a real combined hardware round before accepting capture or speaker
+response. The640 ceiling is for the fixed -18dBFS test, not ordinary playback
+or a replacement for dynamic protection; the qualified256 check stays intact.
+
 ## Public RPC runtime must retain the phone recipe, 2026-10-28
 
 The941d4eb7 hardware round exposed a packaging regression: original Pad-only

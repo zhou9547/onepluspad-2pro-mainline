@@ -106,5 +106,6 @@ def derive(blob):
         'nodes_added':sorted(set(tree.nodes)-set(before)),
         'nonaudio_properties_and_reservations_preserved':True,
         'default_module_policy_requires_explicit_activation':True,
-        'amplifier_default_volume':0,'amplifier_test_volume_ceiling':256,
+        'amplifier_default_volume':0,'amplifier_test_volume_ceiling':640,
+        'qualified_quiet_checker_volume':256,'acoustic_checker_volume':640,
         'dynamic_protection_qualified':False,'audio_accepted':False}
