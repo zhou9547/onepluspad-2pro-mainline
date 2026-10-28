@@ -15,6 +15,7 @@ class AudioRuntime(unittest.TestCase):
     def test_live_amp_state_requires_zero_volume_and_maximum_attenuation(self):
         row='id=2308 channel=0 volume=0 powered=1 faulted=0 sysst=0311 sysctrl=2000 attenuation=1023\n'
         self.assertTrue(m.active_state(m.amp_state(row)))
+        self.assertTrue(m.active_state(m.amp_state(row.replace('sysst=0311','sysst=0211'))))
         for old,new in [('id=2308','id=2309'),('volume=0','volume=1'),
                         ('faulted=0','faulted=1'),('attenuation=1023','attenuation=1000')]:
             with self.assertRaises(ValueError):m.amp_state(row.replace(old,new))

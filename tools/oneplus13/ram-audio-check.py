@@ -47,7 +47,11 @@ def amp_state(text):
     return state
 
 def active_state(state):
-    required=(1<<4)|(1<<0)|(1<<9)|(1<<8)
+    # The ACF enables the noise gate. In that mode the driver's ready check
+    # deliberately does not require the switching bit during digital silence.
+    # phone_state_show takes the same mutex as the completed start callback:
+    # powered/nonfaulted cannot be observed halfway through its ready check.
+    required=(1<<4)|(1<<0)|(1<<9)
     faults=(1<<14)|(1<<11)|(1<<5)|(1<<3)|(1<<1)
     return bool(state['powered'] and state['sysst']&required==required and
                 not state['sysst']&faults and not state['sysctrl']&3)
