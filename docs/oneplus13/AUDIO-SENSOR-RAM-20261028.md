@@ -32,6 +32,22 @@ out of range and GLib tests promote that warning to failure. The launch now
 omits both variables. The composite also now loads and hash-binds the separate
 sample helper rather than passing the metadata module into sample mode.
 
+The corrected source then passed the native five-test sampler gate and ran
+inside a RAM boot. Both AW88461 devices entered a live state for a two-second
+Secondary MI2S SD1 S16_LE 48kHz stereo digital-zero PCM, then powered down and
+restored the route. This qualifies the silent transport path, not audible
+playback or dynamic protection.
+
+The same boot collected finite three-axis samples for accel, gyro and mag.
+Burst delivery exceeded the publication cap: accel and gyro were capped at64,
+and the four/seven valid excess reports were counted as decode failures. The
+non-capped mag delivered15 samples. An all-zero firmware mount matrix also
+triggered the original identity fallback warning. The sampler now discards
+valid excess reports without marking an error; it still rejects malformed
+payloads. The firmware warning leaves physical axes and calibration
+unaccepted. Android returned in193.4s with matching baselines and zero
+partition writes. See `evidence/AUDIO-SSC-SAMPLE-20261028.json`.
+
 The original implementation description follows; its first metadata-only
 round is historical and does not authorize or claim successful streaming.
 

@@ -93,7 +93,7 @@ integration, IIO publisher, physical axis or calibration claim is added.
 +}
 --- /dev/null
 +++ b/src/phone-ssc-sample-probe.c
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,155 @@
 +/* SPDX-License-Identifier: GPL-3.0-or-later */
 +/* Bounded 5Hz three-vector diagnostic. No device service or IIO publisher. */
 +#include <stdio.h>
@@ -150,7 +150,9 @@ integration, IIO publisher, physical axis or calibration claim is added.
 + if(stopping || !p->enable_sent || high!=p->high || low!=p->low || id!=SSC_MSG_REPORT_MEASUREMENT) return;
 + double norm;
 + if(!decode(buf,p->matrix,&norm)) {p->invalid++;return;}
-+ if(p->samples>=64) {p->invalid++;return;}
++ /* Burst descriptors can deliver more than the fixed receipt cap. Those are
++  * valid excess samples, not decoder errors, and are never published. */
++ if(p->samples>=64) return;
 + if(!p->samples || norm<p->norm_min) p->norm_min=norm;
 + if(!p->samples || norm>p->norm_max) p->norm_max=norm;
 + p->samples++;

@@ -1,0 +1,52 @@
+{
+  "scope": "RAM_SPEAKER_DIGITAL_ZERO_AND_BOUNDED_SENSOR_SAMPLE_EVIDENCE",
+  "source_commit": "500ce9a2670f90ab9b39714783defc7e1899b85d",
+  "actions_run": 40624861431,
+  "android_return_confirmed": true,
+  "android_return_seconds": 193.4,
+  "seven_baseline_keys_match": true,
+  "physical_partition_writes": 0,
+  "kernel_health": {
+    "iommu_context_fault": 0,
+    "kernel_bug_or_panic": 0,
+    "out_of_memory": 0,
+    "gpu_fault": 0,
+    "wifi_hardware_restart": 0
+  },
+  "speaker": {
+    "device_count": 2,
+    "chip_id_hex": "2308",
+    "channels": [0, 1],
+    "backend": "Secondary MI2S",
+    "sd_line": "SD1",
+    "format": "S16_LE",
+    "rate_hz": 48000,
+    "channels_stereo": 2,
+    "digital_zero_pcm_pass": true,
+    "active_state_sample_count": 2,
+    "both_amplifiers_powered_during_pcm": true,
+    "both_amplifiers_stopped_after_pcm": true,
+    "route_restored": true,
+    "volume": 0,
+    "attenuation": 1023,
+    "audible_playback_accepted": false,
+    "dynamic_protection_accepted": false
+  },
+  "sensor_samples": {
+    "rate_hz": 5,
+    "collection_ms": 3000,
+    "accel": {"samples_capped": 64, "excess_after_cap": 4, "norm_min": 9.72087, "norm_max": 9.81179, "enable_and_disable_acknowledged": true},
+    "gyro": {"samples_capped": 64, "excess_after_cap": 7, "norm_min": 0.00620573, "norm_max": 0.00870639, "enable_and_disable_acknowledged": true},
+    "mag": {"samples_capped": 15, "excess_after_cap": 0, "norm_min": 82.4577, "norm_max": 96.3023, "enable_and_disable_acknowledged": true},
+    "firmware_mount_matrix_zero_fallback_warning_observed": true,
+    "physical_axis_or_calibration_accepted": false
+  },
+  "test_control": {
+    "sensor_stream_requested_within_same_joint_boot": true,
+    "sample_receipt_complete": false,
+    "reason": "The diagnostic counted valid burst samples beyond its 64-sample publication cap as decode errors",
+    "code_correction": "Excess samples are now discarded without incrementing the decode-error count"
+  },
+  "later_wifi_gpu_desktop_locale_ssh_regressions_executed": false,
+  "overall_hardware_acceptance": false
+}
