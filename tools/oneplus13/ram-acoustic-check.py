@@ -93,12 +93,14 @@ def main():
  for name in controls:
   if not re.search(r'^\s*: values=0$',audio.run(['amixer','-c',card,'cget','name='+name]),re.M):raise ValueError('Initial amplifier volume changed')
  raw=STATE/'capture.s24le';tone=STATE/'signal.s16le';wave=signal();tone.write_bytes(wave);tone.chmod(0o600)
- recorder=player=None;changed=[];amp_samples=[];frames=[];answer=None;cleanup_errors=[]
+ capture_log=(STATE/'arecord.private.log').open('xb');recorder=player=None;changed=[];amp_samples=[];frames=[];answer=None;cleanup_errors=[]
  try:
   for name,old,target in saved:
    changed.append((name,old));audio.run(['amixer','-q','-c',card,'cset','name='+name,target])
-   recorder=subprocess.Popen(['arecord','-q','-D','hw:'+card+',2','-t','raw','-f','S24_LE','-r','48000','-c','2','-d','9',str(raw)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
-  until=time.monotonic()+3
+   recorder=subprocess.Popen(['arecord','-q','-D','hw:'+card+',2','-t','raw','-f','S24_LE',
+       '-r','48000','-c','2','--period-size','1024','--buffer-size','4096','-d','9',str(raw)],
+       stdout=subprocess.DEVNULL,stderr=capture_log)
+  until=time.monotonic()+6
   while not raw.exists() or raw.stat().st_size<RATE*8//4:
    if recorder.poll() is not None or time.monotonic()>=until:raise ValueError('Microphone did not deliver initial frames')
    time.sleep(.05)
@@ -127,6 +129,7 @@ def main():
     if proc.poll() is None:proc.terminate()
     try:proc.communicate(timeout=2)
     except subprocess.TimeoutExpired:proc.kill();proc.communicate(timeout=2)
+  capture_log.close()
   for name in controls:
    try:audio.run(['amixer','-q','-c',card,'cset','name='+name,'0'])
    except Exception:cleanup_errors.append(name)

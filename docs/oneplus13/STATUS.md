@@ -22,6 +22,14 @@ the desktop checker reads all four keys back exactly before accepting the
 session. The contract is tested in source; physical post-rotation appearance
 still needs the next RAM boot.
 
+The b2669d87 joint round passed SensorProxy, native microphone capture, quiet
+PCM, Docker, both WiFi bands, desktop/Chinese/SSH and the new Dock gate. Its
+acoustic checker did not play at the higher test level: the9-second default
+`arecord` buffer did not expose initial frames within the3-second startup
+wait. The next candidate uses1024-frame periods with a4096-frame buffer and a
+6-second readiness bound, and retains the capture stderr in RAM for diagnosis.
+Android returned in422.8s with matching baselines and no physical writes.
+
 The firstf37017bc microphone-alternative round stopped before loading the WCD
 drivers: ABL rewrites the root compatible/model to the exact C.93 Sun MTP,dodge
 pair, whereas the new check expected the source DT's OnePlus identity. A guarded

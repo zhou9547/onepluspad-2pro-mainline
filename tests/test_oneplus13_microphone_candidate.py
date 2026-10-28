@@ -12,6 +12,11 @@ def load(name):
 dtb=load('microphone-dtb');capture=load('ram-microphone-check')
 acoustic=load('ram-acoustic-check')
 class MicrophoneCandidate(unittest.TestCase):
+ def test_acoustic_capture_uses_small_flush_period(self):
+  source=(REPO/'tools/oneplus13/ram-acoustic-check.py').read_text()
+  self.assertIn("'--period-size','1024'",source)
+  self.assertIn("'--buffer-size','4096'",source)
+  self.assertIn("time.monotonic()+6",source)
  def test_exact_abl_identity_and_live_power_wiring_are_required(self):
   base=(REPO/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes()
   tree=Fdt(dtb.derive(base)[0])
