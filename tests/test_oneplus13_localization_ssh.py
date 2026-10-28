@@ -22,6 +22,11 @@ class LocalizationAndSsh(unittest.TestCase):
         self.assertIn("('ibus', 'libpinyin')",self.bringup)
         self.assertLess(self.bringup.index('systemctl restart gdm'),
                         self.bringup.index('gsettings set org.gnome.desktop.input-sources'))
+        self.assertLess(self.bringup.index("pgrep -u a -x gnome-shell"),
+                        self.bringup.index('gsettings set org.gnome.desktop.input-sources'))
+        self.assertIn('mru-sources',self.bringup)
+        self.assertIn('sleep 8',self.bringup)
+        self.assertIn('test "$actual_sources" = "$expected_sources"',self.bringup)
 
     def test_ssh_server_is_enabled_without_root_or_shared_host_keys(self):
         self.assertIn('openssh-server',self.image['packages'])

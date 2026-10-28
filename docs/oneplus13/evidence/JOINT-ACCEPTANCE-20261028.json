@@ -1,0 +1,101 @@
+{
+  "scope": "ONE_JOINT_RAM_BOOT_WIFI_AUDIO_SENSORS_PRESERVED_FEATURES",
+  "source_commit_under_test": "20692a3bbc557f99dceb1abefa04bf5a827c91f1",
+  "actions_run": 40627099963,
+  "boot_image_sha256": "6fbcbdf1539c4ef2dae0840f6a1f35824757265ef9f4f2169c6af61436f2e075",
+  "rootfs_sha256": "7d4a61228384b007f432b1af902c8f4514f01ee6a58d5f055750eb882b6b1850",
+  "gnome_normalization_candidate_sha256": "a6ac06350c17574596831d492afe1ff7ad6bc0e8df8a9d0c2542f4955ee9007b",
+  "android_return_confirmed": true,
+  "android_return_seconds": 329.5,
+  "seven_baseline_keys_match": true,
+  "physical_partition_writes": 0,
+  "full_history_kernel_health_pass": true,
+  "kernel_health": {
+    "iommu_context_fault": 0,
+    "kernel_bug_or_panic": 0,
+    "cpu_stall": 0,
+    "out_of_memory": 0,
+    "gpu_fault": 0,
+    "wifi_hardware_restart": 0,
+    "wifi_driver_failure": 0,
+    "wifi_invalid_runtime_id": 0,
+    "wifi_vdev_failure": 0
+  },
+  "wifi": {
+    "regulatory_country": "CN",
+    "self_managed_phy_acknowledged": true,
+    "networkmanager_hold_released": true,
+    "scan_priority_serialized": true,
+    "five_ghz": {
+      "target_seen": true,
+      "associated_frequency_mhz": 5240,
+      "association": true,
+      "ipv4_address": true,
+      "default_route": true,
+      "lan_http_code": 200
+    },
+    "two_point_four_ghz": {
+      "target_seen": true,
+      "associated_frequency_mhz": 2437,
+      "association": true,
+      "ipv4_address": true,
+      "default_route": true,
+      "lan_http_code": 200
+    },
+    "dual_band_pass": true
+  },
+  "speaker": {
+    "device_count": 2,
+    "chip_id_hex": "2308",
+    "backend": "Secondary MI2S SD1",
+    "format": "S16_LE",
+    "rate_hz": 48000,
+    "stereo_channels": 2,
+    "digital_zero_pcm_pass": true,
+    "two_active_state_samples_pass": true,
+    "amplifiers_stopped": true,
+    "route_restored": true,
+    "volume": 0,
+    "attenuation": 1023,
+    "audible_playback_accepted": false,
+    "dynamic_protection_accepted": false
+  },
+  "sensor_samples": {
+    "rate_hz": 5,
+    "collection_ms": 3000,
+    "bounded_samples_complete": true,
+    "accel": {"samples": 64, "finite_vectors": true, "norm_min": 9.72566, "norm_max": 9.81656, "disabled": true},
+    "gyro": {"samples": 64, "finite_vectors": true, "norm_min": 0.00706048, "norm_max": 0.00903234, "disabled": true},
+    "mag": {"samples": 15, "finite_vectors": true, "norm_min": 82.7475, "norm_max": 98.1623, "disabled": true},
+    "physical_axes_or_calibration_accepted": false
+  },
+  "desktop": {
+    "project_mesa_version": "26.2.3",
+    "freedreno_device": "Adreno 830v1",
+    "gpu_render_readback_pass": true,
+    "ordinary_user_wayland_session": true,
+    "gnome_settings_process_and_bus": true,
+    "touch_device_present": true,
+    "physical_touch_observed": false,
+    "bluetooth_powered": true,
+    "obex_sender_present": true,
+    "battery_telemetry_present": true
+  },
+  "localization_and_ssh": {
+    "session_language": "zh_CN.UTF-8",
+    "input_sources": [["xkb", "us"], ["ibus", "libpinyin"]],
+    "duplicate_sources": false,
+    "sshd_active": true,
+    "password_login_from_host": true,
+    "remote_language": "zh_CN.UTF-8"
+  },
+  "joint_acceptance_pass": true,
+  "not_claimed": [
+    "audible speaker playback or dynamic speaker protection",
+    "ambient-light sensor availability",
+    "physical axes or sensor calibration qualification",
+    "physical touch response observed without owner",
+    "Bluetooth peer receipt",
+    "camera or persistent installation"
+  ]
+}

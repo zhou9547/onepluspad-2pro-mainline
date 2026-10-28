@@ -78,10 +78,39 @@ EOF
         sleep 1
     done
     test -S /run/user/1000/bus
-    runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+    # The user bus exists before GNOME Shell has finished initializing. Set the
+    # sources only after the shell process appears, then read back and repair
+    # the initialization-time duplicate that otherwise survives the session.
+    for attempt in $(seq 1 20); do
+        pgrep -u a -x gnome-shell >/dev/null && break
+        sleep 1
+    done
+    pgrep -u a -x gnome-shell >/dev/null
+    # IBus/GNOME finish loading their session sources asynchronously. Let that
+    # one-time initialization settle before applying the user preference.
+    sleep 8
+    expected_sources="[('xkb', 'us'), ('ibus', 'libpinyin')]"
+    actual_sources=
+    for attempt in $(seq 1 5); do
+        runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+            DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+            gsettings set org.gnome.desktop.input-sources sources \
+            "$expected_sources"
+        runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+            DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+            gsettings set org.gnome.desktop.input-sources mru-sources \
+            "$expected_sources"
+        actual_sources=$(runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+            DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+            gsettings get org.gnome.desktop.input-sources sources)
+        test "$actual_sources" = "$expected_sources" && break
+        sleep 1
+    done
+    sleep 2
+    actual_sources=$(runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
         DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
-        gsettings set org.gnome.desktop.input-sources sources \
-        "[('xkb', 'us'), ('ibus', 'libpinyin')]"
+        gsettings get org.gnome.desktop.input-sources sources)
+    test "$actual_sources" = "$expected_sources"
     runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
         DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
         gsettings set org.gnome.system.locale region zh_CN

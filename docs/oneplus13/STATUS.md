@@ -1,3 +1,27 @@
+## Joint speaker, sensor, WiFi, desktop, and localization pass, 2026-10-28
+
+One RAM boot at image source20692a3b completed every requested target and
+returned to Android in329.5s with matching baselines and zero physical partition
+writes. Both AW88461 amplifiers stayed active during a maximum-attenuation
+Secondary MI2S SD1 S16_LE 48kHz stereo digital-zero PCM, then stopped and
+restored the route. Five-Hz bounded samples completed for accel, gyro and mag,
+with every amplifier/sensor unit disabled afterward.
+
+The same boot passed 5GHz association at5240MHz and2.4GHz association at2437MHz,
+both with DHCP, default IPv4 route and owner-LAN HTTP200. Adreno830 renderback,
+ordinary-user Wayland GNOME, project Mesa, touch-device discovery, powered
+Bluetooth with OBEX sender and battery telemetry were retained. Chinese session
+locale, exactly one libpinyin source plus US keyboard, sshd and a real
+password-authenticated Chinese SSH login passed. Every recorded kernel health
+count remained zero. See evidence/JOINT-ACCEPTANCE-20261028.json.
+
+This accepts the silent speaker transport and bounded sample diagnostics. It
+does not accept audible playback, dynamic speaker protection, physical sensor
+axes/calibration, ambient light, physical touch response or Bluetooth peer
+receipt. Final source requires the same GNOME settlement change to be compiled
+by Actions; the observed hardware candidate used the identical source-bound
+script in its joint boot.
+
 ## Native amplifier inventory and exact I2S mapping, 2026-10-28
 
 Complete Actions40615700391 passes at e539f11e. One RAM boot confirms both
