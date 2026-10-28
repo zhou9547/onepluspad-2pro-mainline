@@ -1,3 +1,13 @@
+## Public RPC runtime must retain the phone recipe, 2026-10-28
+
+The941d4eb7 hardware round exposed a packaging regression: original Pad-only
+hexagonrpcd does not accept the phone qualification command's -W option.
+Do not duplicate the shared recipe in the public runtime builder. Reuse the
+phone builder with all ten supplemental patches, require both14-case native
+test suites and execute the exported daemon's parser against an absent node.
+The corrected image still needs a full Actions build and one combined RAM
+test; SensorProxy and self-contained sample acceptance remain pending.
+
 ## Self-contained sensor runtime pending hardware, 2026-10-28
 
 The previous private host runtime dependency is replaced by an Actions-built

@@ -51,11 +51,13 @@ jobs:
           python3 -m unittest discover -s tests -p test_oneplus13_ssc_samples.py -v
           python3 -m unittest discover -s tests -p test_oneplus13_sensor_fileserver.py -v
           python3 -m unittest discover -s tests -p test_oneplus13_sensor_discovery.py -v
+          python3 -m unittest discover -s tests -p test_oneplus13_sensor_inputs_candidate.py -v
           python3 tools/oneplus13/build-phone-ssc-probe.py --meson "$RUNNER_TEMP/phone-ssc-meson/bin/meson" --output out/phone-ssc
           python3 tools/oneplus13/build-phone-sensor-runtime.py --meson "$RUNNER_TEMP/phone-ssc-meson/bin/meson" --ssc-build out/phone-ssc --output out/phone-sensor-runtime
           python3 tools/oneplus13/reviewed-sensor-inputs.py --data devices/oneplus13/qualified-data/sensors/reviewed-runtime-data.json --native out/phone-sensor-runtime/phone-sensor-runtime-arm64.tar.gz --manifest out/phone-sensor-runtime/phone-sensor-runtime-manifest.json --output out/phone-ssc/sensor-inputs
           mkdir -p out/phone-ssc/runtime-evidence
           cp out/phone-sensor-runtime/phone-sensor-runtime-manifest.json out/phone-sensor-runtime/runtime-build.log out/phone-sensor-runtime/LICENSE-* out/phone-ssc/runtime-evidence/
+          cp out/phone-sensor-runtime/phone-rpc/verification.json out/phone-ssc/runtime-evidence/phone-rpc-verification.json
       - name: Preserve public source evidence and isolated probe
         if: always()
         uses: actions/upload-artifact@v4

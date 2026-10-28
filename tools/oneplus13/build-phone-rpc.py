@@ -71,6 +71,7 @@ def extract(archive,directory,expected):
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--archive',type=Path);parser.add_argument('--host-check',action='store_true')
+    parser.add_argument('--meson',default='meson')
     a=parser.parse_args();native=platform.machine() in ('aarch64','arm64')
     if not native and not a.host_check:raise ValueError('Native ARM64 is required for runtime artifacts')
     out=a.output.resolve()
@@ -93,15 +94,15 @@ def main():
     for name,options in [('release',['--buildtype=release']),
                           ('sanitized',['--buildtype=debug','-Db_sanitize=address,undefined','-Db_lundef=false'])]:
         build=out/name
-        run(['meson','setup',build,source,*common,*options],log)
-        run(['meson','compile','-C',build,'-j','2'],log)
+        run([a.meson,'setup',build,source,*common,*options],log)
+        run([a.meson,'compile','-C',build,'-j','2'],log)
         environment=build_environment()
         if name=='sanitized':
             # Upstream construct_root_dir explicitly has no tree destructor.
             # Invalid memory/UB are checked; do not claim leak validation.
             environment['ASAN_OPTIONS']='detect_leaks=0:abort_on_error=1'
             environment['UBSAN_OPTIONS']='halt_on_error=1:print_stacktrace=1'
-        run(['meson','test','-C',build,'--print-errorlogs'],log,environment)
+        run([a.meson,'test','-C',build,'--print-errorlogs'],log,environment)
         tested=[json.loads(line) for line in (build/'meson-logs/testlog.json').read_text().splitlines() if line.strip()]
         if len(tested)!=14 or not all(item['result']=='OK' for item in tested):raise ValueError('Missing exact C test results')
         if not any(item['name'].endswith('input-type-sequence') for item in tested):raise ValueError('No actual input sequence wire test')

@@ -1,4 +1,5 @@
 import copy,hashlib,importlib.util,json,tempfile,unittest
+from unittest.mock import patch
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]/'tools/oneplus13'
 DATA=Path(__file__).resolve().parents[1]/'devices/oneplus13/qualified-data/sensors/reviewed-runtime-data.json'
@@ -7,8 +8,23 @@ def module(name):
     m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
 data=module('reviewed-sensor-inputs');fs=module('ram-sensor-fileserver');proxy=module('ram-ssc-proxy')
 image=module('image-sensors-check')
+builder=module('build-phone-sensor-runtime')
 
 class RuntimeInputs(unittest.TestCase):
+    def test_unpatched_or_untested_rpc_cannot_enter_public_image(self):
+        for defect in ('pad-only','missing-sanitized-tests'):
+            with self.subTest(defect=defect),tempfile.TemporaryDirectory() as tmp:
+                out=Path(tmp);(out/'phone-rpc').mkdir()
+                proof={'native_arm64':True,'host_check_only':False,
+                    'c_test_counts':{'release':14,'sanitized':14},
+                    'release_tests_pass':True,'asan_ubsan_tests_pass':True,'patches':[{}]*15}
+                if defect=='pad-only':proof['patches']=[{}]*5
+                else:proof['c_test_counts'].pop('sanitized')
+                (out/'phone-rpc/verification.json').write_text(json.dumps(proof))
+                with patch.object(builder,'run'),self.assertRaisesRegex(ValueError,'Incomplete phone RPC'):
+                    builder.build_phone_rpc(out/'source.tar.gz',out,'meson',out/'log')
+                self.assertFalse((out/'hexagonrpc-stage').exists())
+
     def test_actual_reviewed_data_is_complete(self):
         self.assertEqual(len(data.data_entries(DATA)),922)
 

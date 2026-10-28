@@ -5,7 +5,7 @@
 Development candidate. No registry, calibration or automatic service included.
 Consumes only the guarded SSC build from this exact integration source commit.
 """
-import argparse,hashlib,io,json,os,platform,shlex,shutil,struct,subprocess,tarfile,urllib.request
+import argparse,hashlib,io,json,os,platform,shlex,shutil,struct,subprocess,sys,tarfile,urllib.request
 from pathlib import Path
 REPO=Path(__file__).resolve().parents[2]
 PREFIX='/usr/lib/erhai/sensors'
@@ -13,10 +13,48 @@ PREFIX='/usr/lib/erhai/sensors'
 def sha(p):
     with Path(p).open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 def run(args,log,env=None):
-    p=subprocess.run([str(x) for x in args],capture_output=True,text=True,timeout=240,env=env)
+    if env is None:
+        env={k:os.environ[k] for k in ('PATH','HOME','TMPDIR') if k in os.environ}
+        env.update(LANG='C.UTF-8',LC_ALL='C.UTF-8')
+    p=subprocess.run([str(x) for x in args],capture_output=True,text=True,timeout=480,env=env)
     with log.open('a') as f:f.write('\n'+json.dumps([str(x) for x in args])+'\n'+p.stdout+p.stderr)
     if p.returncode:raise ValueError('Native sensor runtime step failed: '+str(args[0]))
     return p.stdout.strip()
+
+def build_phone_rpc(archive,out,meson,log):
+    """Reuse the qualified phone recipe, including its full wire/storage tests."""
+    result=out/'phone-rpc'
+    run([sys.executable,REPO/'tools/oneplus13/build-phone-rpc.py',
+         '--archive',archive,'--output',result,'--meson',meson],log)
+    proof=json.loads((result/'verification.json').read_text())
+    if (proof.get('native_arm64') is not True or proof.get('host_check_only') is not False or
+        proof.get('c_test_counts')!={'release':14,'sanitized':14} or
+        proof.get('release_tests_pass') is not True or proof.get('asan_ubsan_tests_pass') is not True or
+        len(proof.get('patches',[]))!=15):
+        raise ValueError('Incomplete phone RPC patch/test evidence')
+    stage=out/'hexagonrpc-stage';stage.mkdir()
+    expected={PREFIX.lstrip('/')+'/bin/hexagonrpcd',PREFIX.lstrip('/')+'/lib/libhexagonrpc.so.0.5'}
+    with tarfile.open(result/'phone-rpc-arm64.tar.gz') as tf:
+        if {x.name for x in tf}!=expected:raise ValueError('Unexpected phone RPC export')
+        for member in tf:
+            if not member.isfile():raise ValueError('Non-file phone RPC export')
+            raw=tf.extractfile(member).read()
+            if hashlib.sha256(raw).hexdigest()!=proof['outputs'][member.name]['sha256']:
+                raise ValueError('Phone RPC export changed')
+            target=stage/member.name;target.parent.mkdir(parents=True,exist_ok=True)
+            target.write_bytes(raw);target.chmod(member.mode)
+    # Exercise the delivered parser with -W, but point exclusively at a known
+    # absent build-output path. This must fail before any device open/attach.
+    missing=out/'NO_DEVICE_MUST_EXIST';assert not missing.exists()
+    env={'PATH':os.environ['PATH'],'LANG':'C.UTF-8','LC_ALL':'C.UTF-8',
+         'LD_LIBRARY_PATH':str(stage/PREFIX.lstrip('/')/'lib')}
+    checked=subprocess.run([str(stage/PREFIX.lstrip('/')/'bin/hexagonrpcd'),'-W',
+        '-f',str(missing),'-d','adsp','-s','-R',str(missing)],capture_output=True,text=True,timeout=5,env=env)
+    output=checked.stdout+checked.stderr
+    with log.open('a') as f:f.write('\nPHONE_RPC_NO_DEVICE_CLI_CHECK\n'+output)
+    if checked.returncode==0 or str(missing) not in output or 'invalid option' in output.lower():
+        raise ValueError('Delivered phone RPC -W parser/no-device guard failed')
+    return stage/PREFIX.lstrip('/'),proof
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--ssc-build',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
@@ -41,12 +79,19 @@ def main():
     # original public prefix, not a build-host or owner filesystem location.
     text=pc[0].read_text();assert 'prefix='+PREFIX+'\n' in text
     pc[0].write_text(text.replace('prefix='+PREFIX+'\n','prefix='+str(sdk/PREFIX.lstrip('/'))+'\n',1))
-    built={};pins=[]
+    built={};pins=[];rpc_proof=None
     for name in ('hexagonrpc','iio-sensor-proxy'):
         entry=sources[name];archive=out/entry['archive']
         url=entry.get('mirror_url',entry['url']).replace('http:','https:',1)
         with urllib.request.urlopen(url,timeout=45) as response,archive.open('xb') as f:shutil.copyfileobj(response,f)
         if sha(archive)!=entry['sha256']:raise ValueError('Original source archive changed')
+        if name=='hexagonrpc':
+            built[name],rpc_proof=build_phone_rpc(archive,out,a.meson,log)
+            for license_path in (out/'phone-rpc').glob('LICENSE-*'):
+                shutil.copy2(license_path,out/('LICENSE-hexagonrpc-'+license_path.name.removeprefix('LICENSE-')))
+            pins.append({'name':name,'commit':entry['upstream_commit'],'archive_sha256':sha(archive),
+                         'patches':rpc_proof['patches'],'builder_sha256':sha(REPO/'tools/oneplus13/build-phone-rpc.py')})
+            continue
         tree=out/(name+'-source');tree.mkdir()
         with tarfile.open(archive) as tf:
             for member in tf:
@@ -61,7 +106,8 @@ def main():
             if sha(path)!=patch['sha256']:raise ValueError('Original runtime patch changed')
             run(['patch','-d',src,'-p1','--batch','--fuzz=0','-i',path],log)
         build=out/(name+'-build')
-        env={**os.environ,'PKG_CONFIG_PATH':str(pc[0].parent)}
+        env={k:os.environ[k] for k in ('PATH','HOME','TMPDIR') if k in os.environ}
+        env.update(LANG='C.UTF-8',LC_ALL='C.UTF-8',PKG_CONFIG_PATH=str(pc[0].parent))
         args=[a.meson,'setup',build,src,'--buildtype=release','--wrap-mode=nofallback',
               '--prefix='+PREFIX,'--libdir=lib','--bindir=bin','--libexecdir=libexec',
               '-Dc_link_args=-Wl,-rpath,'+PREFIX+'/lib']
@@ -113,6 +159,8 @@ def main():
         'phone_property_and_matrix_fixes':True,'metadata_executable_guard_unchanged':True,
         'bus_client_variant_tests_passed':True,'real_gio_claim_signal_release_tests':True,
         'sanitized_real_gio_tests_passed':True,'builder_sha256':sha(Path(__file__)),
+        'phone_rpc_release_and_sanitized_tests':rpc_proof['c_test_counts'],
+        'phone_rpc_delivered_W_parser_no_device_check':True,
         'bus_client_source_sha256':sha(REPO/'tools/oneplus13/phone-sensor-bus-check.c')}
     (out/'phone-sensor-runtime-manifest.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({'scope':result['scope'],'native_files':len(files),'source_commit':commit,'hardware_qualified':False}))

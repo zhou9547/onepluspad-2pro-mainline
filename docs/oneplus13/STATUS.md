@@ -1,3 +1,22 @@
+## Self-contained runtime integration regression corrected, 2026-10-28
+
+Complete Actions40646323627 built source941d4eb7 successfully, but its joint
+RAM test rejected the sensor file server: it exited4 before a reverse attach.
+The new runtime builder had omitted all ten phone-only RPC patches, including
+the required default-off -W RAM backend. Replaying the delivered daemon's CLI
+on the build host reproduces invalid option W and exit4 without any device.
+The builder now reuses build-phone-rpc.py, requires its15-patch provenance and
+all14 release plus14 sanitized wire/storage tests, and checks the delivered
+-W parser against an absent path before exporting the runtime. A new complete
+Actions build and joint hardware regression are required.
+
+The failed sensor round still passed Docker's delivered VFS defaults and real
+bridge/DNS/NAT/published-port tests, bounded quiet PCM, both WiFi bands and the
+retained desktop/Chinese/SSH targets. Android returned in323.1s with matching
+seven-key baselines, zero physical writes and passing kernel-health gates.
+Source46f34674 remains the last fully accepted joint image;941d4eb7 is not a
+replacement for its accepted sensor capability.
+
 ## Docker bridge and quiet nonzero PCM qualified, 2026-10-28
 
 Image source46f34674, complete Actions40641271075, passed one combined RAM
