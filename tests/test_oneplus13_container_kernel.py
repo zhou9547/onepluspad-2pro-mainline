@@ -12,7 +12,7 @@ mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
 class ContainerDelivery(unittest.TestCase):
     def config(self):
         return '\n'.join('CONFIG_' + name + '=y' for name in mod.BUILTIN + mod.BOOLS) + '\n' + \
-            '\n'.join('CONFIG_' + name + '=m' for name in mod.MODULES)
+            '\n'.join('CONFIG_' + name + '=m' for name in list(mod.MODULES) + mod.FEATURES)
 
     def archive(self, omit=None):
         stream = io.BytesIO()
@@ -40,5 +40,12 @@ class ContainerDelivery(unittest.TestCase):
     def test_builtin_does_not_require_a_ko(self):
         text = self.config().replace('CONFIG_IP_NF_NAT=m', 'CONFIG_IP_NF_NAT=y')
         with self.archive('iptable_nat') as archive: mod.check_payload(text, archive, 'test')
+
+    def test_bridge_family_menu_does_not_invent_a_module(self):
+        self.assertEqual(mod.FEATURES, ['NF_TABLES_BRIDGE'])
+        self.assertNotIn('nf_tables_bridge', mod.MODULES.values())
+        with self.archive() as archive: mod.check_payload(self.config(), archive, 'test')
+        with self.assertRaisesRegex(ValueError, 'NF_TABLES_BRIDGE'):
+            mod.check_config(self.config().replace('CONFIG_NF_TABLES_BRIDGE=m', '# CONFIG_NF_TABLES_BRIDGE is not set'))
 
 if __name__ == '__main__': unittest.main()

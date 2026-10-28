@@ -27,13 +27,16 @@ IP_NF_TARGET_REJECT:ipt_REJECT
 IP6_NF_IPTABLES_LEGACY:ip6_tables IP6_NF_FILTER:ip6table_filter
 IP6_NF_NAT:ip6table_nat IP6_NF_MANGLE:ip6table_mangle IP6_NF_RAW:ip6table_raw
 IP6_NF_TARGET_REJECT:ip6t_REJECT
-NF_TABLES:nf_tables NF_TABLES_BRIDGE:nf_tables_bridge
+NF_TABLES:nf_tables
 NFT_CT:nft_ct NFT_NAT:nft_chain_nat NFT_MASQ:nft_masq NFT_REDIR:nft_redir
 NFT_COMPAT:nft_compat NFT_LOG:nft_log
 NFT_LIMIT:nft_limit NFT_REJECT:nft_reject NFT_REJECT_INET:nft_reject_inet
 NFT_FIB_IPV4:nft_fib_ipv4 NFT_FIB_IPV6:nft_fib_ipv6 NFT_FIB_INET:nft_fib_inet
 '''.split())
 BOOLS = 'NF_TABLES_INET NF_TABLES_IPV4 NF_TABLES_IPV6 NF_CONNTRACK_MARK NF_CONNTRACK_ZONES'.split()
+# Menu selector only in this pinned kernel. Bridge-family handling lives in
+# nf_tables; net/bridge/netfilter/Makefile has no nf_tables_bridge object.
+FEATURES = ['NF_TABLES_BRIDGE']
 
 def settings(text):
     return dict(line[7:].split('=', 1) for line in text.splitlines()
@@ -42,7 +45,7 @@ def settings(text):
 def check_config(text):
     values = settings(text)
     missing = [name for name in BUILTIN + BOOLS if values.get(name) != 'y']
-    missing += [name for name in MODULES if values.get(name) not in ('y', 'm')]
+    missing += [name for name in list(MODULES) + FEATURES if values.get(name) not in ('y', 'm')]
     if missing:
         raise ValueError('Container kernel dependencies disabled: ' + ', '.join(missing))
     return values

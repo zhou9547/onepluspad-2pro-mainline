@@ -11,7 +11,11 @@ Ubuntu's iptables-nft backend, NAT/masquerade, connection tracking, required
 matches, bridge/veth, namespaces, cgroups, seccomp and overlayfs. The resolved
 olddefconfig and delivered modules.tar.gz are checked together; absent
 modules fail the build. NFT counters are built into nf_tables in this kernel,
-so the obsolete NFT_COUNTER option is deliberately not used.
+so the obsolete NFT_COUNTER option is deliberately not used. NF_TABLES_BRIDGE
+is a menu selector whose family handling is in nf_tables, not a separate
+nf_tables_bridge.ko. The first Actions build compiled the kernel and module
+payload but correctly stopped at the mistakenly named delivery requirement;
+that check is corrected against this kernel's actual Makefile.
 
 Docker, iptables, nftables and iproute2 are preinstalled. Docker/containerd
 remain stopped at boot during phone qualification. The owner can explicitly

@@ -55,7 +55,7 @@ jobs:
           CCACHE_MAXSIZE: 3G
           ONEPLUS13_BUILD_JOBS: ${{ inputs.use_server && '4' || '' }}
       - uses: actions/cache/save@v4
-        if: ${{ !inputs.use_server && steps.kernel-cache.outputs.cache-hit != 'true' }}
+        if: ${{ always() && !inputs.use_server && steps.kernel-cache.outputs.cache-hit != 'true' }}
         with:
           path: ~/.cache/ccache
           key: ${{ steps.kernel-cache.outputs.cache-primary-key }}

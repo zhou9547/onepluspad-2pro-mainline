@@ -311,7 +311,7 @@ class PhoneFormats(unittest.TestCase):
         import importlib
         container = importlib.import_module('container-kernel')
         full = '\n'.join(f'CONFIG_{name}=y' for name in
-                         dict.fromkeys(REQUIRED + container.BUILTIN + container.BOOLS + list(container.MODULES)))
+                         dict.fromkeys(REQUIRED + container.BUILTIN + container.BOOLS + container.FEATURES + list(container.MODULES)))
         with tempfile.TemporaryDirectory() as tmp:
             config = pathlib.Path(tmp) / '.config'
             config.write_text(full)
