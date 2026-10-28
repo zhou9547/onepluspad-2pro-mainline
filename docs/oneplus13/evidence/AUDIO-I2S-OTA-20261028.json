@@ -5,6 +5,10 @@
   "parser_reference": "AudioReach/audioreach-graphservices@c3ed9dd4544dc2a36f4e6d54af66105c9e3f18ff",
   "format": "MTKT -> MTLU -> independent MTDE/MTDO -> POOL; uint32,uint32,uint16,uint16",
   "parameter_id": "0x08001019",
+  "subgraph_module_iid": "0x4023",
+  "subgraph_module_id": "0x0700100A",
+  "subgraph_module_name": "MODULE_ID_I2S_SINK",
+  "kernel_definition_reference": "sound/soc/qcom/qdsp6/audioreach.h",
   "records": [
     {
       "lut_relative": 64,

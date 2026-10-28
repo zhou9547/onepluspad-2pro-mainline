@@ -60,27 +60,33 @@ def main():
     for name in ('release','module-sha256','policy-sha256','attach-helper','attach-helper-sha256',
                  'fileserver-helper','fileserver-helper-sha256','archive','archive-sha256','manifest','manifest-sha256',
                  'trace-tool','trace-sha256','ssc-helper','ssc-helper-sha256','ssc-archive','ssc-archive-sha256',
-                 'ssc-manifest','ssc-manifest-sha256'):p.add_argument('--'+name,required=True)
+                 'ssc-manifest','ssc-manifest-sha256','ssc-samples-helper','ssc-samples-helper-sha256',
+                 'ssc-samples-archive','ssc-samples-archive-sha256','ssc-samples-manifest',
+                 'ssc-samples-manifest-sha256'):p.add_argument('--'+name,required=True)
     a=p.parse_args()
     if os.geteuid()!=0 or os.uname().release!=a.release:raise ValueError('Wrong running root/kernel')
     fs=load('reviewed_reverse_service',a.fileserver_helper,a.fileserver_helper_sha256)
     guard=load('reviewed_attach_guard',a.attach_helper,a.attach_helper_sha256)
     ssc=load('reviewed_metadata_guard',a.ssc_helper,a.ssc_helper_sha256)
+    samples=load('reviewed_samples_guard',a.ssc_samples_helper,a.ssc_samples_helper_sha256)
     root=Path('/')
     guard.validate(root,a.release,a.module_sha256,a.policy_sha256)
     for path,digest in [(a.archive,a.archive_sha256),(a.manifest,a.manifest_sha256),
                         (a.trace_tool,a.trace_sha256),(a.ssc_archive,a.ssc_archive_sha256),
-                        (a.ssc_manifest,a.ssc_manifest_sha256)]:
+                        (a.ssc_manifest,a.ssc_manifest_sha256),(a.ssc_samples_archive,a.ssc_samples_archive_sha256),
+                        (a.ssc_samples_manifest,a.ssc_samples_manifest_sha256)]:
         if Path(path).is_symlink() or not re.fullmatch('[0-9a-f]{64}',digest) or sha(path)!=digest:raise ValueError('Composite input mismatch')
     probe_files=ssc.entries(a.ssc_archive,json.loads(Path(a.ssc_manifest).read_text()))
+    sample_files=samples.entries(a.ssc_samples_archive,json.loads(Path(a.ssc_samples_manifest).read_text()))
     files=fs.archive_entries(a.archive,json.loads(Path(a.manifest).read_text()))
     fs.install(root,files)
     ssc.install(probe_files)
+    samples.install(sample_files)
     for name,(data,mode,target) in files.items():
         if data is not None and sha(root/name)!=hashlib.sha256(data).hexdigest():raise ValueError('Reverse input changed before attach')
     guard.guard(root,guard.command)
     sample_mode=a.probe_mode=='samples'
-    if sample_mode and ssc.TYPES!={'accel','gyro','mag'}:raise ValueError('Wrong isolated sample helper')
+    diagnostic=samples if sample_mode else ssc
     with (root/guard.MARKER).open('x') as stream:stream.write('ONE_REVERSE_ATTACH_THREE_VECTOR_SAMPLE_DIAGNOSTIC\n' if sample_mode else 'ONE_REVERSE_ATTACH_FOUR_METADATA_QUERIES_NO_STREAM_NO_RETRY\n')
     for unit in guard.UNITS:
         fs.execute(['/usr/bin/systemctl','mask','--runtime',unit])
@@ -91,7 +97,7 @@ def main():
     os.chown('/dev/fastrpc-adsp-secure',fs.UID,fs.UID);os.chmod('/dev/fastrpc-adsp-secure',0o600)
     state=Path(fs.STATE);state.mkdir(mode=0o700);os.chown(state,fs.UID,fs.UID)
     metadata=[]
-    def callback():metadata.append(metadata_callback(fs,ssc,sample_mode=sample_mode))
+    def callback():metadata.append(metadata_callback(fs,diagnostic,sample_mode=sample_mode))
     try:worker=fs.serve(a.trace_tool,diagnostic=True,during_active=callback,samples_requested=sample_mode)
     finally:
         guard.guard(root,guard.command)

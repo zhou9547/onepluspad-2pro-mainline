@@ -26,6 +26,8 @@ class Samples(unittest.TestCase):
         for prop in ['User=65534','PrivateDevices=yes','DevicePolicy=closed','RuntimeMaxSec=20s','RestrictAddressFamilies=AF_UNIX AF_QIPCRTR']:
             self.assertIn('--property='+prop,args)
         self.assertNotIn('--verify-lock',args)
+        self.assertIn('--setenv=SSC_SUSPEND_MODE=nowakeup',args)
+        self.assertFalse(any('SSC_BATCH_PERIOD_US' in x or 'SSC_FLUSH_PERIOD_US' in x for x in args))
         self.assertTrue(args[-1].endswith('/probe/phone-ssc-sample-probe'))
     def test_composite_uses_one_bounded_query_and_accepts_collected_transient(self):
         with tempfile.TemporaryDirectory() as tmp:

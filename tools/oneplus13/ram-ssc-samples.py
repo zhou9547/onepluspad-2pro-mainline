@@ -45,7 +45,9 @@ def command(mode,state=STATE):
     old_unit=unit;unit='oneplus13-ssc-samples-'+mode+'.service'
     args=[x.replace('--unit='+old_unit,'--unit='+unit) for x in args]
     args=args[:args.index('/bin/sh')] if mode=='verify' else args[:-1]
-    args+=['--setenv=SSC_SUSPEND_MODE=nowakeup','--setenv=SSC_BATCH_PERIOD_US=0','--setenv=SSC_FLUSH_PERIOD_US=0']
+    # Absence means unbatched. Explicit zero is rejected by libssc's parser
+    # and, under GLib test semantics, turns that warning into a child failure.
+    args+=['--setenv=SSC_SUSPEND_MODE=nowakeup']
     args+=[str(state/('tests/phone-sample-tests' if mode=='verify' else 'probe/phone-ssc-sample-probe'))]
     return unit,args
 

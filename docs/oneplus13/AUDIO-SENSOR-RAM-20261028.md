@@ -11,6 +11,8 @@ feedback SD0(enum1). The inherited zero selector was invalid and is corrected
 in both speaker graphs. The decoder check requires actual tuple tokens250=1,
 251=0,256=2. The twelve-byte interface metadata and parser provenance are in
 `evidence/AUDIO-I2S-OTA-20261028.json`; no raw ACDB/tuning is published.
+The source-bound SGIT map resolves record IID0x4023 to module0x0700100A,
+named `MODULE_ID_I2S_SINK` by the pinned AudioReach kernel header.
 
 The sample diagnostic is a separate archive and executable. Its private send
 guard enrolls at most three discovered motion UIDs, permits one5Hz enable and
@@ -22,6 +24,13 @@ physical axes, sensor calibration, ambient light or a continuous IIO service.
 An explicit `--probe-mode samples` selects this diagnostic within the same
 bounded reverse-service wrapper. It never auto-starts. Fresh Actions and one
 combined silent PCM/sample/preserved-feature boot remain required.
+
+The first two RAM attempts stopped inside the native self-check before the
+actual sample client. The bounded output identified explicit zero values for
+`SSC_BATCH_PERIOD_US` and `SSC_FLUSH_PERIOD_US`; libssc correctly treats zero as
+out of range and GLib tests promote that warning to failure. The launch now
+omits both variables. The composite also now loads and hash-binds the separate
+sample helper rather than passing the metadata module into sample mode.
 
 The original implementation description follows; its first metadata-only
 round is historical and does not authorize or claim successful streaming.
