@@ -25,18 +25,17 @@ and evidence/AUDIO-I2S-OTA-20261028.json.
 
 ## Joint hardware boundary, 2026-10-28
 
-The source20692a3b joint RAM round passes the requested digital-zero speaker
+The source54fdf46f joint RAM round passes the requested digital-zero speaker
 transport, bounded accel/gyro/mag samples, both WiFi bands, GPU/GNOME, touch
 enumeration, Bluetooth, battery, Chinese locale, clean one-libpinyin input
-source list and SSH login. Android returned in329.5s and no physical partition
+source list and SSH login. Android returned in336.8s and no physical partition
 was written. The input-source fix waits for GNOME Shell and IBus initialization
 to settle before applying and verifying the list.
 
 Audible playback and dynamic protection, physical axes/calibration, ambient
 light, physical touch response and Bluetooth peer receipt remain outside this
-acceptance. The final Actions image must be regenerated from the same
-normalization change; hardware evidence records the exact candidate hash rather
-than treating a host-provided script as image-bound acceptance.
+acceptance. The tested boot image is the final GitHub-hosted ARM64 Actions
+artifact, and hardware evidence records its exact image and rootfs hashes.
 
 ## Speaker transport and protection, 2026-10-28
 

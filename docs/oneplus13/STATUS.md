@@ -1,7 +1,7 @@
 ## Joint speaker, sensor, WiFi, desktop, and localization pass, 2026-10-28
 
-One RAM boot at image source20692a3b completed every requested target and
-returned to Android in329.5s with matching baselines and zero physical partition
+One RAM boot at image source54fdf46f completed every requested target and
+returned to Android in336.8s with matching baselines and zero physical partition
 writes. Both AW88461 amplifiers stayed active during a maximum-attenuation
 Secondary MI2S SD1 S16_LE 48kHz stereo digital-zero PCM, then stopped and
 restored the route. Five-Hz bounded samples completed for accel, gyro and mag,
@@ -18,9 +18,9 @@ count remained zero. See evidence/JOINT-ACCEPTANCE-20261028.json.
 This accepts the silent speaker transport and bounded sample diagnostics. It
 does not accept audible playback, dynamic speaker protection, physical sensor
 axes/calibration, ambient light, physical touch response or Bluetooth peer
-receipt. Final source requires the same GNOME settlement change to be compiled
-by Actions; the observed hardware candidate used the identical source-bound
-script in its joint boot.
+receipt. The tested image itself was produced by the five-job GitHub-hosted
+ARM64 Actions run and its boot image and rootfs hashes are recorded in the
+evidence file.
 
 ## Native amplifier inventory and exact I2S mapping, 2026-10-28
 
