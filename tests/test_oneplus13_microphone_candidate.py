@@ -16,7 +16,8 @@ class MicrophoneCandidate(unittest.TestCase):
   source=(REPO/'tools/oneplus13/ram-acoustic-check.py').read_text()
   self.assertIn("'--period-size','1024'",source)
   self.assertIn("'--buffer-size','4096'",source)
-  self.assertIn("time.monotonic()+6",source)
+  self.assertIn("captures[phase_name]=raw.read_bytes()",source)
+  self.assertNotIn('initial frames',source)
  def test_exact_abl_identity_and_live_power_wiring_are_required(self):
   base=(REPO/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes()
   tree=Fdt(dtb.derive(base)[0])
@@ -55,23 +56,25 @@ class MicrophoneCandidate(unittest.TestCase):
    match=2*abs(sum(v*math.sin(2*math.pi*freq*i/48000) for i,v in enumerate(samples)))/48000
    cross=2*abs(sum(v*math.sin(2*math.pi*other*i/48000) for i,v in enumerate(samples)))/48000
    self.assertGreater(match,4000);self.assertLess(cross,5)
-  phases=[24000,120000,216000,312000]
   def make(contrast=True):
-   out=bytearray()
-   for i in range(48000*9):
-    v=round(10*math.sin(2*math.pi*997*i/48000))
-    for phase,start in enumerate(phases):
-     level=(10,100000 if contrast else 10,100000 if contrast else 10,70000 if contrast else 10)[phase]
-     t=i-start
-     if 0<=t<96000:v+=round(level*math.sin(2*math.pi*(1000 if t<48000 else 1500)*t/48000))
-    out.extend(struct.pack('<ii',v,v//2))
-   return bytes(out)
-  result=acoustic.analyze(make(),phases)
+   levels={'muted':10,'amp0_only':100000 if contrast else 10,
+           'amp1_only':100000 if contrast else 10,'both':70000 if contrast else 10}
+   result={}
+   for phase,level in levels.items():
+    out=bytearray()
+    for i in range(48000*2):
+     v=round(10*math.sin(2*math.pi*997*i/48000))
+     v+=round(level*math.sin(2*math.pi*(1000 if i<48000 else 1500)*i/48000))
+     out.extend(struct.pack('<ii',v,v//2))
+    result[phase]=bytes(out)
+   return result
+  result=acoustic.analyze(make())
   self.assertTrue(result['correlated_two_speaker_response_pass'])
   self.assertTrue(all(v['pass'] for v in result['amp_isolation']))
   self.assertFalse(result['human_listening_performed'])
-  self.assertFalse(acoustic.analyze(make(False),phases)['correlated_two_speaker_response_pass'])
-  with self.assertRaises(ValueError):acoustic.analyze(b'',phases)
+  self.assertFalse(acoustic.analyze(make(False))['correlated_two_speaker_response_pass'])
+  bad=make();bad['muted']=b''
+  with self.assertRaises(ValueError):acoustic.analyze(bad)
  def test_alternative_changes_only_reviewed_audio_nodes(self):
   base=(REPO/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes()
   speaker,_=dtb.audio.derive(base);candidate,proof=dtb.derive(base)

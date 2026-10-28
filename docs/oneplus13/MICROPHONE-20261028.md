@@ -49,12 +49,14 @@ response increase over its muted control, without clipping. Both volumes,
 routes and capture controls restore afterward, and raw audio is deleted.
 The earlier440/880Hz round passed native capture and the880Hz response, while
 the440Hz response failed the unchanged8x threshold. No gain increase is made.
-The next bounded test bypasses the frontend channel mapping: the same duplicated
-1000/1500Hz stereo fixture plays once with both amplifiers muted, once with only
-Amp0 enabled, once with only Amp1 enabled and once with both enabled. Each amp
-is accepted only if its designated frequency rises at least8x over the matching
-silent control. This isolates physical amplifier/speaker paths without raising
-gain. Raw audio is deleted and phase spectra are retained.
+The bounded test bypasses the frontend channel mapping: the same duplicated
+1000/1500Hz stereo fixture is captured once with both amplifiers muted, once
+with only Amp0 enabled, once with only Amp1 enabled and once with both enabled.
+Each independent two-second capture eliminates dependence on `arecord` flushing
+its output file. Each amp is accepted only if its designated frequency rises at
+least8x over the matching silent control. This isolates physical amplifier and
+speaker paths without raising gain. Each raw phase capture is deleted after its
+spectrum is computed, and no raw audio is retained.
 This measures a correlated microphone response; human listening, ordinary
 desktop playback and dynamic speaker protection remain separate acceptance.
 
