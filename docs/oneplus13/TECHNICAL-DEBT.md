@@ -1,3 +1,25 @@
+## Continuous desktop sensors and 896 speaker ceiling tested next, 2026-10-28
+
+The 12-second owner posture run produced real bottom-up, left-up and right-up
+accelerometer transitions, while the same boot passed both amplifier acoustic
+correlations. A continuous desktop runtime now installs its reviewed inputs
+into the protected overlay after ADSP verification, starts the restricted
+reverse file service and SensorProxy, and enables GNOME automatic orientation.
+This remains pending an Actions build and a screen-visible joint test.
+
+The first UCM candidate at 768 was audible but too quiet. The next candidate
+uses 896 only in the reversible RAM desktop, leaving 11.921875 dB additional
+attenuation beyond the signed amplifier profile and raising the ceiling by
+about 12 dB. PipeWire software volume still attenuates below it. The original
+256 transport, 640 acoustic, clipping, fault and cleanup checks remain
+mandatory. Dynamic speaker protection and ordinary-volume long-duration use
+remain unaccepted.
+
+The WiFi acceptance profile now pins an observed BSSID from the requested band.
+This avoids a dual-band SSID silently selecting 5 GHz during the 2.4 GHz stage;
+the result continues to require the actual nl80211 frequency, DHCPv4, default
+route and LAN HTTP response.
+
 ## Desktop speaker volume and owner posture candidate, 2026-10-28
 
 Owner listening now confirms both outputs at640 with near0dBFS PCM, Amp0 top

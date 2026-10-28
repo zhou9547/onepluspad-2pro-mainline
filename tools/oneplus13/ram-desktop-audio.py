@@ -90,7 +90,7 @@ def enable(card):
     run(['wpctl','set-mute',str(sink['id']),'0'],user=True)
     return {'scope':'EXPLICIT_RAM_PIPEWIRE_SPEAKER_CANDIDATE','sink_id':sink['id'],'sink_name':sink['name'],
             'ucm_speakers':True,'desktop_software_volume':True,'initial_volume':0.5,
-            'hardware_test_level':768,'extra_profile_attenuation_db':23.9859375,
+            'hardware_test_level':896,'extra_profile_attenuation_db':11.921875,
             'dynamic_protection_qualified':False,'normal_desktop_playback_qualified':False}
 
 def main():

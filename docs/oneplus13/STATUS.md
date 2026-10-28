@@ -1,3 +1,29 @@
+## Sensor-first posture pass and desktop runtime candidate, 2026-10-28
+
+The owner-assisted posture window on image
+`17ecf5425ad3b07aff53c3e328b5838a0ae20a12` completed with 60 accelerometer
+samples and actual `bottom-up`, `left-up` and `right-up` transitions on one
+claim/release. The screen had not started, so this proves physical data delivery
+but not automatic display rotation.
+
+The same boot's independent two-amplifier microphone correlation passed for
+both Amp0 and Amp1 without clipping or fault. Owner listening had already
+identified Amp0 as top and Amp1 as bottom; ordinary desktop loudness remained
+too low at the 768 fixed ceiling.
+
+The next candidate installs the reviewed sensor runtime only during protected
+RAM bring-up, starts the restricted file service and SensorProxy after ADSP,
+and disables GNOME orientation lock. A new bounded desktop check requires three
+accelerometer orientations and multiple Mutter monitor transforms. It also
+raises only the RAM desktop amplifier ceiling to 896, retaining 11.921875 dB
+of attenuation beyond the signed profile and leaving GNOME/PipeWire as the
+user volume control. The fixed 640 acoustic precheck and all cleanup gates are
+unchanged. The 2.4 GHz test now pins a cached BSSID from its requested band so
+a dual-band SSID cannot silently reconnect on 5 GHz.
+
+Fresh Actions and one combined RAM test are required. See
+SENSOR-DESKTOP-AUDIO-20261028.md.
+
 ## Desktop volume candidate held after joint regression, 2026-10-28
 
 The first follow-up build atb4f423de failed while downloading BusyBox and

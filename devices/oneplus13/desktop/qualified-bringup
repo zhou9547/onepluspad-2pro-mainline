@@ -40,6 +40,23 @@ case "$(cat "$ADSP/state")" in
     *) echo UNEXPECTED_ADSP_STATE; exit 3;;
 esac
 test "$(cat "$ADSP/state")" = running
+# Mobile sensor data is available only after the protected ADSP attach path is
+# present. This bypasses the global peripheral denial for one reviewed
+# module load; the udev rule then restricts the resulting node to the sensor
+# daemon and marks it for iio-sensor-proxy's SSC backend.
+modprobe --ignore-install fastrpc
+udevadm settle --timeout=5
+test -c /dev/fastrpc-adsp-secure
+systemctl start oneplus13-sensor-stack.target
+systemctl is-active --quiet oneplus13-sensor-fileserver.service
+systemctl is-active --quiet oneplus13-sensor-proxy.service
+for attempt in $(seq 1 10); do
+    test "$(busctl --system get-property net.hadess.SensorProxy \
+        /net/hadess/SensorProxy net.hadess.SensorProxy HasAccelerometer)" = 'b true' && break
+    sleep 1
+done
+test "$(busctl --system get-property net.hadess.SensorProxy \
+    /net/hadess/SensorProxy net.hadess.SensorProxy HasAccelerometer)" = 'b true'
 timeout -k 1 6 systemctl start wpa_supplicant.service
 timeout -k 1 3 systemctl is-active --quiet wpa_supplicant.service
 timeout -k 1 4 busctl --system get-property fi.w1.wpa_supplicant1 /fi/w1/wpa_supplicant1 fi.w1.wpa_supplicant1 Interfaces
@@ -108,6 +125,13 @@ EOF
     test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock intellihide)" = false
     test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock dock-position)" = "'LEFT'"
     test "$(runuser -u a -- env $session_env gsettings get org.gnome.shell.extensions.dash-to-dock extend-height)" = true
+    # GNOME Settings Daemon consumes SensorProxy's accelerometer claim and
+    # rotates the Wayland output without restarting GDM or GNOME Shell.
+    runuser -u a -- env XDG_RUNTIME_DIR=/run/user/1000 \
+        DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus \
+        gsettings set org.gnome.settings-daemon.peripherals.touchscreen orientation-lock false
+    test "$(runuser -u a -- env $session_env gsettings get \
+        org.gnome.settings-daemon.peripherals.touchscreen orientation-lock)" = false
     # IBus/GNOME finish loading their session sources asynchronously. Let that
     # one-time initialization settle before applying the user preference.
     sleep 8

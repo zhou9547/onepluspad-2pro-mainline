@@ -48,6 +48,26 @@ def main():
     for name,digest in runtime_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered sensor runtime changed')
+    sensor_desktop_files=m.get('sensor_desktop_files',{})
+    required_sensor_desktop={
+        'usr/libexec/oneplus13-ram-sensor-desktop.py',
+        'etc/udev/rules.d/10-oneplus13-fastrpc.rules',
+        'usr/share/dbus-1/system.d/net.hadess.SensorProxy.conf',
+        'usr/share/polkit-1/actions/net.hadess.SensorProxy.policy',
+        'etc/polkit-1/rules.d/49-oneplus13-sensor-proxy.rules',
+        'usr/share/dbus-1/system-services/net.hadess.SensorProxy.service',
+        'usr/lib/systemd/system/oneplus13-sensor-setup.service',
+        'usr/lib/systemd/system/oneplus13-sensor-fileserver.service',
+        'usr/lib/systemd/system/oneplus13-sensor-proxy.service',
+        'usr/lib/systemd/system/oneplus13-sensor-stack.target'}
+    if (set(sensor_desktop_files)!=required_sensor_desktop or
+            m.get('sensor_desktop_stack_manual_start_after_adsp') is not True or
+            m.get('sensor_desktop_auto_rotation_enabled') is not True or
+            m.get('sensor_desktop_hardware_qualified') is not False):
+        raise ValueError('Missing reviewed desktop sensor integration')
+    for name,digest in sensor_desktop_files.items():
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered desktop sensor input changed')
     container_files=m.get('container_files',{})
     if set(container_files)!={'usr/lib/oneplus13-container/kernel.config',
             'usr/libexec/oneplus13-container-kernel.py','usr/libexec/oneplus13-ram-container-check.py','etc/docker/daemon.json'} or m.get('container_daemon_auto_started') is not False:

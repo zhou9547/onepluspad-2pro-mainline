@@ -153,6 +153,24 @@ def main():
     dest.write_text(json.dumps(defaults,indent=2)+'\n');dest.chmod(0o644)
     runtime_hashes[str(dest.relative_to(stage))]=sha256(dest)
     runtime_hashes['usr/bin/strace']=sha256(stage/'usr/bin/strace')
+    sensor_desktop_hashes={}
+    sensor_desktop_sources=[
+        ('ram-sensor-desktop.py','usr/libexec/oneplus13-ram-sensor-desktop.py',0o755),
+        ('10-oneplus13-fastrpc.rules','etc/udev/rules.d/10-oneplus13-fastrpc.rules',0o644),
+        ('net.hadess.SensorProxy.conf','usr/share/dbus-1/system.d/net.hadess.SensorProxy.conf',0o644),
+        ('net.hadess.SensorProxy.policy','usr/share/polkit-1/actions/net.hadess.SensorProxy.policy',0o644),
+        ('49-oneplus13-sensor-proxy.rules','etc/polkit-1/rules.d/49-oneplus13-sensor-proxy.rules',0o644),
+        ('net.hadess.SensorProxy.service','usr/share/dbus-1/system-services/net.hadess.SensorProxy.service',0o644),
+        ('oneplus13-sensor-setup.service','usr/lib/systemd/system/oneplus13-sensor-setup.service',0o644),
+        ('oneplus13-sensor-fileserver.service','usr/lib/systemd/system/oneplus13-sensor-fileserver.service',0o644),
+        ('oneplus13-sensor-proxy.service','usr/lib/systemd/system/oneplus13-sensor-proxy.service',0o644),
+        ('oneplus13-sensor-stack.target','usr/lib/systemd/system/oneplus13-sensor-stack.target',0o644)]
+    for source_name,target_name,mode in sensor_desktop_sources:
+        source=(REPO/'tools/oneplus13'/source_name if source_name.endswith('.py')
+                else REPO/'devices/oneplus13/sensors'/source_name)
+        dest=stage/target_name;dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,dest);dest.chmod(mode)
+        sensor_desktop_hashes[target_name]=sha256(dest)
     container_hashes={}
     container=import_module('container-kernel')
     with tarfile.open(kernel/'modules.tar.gz') as archive:
@@ -246,11 +264,15 @@ def main():
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
     result.update(desktop_audio_files=desktop_audio_hashes,desktop_audio_auto_started=False,
-                  desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=768)
+                  desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=896)
     result.update(container_files=container_hashes,container_daemon_auto_started=False,
                   container_hardware_qualified=False)
     result.update(sensor_runtime_files=runtime_hashes,sensor_runtime_host_private_inputs_required=False,
                   sensor_runtime_auto_started=False,sensor_proxy_hardware_qualified=False)
+    result.update(sensor_desktop_files=sensor_desktop_hashes,
+                  sensor_desktop_stack_manual_start_after_adsp=True,
+                  sensor_desktop_auto_rotation_enabled=True,
+                  sensor_desktop_hardware_qualified=False)
     (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({k:result[k] for k in ['scope','source_commit','kernel_release','boot_image_sha256','rootfs_sha256','firmware_files','old_kernel_or_rootfs_used']},indent=2))
 

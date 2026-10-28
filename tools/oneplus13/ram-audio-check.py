@@ -42,7 +42,7 @@ def amp_state(text,expected_volume=0):
     v=match.groups()
     state=dict(zip(['id','channel','volume','powered','faulted','sysst','sysctrl','attenuation'],
                    [int(x,16) if i in (0,5,6) else int(x) for i,x in enumerate(v)]))
-    if expected_volume not in (0,256,640,768):raise ValueError('Unknown bounded test gain')
+    if expected_volume not in (0,256,640,768,896):raise ValueError('Unknown bounded test gain')
     if (state['id']!=0x2308 or state['volume']!=expected_volume or state['faulted'] or
             not 1023-expected_volume<=state['attenuation']<=1023):
         raise ValueError('Amplifier identity, mute or health condition failed')
