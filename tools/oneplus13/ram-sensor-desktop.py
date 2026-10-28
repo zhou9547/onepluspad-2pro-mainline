@@ -105,20 +105,39 @@ def service_active(run=subprocess.run):
         raise ValueError('Desktop sensor services are not active')
 
 
-def system_orientation(bus):
+def system_posture(bus):
     import gi
     gi.require_version('GLib', '2.0')
     from gi.repository import GLib
     value = bus.call_sync(
         'net.hadess.SensorProxy', '/net/hadess/SensorProxy',
-        'org.freedesktop.DBus.Properties', 'Get',
-        GLib.Variant('(ss)', ('net.hadess.SensorProxy',
-                              'AccelerometerOrientation')),
-        GLib.VariantType.new('(v)'), 0, 2000, None)
-    orientation = value.unpack()[0]
+        'org.freedesktop.DBus.Properties', 'GetAll',
+        GLib.Variant('(s)', ('net.hadess.SensorProxy',)),
+        GLib.VariantType.new('(a{sv})'), 0, 2000, None)
+    properties = value.unpack()[0]
+    orientation = properties.get('AccelerometerOrientation')
+    tilt = properties.get('AccelerometerTilt')
     if orientation not in {'undefined', 'normal', 'bottom-up', 'left-up', 'right-up'}:
         raise ValueError('Unexpected SensorProxy orientation')
-    return orientation
+    if tilt not in {'undefined', 'vertical', 'tilted-up', 'tilted-down',
+                    'face-up', 'face-down'}:
+        raise ValueError('Unexpected SensorProxy tilt')
+    return orientation, tilt
+
+
+def system_orientation(bus):
+    return system_posture(bus)[0]
+
+
+def parse_display_transforms(value):
+    transforms = []
+    for monitor in value[2]:
+        if len(monitor) < 4 or type(monitor[3]) is not int:
+            raise ValueError('Unrecognized Mutter logical-monitor state')
+        transforms.append(monitor[3])
+    if not transforms or any(value not in (0, 1, 2, 3) for value in transforms):
+        raise ValueError('Unrecognized Mutter monitor transform')
+    return tuple(transforms)
 
 
 def display_transforms(bus):
@@ -130,14 +149,7 @@ def display_transforms(bus):
         'org.gnome.Mutter.DisplayConfig', 'GetCurrentState', None,
         GLib.VariantType.new('(ua((ssss)a(siiddada{sv})a{sv})a(iiduba(ssss)a{sv})a{sv})'),
         0, 2000, None).unpack()
-    transforms = []
-    for monitor in value[1]:
-        if len(monitor) < 4 or type(monitor[3]) is not int:
-            raise ValueError('Unrecognized Mutter logical-monitor state')
-        transforms.append(monitor[3])
-    if not transforms or any(value not in (0, 1, 2, 3) for value in transforms):
-        raise ValueError('Unrecognized Mutter monitor transform')
-    return tuple(transforms)
+    return parse_display_transforms(value)
 
 
 def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.sleep):
@@ -175,6 +187,54 @@ def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.s
     }
 
 
+def collect_static_right_up(seconds, orientation, transforms,
+                            clock=time.monotonic, sleep=time.sleep,
+                            posture=None):
+    if type(seconds) is not int or seconds != 8:
+        raise ValueError('Only the eight-second static right-up window is reviewed')
+    orientations = set()
+    tilts = set()
+    display_states = []
+    samples = 0
+    until = clock() + seconds
+    while clock() < until:
+        current_posture = posture() if posture else None
+        current_orientation = (current_posture[0] if current_posture
+                               else orientation())
+        current_transforms = transforms()
+        samples += 1
+        if samples > 64:
+            raise ValueError('Static orientation sample bound exceeded')
+        orientations.add(current_orientation)
+        if current_posture:
+            tilts.add(current_posture[1])
+        if not display_states or display_states[-1] != list(current_transforms):
+            display_states.append(list(current_transforms))
+        sleep(min(.25, max(0, until - clock())))
+    transforms_seen = {value for state in display_states for value in state}
+    right_up_pass = ('right-up' in orientations
+                     and bool(transforms_seen & {1, 3}))
+    normal_pass = orientations == {'normal'} and transforms_seen == {0}
+    flat_pass = ('undefined' in orientations and transforms_seen == {0}
+                 and bool(tilts)
+                 and tilts <= {'face-up', 'face-down'})
+    passed = samples >= 8 and (right_up_pass or normal_pass or flat_pass)
+    return {
+        'scope': 'STATIC_RIGHT_UP_AUTOMATIC_ORIENTATION',
+        'seconds': seconds,
+        'samples': samples,
+        'orientations': sorted(orientations),
+        'tilts': sorted(tilts),
+        'display_transform_sequence': display_states,
+        'distinct_display_transforms': sorted(transforms_seen),
+        'right_up_nonzero_transform_pass': right_up_pass,
+        'normal_zero_transform_pass': normal_pass,
+        'flat_zero_transform_pass': flat_pass,
+        'automatic_rotation_pass': passed,
+        'physical_axes_calibration_accepted': False,
+    }
+
+
 def check(seconds=20, system_bus=None, session_bus=None):
     if not MARKER.is_file():
         raise ValueError('Sensor runtime setup marker missing')
@@ -195,9 +255,29 @@ def check(seconds=20, system_bus=None, session_bus=None):
     return result
 
 
+def check_static_right_up(seconds=8, system_bus=None, session_bus=None):
+    if not MARKER.is_file():
+        raise ValueError('Sensor runtime setup marker missing')
+    data = json.loads(MARKER.read_text())
+    if data.get('scope') != 'ONEPLUS13_RAM_DESKTOP_SENSOR_RUNTIME_READY':
+        raise ValueError('Sensor runtime setup marker changed')
+    service_active()
+    import gi
+    gi.require_version('Gio', '2.0')
+    from gi.repository import Gio
+    system_bus = system_bus or Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+    session_bus = session_bus or Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    result = collect_static_right_up(
+        seconds,
+        lambda: system_orientation(system_bus),
+        lambda: display_transforms(session_bus),
+        posture=lambda: system_posture(system_bus))
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=('setup', 'check'))
+    parser.add_argument('mode', choices=('setup', 'check', 'check-static'))
     parser.add_argument('--seconds', type=int, default=20)
     args = parser.parse_args()
     try:
@@ -205,6 +285,15 @@ def main():
             if os.geteuid() != 0:
                 raise ValueError('Sensor setup requires root')
             result = setup()
+        elif args.mode == 'check-static':
+            result = check_static_right_up(args.seconds)
+            if not result['automatic_rotation_pass']:
+                raise ValueError('Static posture and Mutter transform disagree: ' +
+                                 json.dumps({
+                                     'orientations': result['orientations'],
+                                     'tilts': result['tilts'],
+                                     'transforms': result['distinct_display_transforms'],
+                                 }, sort_keys=True))
         else:
             result = check(args.seconds)
         print('RAM_SENSOR_DESKTOP_RESULT ' + json.dumps(result, sort_keys=True), flush=True)

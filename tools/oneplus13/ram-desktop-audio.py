@@ -98,7 +98,7 @@ def load_native_sink(card):
          'api.alsa.path="hw:'+card+',0"','node.name=oneplus13_speakers',
          'node.description="OnePlus 13 speakers"','media.class=Audio/Sink',
          'object.linger=true'],8,user=True)
-    time.sleep(6)
+    time.sleep(15)
     sinks=desktop_sinks(json.loads(run(['pw-dump'],user=True)),card)
     if len(sinks)!=1:raise ValueError('Native ALSA sink did not appear')
     with NODE.open('x') as stream:stream.write(str(sinks[0]['id'])+'\n')
@@ -108,21 +108,32 @@ def load_native_sink(card):
 
 def load_pulse_sink(card):
     prepare_explicit_route(card)
-    module=run(['pactl','load-module','module-alsa-sink',
-                'device=hw:'+card+',0','sink_name=oneplus13_speakers',
-                'rate=48000','channels=2','format=s16le'],8,user=True).strip()
-    if not re.fullmatch(r'[0-9]{1,8}',module):raise ValueError('Invalid PulseAudio module id')
-    with MODULE.open('x') as stream:stream.write(module+'\n')
-    MODULE.chmod(0o600)
-    until=time.monotonic()+3
+    uid=pwd.getpwnam('a').pw_uid
+    command=['runuser','-u','a','--','env',
+             'XDG_RUNTIME_DIR=/run/user/'+str(uid),
+             'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+str(uid)+'/bus',
+             'PULSE_SERVER=unix:/run/user/'+str(uid)+'/pulse/native',
+             'pactl','load-module','module-alsa-sink',
+             'device=hw:'+card+',0','sink_name=oneplus13_speakers',
+             'rate=48000','channels=2','format=s16le']
+    completed=subprocess.run(command,capture_output=True,text=True,timeout=8)
+    combined=(completed.stdout+'\n'+completed.stderr)[:8192]
+    (STATE/'pulse-load.private.txt').write_text(combined)
+    (STATE/'pulse-load.private.txt').chmod(0o600)
+    if completed.returncode:raise ValueError('PulseAudio sink module failed')
+    until=time.monotonic()+5
     while True:
         sinks=desktop_sinks(json.loads(run(['pw-dump'],user=True)),card)
         if len(sinks)==1:break
-        if time.monotonic()>until:raise ValueError('Pulse ALSA sink did not appear')
+        if time.monotonic()>until:
+            (STATE/'pulse-inventory.private.json').write_text(json.dumps({
+                'objects':json.loads(run(['pw-dump'],user=True)),
+                'matching_sinks':sinks},indent=2)+'\n')
+            raise ValueError('Pulse ALSA sink did not appear')
         time.sleep(.3)
     with NODE.open('x') as stream:stream.write(str(sinks[0]['id'])+'\n')
     NODE.chmod(0o600)
-    return int(module)
+    return int(sinks[0]['id'])
 
 
 def disable(card):
@@ -136,7 +147,9 @@ def disable(card):
         if NODE.exists():
             node=NODE.read_text().strip()
             if not re.fullmatch(r'[0-9]{1,8}',node):raise ValueError('Unknown desktop audio node')
-            run(['pw-cli','destroy',node],8,user=True)
+            objects=json.loads(run(['pw-dump'],user=True))
+            if any(str(obj.get('id'))==node for obj in objects):
+                run(['pw-cli','destroy',node],8,user=True)
             NODE.unlink()
         if RULE.exists():
             if RULE.is_symlink() or RULE.read_bytes()!=(ROOT/RULE.name).read_bytes():raise ValueError('Unknown desktop rule')
@@ -166,10 +179,7 @@ def enable(card):
         sinks=desktop_sinks(objects,card)
         if len(sinks)==1:break
         if time.monotonic()>until:
-            try:
-                load_native_sink(card);sink_method='pipewire-native'
-            except ValueError:
-                load_pulse_sink(card);sink_method='pulse-module'
+            load_pulse_sink(card);sink_method='pulse-module'
             until=time.monotonic()+8
             objects=json.loads(run(['pw-dump'],user=True))
             sinks=desktop_sinks(objects,card)

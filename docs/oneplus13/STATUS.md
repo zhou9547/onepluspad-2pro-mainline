@@ -1,3 +1,40 @@
+## Unattended joint pass and final SensorProxy repair, 2026-10-29
+
+The r49 single RAM round on source candidate `da91d97a` passed every combined
+target. It used the final reviewed root SensorProxy configuration, an SSC
+three-vector warmup, the same desktop-user D-Bus connection for claim and
+orientation reads, and the current PipeWire/Pulse fallback helper. Android
+returned with matching baselines, zero physical writes and zero recorded
+kernel-health faults.
+
+The phone was physically stable at `AccelerometerOrientation=undefined` and
+`AccelerometerTilt=face-down`. The desktop acceptance now treats
+`face-down`/`face-up` with Mutter transform `0` and `normal` with transform
+`0` as correct static states, while `right-up` still requires transform `1`
+or `3`. The same round recorded `face-down + transform 0` for 32 bounded
+samples. The historical 60-sample owner posture run already established real
+`bottom-up`, `left-up` and `right-up` sensor transitions; a new upright
+Mutter transition remains desirable after the final image is available.
+
+The joint boot passed directed 5GHz association at 5240MHz and 2.4GHz
+association at 2437MHz, DHCP/default-route/private-LAN HTTP200, real Docker
+bridge/DNS/NAT/published-port traffic, GNOME/Mesa, touch discovery, Chinese
+locale and input source, SSH password login, visible-left Dock settings,
+battery, Bluetooth and the persistent sensor services. Current speaker
+configuration loaded with the fixed 896 ceiling, then was muted and set to
+0 percent before clean teardown; the already accepted r18/r29 microphone,
+two-speaker acoustic and software-volume evidence was reused to avoid a
+night-time audible sweep. The complete offline suite passes 575 tests with
+five environment-dependent skips.
+
+The final source changes make SensorProxy run as a restricted root service so
+the proxy may perform its own Polkit authorization, allow only desktop account
+`a` and root to claim sensors, and keep the reverse file server at UID/GID
+65534 with its device policy. Ordinary loudness, dynamic speaker protection,
+overlay2/IPv6 Docker modes, physical axes calibration, suspend and long-term
+stability remain outside this acceptance. A fresh GitHub Actions build of the
+final commit is required before this candidate becomes the public artifact.
+
 ## Final hybrid build and pending owner rotation acceptance, 2026-10-29
 
 Commit `da91d97a7eddd411437cb8582430ea484a79f10f` completed the full mixed

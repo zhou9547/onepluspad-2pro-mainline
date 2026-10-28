@@ -49,6 +49,68 @@ class DesktopSensor(unittest.TestCase):
             with self.subTest(seconds=seconds), self.assertRaises(ValueError):
                 desktop.collect(seconds, lambda: 'normal', lambda: (0,))
 
+    def test_static_right_up_requires_sensor_and_nonzero_transform(self):
+        now = [0.0]
+        result = desktop.collect_static_right_up(
+            8, lambda: 'right-up', lambda: (3,),
+            clock=lambda: now[0],
+            sleep=lambda delay: now.__setitem__(0, now[0] + .25))
+        self.assertTrue(result['automatic_rotation_pass'])
+        self.assertEqual(result['orientations'], ['right-up'])
+        self.assertEqual(result['distinct_display_transforms'], [3])
+
+    def test_static_pose_with_normal_transform_fails(self):
+        now = [0.0]
+        result = desktop.collect_static_right_up(
+            8, lambda: 'right-up', lambda: (0,),
+            clock=lambda: now[0],
+            sleep=lambda delay: now.__setitem__(0, now[0] + .25))
+        self.assertFalse(result['automatic_rotation_pass'])
+
+    def test_flat_pose_with_zero_transform_is_the_correct_static_state(self):
+        now = [0.0]
+        result = desktop.collect_static_right_up(
+            8, lambda: 'undefined', lambda: (0,),
+            clock=lambda: now[0],
+            sleep=lambda delay: now.__setitem__(0, now[0] + .25),
+            posture=lambda: ('undefined', 'face-down'))
+        self.assertTrue(result['automatic_rotation_pass'])
+        self.assertTrue(result['flat_zero_transform_pass'])
+        self.assertEqual(result['tilts'], ['face-down'])
+
+    def test_undefined_without_flat_tilt_still_fails(self):
+        now = [0.0]
+        result = desktop.collect_static_right_up(
+            8, lambda: 'undefined', lambda: (0,),
+            clock=lambda: now[0],
+            sleep=lambda delay: now.__setitem__(0, now[0] + .25),
+            posture=lambda: ('undefined', 'vertical'))
+        self.assertFalse(result['automatic_rotation_pass'])
+
+    def test_mutter_transform_is_read_from_logical_monitor_tuple(self):
+        physical=[('eDP-1','vendor','product','serial',[],{})]
+        logical=[(0,0,1.0,3,True,[('eDP-1','vendor','product','serial')],{})]
+        self.assertEqual(desktop.parse_display_transforms((7,physical,logical,{})),(3,))
+
+    def test_orientation_uses_the_same_getall_shape_as_the_claim_client(self):
+        class Value:
+            @staticmethod
+            def unpack():
+                return ({'AccelerometerOrientation': 'right-up',
+                         'AccelerometerTilt': 'vertical'},)
+
+        class Bus:
+            call = None
+
+            @classmethod
+            def call_sync(cls, *args):
+                cls.call = args
+                return Value()
+
+        self.assertEqual(desktop.system_orientation(Bus), 'right-up')
+        self.assertEqual(Bus.call[3], 'GetAll')
+        self.assertEqual(desktop.system_posture(Bus), ('right-up', 'vertical'))
+
     def test_setup_installs_only_inside_protected_ram_tree(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -107,7 +169,9 @@ class DesktopSensor(unittest.TestCase):
         self.assertIn('User=65534', fileserver)
         self.assertIn('DevicePolicy=closed', fileserver)
         self.assertIn('/dev/fastrpc-adsp-secure rw', fileserver)
-        self.assertIn('User=nobody', proxy)
+        self.assertNotIn('User=', proxy)
+        self.assertIn('PrivateDevices=yes', proxy)
+        self.assertIn('CapabilityBoundingSet=', proxy)
         self.assertNotIn('WantedBy=', fileserver+proxy)
         self.assertIn('ENV{IIO_SENSOR_PROXY_TYPE}="ssc-accel ssc-compass ssc-gyro"', udev)
         self.assertIn('modprobe --ignore-install fastrpc', bringup)

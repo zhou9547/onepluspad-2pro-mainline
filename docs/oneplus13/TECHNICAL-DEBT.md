@@ -1,3 +1,37 @@
+## Final desktop sensor and audio boundaries, 2026-10-29
+
+The r49 RAM round proves the combined desktop path with the final candidate
+configuration: root-owned restricted SensorProxy, SSC warmup, same-client
+claim/read, 5GHz and 2.4GHz traffic, Docker, GNOME, Chinese, SSH, Dock,
+current audio sink setup and clean recovery all pass together. It does not
+turn a flat phone into a rotation-transition test. Preserve the following
+boundary:
+
+- `face-down` or `face-up` with orientation `undefined` and Mutter transform
+  `0` is a valid static pose. `normal` with transform `0` is also valid.
+- `right-up` must reach transform `1` or `3`; missing readings or a nonzero
+  orientation with transform `0` still fail.
+- The historical owner posture evidence contains real bottom-up, left-up and
+  right-up sensor transitions. Repeat a visible upright transition on the
+  final public image when the phone can be attended.
+
+SensorProxy must remain root because the proxy itself authorizes claims. The
+Polkit rule deliberately permits only user `a` and root; do not broaden it to
+all users. Keep `PrivateDevices=yes`, the empty capability set and the other
+systemd restrictions. The reverse file server remains UID/GID 65534 and owns
+only the reviewed FastRPC device.
+
+The r49 current audio helper passed real Pulse/PipeWire sink creation, mute,
+0-percent software volume, disable and amplifier-off cleanup without opening
+an audible fixture. Reusing the accepted r18/r29 acoustic evidence is valid
+for the same source image, but ordinary loudness and stock dynamic speaker
+protection remain unqualified. Do not raise the 896 ceiling or infer
+long-duration safety from short diagnostics.
+
+The offline suite passes 575 tests with five skips caused by absent pinned
+source caches or host compilers. Docker acceptance covers VFS plus IPv4
+bridge/DNS/NAT/published-port traffic, not overlay2, IPv6, rootless or Swarm.
+
 ## Continuous desktop sensors and 896 speaker ceiling tested next, 2026-10-28
 
 The 12-second owner posture run produced real bottom-up, left-up and right-up
