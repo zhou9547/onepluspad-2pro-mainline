@@ -1,3 +1,35 @@
+## Owner-assisted speaker, rotation and desktop acceptance, 2026-10-28
+
+The owner tested the unchanged2457ac35 microphone boot in one20-minute RAM
+session. Three rotation cycles and maximized windows retained the Dock and
+login; GNOME Shell kept the same PID and GDM had zero restarts. Chinese UI and
+physical touch were confirmed. At the earlier640 amplifier level the-18dBFS
+fixture was inaudible. Raising only the PCM fixture to near0dBFS established
+audible but very quiet output. Three isolated4s/3s/4s rounds let the owner
+confirm Amp0 is the top speaker and Amp1 the bottom. This accepts both physical
+outputs at that test level, not normal desktop loudness or speaker protection.
+Android returned with seven matching baselines and zero physical writes.
+See evidence/OWNER-MANUAL-20261028.json. The earlier acoustic evidence now names
+the actual microphone alternative boot and its hash, separately from default boot.
+
+The owner posture attempt stopped before sensor activation because wireless
+and audio were already active. The reported lack of autorotation is therefore
+not an axes test. The next joint order puts sensors first. An explicit
+`ONEPLUS13_OWNER_POSTURE_SECONDS=12` adds a same-connection posture observation
+within the existing30s proxy cap; default behavior and cleanup remain intact.
+Physical axes, compass calibration and continuous integration remain unaccepted.
+
+A new desktop speaker candidate reuses the original project's UCM/PipeWire
+approach with this phone's Secondary MI2S SD1 and two amps. The unchanged256/640
+checks remain; a768 ceiling retains23.986dB attenuation beyond the stock profile,
+about12dB louder than640. UCM applies that fixed ceiling and PipeWire software
+volume attenuates beneath unity, so GNOME's volume and mute control output.
+The candidate is default-off, explicitly enabled only after independent native
+capture/acoustic checks, with reversible WirePlumber configuration. It still
+requires fresh Actions and joint owner validation. No dynamic protection or
+normal desktop audio qualification is implied. Shanghai timezone is now staged;
+the existing explicit RAM clock bridge passed without any RTC write.
+
 ## Microphone, two-amplifier acoustics, Dock and sensor joint pass, 2026-10-28
 
 Complete Actions40677232016 at source2457ac35 passed all five jobs. One RAM

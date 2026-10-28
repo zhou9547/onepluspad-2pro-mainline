@@ -1,3 +1,20 @@
+## Desktop speaker volume and owner posture candidate, 2026-10-28
+
+Owner listening now confirms both outputs at640 with near0dBFS PCM, Amp0 top
+and Amp1 bottom, but volume is too low for normal use. Direct ALSA fixtures
+bypass GNOME's mixer; do not call them desktop volume validation. The new
+default-off UCM/PipeWire candidate uses768 (23.986dB additional attenuation),
+software volume with no boost, and exact source/module/policy binding. Fresh
+Actions and one joint sensor-first RAM test must confirm real sink discovery,
+GNOME volume/mute effects, normal playback, both outputs, suspend/stop and
+cleanup. Stock dynamic protection is still absent; do not remove this ceiling.
+
+The owner posture attempt in the manual session was refused before attach
+because radios and sound were active. Keep that isolation rule. Use the new
+explicit12s observation before wireless/audio, inside the existing30s proxy
+service limit, and retain same-connection claim/release. A lack of automatic
+rotation with the service disabled says nothing about physical axis mapping.
+
 ## Microphone/acoustic acceptance boundary, 2026-10-28
 
 Source2457ac35 validates bounded native capture and correlated response from

@@ -34,7 +34,44 @@ def interpret(output):
             'accelerometer_posture_updates':int(accel),'compass_heading_updates':int(compass),
             'accelerometer_posture_available':True,'compass_heading_finite':True,
             'physical_axes_or_calibration_accepted':False,'continuous_autostart_accepted':False}
+def collect_posture(seconds,claim,properties,release,clock=time.monotonic,sleep=time.sleep):
+    """Observe a short owner-assisted window; never accept physical calibration."""
+    if type(seconds) is not int or seconds!=12:
+        raise ValueError('Only the twelve-second owner posture window is reviewed')
+    orientations={'undefined','normal','bottom-up','left-up','right-up'}
+    tilts={'undefined','vertical','tilted-up','tilted-down','face-up','face-down'}
+    rows=[];samples=0
+    claim()
+    try:
+        start=clock()
+        while clock()-start<seconds:
+            values=properties();orientation=values.get('AccelerometerOrientation');tilt=values.get('AccelerometerTilt')
+            if orientation not in orientations or tilt not in tilts:
+                raise ValueError('Unrecognized SensorProxy posture properties')
+            samples+=1
+            if samples>64:raise ValueError('Posture sample bound exceeded')
+            row={'seconds':round(clock()-start,3),'orientation':orientation,'tilt':tilt}
+            if not rows or (orientation,tilt)!=(rows[-1]['orientation'],rows[-1]['tilt']):rows.append(row)
+            sleep(.2)
+    finally:release()
+    if samples<3:raise ValueError('Incomplete owner posture window')
+    return {'scope':'OWNER_ASSISTED_POSTURE_OBSERVATION_ONLY','same_connection_claim_release':True,
+            'seconds':seconds,'samples':samples,'transitions':rows,'physical_axis_calibration_accepted':False}
+
+def observe_posture():
+    # This optional diagnostic stays within the existing30s proxy service cap.
+    from gi.repository import Gio,GLib
+    bus=Gio.bus_get_sync(Gio.BusType.SYSTEM,None)
+    destination='net.hadess.SensorProxy';path='/net/hadess/SensorProxy'
+    def call(interface,method,args=None):
+        return bus.call_sync(destination,path,interface,method,args,None,Gio.DBusCallFlags.NONE,2000,None)
+    return collect_posture(12,lambda:call(destination,'ClaimAccelerometer'),
+        lambda:call('org.freedesktop.DBus.Properties','GetAll',GLib.Variant('(s)',(destination,))).unpack()[0],
+        lambda:call(destination,'ReleaseAccelerometer'))
+
 def run_proxy(manifest):
+    owner_window=os.environ.get('ONEPLUS13_OWNER_POSTURE_SECONDS','0')
+    if owner_window not in ('0','12'):raise ValueError('Unreviewed owner posture duration')
     if os.geteuid()!=0 or not Path('/run/oneplus13/ram-session').is_file():raise ValueError('Protected root RAM session required')
     if not any(row.split()[1:3]==['/','overlay'] for row in Path('/proc/mounts').read_text().splitlines()):raise ValueError('RAM overlay required')
     for path in Path('/sys/class/block').iterdir():
@@ -90,6 +127,7 @@ def run_proxy(manifest):
         (STATE/'client.stdout').write_text(result.stdout);(STATE/'client.stderr').write_text(result.stderr)
         if result.returncode:raise ValueError('D-Bus client failed rc='+str(result.returncode))
         answer=interpret(result.stdout)
+        if owner_window=='12':answer['owner_posture_observation']=observe_posture()
     finally:
         if started:
             try:

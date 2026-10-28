@@ -42,11 +42,12 @@
 #define AW88461_FAULTS		(BIT(14) | BIT(11) | BIT(5) | BIT(3) | BIT(1))
 /* PID 2308 uses linear 0.0940625-dB attenuation steps. Until the phone's
  * dynamic speaker-protection graph is qualified, expose only a quiet test
- * range: even the top control value adds >= 36.026 dB to profile attenuation.
- * A fixed -18dBFS qualification tone remains >=54dB below the profile signal.
+ * range: even the top control value adds >= 23.985 dB to profile attenuation.
+ * The older256/640 qualification levels remain unchanged. Desktop software
+ * volume only attenuates below this ceiling; it never boosts the DSP signal.
  * Zero remains maximum attenuation. This is not a normal playback profile.
  */
-#define AW88461_TEST_VOLUME_MAX	640
+#define AW88461_TEST_VOLUME_MAX	768
 
 struct aw88461 {
 	struct aw_device aw_dev;

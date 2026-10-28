@@ -1,0 +1,282 @@
+{
+  "scope": "OWNER_ASSISTED_DISPLAY_TOUCH_DUAL_SPEAKER_RAM_ACCEPTANCE",
+  "source_commit_under_test": "2457ac350c8b81d4d42e684b1a720be79cbe2530",
+  "actions_run": 40677232016,
+  "boot_image_filename": "boot-microphone-ram-experimental.img",
+  "boot_image_sha256": "0c85c0e2e80448deb38ebf331b2358c022da0e989ff46bb7c06d847ebaaad0ec",
+  "rootfs_sha256": "347df7be6069f6562857b85beaf6ff0c92e0aff3877d4b7dd286cb96610955d8",
+  "one_ram_boot": true,
+  "watchdog_seconds": 1200,
+  "android_return_confirmed": true,
+  "seven_baseline_keys_match": true,
+  "physical_partition_writes": 0,
+  "desktop": {
+    "owner_three_rotation_cycles_pass": true,
+    "no_relogin": true,
+    "dock_visible_with_maximized_window": true,
+    "chinese_ui_confirmed": true,
+    "physical_touch_confirmed": true,
+    "gnome_shell_pid_unchanged": true,
+    "gdm_restarts": 0,
+    "chinese_typing_tested": false
+  },
+  "speakers": {
+    "owner_report": "Both isolated sounds confirmed; first is top speaker, second is bottom speaker",
+    "amplifier_to_physical_position": {
+      "0": "top",
+      "1": "bottom"
+    },
+    "both_physically_audible_confirmed": true,
+    "owner_reports_volume_too_low": true,
+    "normal_desktop_volume_accepted": false,
+    "dynamic_protection_qualified": false,
+    "first_fixed_minus18_dbfs_fixture_owner_could_not_hear": true,
+    "digital_signal_increase_db": 18,
+    "final_repeated_fixture": {
+      "signal_peak_dbfs": -0.0018557610663615936,
+      "frequency_hz": 1000,
+      "seconds_per_phase": 4,
+      "driver_limit": 640,
+      "amplifier_gain_increased": false,
+      "phases": [
+        {
+          "volumes": [
+            640,
+            0
+          ],
+          "states": [
+            {
+              "id": 8968,
+              "channel": 0,
+              "volume": 640,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 447
+            },
+            {
+              "id": 8968,
+              "channel": 1,
+              "volume": 0,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 1023
+            }
+          ]
+        },
+        {
+          "volumes": [
+            0,
+            640
+          ],
+          "states": [
+            {
+              "id": 8968,
+              "channel": 0,
+              "volume": 0,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 1023
+            },
+            {
+              "id": 8968,
+              "channel": 1,
+              "volume": 640,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 431
+            }
+          ]
+        },
+        {
+          "volumes": [
+            640,
+            0
+          ],
+          "states": [
+            {
+              "id": 8968,
+              "channel": 0,
+              "volume": 640,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 447
+            },
+            {
+              "id": 8968,
+              "channel": 1,
+              "volume": 0,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 1023
+            }
+          ]
+        },
+        {
+          "volumes": [
+            0,
+            640
+          ],
+          "states": [
+            {
+              "id": 8968,
+              "channel": 0,
+              "volume": 0,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 1023
+            },
+            {
+              "id": 8968,
+              "channel": 1,
+              "volume": 640,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 431
+            }
+          ]
+        },
+        {
+          "volumes": [
+            640,
+            0
+          ],
+          "states": [
+            {
+              "id": 8968,
+              "channel": 0,
+              "volume": 640,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 447
+            },
+            {
+              "id": 8968,
+              "channel": 1,
+              "volume": 0,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 1023
+            }
+          ]
+        },
+        {
+          "volumes": [
+            0,
+            640
+          ],
+          "states": [
+            {
+              "id": 8968,
+              "channel": 0,
+              "volume": 0,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 1023
+            },
+            {
+              "id": 8968,
+              "channel": 1,
+              "volume": 640,
+              "powered": 1,
+              "faulted": 0,
+              "sysst": 789,
+              "sysctrl": 29248,
+              "attenuation": 431
+            }
+          ]
+        }
+      ],
+      "off": [
+        {
+          "id": 8968,
+          "channel": 0,
+          "volume": 0,
+          "powered": 0,
+          "faulted": 0,
+          "sysst": 0,
+          "sysctrl": 54083,
+          "attenuation": 1023
+        },
+        {
+          "id": 8968,
+          "channel": 1,
+          "volume": 0,
+          "powered": 0,
+          "faulted": 0,
+          "sysst": 0,
+          "sysctrl": 54083,
+          "attenuation": 1023
+        }
+      ],
+      "controls_restored": true,
+      "pcm_deleted": true,
+      "human_acceptance_pending": true
+    }
+  },
+  "sensor_posture": {
+    "attempt_stopped_before_activation": true,
+    "reason": "Existing guard refuses active WiFi/Bluetooth and sound",
+    "owner_reported_no_automatic_rotation_with_service_disabled": true,
+    "physical_axes_accepted": false,
+    "new_sensor_stream_started": false,
+    "next_order": "Sensor posture before radio and sound"
+  },
+  "ram_clock": {
+    "after_epoch": 1793188221.0,
+    "before_epoch": 1789570804.366,
+    "changed": true,
+    "host_epoch": 1793188221,
+    "monotonic_elapsed_seconds": 6e-05,
+    "rtc_write_requested": false
+  },
+  "timezone_ram_only": "Asia/Shanghai",
+  "rtc_write_requested": false,
+  "platform_read_only": {
+    "scope": "PASSIVE_SYSFS_INVENTORY_ONLY",
+    "hardware_block_devices_observed": 56,
+    "writable_block_devices_observed": 0,
+    "cpu_frequency_policies": [
+      {
+        "driver": "scmi",
+        "governor": "schedutil",
+        "maximum_khz": 3532800,
+        "minimum_khz": 384000
+      },
+      {
+        "driver": "scmi",
+        "governor": "schedutil",
+        "maximum_khz": 4089600,
+        "minimum_khz": 1017600
+      }
+    ],
+    "thermal_zone_count": 57,
+    "suspend_tested": false,
+    "charging_control_tested": false
+  },
+  "kernel_health_observations": 15,
+  "kernel_health_counts_all_zero": true,
+  "raw_audio_saved_to_host": false,
+  "raw_private_logs_published": false
+}

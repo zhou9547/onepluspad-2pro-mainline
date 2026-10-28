@@ -75,6 +75,9 @@ python3 tools/oneplus13/prefetch-rootfs-debs.py \
 time chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
   apt-get install --no-download -y --no-install-recommends "${packages[@]}"
 chroot "$root" locale-gen en_US.UTF-8 zh_CN.UTF-8
+test -f "$root/usr/share/zoneinfo/Asia/Shanghai"
+ln -sfn /usr/share/zoneinfo/Asia/Shanghai "$root/etc/localtime"
+printf 'Asia/Shanghai\n' > "$root/etc/timezone"
 cat > "$root/etc/default/locale" <<'EOF'
 LANG=zh_CN.UTF-8
 LANGUAGE=zh_CN:zh

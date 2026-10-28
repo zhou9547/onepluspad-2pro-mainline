@@ -73,6 +73,18 @@ def main():
     for name,digest in audio_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered audio input changed')
+    desktop_audio_files=m.get('desktop_audio_files',{})
+    required_desktop_audio={'usr/share/alsa/ucm2/conf.d/sm8750/OnePlus13-Audio-Probe.conf',
+        'usr/share/alsa/ucm2/Qualcomm/sm8750/OnePlus13/HiFi.conf',
+        'usr/lib/oneplus13-audio/95-oneplus13-desktop-audio.conf',
+        'usr/libexec/oneplus13-ram-desktop-audio.py','usr/lib/oneplus13-audio/desktop-bindings.json'}
+    if set(desktop_audio_files)!=required_desktop_audio or m.get('desktop_audio_auto_started') is not False:
+        raise ValueError('Missing explicitly gated desktop audio files')
+    for name,digest in desktop_audio_files.items():
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered desktop audio changed')
+    timezone=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'etc/timezone'],text=True)
+    if timezone!='Asia/Shanghai\n':raise ValueError('Wrong phone timezone')
     microphone_files=m.get('experimental_microphone_files',{})
     if set(microphone_files)!={'usr/lib/firmware/qcom/sm8750/OnePlus13-Audio-Probe-tplg.bin',
             'usr/libexec/oneplus13-ram-microphone-check.py','usr/libexec/oneplus13-ram-acoustic-check.py'} or m.get('microphone_auto_started') is not False:
@@ -124,6 +136,8 @@ def main():
             'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
             'ssc_sample_files_verified':len(sample_files),'ssc_samples_auto_started':False,
             'experimental_audio_files_verified':len(audio_files),'audio_auto_started':False,
+            'desktop_audio_files_verified':len(desktop_audio_files),'desktop_audio_auto_started':False,
+            'phone_timezone':'Asia/Shanghai',
             'experimental_microphone_files_verified':len(microphone_files),'microphone_auto_started':False,
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')

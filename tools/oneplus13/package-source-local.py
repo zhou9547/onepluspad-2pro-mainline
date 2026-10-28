@@ -172,6 +172,22 @@ def main():
         dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(source,dest);dest.chmod(0o755 if name.endswith('.py') else 0o644)
         microphone_hashes[name]=sha256(dest)
+    desktop_audio_hashes={}
+    desktop_audio_sources=[
+        (REPO/'devices/oneplus13/audio/OnePlus13-Audio-Probe.conf','usr/share/alsa/ucm2/conf.d/sm8750/OnePlus13-Audio-Probe.conf'),
+        (REPO/'devices/oneplus13/audio/HiFi.conf','usr/share/alsa/ucm2/Qualcomm/sm8750/OnePlus13/HiFi.conf'),
+        (REPO/'devices/oneplus13/audio/95-oneplus13-desktop-audio.conf','usr/lib/oneplus13-audio/95-oneplus13-desktop-audio.conf'),
+        (REPO/'tools/oneplus13/ram-desktop-audio.py','usr/libexec/oneplus13-ram-desktop-audio.py')]
+    for source,name in desktop_audio_sources:
+        dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,dest);dest.chmod(0o755 if name.endswith('.py') else 0o644)
+        desktop_audio_hashes[name]=sha256(dest)
+    desktop_audio_bindings={'kernel_release':release,'original_policy_sha256':bindings['MODULE_POLICY_SHA256'],
+        'amplifier_module_sha256':sha256(stage/'usr/lib/modules'/release/'kernel/sound/soc/codecs/snd-soc-aw88461.ko'),
+        'files':dict(desktop_audio_hashes)}
+    dest=stage/'usr/lib/oneplus13-audio/desktop-bindings.json'
+    dest.write_text(json.dumps(desktop_audio_bindings,indent=2)+'\n');dest.chmod(0o644)
+    desktop_audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
@@ -229,6 +245,8 @@ def main():
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
+    result.update(desktop_audio_files=desktop_audio_hashes,desktop_audio_auto_started=False,
+                  desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=768)
     result.update(container_files=container_hashes,container_daemon_auto_started=False,
                   container_hardware_qualified=False)
     result.update(sensor_runtime_files=runtime_hashes,sensor_runtime_host_private_inputs_required=False,
