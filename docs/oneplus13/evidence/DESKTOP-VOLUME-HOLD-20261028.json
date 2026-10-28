@@ -1,0 +1,88 @@
+{
+  "source_commit": "13bfebfe29b09dd4efccdf288ee40607ef85b39a",
+  "actions_run": 40685517582,
+  "actions_url": "https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40685517582",
+  "boot_image_sha256": "61ad3fcd70a6e8c39e4a0011140440b6034531de72fdd65b007203b8befd6142",
+  "rootfs_sha256": "1ca68d7128bb9911e8c56806d75210c094b2ecf68fc785072ca9bc0f80eb2725",
+  "kernel_release": "7.2.0-oneplus13-g7a81d184e309-c2a2d1d095750-p2c3f43dd0996",
+  "scope": "HELD_DESKTOP_AUDIO_POSTURE_CANDIDATE",
+  "candidate_held": true,
+  "joint_acceptance_pass": false,
+  "boot_image_filename": "boot-microphone-ram-experimental.img",
+  "actions_five_jobs_passed": true,
+  "android_return_confirmed": true,
+  "seven_baselines_match": true,
+  "android_return_seconds": 444.3,
+  "physical_partition_writes": 0,
+  "initial_default_accelerometer_uid_count": 0,
+  "sample_streams_enabled": false,
+  "posture_window_reached": false,
+  "desktop_pipewire_window_reached": false,
+  "acoustic": {
+    "amp_isolation": [
+      {
+        "amplifier": 0,
+        "frequency_hz": 1000,
+        "observations": [
+          {
+            "live_amplitude": 4.219560672130283e-05,
+            "live_to_muted_ratio": 0.5614935486675412,
+            "microphone_channel": 0,
+            "muted_amplitude": 7.514887182842191e-05,
+            "pass": false
+          },
+          {
+            "live_amplitude": 0.00015798612103897156,
+            "live_to_muted_ratio": 2.6710109064795255,
+            "microphone_channel": 1,
+            "muted_amplitude": 5.914843726609942e-05,
+            "pass": false
+          }
+        ],
+        "pass": false
+      },
+      {
+        "amplifier": 1,
+        "frequency_hz": 1500,
+        "observations": [
+          {
+            "live_amplitude": 0.00024948322312834853,
+            "live_to_muted_ratio": 13.334236534056043,
+            "microphone_channel": 0,
+            "muted_amplitude": 1.8709974319951565e-05,
+            "pass": true
+          },
+          {
+            "live_amplitude": 3.051689874527154e-05,
+            "live_to_muted_ratio": 0.5956571134606835,
+            "microphone_channel": 1,
+            "muted_amplitude": 5.123232486551311e-05,
+            "pass": false
+          }
+        ],
+        "pass": true
+      }
+    ],
+    "clipped_samples": [
+      0,
+      0
+    ],
+    "controls_restored": true,
+    "raw_audio_deleted": true,
+    "amplifiers_stopped": true
+  },
+  "kernel_health_phase_count": 17,
+  "kernel_health_counts_all_zero": true,
+  "retained": {
+    "microphone_capture_pass": true,
+    "audio_quiet_nonzero_pass": true,
+    "docker_bridge_pass": true,
+    "dock_extension_pass": true,
+    "preserved_features_completed": true,
+    "locale_defaults_pass": true,
+    "ssh_password_login_and_chinese_locale_pass": true,
+    "wifi_dualband_pass": true
+  },
+  "no_raw_audio_or_private_logs_published": true,
+  "readiness_race_root_cause_confirmed": false
+}

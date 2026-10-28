@@ -47,7 +47,8 @@ class MicrophoneCandidate(unittest.TestCase):
  def test_acoustic_signal_separates_channels_and_requires_volume_contrast(self):
   wave=acoustic.signal();values=struct.unpack('<'+str(len(wave)//2)+'h',wave)
   self.assertEqual(len(wave),48000*2*2*2)
-  self.assertLessEqual(max(abs(x) for x in values),4125)
+  self.assertLessEqual(max(abs(x) for x in values),16423)
+  self.assertGreater(max(abs(x) for x in values),16000)
   left=values[0:96000:2];right=values[1:96000:2]
   self.assertEqual(left,right)
   for samples,freq,other in ((left,1000,1500),(right,1000,1500),

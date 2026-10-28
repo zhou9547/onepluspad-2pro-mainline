@@ -1,3 +1,27 @@
+## Desktop volume candidate held after joint regression, 2026-10-28
+
+Actions40685517582 at13bfebfe passed all five jobs. The single RAM round
+returned to Android in444.3s with seven matching baselines, no physical writes
+and clean full-history kernel gates. Microphone, quiet PCM, Docker, both WiFi
+bands, project Mesa/GNOME, Dock, Chinese/SSH, Bluetooth and battery checks passed.
+However the initial default accelerometer lookup returned zero UIDs, so no
+sample stream or owner posture window started. Its cause is not established.
+The quiet1kHz muted baseline was about ten times the earlier ambient level;
+Amp0's active response stayed similar but failed8x contrast. Amp1 passed and
+there was no clipping, fault or cleanup failure. The PipeWire window was
+therefore skipped. This candidate does not replace the accepted2457ac35 image.
+See evidence/DESKTOP-VOLUME-HOLD-20261028.json.
+
+The follow-up permits one empty-default-UID recheck only after a normal exit
+with exact three zero-enable/zero-disable/zero-count receipts and clean local
+stop, within the original16s total process budget and the same reverse attach.
+The first failure is retained privately; any partial stream, crash, malformed
+receipt or unrelated failure remains ineligible. The acoustic fixture changes
+from-18 to-6dBFS at the unchanged640 test level, still at least42dB below a
+full-scale stock-profile signal and quieter than the owner-confirmed0dBFS
+fixture. The8x contrast and clipping gates are retained. Fresh build and joint
+testing are required; no old failure is reclassified as success.
+
 ## Owner-assisted speaker, rotation and desktop acceptance, 2026-10-28
 
 The owner tested the unchanged2457ac35 microphone boot in one20-minute RAM

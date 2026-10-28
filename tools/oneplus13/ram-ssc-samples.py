@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 """Explicit bounded three-vector samples; no autostart or IIO service."""
-import hashlib,importlib.util,json,math,os,re,struct,subprocess,tarfile
+import hashlib,importlib.util,json,math,os,re,struct,subprocess,tarfile,time
 from pathlib import Path
 
 STATE=Path('/run/oneplus13/ssc-samples')
@@ -66,15 +66,39 @@ def interpret(output):
     return {'samples':result,'rate_hz':5,'collection_ms':3000,'cleanup_returned':True,
             'physical_axes_or_calibration_accepted':False,'continuous_service_accepted':False}
 
+def empty_default_lookups(result):
+    """Only a normal, fully cleaned-up discovery miss can be retried."""
+    if result.returncode!=1:return []
+    expected={'SSC_PHONE_SAMPLE type='+name+' enabled=0 disabled=0 count=0 invalid=0 norm_min=0 norm_max=0' for name in TYPES}
+    lines=result.stdout.splitlines()
+    footer='SSC_PHONE_SAMPLE_RESULT complete=no rate_hz=5 collection_ms=3000 cleanup_returned=yes'
+    if len(lines)!=4 or set(lines[:3])!=expected or lines[-1]!=footer:return []
+    return sorted(set(re.findall(r'^SSC_PHONE_LOOKUP type=(accel|gyro|mag) default=1 count=0$',result.stderr,re.M)))
+
 def run_probe(mode,state=STATE,run=subprocess.run):
-    unit,args=command(mode,state);result=None
-    try:
-        result=run(args,capture_output=True,text=True,timeout=20)
-    finally:
-        try:stopped=run(['/usr/bin/systemctl','stop',unit],capture_output=True,text=True,timeout=3)
-        finally:inactive=run(['/usr/bin/systemctl','is-active',unit],capture_output=True,text=True,timeout=2)
-        if stopped.returncode not in (0,5) or inactive.returncode not in (3,4) or inactive.stdout.strip() not in ('inactive','unknown','failed'):
-            raise ValueError('Sample unit failed to stop')
+    unit,args=command(mode,state);result=None;attempt=0;missing=[]
+    deadline=time.monotonic()+16
+    while True:
+        timeout=16 if attempt==0 else max(.1,deadline-time.monotonic())
+        try:
+            result=run(args,capture_output=True,text=True,timeout=timeout)
+        finally:
+            try:stopped=run(['/usr/bin/systemctl','stop',unit],capture_output=True,text=True,timeout=3)
+            finally:inactive=run(['/usr/bin/systemctl','is-active',unit],capture_output=True,text=True,timeout=2)
+            if stopped.returncode not in (0,5) or inactive.returncode not in (3,4) or inactive.stdout.strip() not in ('inactive','unknown','failed'):
+                raise ValueError('Sample unit failed to stop')
+        missing=empty_default_lookups(result) if mode=='sample' and attempt==0 else missing
+        if not result.returncode or mode!='sample' or attempt or not missing or deadline-time.monotonic()<6:break
+        # No stream was enabled. Preserve the first failure,
+        # keep the same reverse attach, and never extend the16s process budget.
+        private_state=Path(state)/'empty-default-first-attempt'
+        private_state.mkdir(mode=0o700)
+        metadata.save_private_failure(private_state,result)
+        if inactive.stdout.strip()!='unknown':
+            reset=run(['/usr/bin/systemctl','reset-failed',unit],capture_output=True,text=True,timeout=1)
+            if reset.returncode:raise ValueError('Cannot reset collected empty-discovery unit')
+        time.sleep(1);attempt=1
+        print('SSC_EMPTY_DEFAULT_UID_RETRY '+json.dumps({'types':missing,'maximum_retries':1,'first_attempt_enabled_streams':0}),flush=True)
     if result.returncode:
         private=metadata.save_private_failure(state,result)
         raise ValueError('Sample process failed: '+json.dumps({'exit':result.returncode,'private_output':private}))
@@ -84,4 +108,5 @@ def run_probe(mode,state=STATE,run=subprocess.run):
         facts={'native_guard_checks_passed':3,'qrtr_query_requested':False}
     else:facts=interpret(result.stdout)
     return {'scope':'BOUNDED_THREE_VECTOR_SAMPLES','mode':mode,'unit_inactive':True,
+            'empty_default_lookup_retries':attempt,'initial_empty_default_types':missing,
             'measurement_commands_allowed':mode=='sample',**facts}

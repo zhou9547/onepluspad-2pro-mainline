@@ -7,12 +7,13 @@ STATE=Path('/run/oneplus13/acoustic-check')
 CARD='OnePlus13-Audio-Probe'
 RATE=48000
 VOLUME=640
+SIGNAL_PEAK_DBFS=-6
 FREQUENCIES=(1000,1500)
 PHASES=(('muted',(0,0)),('amp0_only',(VOLUME,0)),('amp1_only',(0,VOLUME)),('both',(VOLUME,VOLUME)))
 def load(name,path):
  s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
 def signal():
- peak=round(32767*10**(-18/20));result=bytearray()
+ peak=round(32767*10**(SIGNAL_PEAK_DBFS/20));result=bytearray()
  for i in range(RATE*2):
   t=i%RATE;level=min(1.,t/(RATE*.02),(RATE-1-t)/(RATE*.02))
   value=round(peak*level*math.sin(2*math.pi*FREQUENCIES[i//RATE]*t/RATE))
@@ -144,7 +145,7 @@ def main():
   if cleanup_errors:raise ValueError('Acoustic control restoration failed')
  after=audio.wait_off(paths)
  report={'scope':'BOUNDED_NATIVE_TWO_SPEAKER_MICROPHONE_CORRELATION',
-    'test_volume':VOLUME,'signal_peak_dbfs':-18,'signal_sha256':hashlib.sha256(wave).hexdigest(),
+    'test_volume':VOLUME,'signal_peak_dbfs':SIGNAL_PEAK_DBFS,'signal_sha256':hashlib.sha256(wave).hexdigest(),
     'muted_then_live_same_pcm':True,'amp_state_samples':amp_samples,
     'raw_audio_deleted':True,'controls_restored':True,'amplifiers_stopped':not any(s['powered'] for s in after),
     'normal_desktop_playback_qualified':False,**answer}
