@@ -15,10 +15,17 @@ about 12 dB. PipeWire software volume still attenuates below it. The original
 mandatory. Dynamic speaker protection and ordinary-volume long-duration use
 remain unaccepted.
 
-The WiFi acceptance profile now pins an observed BSSID from the requested band.
-This avoids a dual-band SSID silently selecting 5 GHz during the 2.4 GHz stage;
-the result continues to require the actual nl80211 frequency, DHCPv4, default
-route and LAN HTTP response.
+The WiFi acceptance profile uses NetworkManager's explicit band property. It
+does not pin a cached BSSID: repeated hardware attempts showed stale BSSIDs
+causing association timeouts even when the live SSID was present. The result
+requires the actual nl80211 frequency, DHCPv4, default route and LAN HTTP
+response.
+
+WirePlumber currently disables the phone ALSA card as an unqualified device.
+The RAM desktop helper therefore applies the reviewed UCM mixer sequence and
+loads a temporary ALSA sink through `pactl`; `pulseaudio-utils` is now a pinned
+image package. The sink is removed before amplifiers are muted and powered
+off. GNOME/PipeWire remains the software volume control.
 
 ## Desktop speaker volume and owner posture candidate, 2026-10-28
 

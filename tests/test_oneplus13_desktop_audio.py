@@ -6,6 +6,19 @@ spec=importlib.util.spec_from_file_location('desktop_audio',R/'tools/oneplus13/r
 m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 
 class DesktopAudio(unittest.TestCase):
+    def test_sink_binding_follows_pipewire_device_id(self):
+        objects=[
+            {'id':7,'type':'PipeWire:Interface:Device','info':{'props':{
+                'api.alsa.card':'0','api.alsa.card.name':'OnePlus13-Audio-Probe'}}},
+            {'id':10,'type':'PipeWire:Interface:Node','info':{'props':{
+                'media.class':'Audio/Sink','device.id':7,'node.name':'phone_speaker'}}},
+            {'id':11,'type':'PipeWire:Interface:Node','info':{'props':{
+                'media.class':'Audio/Sink','device.id':99,'node.name':'other'}}},
+        ]
+        result=m.desktop_sinks(objects,'0')
+        self.assertEqual([item['name'] for item in result],['phone_speaker'])
+        self.assertNotIn('OnePlus13-Audio-Probe',str(result))
+
     def test_only_original_or_exact_display_prerequisite_policy_is_allowed(self):
         original=b'install cec /bin/false\ninstall ubwc_config /bin/false\ninstall snd_soc_aw88461 /bin/false\n'
         digest=hashlib.sha256(original).hexdigest()

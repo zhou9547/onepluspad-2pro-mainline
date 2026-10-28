@@ -31,9 +31,6 @@ class Fake:
         assert 0 < seconds <= 18
         if self.fail and self.fail in args:
             return self.fail_status, 'private diagnostics not printed'
-        if 'list' in args and any('BSSID' in arg for arg in args):
-            return 0, ('offline-network:02:00:00:00:00:01:5180 MHz\n'
-                       'offline-network:02:00:00:00:00:02:2437 MHz\n')
         if 'SSID' in args:
             return 0, 'offline-network\n' if self.target else 'other-network\n'
         if 'GENERAL.STATE' in args:
@@ -93,27 +90,6 @@ class Checks(unittest.TestCase):
         self.assertEqual(profile[-2:],['802-11-wireless.band','a'])
         self.assertFalse(any(c[0] in ('ping','getent') or 'https://example.com/' in c for c in fake.calls))
         self.assertNotIn('02:00:00:00:00:01',json.dumps(result))
-
-    def test_band_profile_pins_only_a_bssid_from_that_band(self):
-        fake=Fake()
-        result=self.call(fake,{'ssid':'offline-network','password':'offline-secret-value','band':'bg'})
-        profile=next(c for c in fake.calls if 'add' in c)
-        self.assertEqual(profile[profile.index('802-11-wireless.bssid')+1],
-                         '02:00:00:00:00:02')
-        self.assertEqual(profile[-2:],['802-11-wireless.band','bg'])
-        self.assertTrue(result['target_band_bssid_selected'])
-        self.assertNotIn('02:00:00:00:00:02',json.dumps(result))
-
-    def test_missing_requested_band_bssid_never_authenticates(self):
-        base=Fake()
-        def only_5g(args,seconds):
-            if 'list' in args and any('BSSID' in arg for arg in args):
-                return 0,'offline-network:02:00:00:00:00:01:5180 MHz\n'
-            return base(args,seconds)
-        only_5g.calls=base.calls
-        result=self.call(only_5g,{'ssid':'offline-network','password':'offline-secret-value','band':'bg'})
-        self.assertFalse(result['target_band_bssid_selected'])
-        self.assertFalse(any('passwd-file' in call or 'add' in call for call in base.calls))
 
     def test_wrong_or_unproven_frequency_never_reaches_traffic_acceptance(self):
         for output in ('freq: 2437\n','freq: 5975\n','Not connected.\n','freq: 5180\nfreq: 5240\n','freq: private\n'):

@@ -12,14 +12,20 @@ identified Amp0 as top and Amp1 as bottom; ordinary desktop loudness remained
 too low at the 768 fixed ceiling.
 
 The next candidate installs the reviewed sensor runtime only during protected
-RAM bring-up, starts the restricted file service and SensorProxy after ADSP,
+RAM bring-up, starts the restricted file service before SensorProxy after ADSP,
 and disables GNOME orientation lock. A new bounded desktop check requires three
 accelerometer orientations and multiple Mutter monitor transforms. It also
 raises only the RAM desktop amplifier ceiling to 896, retaining 11.921875 dB
 of attenuation beyond the signed profile and leaving GNOME/PipeWire as the
 user volume control. The fixed 640 acoustic precheck and all cleanup gates are
-unchanged. The 2.4 GHz test now pins a cached BSSID from its requested band so
-a dual-band SSID cannot silently reconnect on 5 GHz.
+unchanged. Desktop audio now falls back to an explicitly routed, temporary
+`module-alsa-sink` when WirePlumber disables the unqualified ALSA card; the
+image pins `pulseaudio-utils` so this path is self-contained.
+
+Both WiFi stages pass through an explicit band profile, DHCPv4, default route
+and LAN HTTP, then verify the actual nl80211 frequency. Cached BSSIDs are not
+pinned: repeated tests showed a stale cached BSSID caused association timeouts
+even while the live target remained present.
 
 Fresh Actions and one combined RAM test are required. See
 SENSOR-DESKTOP-AUDIO-20261028.md.

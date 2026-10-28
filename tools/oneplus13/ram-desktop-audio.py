@@ -8,6 +8,8 @@ BINDINGS=ROOT/'desktop-bindings.json'
 RULE=Path('/etc/wireplumber/wireplumber.conf.d/95-oneplus13-desktop-audio.conf')
 CARD='OnePlus13-Audio-Probe'
 UNITS=['pipewire.service','pipewire-pulse.service','wireplumber.service']
+STATE=Path('/run/oneplus13/desktop-audio')
+MODULE=STATE/'pause-module-id'
 
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -50,9 +52,56 @@ def guard():
 
 def mixer(card,name,value):run(['amixer','-q','-c',card,'cset','name='+name,value])
 
+def card_property_match(props,card):
+    values={str(props.get(key,'')) for key in
+            ('api.alsa.card','api.alsa.pcm.card','api.alsa.card.name',
+             'api.alsa.card.longname','device.description','node.nick')}
+    return card in values or CARD in values or 'oneplus13' in ' '.join(values).lower()
+
+
+def desktop_sinks(objects,card):
+    devices={obj.get('id') for obj in objects
+             if obj.get('type')=='PipeWire:Interface:Device'
+             and card_property_match(obj.get('info',{}).get('props',{}),card)}
+    sinks=[]
+    for obj in objects:
+        if obj.get('type')!='PipeWire:Interface:Node':
+            continue
+        props=obj.get('info',{}).get('props',{})
+        if props.get('media.class')!='Audio/Sink':
+            continue
+        if props.get('device.id') in devices or card_property_match(props,card):
+            sinks.append({'id':obj['id'],'name':props.get('node.name'),'properties':props})
+    return sinks
+
+
+def load_explicit_sink(card):
+    STATE.mkdir(mode=0o700,parents=True,exist_ok=True)
+    # UCM remains the route/control source when WirePlumber declines to expose
+    # an unqualified ALSA device. The fallback sink still traverses that PCM.
+    run(['alsaucm','-c','hw:'+card,'set','_verb','HiFi'],8)
+    # Apply the exact reviewed UCM EnableSequence. Some WirePlumber versions
+    # reject the card before the UCM device verb can be exposed.
+    mixer(card,'Amp0 Playback Volume','896')
+    mixer(card,'Amp1 Playback Volume','896')
+    mixer(card,'Secondary MI2S Audio Mixer MultiMedia1','on,on')
+    module=run(['pactl','load-module','module-alsa-sink',
+                'device=hw:'+card+',0','sink_name=oneplus13_speakers',
+                'rate=48000','channels=2','format=s16le'],8,user=True).strip()
+    if not re.fullmatch(r'[0-9]{1,8}',module):raise ValueError('Invalid PulseAudio module id')
+    with MODULE.open('x') as stream:stream.write(module+'\n')
+    MODULE.chmod(0o600)
+    return int(module)
+
+
 def disable(card):
     errors=[]
     try:
+        if MODULE.exists():
+            module=MODULE.read_text().strip()
+            if not re.fullmatch(r'[0-9]{1,8}',module):raise ValueError('Unknown desktop audio module')
+            run(['pactl','unload-module',module],8,user=True)
+            MODULE.unlink()
         if RULE.exists():
             if RULE.is_symlink() or RULE.read_bytes()!=(ROOT/RULE.name).read_bytes():raise ValueError('Unknown desktop rule')
             RULE.unlink()
@@ -74,15 +123,20 @@ def enable(card):
     run(['gsettings','set','org.gnome.desktop.sound','allow-volume-above-100-percent','false'],user=True)
     shutil.copyfile(ROOT/RULE.name,RULE)
     run(['systemctl','--user','restart',*UNITS],timeout=15,user=True)
-    until=time.monotonic()+12
+    until=time.monotonic()+8
     while True:
-        sinks=[]
-        for obj in json.loads(run(['pw-dump'],user=True)):
-            props=obj.get('info',{}).get('props',{})
-            if props.get('media.class')=='Audio/Sink' and str(props.get('api.alsa.pcm.card'))==card:
-                sinks.append({'id':obj['id'],'name':props.get('node.name'),'properties':props})
+        objects=json.loads(run(['pw-dump'],user=True))
+        sinks=desktop_sinks(objects,card)
         if len(sinks)==1:break
-        if time.monotonic()>until:raise ValueError('Unique desktop speaker sink did not appear')
+        if time.monotonic()>until:
+            load_explicit_sink(card)
+            until=time.monotonic()+8
+            objects=json.loads(run(['pw-dump'],user=True))
+            sinks=desktop_sinks(objects,card)
+            if len(sinks)==1:break
+            (STATE/'inventory.private.json').write_text(json.dumps({
+                'objects':objects,'matching_sinks':sinks},indent=2)+'\n')
+            raise ValueError('Unique desktop speaker sink did not appear')
         time.sleep(.3)
     sink=sinks[0]
     run(['wpctl','set-default',str(sink['id'])],user=True)

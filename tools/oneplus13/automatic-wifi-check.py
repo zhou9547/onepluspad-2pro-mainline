@@ -46,27 +46,6 @@ def https_metrics(output):
     return result
 
 
-def select_band_bssid(output, band):
-    """Choose a visible target BSSID from the requested RF band.
-
-    NetworkManager can retain a dual-band SSID while ignoring a band-only
-    profile hint. Pinning the already observed BSSID makes the requested band
-    explicit without another scan or any driver override.
-    """
-    low, high = (2400, 2501) if band == 'bg' else (4900, 5925)
-    rows=[]
-    for line in output.splitlines():
-        match=re.fullmatch(
-            r'(.*):([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}):([0-9]+)(?:\.0+)?\s*MHz\s*',
-            line)
-        if not match:
-            continue
-        frequency=int(match[3])
-        if low <= frequency < high:
-            rows.append((match[1],match[2].lower(),frequency))
-    return rows[0] if rows else None
-
-
 def run(argv, seconds=6):
     try:
         p = subprocess.run(argv, capture_output=True, text=True, timeout=seconds)
@@ -243,25 +222,12 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
         if observation < 2:time.sleep(min(1,max(0,cache_deadline-time.monotonic())))
     if rc or not result['target_seen']:
         return result
-    bssid=None
-    if band:
-        rc, observed = command('bssid_cache', [
-            'nmcli','--wait','4','--escape','no','-t','-f','SSID,BSSID,FREQ',
-            'device','wifi','list','ifname',iface,'--rescan','no'],6)
-        if rc:
-            return result
-        selected=select_band_bssid(observed,band)
-        result['target_band_bssid_selected']=selected is not None
-        if selected is None:
-            return result
-        _,bssid,_=selected
     ident = str(uuid.uuid4())
     profile = ['nmcli', '--wait', '4', 'connection', 'add', 'type', 'wifi',
                                'ifname', iface, 'con-name', 'oneplus13-ram-acceptance',
                                'connection.uuid', ident, 'ssid', ssid,
                                'connection.autoconnect', 'no', 'wifi-sec.key-mgmt', 'wpa-psk']
     if band:
-        profile += ['802-11-wireless.bssid', bssid]
         profile += ['802-11-wireless.band', band]
     rc, _ = command('profile', profile, 6)
     if rc:
