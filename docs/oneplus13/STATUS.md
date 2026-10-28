@@ -1,3 +1,35 @@
+## Final hybrid build and pending owner rotation acceptance, 2026-10-29
+
+Commit `da91d97a7eddd411437cb8582430ea484a79f10f` completed the full mixed
+Actions run [40719703246 attempt 2](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40719703246/attempts/2).
+Kernel, Mesa and SSC built on the owner's self-hosted ARM64 runners; the
+GitHub ARM64 runner built rootfs and performed final image assembly. A transient
+self-hosted Mesa source-download failure was retried without changing code or
+the successful kernel, SSC and rootfs products.
+
+The downloaded boot image SHA256 is
+`3644d5189047d6952e14c7c8b29a78dab29e7601c74015e836986aa50aeed3e2`;
+the rootfs SHA256 is
+`aea746eb428e63dfb3d964a53b2a01b4828b50269177ad43e22c2c8072ce8941`.
+Independent host verification passed all boot sections and SHA256SUMS, 71
+qualified firmware files, 4 SSC probe inputs, 3 SSC sample inputs, 9 sensor
+runtime inputs, 10 desktop sensor integration files, 4 Docker files, 896
+desktop speaker configuration and a native ARM64 `pactl`.
+
+The native PipeWire sink factory and destruction path were exercised against a
+real PipeWire 1.6.2 instance. The final helper creates
+`api.alsa.pcm.sink` through `spa-node-factory`, quotes `hw:<card>,0` for
+`pw-cli` parsing, requires six seconds of node persistence, and falls back to a
+temporary Pulse ALSA module through the explicit user Pulse socket. The last
+single-device run reached the owner audio window but failed before playback
+because WirePlumber did not expose a default sink. The final code now targets
+the explicit node for volume and playback. The 569-test offline suite passes.
+
+The current phone-test authorization expired before the final joint boot. The
+next single RAM boot will test both speakers with 20/50/100 percent PipeWire
+volume and mute, three owner orientations with Mutter transform changes, and
+the retained dual-band WiFi, Docker, GNOME, Dock, Chinese and SSH checks.
+
 ## Sensor-first posture pass and desktop runtime candidate, 2026-10-28
 
 The owner-assisted posture window on image
