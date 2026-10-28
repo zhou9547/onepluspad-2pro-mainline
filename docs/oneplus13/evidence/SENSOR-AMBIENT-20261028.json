@@ -41,9 +41,9 @@
   "ssc": {
     "metadata_only": true,
     "sample_or_stream_requested": false,
-    "default_ambient_light_lookup": "empty",
-    "non_default_uid_lookup": "nonempty",
-    "all_returned_ambient_light_candidates_enumerated": true,
+    "default_ambient_light_lookup": "not_established_by_saved_public_output",
+    "non_default_uid_lookup": "not_established_by_saved_public_output",
+    "all_returned_ambient_light_candidates_enumerated": null,
     "ambient_light_available_candidate_found": false,
     "types": {
       "accel": "available",
@@ -61,7 +61,8 @@
       "qti.sensor.light_rear"
     ]
   },
-  "classification": "VENDOR_FUSED_LIGHT_REQUIRES_SEPARATE_LINUX_ADAPTER",
+  "classification": "AMBIENT_LIGHT_UNAVAILABLE_DISCOVERY_STAGE_UNRESOLVED",
   "joint_acceptance_pass": false,
-  "next_step": "Implement and offline-qualify the exact OPLUS fused-light or high-PWM measurement ABI; never enable a stream until calibration, units and cleanup are reviewed."
+  "next_step": "Record bounded numeric lookup/attribute stages before choosing a light-adapter implementation. Android fused-light naming alone does not establish its SSC discovery flags.",
+  "evidence_correction": "Saved stdout only establishes available=false; returned UID counts and per-candidate attributes were not retained. Earlier nonempty/all-enumerated claims exceeded evidence."
 }

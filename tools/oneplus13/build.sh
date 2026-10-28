@@ -72,6 +72,21 @@ python3 tools/oneplus13/check-spr-runtime.py --kernel-source "$src" \
 cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
+cp tools/oneplus13/audio-draft/aw88461.c tools/oneplus13/audio-draft/aw88461-profile.h "$src/sound/soc/codecs/"
+if ! grep -q '^config SND_SOC_AW88461$' "$src/sound/soc/codecs/Kconfig"; then
+  cat >> "$src/sound/soc/codecs/Kconfig" <<'KCONFIG'
+
+config SND_SOC_AW88461
+	tristate "Experimental AW88461 phone amplifier"
+	depends on I2C && GPIOLIB
+	select REGMAP_I2C
+	select SND_SOC_AW88395_LIB
+	help
+	  PID 2308 only, bounded owner-matched ACF and default maximum attenuation.
+	  No amplifier node is added to the qualified phone device tree.
+KCONFIG
+  printf '\nobj-$(CONFIG_SND_SOC_AW88461) += snd-soc-aw88461.o\nsnd-soc-aw88461-y := aw88461.o\n' >> "$src/sound/soc/codecs/Makefile"
+fi
 cp devices/oneplus13/kernel/spr-aa569/dpu_aa569_spr*.[ch] "$src/drivers/gpu/drm/msm/disp/dpu1/"
 if ! grep -q DRM_PANEL_ONEPLUS_AA569_EXPERIMENTAL "$src/drivers/gpu/drm/panel/Kconfig"; then
   cat >> "$src/drivers/gpu/drm/panel/Kconfig" <<'KCONFIG'
@@ -110,6 +125,7 @@ grep -q 'sm8750-oneplus-dodge-gpu.dtb' "$src/arch/arm64/boot/dts/qcom/Makefile" 
 git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*.dts \
   drivers/input/touchscreen/synaptics-dodge drivers/gpu/drm/panel/panel-aa569 \
   drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr*.[ch]
+git -C "$src" add --intent-to-add sound/soc/codecs/aw88461.c sound/soc/codecs/aw88461-profile.h
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1

@@ -33,9 +33,10 @@ def main():
         if r.returncode:raise ValueError('Topology compiler failed; see build.log')
         return r.stdout
     results=[]
-    for name,required,forbidden in [
-        ('capture-only','TX_CODEC_DMA_TX_3 Capture',['Secondary MI2S','DISPLAY_PORT','WSA_CODEC']),
-        ('speaker-mi2s-only','Secondary MI2S Playback',['TX_CODEC_DMA_TX_3','DISPLAY_PORT','WSA_CODEC'])]:
+    for name,required,forbidden,sample_format in [
+        ('capture-only','TX_CODEC_DMA_TX_3 Capture',['Secondary MI2S','DISPLAY_PORT','WSA_CODEC'],'S24_LE'),
+        ('speaker-mi2s-only','Secondary MI2S Playback',['TX_CODEC_DMA_TX_3','DISPLAY_PORT','WSA_CODEC'],'S24_LE'),
+        ('speaker-s16-probe','Secondary MI2S Playback',['TX_CODEC_DMA_TX_3','DISPLAY_PORT','WSA_CODEC'],'S16_LE')]:
         config=out/(name+'.conf');binary=out/(name+'.tplg');decoded=out/(name+'.decoded.conf')
         config.write_text(run([a.m4,'-I',macros,HERE/(name+'.m4')]))
         expanded=config.read_text()
@@ -47,15 +48,15 @@ def main():
         # opaque vendor tuples. Reject broadened formats/rates/channels.
         capabilities=re.findall(r"SectionPCMCapabilities\.[^\{]+\{([^}]+)\}",text)
         if len(capabilities)!=1:raise ValueError('Expected one isolated PCM capability')
-        expected={'formats':"'S24_LE'",'rate_min':'48000','rate_max':'48000','channels_min':'2','channels_max':'2'}
+        expected={'formats':"'"+sample_format+"'",'rate_min':'48000','rate_max':'48000','channels_min':'2','channels_max':'2'}
         fields=dict(re.findall(r'^\s*(formats|rate_min|rate_max|channels_min|channels_max)\s+([^\n]+)',capabilities[0],re.M))
         if {k:v.strip() for k,v in fields.items()}!=expected:raise ValueError('Decoded PCM capabilities differ from phone contract')
         if any(x in text for x in forbidden+['TDM','S32_LE']):raise ValueError('Decoded graph contains another backend')
         if binary.read_bytes()[:4]!=b'CoSA':raise ValueError('Invalid ALSA topology magic')
-        results.append({'name':name,'endpoint':required,'binary_sha256':sha(binary),
+        results.append({'name':name,'endpoint':required,'format':sample_format,'binary_sha256':sha(binary),
                         'source_sha256':sha(HERE/(name+'.m4')),'compile_and_decode_pass':True})
     result={'scope':'OFFLINE_PHONE_AUDIO_GRAPH_DRAFTS_ONLY','phone_operations':0,
-       'original_macro_source_sha256':sha(archive),'graphs':results,'front_end_format':'S24_LE',
+       'original_macro_source_sha256':sha(archive),'graphs':results,
        'rate_hz':48000,'channels':2,'pad_tdm_or_wsa_route_included':False,
        'board_mixer_clock_or_protection_qualified':False,'service_or_runtime_install_created':False,
        'hardware_stream_eligible':False}

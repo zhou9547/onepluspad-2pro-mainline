@@ -246,8 +246,12 @@ class BoundedService(unittest.TestCase):
         self.assertEqual(self.hook_calls,1);self.assertTrue(answer['file_server_cleanly_stopped'])
     def test_callback_failure_still_stops_file_service(self):
         def failed():raise ValueError('synthetic metadata refusal')
-        with self.assertRaises(ValueError):self.run_service(hook=failed)
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output),self.assertRaisesRegex(ValueError,'synthetic metadata refusal'):
+            self.run_service(hook=failed)
         self.assertEqual(sum(a[1]=='stop' for a,s in self.last_calls if len(a)>1),1)
+        line=next(x for x in output.getvalue().splitlines() if x.startswith('RAM_SENSOR_FILESERVER_DIAGNOSTIC '))
+        self.assertTrue(json.loads(line.split(' ',1)[1])['file_server_cleanly_stopped'])
     def test_callback_overrun_stops_and_refuses_pass(self):
         with self.assertRaises(ValueError):self.run_service(hook=lambda:None,hook_advance=29)
         self.assertEqual(sum(a[1]=='stop' for a,s in self.last_calls if len(a)>1),1)

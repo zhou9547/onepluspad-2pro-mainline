@@ -32,10 +32,21 @@ def main():
     for name,digest in ssc_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered SSC input changed')
+    audio_files=m.get('experimental_audio_files',{})
+    if len(audio_files)!=4 or m.get('audio_auto_started') is not False or m.get('audio_hardware_qualified') is not False:
+        raise ValueError('Missing gated audio candidate')
+    for name,digest in audio_files.items():
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered audio input changed')
+    policy=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),
+        'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf'],text=True)
+    if 'install snd_soc_aw88461 /bin/false\n' not in policy:
+        raise ValueError('Experimental amplifier must require manual activation')
     static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION','pass':True,'source_commit':m['source_commit'],
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
             'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
+            'experimental_audio_files_verified':len(audio_files),'audio_auto_started':False,
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')
     if a.static_only:

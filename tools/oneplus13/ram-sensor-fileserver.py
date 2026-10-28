@@ -161,6 +161,7 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
     status_query_failed=False
     pre_status=None
     callback_completed=False
+    callback_error=None
     try:
         # A launch timeout can occur after systemd created the unit.
         started=True
@@ -184,7 +185,14 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
             # retaining this same unit lifetime and unconditional stop path.
             if during_active is not None and not callback_completed:
                 if launch_failed:raise ValueError('Cannot start callback after failed file server launch')
-                during_active()
+                try:
+                    during_active()
+                except Exception as error:
+                    # Retain the original failure, stop the reverse service,
+                    # then emit its derived facts before propagating it. A
+                    # failed SSC client must not skip the only attach evidence.
+                    callback_error=error
+                    break
                 callback_completed=True
                 if clock()>until:raise ValueError('Metadata callback exceeded the observation window')
             sleep(min(1,max(0,until-clock())))
@@ -219,6 +227,7 @@ def serve(trace,run=execute,sleep=time.sleep,clock=time.monotonic,diagnostic=Fal
        'complete_local_trace_facts':result,'trace_qualification_error':trace_failure,
        'sensor_stream_requested':False,'acceptance_not_implied':True},sort_keys=True),flush=True)
     if not clean_stop:raise ValueError('File server stop not clean')
+    if callback_error is not None:raise callback_error
     if launch_failed or exited_early or status_query_failed or before.get('ActiveState')!='active':
         raise ValueError('File server exited before the bounded observation window')
     if diagnostic:

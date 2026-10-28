@@ -69,6 +69,17 @@ def diagnostics(output):
     if len({x[0] for x in rows})!=len(rows):raise ValueError('Duplicate diagnostic type')
     return {name:reason for name,reason in rows}
 
+def discovery_stages(output):
+    """Bounded enum/count evidence; UIDs and arbitrary vendor text stay private."""
+    if len(output)>32768:raise ValueError('Oversized probe output')
+    lookups=re.findall(r'^SSC_PHONE_LOOKUP type=([a-z_]+) default=([01]) count=([0-9]{1,6})$',output,re.M)
+    attrs=re.findall(r'^SSC_PHONE_ATTRIBUTES type=([a-z_]+) candidate=([0-9]{1,2}) available=([01]) matrix=([01])$',output,re.M)
+    if len(lookups)>8 or len(attrs)>64:raise ValueError('Discovery diagnostic bound exceeded')
+    if any(t not in TYPES or int(n)>65536 for t,d,n in lookups):raise ValueError('Unrecognized discovery type/count')
+    if any(t not in TYPES or not 1<=int(n)<=16 for t,n,a,m in attrs):raise ValueError('Unrecognized attribute diagnostic')
+    return {'lookups':[{'type':t,'default_only':d=='1','uid_count':int(n)} for t,d,n in lookups],
+            'attributes':[{'type':t,'candidate':int(n),'available':a=='1','mount_matrix_present':m=='1'} for t,n,a,m in attrs]}
+
 def execution_status(unit,run):
     fields={'LoadState':{'loaded','not-found','error','masked'},
             'ActiveState':{'active','inactive','failed','activating','deactivating'},
@@ -161,10 +172,12 @@ def run_probe(mode,state=STATE,run=subprocess.run):
         else:
             private=save_private_failure(state,result)
             detail=json.dumps({'probe':diagnostics(result.stdout+result.stderr),
+                               'discovery_stages':discovery_stages(result.stdout+result.stderr),
                                'metadata_inventory':partial_inventory(result.stdout),
                                'execution':status,'private_output':private},sort_keys=True)
         raise ValueError('SSC metadata process failed, exit='+str(result.returncode)+': '+detail)
     facts=interpret(mode,result.stdout+result.stderr)
+    if mode=='discover':facts['discovery_stages']=discovery_stages(result.stdout+result.stderr)
     return {'scope':'BOUNDED_SSC_METADATA_ONLY','mode':mode,'uid':65534,'unit_inactive':True,
             'measurement_commands_allowed':False,'peripheral_hardware_qualification_implied':False,**facts}
 

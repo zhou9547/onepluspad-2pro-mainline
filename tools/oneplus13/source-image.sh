@@ -31,6 +31,8 @@ case "${1:-}" in
     sudo python3 tools/oneplus13/desktop.py --source-build --kernel out/oneplus13 --rootfs out/oneplus13-source-image/rootfs.squashfs --output out/oneplus13-source-desktop "${qemu_args[@]}"
     ;;
   complete)
+    python3 tools/oneplus13/audio-draft/check.py --output out/phone-audio-synthetic
+    python3 tools/oneplus13/audio-draft/build-topology-drafts.py --output out/phone-audio
     python3 tools/oneplus13/verify_qualified_data.py devices/oneplus13/qualified-data
     sudo python3 tools/oneplus13/package-source-local.py --kernel out/oneplus13 --desktop out/oneplus13-source-desktop --rootfs out/oneplus13-source-image --qualified-data devices/oneplus13/qualified-data --runtime-checks "$runtime_checks" --output out/oneplus13-complete-image
     complete_args=(--static-only)

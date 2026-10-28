@@ -40,6 +40,12 @@
 #define AW88461_BOOST_READY	BIT(9)
 #define AW88461_SWITCHING	BIT(8)
 #define AW88461_FAULTS		(BIT(14) | BIT(11) | BIT(5) | BIT(3) | BIT(1))
+/* PID 2308 uses linear 0.0940625-dB attenuation steps. Until the phone's
+ * dynamic speaker-protection graph is qualified, expose only a quiet test
+ * range: even the top control value adds >= 72.1459 dB to profile attenuation.
+ * Zero remains maximum attenuation. This is not a normal playback profile.
+ */
+#define AW88461_TEST_VOLUME_MAX	256
 
 struct aw88461 {
 	struct aw_device aw_dev;
@@ -394,7 +400,7 @@ static int aw88461_volume_put(struct snd_kcontrol *kcontrol,
 	long volume = value->value.integer.value[0];
 	int ret;
 
-	if (volume < 0 || volume > 1023)
+	if (volume < 0 || volume > AW88461_TEST_VOLUME_MAX)
 		return -EINVAL;
 	guard(mutex)(&amp->lock);
 	if (amp->faulted)
@@ -411,7 +417,7 @@ static int aw88461_volume_put(struct snd_kcontrol *kcontrol,
 }
 
 static const struct snd_kcontrol_new aw88461_controls[] = {
-	SOC_SINGLE_EXT("Playback Volume", SND_SOC_NOPM, 0, 1023, 0,
+	SOC_SINGLE_EXT("Playback Volume", SND_SOC_NOPM, 0, AW88461_TEST_VOLUME_MAX, 0,
 		       aw88461_volume_get, aw88461_volume_put),
 };
 
@@ -473,6 +479,33 @@ static const struct snd_soc_component_driver aw88461_component = {
 	.num_dapm_routes = ARRAY_SIZE(aw88461_routes),
 };
 
+/* Bounded live verification, without a general register access interface. */
+static ssize_t phone_state_show(struct device *dev,
+			       struct device_attribute *attr, char *buf)
+{
+	struct aw88461 *amp = dev_get_drvdata(dev);
+	unsigned int status, control, volume;
+	int ret;
+
+	guard(mutex)(&amp->lock);
+	ret = regmap_read(amp->aw_dev.regmap, AW88461_SYSST, &status);
+	if (ret)
+		return ret;
+	ret = regmap_read(amp->aw_dev.regmap, AW88461_SYSCTRL, &control);
+	if (ret)
+		return ret;
+	ret = regmap_read(amp->aw_dev.regmap, AW88461_SYSCTRL2, &volume);
+	if (ret)
+		return ret;
+	return sysfs_emit(buf, "id=%04x channel=%u volume=%u powered=%u faulted=%u sysst=%04x sysctrl=%04x attenuation=%u\n",
+		AW88461_CHIP_ID, amp->aw_dev.channel, amp->volume,
+		amp->powered, amp->faulted, status, control,
+		(unsigned int)(volume & AW88461_VOLUME));
+}
+static DEVICE_ATTR_RO(phone_state);
+static struct attribute *aw88461_attrs[] = { &dev_attr_phone_state.attr, NULL };
+static const struct attribute_group aw88461_group = { .attrs = aw88461_attrs };
+
 static int aw88461_probe(struct i2c_client *client)
 {
 	struct aw88461 *amp;
@@ -489,6 +522,8 @@ static int aw88461_probe(struct i2c_client *client)
 	ret = device_property_read_u32(&client->dev, "awinic,audio-channel", &amp->aw_dev.channel);
 	if (ret && device_property_present(&client->dev, "awinic,audio-channel"))
 		return ret;
+	if (amp->aw_dev.channel > 1)
+		return -EINVAL;
 	mutex_init(&amp->lock);
 	INIT_WORK(&amp->start_work, aw88461_start_work);
 	i2c_set_clientdata(client, amp);
@@ -512,6 +547,9 @@ static int aw88461_probe(struct i2c_client *client)
 	ret = aw88461_load_profile(amp);
 	if (ret)
 		return dev_err_probe(&client->dev, ret, "amplifier profile load failed\n");
+	ret = devm_device_add_group(&client->dev, &aw88461_group);
+	if (ret)
+		return ret;
 	ret = devm_add_action_or_reset(&client->dev, aw88461_cancel_work, amp);
 	if (ret)
 		return ret;

@@ -167,13 +167,6 @@
               "shows": "stock sensor HAL requests the delivery type per sensor (_wakeup_type)"
             }
           ]
-        },
-        {
-          "file": "patches/libssc/0003-libssc-retry-light-discovery-with-non-default-uids.patch",
-          "sha256": "3b61b6540141a777613e6853a498faa8af3189bba3f57a4b422037a4416c06c8",
-          "origin": "this project",
-          "upstream_status": "not submitted; hardware-gated candidate",
-          "note": "Retry an empty default ambient_light SUID lookup once with non-default UIDs. Some OEM sensor images publish the fused light as non-default while retaining the registry SUID group; other sensor types keep default-only discovery."
         }
       ]
     },

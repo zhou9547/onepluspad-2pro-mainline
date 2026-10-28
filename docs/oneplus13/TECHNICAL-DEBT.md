@@ -1,20 +1,23 @@
-## Fused ambient light remains unavailable, 2026-10-28
+## Speaker transport and protection, 2026-10-28
 
-Source `5d1fa4f8254870c59858225c3b1f9da98b8058a8` passed the complete Actions
-build and one joint RAM regression. Dual-band WiFi, Mesa/GNOME, touch-device
-discovery, Bluetooth, battery and kernel-health gates passed again. SSC
-enumerated non-default `ambient_light` UIDs after the default lookup was empty,
-but every returned candidate was unavailable; no stream was opened. Android
-shows the active light as `OPLUS Fusion Light Sensor Next Gen`, with `tcs3720`
-high-PWM light/RGB exposed as separate vendor sensor types. Generic libssc's
-`ambient_light` driver therefore cannot by itself reproduce this phone's fused
-light path.
+Both stock amplifier IDs are confirmed0x2308, closing the former silicon
+identity gap. A matched generic ACF, gated module, exact phone MI2S/reset DT
+derivation and bounded digital-zero checker are now in the source image build.
+Hardware registration, actual clock/PCM state and clean stop remain pending.
+The test volume ceiling is deliberately quiet; it does not implement the
+Android DSP's dynamic speaker protection or qualify ordinary playback. A silent
+PCM result must never be recorded as audible speaker acceptance. Complete UCM,
+24bit backend negotiation and capture/headset integration remain separate work.
 
-The next implementation must consume the exact vendor fused-light or high-PWM
-measurement ABI, preserve calibration and wake-up semantics, and remain
-offline-tested before a stream is enabled. Do not substitute the rear light,
-hardcode lux, or relabel SSC/a joint run as accepted while ambient light remains
-unavailable.
+## Ambient light discovery evidence is incomplete, 2026-10-28
+
+The exact 5d1fa4f8 joint run establishes ambient_light unavailable and accel,
+gyro and mag available. It does not establish whether the default/all-UID
+queries were empty or whether attributes rejected candidates. Earlier text
+overstated those intermediate facts. The Android fused-light name is only a
+research lead; it does not prove SSC discovery flags or a missing fusion ABI.
+The next candidate records numeric stages and bounds candidates to16. The
+phone-only fallback is removed from the shared Pad library recipe.
 
 ## Chinese desktop and SSH defaults, 2026-10-27
 

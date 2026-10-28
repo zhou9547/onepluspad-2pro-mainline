@@ -10,6 +10,18 @@ GOOD='\n'.join('SSC_PHONE_METADATA type='+t+' available=yes completed=yes' for t
 VERIFY='SSC_PHONE_METADATA_LOCK_VERIFIED_NO_QRTR\nok 6 /phone/06-one-way-lock\nPHONE_METADATA_SEND_GUARD_BLOCKED_ALL_UNREVIEWED_REQUESTS_BEFORE_QMI\n'
 
 class ControlTests(unittest.TestCase):
+    def test_discovery_stages_distinguish_empty_lookup_and_unavailable_attributes(self):
+        text=('SSC_PHONE_LOOKUP type=ambient_light default=1 count=0\n'
+              'SSC_PHONE_LOOKUP type=ambient_light default=0 count=2\n'
+              'SSC_PHONE_ATTRIBUTES type=ambient_light candidate=1 available=0 matrix=0\n'
+              'SSC_PHONE_ATTRIBUTES type=ambient_light candidate=2 available=1 matrix=0\n'
+              'private UID and calibration text\n')
+        facts=m.discovery_stages(text)
+        self.assertEqual([r['uid_count'] for r in facts['lookups']],[0,2])
+        self.assertEqual([r['available'] for r in facts['attributes']],[False,True])
+        self.assertNotIn('private',json.dumps(facts))
+        self.assertEqual(m.discovery_stages('unrecognized private output')['lookups'],[])
+        with self.assertRaises(ValueError):m.discovery_stages(text*9)
     def test_partial_sensor_inventory_is_explicit_and_raw_text_is_withheld(self):
         output=GOOD.replace('type=ambient_light available=yes','type=ambient_light available=no')+'private device text\n'
         facts=m.partial_inventory(output)

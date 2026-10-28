@@ -1,3 +1,15 @@
+## Speaker and sensor joint candidate, 2026-10-28
+
+Both stock amplifier IDs are now observed as0x2308. The owner C.93 full-package
+payload is verified and identical to the previous extraction. The new manually
+gated AW88461/Secondary-MI2S candidate includes matched generic ACF and a bounded
+maximum-attenuation digital-zero checker, with nonaudio DT properties preserved.
+Sensor lookup counts and per-candidate availability now have explicit numeric
+diagnostics and a16-UID bound. The phone fallback no longer alters the shared
+Pad recipe. Offline checks pass; full Actions and joint hardware are pending.
+See `AUDIO-SENSOR-RAM-20261028.md`. Audible playback and sensor streams remain
+unaccepted.
+
 ## Joint WiFi, desktop, and fused ambient-light boundary, 2026-10-28
 
 Source `5d1fa4f8254870c59858225c3b1f9da98b8058a8`, complete Actions
@@ -14,16 +26,15 @@ project Mesa 26.2.3 renderer, ordinary user Wayland GNOME session, settings
 process/bus, touch-device discovery, Bluetooth power and OBEX sender, battery
 telemetry and regulatory facts were retained.
 
-The libssc default-only light lookup was followed by a non-default UID lookup;
-that response was non-empty, so the probe enumerated every returned UID and
-read its metadata without enabling a stream. Every fused-light UID still
-reported `available=false`. The Android SensorService independently exposes the
-active `android.sensor.light` as `OPLUS Fusion Light Sensor Next Gen`, while
-`tcs3720` high-PWM light/RGB remain separate vendor sensors. The remaining work
-is a reviewed Linux implementation of the vendor fused-light input, not another
-country/SAR toggle. The failed metadata inventory is immutable evidence; do not
-mark SSC or overall joint acceptance as passed. See
-`evidence/SENSOR-AMBIENT-20261028.json`.
+The saved SSC output establishes ambient_light unavailable, while accel, gyro
+and mag are available. It does not retain default/non-default UID counts or
+per-candidate attributes. The earlier claim of a nonempty non-default response
+and exhaustive unavailable candidates exceeded that evidence and is corrected
+here and in `evidence/SENSOR-AMBIENT-20261028.json`. Android independently calls
+its active light `OPLUS Fusion Light Sensor Next Gen`; this is not proof of the
+SSC flags or that a separate fusion implementation is necessary. Add numeric
+discovery-stage diagnostics before choosing that implementation. Overall joint
+acceptance remains false and no sensor samples were obtained.
 
 ## Chinese desktop and SSH defaults, 2026-10-27
 

@@ -9,8 +9,11 @@ SOURCE_COMMIT='0cf77b93b55752da34dca2dcecc06fca8665184b'
 BASE_PATCHES=(
     '0001-libssc-select-the-delivery-and-batching-of-streams-at-run-time.patch',
     '0002-libssc-choose-the-stream-delivery-by-sensor-type.patch',
-    '0003-libssc-retry-light-discovery-with-non-default-uids.patch',
 )
+LIGHT_PATCH='0004-bounded-phone-light-lookup.patch'
+LIGHT_SHA='a8e8aa403227d4a76ea0e0299bc43884d04b2ff553c5b1e40db499b4247e07a7'
+DIAGNOSTIC_PATCH='0005-record-bounded-discovery-stages.patch'
+DIAGNOSTIC_SHA='09328d2f337027a3c8e2d186fdfc162e2125010d43b51c3967edf78b723c4f1d'
 EXTRA='0001-add-metadata-only-discovery-guard.patch'
 EXTRA_SHA='d2c913814a2011fe5e5009c065d45423b6e43c595f538f0249b6fb066dea7cee'
 PROPERTY_PATCH='0002-fix-sensor-property-value-types.patch'
@@ -62,6 +65,9 @@ def main():
         path=REPO/'packaging/sensors'/item['file']
         if sha(path)!=item['sha256']:raise ValueError('Original patch changed')
         patches.append(path)
+    light=REPO/'tools/oneplus13/ssc-patches'/LIGHT_PATCH
+    if sha(light)!=LIGHT_SHA:raise ValueError('Phone light overlay changed')
+    patches.append(light)
     extra=REPO/'tools/oneplus13/ssc-patches'/EXTRA
     if sha(extra)!=EXTRA_SHA:raise ValueError('Phone overlay changed')
     patches.append(extra)
@@ -71,6 +77,9 @@ def main():
     matrix=REPO/'tools/oneplus13/ssc-patches'/MATRIX_PATCH
     if sha(matrix)!=MATRIX_SHA:raise ValueError('Phone matrix correction changed')
     patches.append(matrix)
+    diagnostic=REPO/'tools/oneplus13/ssc-patches'/DIAGNOSTIC_PATCH
+    if sha(diagnostic)!=DIAGNOSTIC_SHA:raise ValueError('Phone diagnostics overlay changed')
+    patches.append(diagnostic)
     for patch in patches:run(['patch','-d',source,'-p1','--batch','--fuzz=0','-i',patch],log)
     counts={}
     for kind,options in [('release',['--buildtype=release']),('sanitized',['--buildtype=debug','-Db_sanitize=address,undefined','-Db_lundef=false'])]:

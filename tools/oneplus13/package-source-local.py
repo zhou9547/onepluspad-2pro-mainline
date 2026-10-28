@@ -94,6 +94,28 @@ def main():
     dest=stage/'usr/libexec/oneplus13-ram-ssc-metadata.py'
     shutil.copyfile(REPO/'tools/oneplus13/ram-ssc-metadata.py',dest);dest.chmod(0o755)
     ssc_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    # Audio is delivered as a manually gated candidate, not a qualified output.
+    # The generic owner-version ACF contains no per-unit registry or identities.
+    from importlib import import_module
+    audio=import_module('audio-dtb')
+    audio_build=REPO/'out/phone-audio'
+    audio_source=REPO/'devices/oneplus13/audio/aw88461_acf.bin'
+    if sha256(audio_source)!='941f23e9e315820a01170a97dbb0c88382c46a548993e5d2ca98c7619b1b1847':
+        raise ValueError('Phone ACF identity changed')
+    audio_hashes={}
+    for source,name in [(audio_source,audio.FIRMWARE),
+                        (audio_build/'speaker-s16-probe.tplg',audio.TOPOLOGY)]:
+        dest=stage/'usr/lib/firmware'/name
+        dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,dest);dest.chmod(0o644)
+        audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    dest=stage/'usr/libexec/oneplus13-ram-audio-check.py'
+    shutil.copyfile(REPO/'tools/oneplus13/ram-audio-check.py',dest);dest.chmod(0o755)
+    audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    dest=stage/'etc/wireplumber/wireplumber.conf.d/90-oneplus13-manual-audio.conf'
+    dest.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copyfile(REPO/'devices/oneplus13/audio/90-oneplus13-manual-audio.conf',dest)
+    dest.chmod(0o644);audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
@@ -113,7 +135,9 @@ def main():
     (out/'initramfs-desktop.cpio.gz').write_bytes(packed)
     nonce=secrets.token_hex(12)
     cmdline='rdinit=/init panic=15 oneplus13.desktop=1 oneplus13.rootfs.sha256='+sha256(image_rootfs)+' oneplus13.rootfs.bytes='+str(image_rootfs.stat().st_size)+' oneplus13.session='+nonce
-    tree=Fdt((private/'calibrated.dtb').read_bytes());tree.nodes['/chosen']['bootargs']=(cmdline+'\0').encode()
+    audio_blob,audio_report=audio.derive((private/'calibrated.dtb').read_bytes())
+    (out/'audio-dtb-review.json').write_text(json.dumps(audio_report,indent=2)+'\n')
+    tree=Fdt(audio_blob);tree.nodes['/chosen']['bootargs']=(cmdline+'\0').encode()
     dtb=out/'sm8750-oneplus-dodge-abl.dtb';dtb.write_bytes(tree.to_blob())
     geometry=json.loads((private/'boot-geometry.json').read_text())
     tool=json.loads((REPO/'kernel/source.json').read_text())['tool_inputs']['mkbootimg.py']
@@ -144,7 +168,9 @@ def main():
         'initial_watchdog_seconds':600,'post_handoff_deadline_seconds':300,
         'initial_watchdog_survives_switch_root':False,'phone_operations':0,'partition_writes':0,
         'hardware_tested':False,'ssc_probe_files':ssc_hashes,'ssc_probe_auto_started':False,
-        'ssc_sensor_property_types_corrected':True}
+        'ssc_sensor_property_types_corrected':True,
+        'experimental_audio_files':audio_hashes,'audio_auto_started':False,
+        'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
     (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps({k:result[k] for k in ['scope','source_commit','kernel_release','boot_image_sha256','rootfs_sha256','firmware_files','old_kernel_or_rootfs_used']},indent=2))
 

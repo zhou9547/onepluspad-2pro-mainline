@@ -3,11 +3,11 @@ From: Codex <codex@openai.com>
 Date: Wed, 28 Oct 2026 01:04:00 +0800
 Subject: [PATCH] libssc: retry light discovery with non-default UIDs
 
-Some vendor sensor images publish android.sensor.light as a fused,
-non-default sensor while still exposing the default ambient_light SUID
-group. libssc currently only asks for default UIDs, observes an empty
-ambient_light response, and reports the sensor unavailable without trying
-the non-default entries.
+Phone-only diagnostic hypothesis: a non-default ambient_light lookup may
+expose another candidate after an empty default lookup. Existing hardware
+logs establish only available=false, not the number of returned UIDs or
+the cause. Do not treat the Android fused sensor name as proof of its
+SSC discovery flags or of a missing Linux fusion algorithm.
 
 On the OnePlus 13 Android sensor service, the active light type is
 "OPLUS Fusion Light Sensor Next Gen"; the tcs3720 high-PWM light sensor
