@@ -23,9 +23,13 @@ response.
 
 WirePlumber currently disables the phone ALSA card as an unqualified device.
 The RAM desktop helper therefore applies the reviewed UCM mixer sequence and
-loads a temporary ALSA sink through `pactl`; `pulseaudio-utils` is now a pinned
-image package. The sink is removed before amplifiers are muted and powered
-off. GNOME/PipeWire remains the software volume control.
+creates the PCM with `spa-node-factory` plus `factory.name=api.alsa.pcm.sink`.
+The `hw:<card>,0` value must be quoted for `pw-cli` property parsing. The node
+must survive a six-second observation; otherwise a temporary
+`module-alsa-sink` is loaded through the explicit `/run/user/1000/pulse/native`
+socket. `pulseaudio-utils` is a pinned image package. The sink is removed
+before amplifiers are muted and powered off. GNOME/PipeWire remains the
+software volume control.
 
 ## Desktop speaker volume and owner posture candidate, 2026-10-28
 

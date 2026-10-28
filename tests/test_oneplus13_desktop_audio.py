@@ -19,6 +19,16 @@ class DesktopAudio(unittest.TestCase):
         self.assertEqual([item['name'] for item in result],['phone_speaker'])
         self.assertNotIn('OnePlus13-Audio-Probe',str(result))
 
+    def test_native_fallback_binds_explicit_alsa_path(self):
+        objects=[{'id':12,'type':'PipeWire:Interface:Node','info':{'props':{
+            'media.class':'Audio/Sink','api.alsa.path':'hw:0,0',
+            'node.name':'oneplus13_speakers'}}}]
+        result=m.desktop_sinks(objects,'0')
+        self.assertEqual([item['id'] for item in result],[12])
+        source=(R/'tools/oneplus13/ram-desktop-audio.py').read_text()
+        self.assertIn("'spa-node-factory'",source)
+        self.assertIn("'factory.name=api.alsa.pcm.sink'",source)
+
     def test_only_original_or_exact_display_prerequisite_policy_is_allowed(self):
         original=b'install cec /bin/false\ninstall ubwc_config /bin/false\ninstall snd_soc_aw88461 /bin/false\n'
         digest=hashlib.sha256(original).hexdigest()

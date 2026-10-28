@@ -18,9 +18,11 @@ accelerometer orientations and multiple Mutter monitor transforms. It also
 raises only the RAM desktop amplifier ceiling to 896, retaining 11.921875 dB
 of attenuation beyond the signed profile and leaving GNOME/PipeWire as the
 user volume control. The fixed 640 acoustic precheck and all cleanup gates are
-unchanged. Desktop audio now falls back to an explicitly routed, temporary
-`module-alsa-sink` when WirePlumber disables the unqualified ALSA card; the
-image pins `pulseaudio-utils` so this path is self-contained.
+unchanged. Desktop audio first creates the reviewed ALSA PCM through
+`spa-node-factory`, with the card path quoted for `pw-cli` property parsing,
+and requires it to remain for six seconds. If WirePlumber still removes it, a
+temporary `module-alsa-sink` is loaded through the explicit user Pulse socket;
+the image pins `pulseaudio-utils` so this path is self-contained.
 
 Both WiFi stages pass through an explicit band profile, DHCPv4, default route
 and LAN HTTP, then verify the actual nl80211 frequency. Cached BSSIDs are not

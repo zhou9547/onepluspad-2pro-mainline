@@ -18,7 +18,8 @@ def run(args,timeout=8,user=False):
     if user:
         uid=pwd.getpwnam('a').pw_uid
         args=['runuser','-u','a','--','env','XDG_RUNTIME_DIR=/run/user/'+str(uid),
-              'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+str(uid)+'/bus',*args]
+              'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+str(uid)+'/bus',
+              'PULSE_SERVER=unix:/run/user/'+str(uid)+'/pulse/native',*args]
     p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
     if p.returncode:raise ValueError('Desktop audio command failed: '+Path(args[0]).name+' rc='+str(p.returncode))
     if len(p.stdout)>2*1024*1024:raise ValueError('Oversized desktop audio output')
@@ -56,8 +57,10 @@ def mixer(card,name,value):run(['amixer','-q','-c',card,'cset','name='+name,valu
 def card_property_match(props,card):
     values={str(props.get(key,'')) for key in
             ('api.alsa.card','api.alsa.pcm.card','api.alsa.card.name',
-             'api.alsa.card.longname','device.description','node.nick')}
-    return card in values or CARD in values or 'oneplus13' in ' '.join(values).lower()
+             'api.alsa.card.longname','api.alsa.path','device.description','node.nick')}
+    return (card in values or CARD in values or
+            f'hw:{card},' in ' '.join(values) or
+            'oneplus13' in ' '.join(values).lower())
 
 
 def desktop_sinks(objects,card):
@@ -90,11 +93,12 @@ def prepare_explicit_route(card):
 
 def load_native_sink(card):
     prepare_explicit_route(card)
-    run(['pw-cli','create-node','api.alsa.pcm.sink',
-         'api.alsa.path=hw:'+card+',0','node.name=oneplus13_speakers',
-         'node.description=OnePlus 13 speakers','media.class=Audio/Sink',
+    run(['pw-cli','create-node','spa-node-factory',
+         'factory.name=api.alsa.pcm.sink',
+         'api.alsa.path="hw:'+card+',0"','node.name=oneplus13_speakers',
+         'node.description="OnePlus 13 speakers"','media.class=Audio/Sink',
          'object.linger=true'],8,user=True)
-    time.sleep(1)
+    time.sleep(6)
     sinks=desktop_sinks(json.loads(run(['pw-dump'],user=True)),card)
     if len(sinks)!=1:raise ValueError('Native ALSA sink did not appear')
     with NODE.open('x') as stream:stream.write(str(sinks[0]['id'])+'\n')
@@ -110,6 +114,14 @@ def load_pulse_sink(card):
     if not re.fullmatch(r'[0-9]{1,8}',module):raise ValueError('Invalid PulseAudio module id')
     with MODULE.open('x') as stream:stream.write(module+'\n')
     MODULE.chmod(0o600)
+    until=time.monotonic()+3
+    while True:
+        sinks=desktop_sinks(json.loads(run(['pw-dump'],user=True)),card)
+        if len(sinks)==1:break
+        if time.monotonic()>until:raise ValueError('Pulse ALSA sink did not appear')
+        time.sleep(.3)
+    with NODE.open('x') as stream:stream.write(str(sinks[0]['id'])+'\n')
+    NODE.chmod(0o600)
     return int(module)
 
 
@@ -168,6 +180,10 @@ def enable(card):
         time.sleep(.3)
     sink=sinks[0]
     run(['wpctl','set-default',str(sink['id'])],user=True)
+    try:
+        run(['pactl','set-default-sink','oneplus13_speakers'],user=True)
+    except ValueError:
+        pass
     run(['wpctl','set-volume','--limit','1',str(sink['id']),'0.5'],user=True)
     run(['wpctl','set-mute',str(sink['id']),'0'],user=True)
     return {'scope':'EXPLICIT_RAM_PIPEWIRE_SPEAKER_CANDIDATE','sink_id':sink['id'],'sink_name':sink['name'],
