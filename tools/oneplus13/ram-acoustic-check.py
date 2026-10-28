@@ -7,13 +7,14 @@ STATE=Path('/run/oneplus13/acoustic-check')
 CARD='OnePlus13-Audio-Probe'
 RATE=48000
 VOLUME=640
+FREQUENCIES=(1000,1500)
 def load(name,path):
  s=importlib.util.spec_from_file_location(name,path);m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
 def signal():
  peak=round(32767*10**(-18/20));result=bytearray()
  for i in range(RATE*2):
   t=i%RATE;level=min(1.,t/(RATE*.02),(RATE-1-t)/(RATE*.02))
-  value=round(peak*level*math.sin(2*math.pi*(440 if i<RATE else 880)*t/RATE))
+  value=round(peak*level*math.sin(2*math.pi*FREQUENCIES[i//RATE]*t/RATE))
   result.extend(struct.pack('<hh',value if i<RATE else 0,value if i>=RATE else 0))
  return bytes(result)
 def analyze(raw,muted_frame,live_frame):
@@ -24,15 +25,16 @@ def analyze(raw,muted_frame,live_frame):
   if v&0x800000:v-=0x1000000
   channels[n%2].append(v/8388608)
  n=RATE//2
+ basis={freq:([math.cos(2*math.pi*freq*i/RATE) for i in range(n)],
+              [math.sin(2*math.pi*freq*i/RATE) for i in range(n)]) for freq in FREQUENCIES}
  def amplitude(values,start,freq):
   if not 0<=start<=len(values)-n:raise ValueError('Tone window outside capture')
   data=values[start:start+n]
-  angle=2*math.pi*freq/RATE
-  c=sum(v*math.cos(angle*i) for i,v in enumerate(data))
-  s=sum(v*math.sin(angle*i) for i,v in enumerate(data))
+  c=sum(v*w for v,w in zip(data,basis[freq][0]))
+  s=sum(v*w for v,w in zip(data,basis[freq][1]))
   return 2*math.hypot(c,s)/n
  result=[]
- for speaker,freq in ((0,440),(1,880)):
+ for speaker,freq in enumerate(FREQUENCIES):
   observations=[]
   for channel,values in enumerate(channels):
    quiet=amplitude(values,muted_frame+int((speaker+.25)*RATE),freq)
@@ -43,7 +45,14 @@ def analyze(raw,muted_frame,live_frame):
   result.append({'speaker_channel':speaker,'frequency_hz':freq,'observations':observations,
                  'pass':any(v['pass'] for v in observations)})
  clipping=[sum(abs(v)>=.999999 for v in values) for values in channels]
- return {'speaker_responses':result,'clipped_samples':clipping,
+ profile=[]
+ for freq in FREQUENCIES:
+  for channel,values in enumerate(channels):
+   profile.append({'frequency_hz':freq,'microphone_channel':channel,
+       'half_second_windows':[{'center_seconds':round((start+n/2)/RATE,3),'amplitude':amplitude(values,start,freq)}
+                              for start in range(0,len(values)-n+1,RATE//4)]})
+ return {'speaker_responses':result,'clipped_samples':clipping,'spectrum_profile':profile,
+         'recorded_frame_markers':{'muted_start':muted_frame,'live_start':live_frame},
          'correlated_two_speaker_response_pass':all(v['pass'] for v in result) and not any(clipping),
          'human_listening_performed':False,'dynamic_protection_qualified':False}
 def main():
@@ -124,9 +133,11 @@ def main():
   audio.wait_off(paths)
   if cleanup_errors:raise ValueError('Acoustic control restoration failed')
  after=audio.wait_off(paths)
- print('RAM_ACOUSTIC_RESULT '+json.dumps({'scope':'BOUNDED_NATIVE_TWO_SPEAKER_MICROPHONE_CORRELATION',
+ report={'scope':'BOUNDED_NATIVE_TWO_SPEAKER_MICROPHONE_CORRELATION',
     'test_volume':VOLUME,'signal_peak_dbfs':-18,'signal_sha256':hashlib.sha256(wave).hexdigest(),
     'muted_then_live_same_pcm':True,'amp_state_samples':amp_samples,
     'raw_audio_deleted':True,'controls_restored':True,'amplifiers_stopped':not any(s['powered'] for s in after),
-    'normal_desktop_playback_qualified':False,**answer},sort_keys=True),flush=True)
+    'normal_desktop_playback_qualified':False,**answer}
+ (STATE/'result.json').write_text(json.dumps(report,sort_keys=True)+'\n')
+ print('RAM_ACOUSTIC_RESULT '+json.dumps(report,sort_keys=True),flush=True)
 if __name__=='__main__':main()

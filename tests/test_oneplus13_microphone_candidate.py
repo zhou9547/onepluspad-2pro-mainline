@@ -43,6 +43,11 @@ class MicrophoneCandidate(unittest.TestCase):
   self.assertEqual(len(wave),48000*2*2*2)
   self.assertFalse(any(values[1:48000*2:2]));self.assertFalse(any(values[48000*2::2]))
   self.assertLessEqual(max(abs(x) for x in values),4125)
+  left=values[0:96000:2];right=values[96001::2]
+  for samples,freq,other in ((left,1000,1500),(right,1500,1000)):
+   match=2*abs(sum(v*math.sin(2*math.pi*freq*i/48000) for i,v in enumerate(samples)))/48000
+   cross=2*abs(sum(v*math.sin(2*math.pi*other*i/48000) for i,v in enumerate(samples)))/48000
+   self.assertGreater(match,4000);self.assertLess(cross,5)
   muted=24000;live=168000
   def make(contrast=True):
    out=bytearray()
@@ -50,11 +55,12 @@ class MicrophoneCandidate(unittest.TestCase):
     v=round(10*math.sin(2*math.pi*997*i/48000))
     for start,level in ((muted,10),(live,100000 if contrast else 10)):
      t=i-start
-     if 0<=t<96000:v+=round(level*math.sin(2*math.pi*(440 if t<48000 else 880)*t/48000))
+     if 0<=t<96000:v+=round(level*math.sin(2*math.pi*(1000 if t<48000 else 1500)*t/48000))
     out.extend(struct.pack('<ii',v,v//2))
    return bytes(out)
   result=acoustic.analyze(make(),muted,live)
   self.assertTrue(result['correlated_two_speaker_response_pass'])
+  self.assertEqual(len(result['spectrum_profile']),4)
   self.assertFalse(result['human_listening_performed'])
   self.assertFalse(acoustic.analyze(make(False),muted,live)['correlated_two_speaker_response_pass'])
   with self.assertRaises(ValueError):acoustic.analyze(b'',muted,live)

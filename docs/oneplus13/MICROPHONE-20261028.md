@@ -42,11 +42,15 @@ physical microphone response, speaker audibility or dynamic protection.
 
 Hardware validation remains required. A separate checker runs only after a
 successful native capture. It compares the same two-second PCM at volume0 and
-640: the left channel receives440Hz for one second, then the right880Hz for
+640: the left channel receives1kHz for one second, then the right1.5kHz for
 one second, both with20ms ramps. Eight seconds of RAM capture are analyzed at
 the matching frequencies; each speaker must produce at least an eightfold
 response increase over its muted control, without clipping. Both volumes,
 routes and capture controls restore afterward, and raw audio is deleted.
+The earlier440/880Hz round passed native capture and the880Hz response, while
+the440Hz response failed the unchanged8x threshold. No gain increase is made.
+Half-second spectral summaries with quarter-second spacing now identify timing
+or band-specific weaknesses without retaining raw audio.
 This measures a correlated microphone response; human listening, ordinary
 desktop playback and dynamic speaker protection remain separate acceptance.
 

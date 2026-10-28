@@ -1,5 +1,17 @@
 ## Self-contained sensor samples and D-Bus joint pass, 2026-10-28
 
+The d353ba17 joint round validates native WCD capture: both48kHz S24_LE
+channels delivered96,000 frames with no clipping, and every control restored.
+Both WCD SoundWire components bind and the corrected live power/reset/port
+properties match. The same-PCM muted/live test at640 produced a12.1x/67.6x
+880Hz microphone response for channel1; channel0's440Hz result failed the8x
+gate. This is not two-speaker acoustic acceptance. The next test retains the
+gain and threshold, changes to1kHz/1.5kHz voice-band tones and records bounded
+time/frequency summaries before deleting raw audio. All retained targets passed,
+including SensorProxy, quiet PCM, Docker, both WiFi bands, desktop/Chinese/SSH
+and the live Ubuntu Dock gate. Android returned in424.5s, baselines matched and
+physical writes remained zero. Normal desktop audio is still disabled.
+
 The firstf37017bc microphone-alternative round stopped before loading the WCD
 drivers: ABL rewrites the root compatible/model to the exact C.93 Sun MTP,dodge
 pair, whereas the new check expected the source DT's OnePlus identity. A guarded
