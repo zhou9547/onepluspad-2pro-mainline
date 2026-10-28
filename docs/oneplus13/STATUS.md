@@ -32,8 +32,21 @@ the proxy may perform its own Polkit authorization, allow only desktop account
 `a` and root to claim sensors, and keep the reverse file server at UID/GID
 65534 with its device policy. Ordinary loudness, dynamic speaker protection,
 overlay2/IPv6 Docker modes, physical axes calibration, suspend and long-term
-stability remain outside this acceptance. A fresh GitHub Actions build of the
-final commit is required before this candidate becomes the public artifact.
+stability remain outside this acceptance.
+
+GitHub Actions run
+[40764560596](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40764560596)
+completed all five jobs on published source
+`30908706429e0aeb154b8b3a57f911cd5b3080f1`. The downloaded artifact was
+independently verified: boot SHA256
+`53593732ea5003643cdbae3baed8d7e4eead913f51a64a88d49c17ca90209796`
+and rootfs SHA256
+`1288689f4e75915ce1a99785d5b811bfa25bedc7be3628e642a940fae013e44b`.
+The final ZIP SHA256 is
+`99ba72524a593c38111ea0bc16e26da16e17c8ba2d946e14ac5560be6b1f5ead`.
+Boot-section, SHA256SUMS, qualified firmware, SSC, sensor runtime, desktop
+sensor service, Docker, timezone, 896 speaker and native `pactl` checks all
+match the reviewed source.
 
 ## Final hybrid build and pending owner rotation acceptance, 2026-10-29
 
