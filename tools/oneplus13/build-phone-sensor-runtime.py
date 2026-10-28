@@ -7,7 +7,6 @@ Consumes only the guarded SSC build from this exact integration source commit.
 """
 import argparse,hashlib,io,json,os,platform,shlex,shutil,struct,subprocess,sys,tarfile,urllib.request
 from pathlib import Path
-from verified_download import fetch
 REPO=Path(__file__).resolve().parents[2]
 PREFIX='/usr/lib/erhai/sensors'
 
@@ -57,6 +56,7 @@ def build_phone_rpc(archive,out,meson,log):
         raise ValueError('Delivered phone RPC -W parser/no-device guard failed')
     return stage/PREFIX.lstrip('/'),proof
 def main():
+    from verified_download import fetch
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--ssc-build',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
     p.add_argument('--meson',default='meson');a=p.parse_args()
