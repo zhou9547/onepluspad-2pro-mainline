@@ -74,6 +74,11 @@ def main():
         verify_paths(directory,{'rebased.patch':cphy_lock['rebase_patch_sha256']})
         run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0','-i',directory/'rebased.patch'])
         verify_paths(kernel,cphy_lock['generated_files'])
+        catalog=['python3',directory/'review-phone-tables.py','--source',
+                 directory/'vendor/cam_csiphy_2_3_0_hwreg_dodge_ultrawide.h',
+                 '--output',out/'phone-cphy-catalog']
+        if args.cross_compile:catalog+=['--cross-compile',args.cross_compile]
+        run(catalog)
     # Only this isolated tree gains disabled CCI/MCLK resources. No firmware,
     # rootfs or normal build output is touched. The amplifier
     # object shares the new build configuration, without Kconfig/DT integration.
@@ -129,6 +134,7 @@ def main():
     (out/'kernel.config').write_text(cfg)
     proof={'scope':'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
        'isolated_cphy_framework':args.cphy,'cphy_provenance':cphy_lock,
+       'phone_cphy_catalog_staged_as_data_only':args.cphy,
        'phone_cphy_register_table_present':False,'cphy_capture_qualified':False,
        'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
        'disabled_cci_resources':lock['disabled_cci_resources'],'resource_rebases':lock['resource_rebases'],

@@ -1,3 +1,15 @@
+## Phone C-PHY data catalog prepared, 2026-10-29
+
+The isolated --cphy component build now includes a hash-bound review of the
+unmodified public GPL dodge-ultrawide v2.3.0 source:29 rate tables,36 registers
+each, three-trio address/parameter checks,72 base and4 common records, and
+the exact3048us reset-release delay. A symbol-rate selector avoids the mismatch
+between the vendor's rounded2.28 rate thresholds and the generic exact16/7
+formula. Sixty release/sanitizer boundary checks, AArch64 data-object compilation
+and a clean full WSL component rebuild pass. Native Actions is pending for this
+addition. No phone runtime table, MMIO or capture is enabled. See
+[CAMERA-PHONE-PHY-CATALOG-20261029.md](CAMERA-PHONE-PHY-CATALOG-20261029.md).
+
 ## r61 countdown passes; host protocol error prevents reset acceptance
 
 r61 on the retained5f37a1da Actions image with the separately published66756a58

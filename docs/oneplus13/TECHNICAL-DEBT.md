@@ -1,5 +1,14 @@
 ## Isolated C-PHY framework boundary, 2026-10-29
 
+The public phone PHY data catalog is now parsed, range-checked, boundary-tested
+and compiled as data in the isolated component workflow. It is not connected
+to a runtime driver. Vendor thresholds use2.28 bits/symbol, so direct comparison
+with generic16/7-converted rates selects the wrong table at nominal boundaries.
+Preserve explicit symbol-rate thresholds, settle-high/CDR behavior,3048us reset
+release, reference-generator polling and actual phone interrupt offsets when
+implementing the runtime operations. The sensor's19.2MHz mode remains required;
+another GPL driver's24MHz C-PHY mode must not be copied wholesale.
+
 r61 passes awake countdown/keepalive but fails the host's key-order-dependent
 receipt regex. The premature recovery branch means no independent reset claim.
 Do not upgrade the unobserved final helper/disarm state from its armed receipt.
