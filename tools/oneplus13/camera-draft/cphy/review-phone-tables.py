@@ -45,7 +45,13 @@ def main():
                       'exact_effective_rate_ceiling':(symbol*16+6)//7,'registers':data})
     assert len(rates)==29 and [r['max_symbol_rate'] for r in rates]==sorted({r['max_symbol_rate'] for r in rates})
     common=rows('csiphy_common_reg_2_3_0_dodge_ultrawide');base=rows('csiphy_3ph_v2_3_0_reg_dodge_ultrawide')
+    irq=rows('csiphy_irq_reg_2_3_0_dodge_ultrawide')
     assert len(common)==4 and len(base)==72
+    assert len(irq)==11 and [r[0] for r in irq]==list(range(0x102c,0x1058,4))
+    assert all(r[3]=='CSIPHY_DEFAULT_PARAMS' for r in common+base+irq)
+    assert re.search(r'\.refgen_status_offset\s*=\s*0x1184',s)
+    assert re.search(r'\.mipi_csiphy_interrupt_status0_addr\s*=\s*0x1138',s)
+    assert re.search(r'\.mipi_csiphy_interrupt_clear0_addr\s*=\s*0x1058',s)
     reset=[r for r in rows('csiphy_reset_exit_reg_2_3_0_dodge_ultrawide') if r[3]=='CSIPHY_3PH_REGS']
     assert reset==[(0x1000,0x0e,3048,'CSIPHY_3PH_REGS')]
     out=args.output.resolve();out.mkdir(parents=True,exist_ok=False)
@@ -62,13 +68,38 @@ def main():
         header+=f'static const struct phone_cphy_reg rate_{i}[] = {{\n'
         for a,v,d,t in rate['registers']:header+=f'{{0x{a:04x},0x{v:02x},{d},{params[t]}}},\n'
         header+='};\n'
+    for name,data in [('phone_common',common),('phone_base',base),('phone_irq',irq)]:
+        header+=f'static const struct phone_cphy_reg {name}[] = {{\n'
+        for a,v,d,t in data:header+=f'{{0x{a:04x},0x{v:02x},{d},0}},\n'
+        header+='};\n'
     header+='static const struct phone_cphy_rate rates[] = {\n'
     for i,r in enumerate(rates):header+=f'{{{r["max_symbol_rate"]}ULL,{r["vendor_rounded_bandwidth"]}ULL,rate_{i},36}},\n'
     header+='};\nstatic int phone_cphy_rate_index(unsigned long long rate)\n{\n if (!rate) return -1;\n for (unsigned int i=0;i<29;i++) if (rate<=rates[i].max_symbol_rate) return i;\n return -1;\n}\n'
+    header+='#include "phone-sequence.h"\n'
     (out/'catalog.h').write_text(header)
+    sequence=Path(__file__).with_name('phone-sequence.h')
+    (out/'phone-sequence.h').write_bytes(sequence.read_bytes())
     harness='''#include <assert.h>
     #include <stdint.h>
     #include "catalog.h"
+    struct fake { unsigned int calls,fail_at,released; unsigned int registers[0x1200/4]; };
+    static int operation(void *context,const struct phone_cphy_op *op) {
+     struct fake *f=context;
+     unsigned int i=f->calls++;
+     if(i==f->fail_at) return -123;
+     assert(op->address%4==0 && op->address<=0x1184);
+     if(op->type==PHONE_POLL) {
+      assert(i==0 && op->address==0x1184 && op->mask==0x80);
+      assert(op->delay_us==500 && op->timeout_us==10000);
+     } else {
+      if(op->type==PHONE_UPDATE) {
+       assert(i==1 && op->address==0x1014 && op->mask==0x2a);
+       f->registers[op->address/4]=(f->registers[op->address/4]&~op->mask)|op->value;
+      } else f->registers[op->address/4]=op->value;
+      if(op->address==0x1000) { assert(i==125 && op->delay_us==3048); f->released++; }
+     }
+     return 0;
+    }
     int main(void) {
      assert(phone_cphy_rate_index(0)==-1);
      for(unsigned int i=0;i<29;i++) {
@@ -78,6 +109,32 @@ def main():
       for(unsigned int j=0;j<36;j++) assert(rates[i].registers[j].value<=255);
      }
      assert(phone_cphy_rate_index(UINT64_MAX)==-1);
+     struct phone_cphy_plan plan;
+     for(unsigned int i=0;i<29;i++) {
+      assert(phone_cphy_build_plan(&plan,rates[i].max_symbol_rate,400000000,1000,3000,7)==0);
+      assert(plan.count==126 && plan.rate_index==i && plan.settle_count==790);
+      struct fake f={.fail_at=UINT32_MAX}; f.registers[0x1014/4]=0x80;
+      assert(phone_cphy_execute(&plan,operation,&f)==0 && f.calls==126 && f.released==1);
+      assert(f.registers[0x1014/4]==0xaa);
+      for(unsigned int trio=0;trio<3;trio++) {
+       unsigned int base=0x200+trio*0x400;
+       assert(f.registers[(base+0x0c)/4]==0x16 && f.registers[(base+0x08)/4]==3);
+       assert(f.registers[(base+0x78)/4]==rates[i].registers[4+trio*8].value);
+      }
+     }
+     for(unsigned int fail=0;fail<126;fail++) {
+      struct fake f={.fail_at=fail};
+      assert(phone_cphy_execute(&plan,operation,&f)==-123 && f.calls==fail+1 && !f.released);
+     }
+     assert(phone_cphy_build_plan(&plan,0,400000000,1000,3000,7)==-1 && !plan.count);
+     assert(phone_cphy_build_plan(&plan,UINT64_MAX,400000000,1000,3000,7)==-1 && !plan.count);
+     assert(phone_cphy_build_plan(&plan,80000000,200000000,1000,3000,7)==-1 && !plan.count);
+     assert(phone_cphy_build_plan(&plan,80000000,400000000,0,3000,7)==-1 && !plan.count);
+     assert(phone_cphy_build_plan(&plan,80000000,400000000,1000,0,7)==-1 && !plan.count);
+     assert(phone_cphy_build_plan(&plan,80000000,400000000,1000000,3000,7)==-1 && !plan.count);
+     assert(phone_cphy_build_plan(&plan,80000000,400000000,1,3,7)==-1 && !plan.count);
+     assert(phone_cphy_build_plan(&plan,80000000,400000000,1000,3000,3)==-1 && !plan.count);
+     assert(phone_cphy_execute(&plan,operation,0)==-1);
      return 0;
     }
     '''
@@ -94,6 +151,11 @@ def main():
             'vendor_bandwidth_uses_228_over_100':True,'generic_formula_is_16_over_7':True,
             'exact_threshold_naive_selection_would_advance_table':all(r['exact_effective_rate_ceiling']>r['vendor_rounded_bandwidth'] for r in rates),
             'symbol_rate_boundary_checks':60,'release_and_sanitizers_pass':True,
+            'phone_sequence_operations':126,'phone_sequence_rate_cases':29,
+            'phone_sequence_abort_injections':126,'phone_sequence_negative_cases':8,
+            'settle_high_byte_and_default_cdr_checked':True,
+            'refgen_poll_before_writes':True,'production_mmio_adapter_present':False,
+            'sequence_source_sha256':hashlib.sha256(sequence.read_bytes()).hexdigest(),
             'aarch64_object_sha256':hashlib.sha256((out/'catalog-arm64.o').read_bytes()).hexdigest(),
             'generated_header_sha256':hashlib.sha256(header.encode()).hexdigest(),
             'phone_operations':0,'kernel_driver_changed':False,'hardware_qualified':False}

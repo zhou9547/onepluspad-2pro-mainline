@@ -33,12 +33,13 @@ flashing acceptance.
 | Suspend / resume / idle power | Not accepted; awake-scope independent reset passes in r62, while idle counter behavior remains unresolved | Idle and suspend recovery, RTC wake, power and charging measurements; awake recovery does not qualify deep sleep |
 | USB host / display / storage peripherals | USB gadget test link works | Physically attached peripherals and role switching later, after isolated theoretical checks |
 | Internal storage / installation / updates | Block read-only RAM guard; repeated Android return checks | No install, partition, boot slot or OTA design is accepted; current scope prohibits writing them |
-| Recovery / endurance | r62 Android return490.2s, seven matching baseline fields, clean kernel health and zero writes | Awake independent reset with zero host recovery requests qualified; idle/suspend/endurance remain open; historical failed-run stop flags preserved |
+| Recovery / endurance | r64 Android return501.4s, seven matching baseline fields, clean kernel health and zero writes | Awake independent reset with zero host recovery requests qualified; idle/suspend/endurance remain open; historical failed-run stop flags preserved |
 
-The retained acceptance above is bound to Actions40824286846 and source5f37a1da,
+The retained acceptance above is bound to Actions40833999996 and sourceee214438,
 with downloaded-artifact verification and r62 published host helper66756a58/parser e65db825. A newer diagnostic commit is not a
-new accepted image. Video runtime native selftests pass, but Iris hardware has
-not been activated and actual video pixels/VA-API remain unqualified.
+new accepted image. r64 verifies one real Iris AVC/NV12 frame with checked pixels/timestamp, runtime
+suspend and full teardown under the awake guard. Desktop playback, VA-API and
+long-duration/all-codec support remain unqualified.
 
 `review-feature-gaps.py` counts effective compatible nodes only. Defaults keep
 camera/video manual, MPSS disabled and unreviewed phone peripherals absent.

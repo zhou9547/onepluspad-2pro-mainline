@@ -42,3 +42,30 @@ its24MHz input and mode clocks differ from this phone's19.2MHz input. Its
 for further review, not permission to transplant another board's complete mode
 or calibration. Sensor register/rate/prepare/preamble agreement and real pixels
 remain required. Original proprietary C.93 sensor register tables stay private.
+
+## Source-derived standalone sequence candidate
+
+The isolated catalog now emits a reusable, bounded126-operation sequence plan.
+It first polls0x1184 bit7 (500us interval,10ms timeout), updates the three-trio
+lane mask0x2a at0x1014, then writes4 common,36 rate,72 base and11 interrupt
+records. Reset release0x1000=0x0e is last and retains3048us delay. This order is
+reviewed against the exact downstream START path and config helpers, recorded
+with Git-blob/SHA256 provenance in `phone-sequence-sources.json`. The source
+also places power/clock/CPAS work before this plan; those are not implemented
+by the planner. Do not call the plan a complete power-on sequence.
+
+The standalone C-PHY settle value is floor((prepare_ns + floor(preamble_ns/3))
+*400MHz/1e9)-10, preserving the vendor's operation order. Both bytes are
+substituted into each trio's rate settings. Zero/overflow, missing timings,
+another timer, partial/combo trios and out-of-range symbol rates are rejected
+before any callback. Normal CDR defaults and all per-register delays survive;
+no sweep, auxiliary or diagnostic tuning is enabled.
+
+The callback executor currently runs only on a fake register array. Tests
+cover29 actual rate tables, settle790 with a nonzero high byte, default CDR,
+lane-mask preservation,8 invalid inputs and injected failure at each of126
+operations. Every error stops subsequent programming, including reset release.
+Release and ASan/UBSan runs pass; the same code compiles into an AArch64 object.
+No production MMIO callback, platform match, DT activation or camera capture
+is added. Clock/rail ownership, full failure rollback, physical sensor timing,
+CSID graph and real pixels remain required before runtime integration.

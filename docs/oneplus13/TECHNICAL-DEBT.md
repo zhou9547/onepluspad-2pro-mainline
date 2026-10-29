@@ -1,3 +1,29 @@
+## r64 real Iris frame and retained regressions pass, 2026-10-29
+
+The exact ee214438 Actions40833999996 image passes all five source-build jobs,
+independent downloaded-byte verification and the combined hardware round.
+Iris decodes the synthetic320x240 AVC frame to linear NV12 with checked luma
+and timestamp, without software fallback. Input size7077888 is confirmed by
+S_FMT/QUERYBUF;16 capture buffers are147456 bytes each. Both streams stop,
+runtime suspend passes, the module unloads and video nodes disappear. The
+separate awake guard acknowledges cleanup and disarms before the host recovers.
+
+Strict camera ID/teardown, ordinary sensor startup/left-up Mutter1, microphone,
+both speaker correlations, actual20/50/100%+mute, Docker bridge/DNS/NAT/port,
+both WiFi bands, GNOME/Mesa, Chinese/SSH/Dock and final kernel health pass.
+Android returns after501.4s with seven matching baselines and zero partition
+writes. [Sanitized evidence](evidence/joint-video-r64.sanitized.json) retains
+an additional final host stop flag set after feature acceptance during the
+recovery path; it is not cleared. No phase-stop event occurs and the saved
+recovery transcript contains the correct RAM identity receipt. Review that
+transport boundary before a new plan. Older failed-run flags also remain.
+
+This accepts one bounded V4L2 frame and cleanup, not desktop playback, VA-API,
+all codecs, long-duration decoding, idle/suspend recovery or camera capture.
+A source-derived phone C-PHY sequence planner additionally passes29 rate-table,
+126 abort-injection and8 invalid-input cases in release/sanitizer builds; it
+has no production MMIO adapter or active camera graph.
+
 ## r63 Iris activation: input allocator limit, clean recovery
 
 The exact b1cf1932 Actions40831129105 image passes independent downloaded-byte

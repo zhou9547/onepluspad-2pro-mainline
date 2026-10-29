@@ -61,6 +61,7 @@ jobs:
             out/av-components/camera-synthetic/*.log
             out/av-components/phone-cphy-catalog/verification.json
             out/av-components/phone-cphy-catalog/catalog.h
+            out/av-components/phone-cphy-catalog/phone-sequence.h
             out/av-components/phone-cphy-catalog/catalog-arm64.o
             out/av-components/linux/drivers/media/platform/qcom/camss/*.o
             out/av-components/linux/drivers/media/i2c/s5kjn5.o

@@ -1,0 +1,180 @@
+{
+  "scope": "R64_COMBINED_REAL_IRIS_FRAME_AND_RETAINED_REGRESSIONS",
+  "image_commit": "ee21443872d8bce00a1b9348efaf33243811398b",
+  "actions_run": 40833999996,
+  "native_offline_gates_run": 40834036462,
+  "qualified_phase_results": {
+    "camera_chip_id_pass": true,
+    "video_frame_pass": true,
+    "awake_video_guard_cleanly_disarmed": true,
+    "desktop_sensor_stack_pass": true,
+    "microphone_capture_pass": true,
+    "audio_amplifier_inventory_pass": true,
+    "audio_quiet_nonzero_pass": true,
+    "acoustic_response_pass": true,
+    "docker_bridge_pass": true,
+    "preserved_features_completed": true,
+    "dock_extension_pass": true,
+    "locale_defaults_pass": true,
+    "ssh_password_login_and_chinese_locale_pass": true,
+    "desktop_static_orientation_pass": true,
+    "desktop_audio_volume_pass": true,
+    "full_history_kernel_health_pass": true,
+    "wifi_dualband_pass": true,
+    "joint_acceptance_pass": true
+  },
+  "video": {
+    "capture_input": false,
+    "cleanup_pass": true,
+    "decoded_frame": {
+      "frame_height": 240,
+      "frame_verified": true,
+      "frame_width": 320,
+      "software_fallback": false,
+      "streams_stopped": true
+    },
+    "firmware_session_opened": true,
+    "hardware_decode_qualified": true,
+    "module_unloaded": true,
+    "runtime_suspended": true,
+    "scope": "BOUNDED_MANUAL_IRIS_AVC_FRAME",
+    "software_fallback": false,
+    "video_nodes_removed": true
+  },
+  "desktop_orientation": {
+    "automatic_rotation_pass": false,
+    "display_transform_sequence": [
+      [
+        1
+      ]
+    ],
+    "distinct_display_transforms": [
+      1
+    ],
+    "expected_orientation": "left-up",
+    "flat_zero_transform_pass": false,
+    "orientations": [
+      "left-up"
+    ],
+    "physical_axes_calibration_accepted": false,
+    "samples": 32,
+    "scope": "STATIC_DESKTOP_ORIENTATION_OBSERVATION",
+    "seconds": 8,
+    "static_pose_pass": true,
+    "tilts": [
+      "vertical"
+    ],
+    "upright_transform_matches": true
+  },
+  "desktop_audio_volume": {
+    "absolute_loudness_or_dynamic_protection_qualified": false,
+    "acoustic_system_volume_pass": true,
+    "capture_controls_restored": true,
+    "clipped_samples": 0,
+    "frequency_responses": [
+      {
+        "amplitudes": {
+          "100": 0.08080919581323606,
+          "20": 0.0006673553814734639,
+          "50": 0.010372905153142679,
+          "muted": 6.994187564582167e-06
+        },
+        "frequency_hz": 1000,
+        "increases_with_volume": true,
+        "live_to_mute_ratio": 11553.764474725465,
+        "microphone_channel": 1
+      },
+      {
+        "amplitudes": {
+          "100": 0.06102058471588697,
+          "20": 0.00044811137595793325,
+          "50": 0.007112862304116656,
+          "muted": 1.2974839108339768e-05
+        },
+        "frequency_hz": 1500,
+        "increases_with_volume": true,
+        "live_to_mute_ratio": 4702.99355594052,
+        "microphone_channel": 1
+      }
+    ],
+    "hardware_level": 896,
+    "measurements": {
+      "100": {
+        "amplitudes": [
+          [
+            0.02401719581629004,
+            0.02603696694924424
+          ],
+          [
+            0.08080919581323606,
+            0.06102058471588697
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 1.00"
+      },
+      "20": {
+        "amplitudes": [
+          [
+            0.0001976094832632945,
+            0.00020828107798945468
+          ],
+          [
+            0.0006673553814734639,
+            0.00044811137595793325
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.20"
+      },
+      "50": {
+        "amplitudes": [
+          [
+            0.0030433141346936435,
+            0.0033013613358121034
+          ],
+          [
+            0.010372905153142679,
+            0.007112862304116656
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.50"
+      },
+      "muted": {
+        "amplitudes": [
+          [
+            3.954374016174374e-06,
+            1.8013316492512246e-06
+          ],
+          [
+            6.994187564582167e-06,
+            1.2974839108339768e-05
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.20 [MUTED]"
+      }
+    },
+    "raw_audio_deleted": true,
+    "scope": "RAM_DESKTOP_SYSTEM_VOLUME_ACOUSTIC_MEASUREMENT",
+    "software_muted_at_exit": true
+  },
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "baseline_key_count": 7,
+  "partition_writes": 0,
+  "elapsed_seconds": 501.4,
+  "kernel_health_clean": true,
+  "host_recovery_requests": 1,
+  "awake_guard_completed_and_disarmed": true,
+  "final_host_stop_flag_preserved": true,
+  "host_stop_flag_present_at_feature_acceptance": false,
+  "recovery_transport_identity_receipt_present": true,
+  "phase_stop_events": 0,
+  "historical_stop_flags_cleared": false,
+  "idle_or_suspend_recovery_qualified": false,
+  "desktop_player_or_vaapi_qualified": false,
+  "physical_pose_transition_qualified": false,
+  "camera_capture_qualified": false
+}

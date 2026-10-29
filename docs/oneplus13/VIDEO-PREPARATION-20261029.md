@@ -79,3 +79,16 @@ requires honoring the returned count; the driver negotiates buffer storage throu
 S_FMT/QUERYBUF. No allocation or successful open substitutes for verified NV12
 pixels and timestamp. A new Actions image and retained-feature joint run are
 required before accepting this fix or claiming hardware decode/VA-API support.
+
+## r64 one-frame hardware result
+
+The corrected exact ee214438 image from Actions40833999996 passes the
+[combined r64 round](evidence/joint-video-r64.sanitized.json). The real input
+buffers are7077888 bytes; capture NV12 is147456 bytes per buffer. The generated
+320x240 AVC frame produces the expected luma bars and timestamp, both queues
+stop, runtime suspend succeeds, Iris unloads and video nodes disappear. The
+awake guard verifies cleanup and disarms. All mature joint regressions pass;
+Android returns after501.4s with clean health, matching baselines and zero
+partition writes. This result qualifies only this bounded stateful V4L2 path.
+Desktop multimedia integration, VA-API, more codecs and long-duration playback
+remain open. The final host recovery stop flag is retained for boundary review.
