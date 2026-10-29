@@ -19,6 +19,12 @@ class ModulePolicy(unittest.TestCase):
         self.assertNotIn('libcomposite',found)
         self.assertNotIn('dodge_s3910',found)
         self.assertNotIn('qcom_cpucp_mbox',found)
+    def test_camera_controller_and_sensor_remain_manual(self):
+        paths=['lib/modules/r/kernel/drivers/i2c/busses/i2c-qcom-cci.ko',
+               'lib/modules/r/kernel/drivers/media/i2c/s5kjn5.ko',
+               'lib/modules/r/kernel/drivers/i2c/busses/i2c-qcom-geni.ko']
+        self.assertEqual(policy.blocked_modules(paths,'r'),['i2c_qcom_cci','s5kjn5'])
+
     def test_no_path_traversal_or_other_release(self):
         for name in ['/lib/modules/r/kernel/sound/x.ko','./lib/modules/r/../x.ko','lib/modules/other/kernel/sound/x.ko']:
             with self.subTest(name=name),self.assertRaises(ValueError):policy.blocked_modules([name],'r')

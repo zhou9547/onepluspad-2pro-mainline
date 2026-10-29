@@ -124,6 +124,10 @@ def main():
     dest=stage/'usr/libexec/oneplus13-ram-audio-check.py'
     shutil.copyfile(REPO/'tools/oneplus13/ram-audio-check.py',dest);dest.chmod(0o755)
     audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    camera_hashes={}
+    dest=stage/'usr/libexec/oneplus13-ram-camera-chip-id.py'
+    shutil.copyfile(REPO/'tools/oneplus13/ram-camera-chip-id.py',dest);dest.chmod(0o755)
+    camera_hashes[str(dest.relative_to(stage))]=sha256(dest)
     dest=stage/'etc/wireplumber/wireplumber.conf.d/90-oneplus13-manual-audio.conf'
     dest.parent.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(REPO/'devices/oneplus13/audio/90-oneplus13-manual-audio.conf',dest)
@@ -263,6 +267,7 @@ def main():
         'ssc_sensor_property_types_corrected':True,
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
+    result.update(camera_probe_runtime_files=camera_hashes,camera_probe_auto_started=False,camera_capture_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
     result.update(desktop_audio_files=desktop_audio_hashes,desktop_audio_auto_started=False,
                   desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=896)

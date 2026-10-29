@@ -1,3 +1,20 @@
+## Separate camera chip-ID candidate prepared, 2026-10-29
+
+A separate camera/microphone boot recipe now derives CCI0/master0, the phone's
+ultrawide GPIO/clock/supply graph and a S5KJN5 client from the qualified tree.
+It preserves every unrelated microphone/desktop property and all reserved
+memory, checks3 existing-node changes and18 additional nodes, and remains a
+manual alternative boot artifact. The source-built rootfs carries a default-off
+chip-ID helper with live board/module/policy/RAM/watchdog checks and complete
+controller/sensor teardown. It never requests a frame. The VDDM shared digital
+vote remains an explicit inference rather than a schematic claim.
+
+All584 offline tests pass with5 environment skips. S5KJN5/full kernel linking
+passed the kernel job of Actions40801825269; its image assembly is still running.
+The camera alternative and its new package verification require a fresh complete
+Actions build. No physical camera power/probe has been attempted yet. See
+[the chip-ID candidate](CAMERA-CHIP-ID-PROBE-20261029.md).
+
 ## Downloaded desktop image qualified; S5KJN5 driver staged, 2026-10-29
 
 The exact e06f06bd Actions40798138265 image passed r53 in421.4s, then returned

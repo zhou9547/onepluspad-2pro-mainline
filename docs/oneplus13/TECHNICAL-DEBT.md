@@ -1,3 +1,14 @@
+## Camera chip-ID alternative boundary
+
+The camera alternative preserves the qualified microphone tree except phandles
+for two existing camera clock providers, the unused L1i regulator's phandle/1.0V
+ceiling and18 explicit camera/pinctrl/supply nodes. Its live helper checks the
+exact graph and module hashes before insertion and requires sensor/controller
+removal afterwards. It does not provide a capture pipeline or claim power/probe
+qualification before the joint hardware run. The VDDM/core shared vote is an
+inference from the saved phone regulator list; optional1.2V I/O is absent and no
+unknown PMIC input parent is fabricated. Keep these assumptions visible.
+
 ## Exact image acceptance and next camera probe boundary, 2026-10-29
 
 r53 qualifies the exact e06f06bd Actions artifact, including fresh independent

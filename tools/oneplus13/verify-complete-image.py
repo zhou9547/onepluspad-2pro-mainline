@@ -149,7 +149,47 @@ def main():
         'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf'],text=True)
     if 'install snd_soc_aw88461 /bin/false\n' not in policy:
         raise ValueError('Experimental amplifier must require manual activation')
-    static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION','pass':True,'source_commit':m['source_commit'],
+    camera_runtime=m.get('camera_probe_runtime_files',{})
+    if set(camera_runtime)!={'usr/libexec/oneplus13-ram-camera-chip-id.py'} or m.get('camera_probe_auto_started') is not False:
+        raise ValueError('Camera runtime must be explicit and default-off')
+    for name,digest in camera_runtime.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Camera runtime source hash changed')
+    camera_files=m.get('camera_probe_artifacts',{})
+    camera_names={'boot-camera-chip-id-ram-experimental.img',
+                  'sm8750-oneplus13-camera-chip-id-probe.dtb',
+                  'camera-probe-manifest.json','camera-probe-dtb-review.json'}
+    if set(camera_files)!=camera_names:raise ValueError('Missing manual camera probe artifacts')
+    for name,digest in camera_files.items():
+        if sha256(root/name)!=digest:raise ValueError('Camera artifact changed')
+    camera=json.loads((root/'camera-probe-manifest.json').read_text())
+    if (camera['scope']!='SEPARATE_MANUAL_CAMERA_CHIP_ID_RAM_BOOT_NEVER_FLASH' or
+            camera.get('camera_capture_qualified') is not False or
+            camera['default_boot_image_sha256']!=m['boot_image_sha256'] or
+            camera['rootfs_sha256']!=m['rootfs_sha256'] or
+            camera['source_commit']!=m['source_commit']):
+        raise ValueError('Camera alternative identity or qualification changed')
+    cam_nonce=camera['session_identity_nonce']
+    if not re.fullmatch('[a-f0-9]{24}',cam_nonce) or cam_nonce in (nonce,m['session_identity_nonce']):
+        raise ValueError('Camera alternative needs a separate session identity')
+    if camera['cmdline']!=m['cmdline'].replace('oneplus13.session='+m['session_identity_nonce'],
+            'oneplus13.session='+cam_nonce)+' oneplus13.audio_probe=1 oneplus13.camera_probe=1':
+        raise ValueError('Camera alternative boot arguments changed')
+    if (sha256(root/'boot-camera-chip-id-ram-experimental.img')!=camera['boot_image_sha256'] or
+            sha256(root/'sm8750-oneplus13-camera-chip-id-probe.dtb')!=camera['dtb_sha256']):
+        raise ValueError('Camera alternative manifest hashes disagree')
+    cam_sections=boot_sections((root/'boot-camera-chip-id-ram-experimental.img').read_bytes())
+    for key in ('kernel','ramdisk'):
+        if cam_sections[key]!=default_sections[key]:raise ValueError('Camera kernel/initramfs changed')
+    camera_dtb=importlib.import_module('camera-probe-dtb')
+    cam_expected,_=camera_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    cam_tree=Fdt(cam_expected);cam_tree.nodes['/chosen']['bootargs']=(camera['cmdline']+'\0').encode()
+    if (cam_sections['dtb']!=(root/'sm8750-oneplus13-camera-chip-id-probe.dtb').read_bytes() or
+            Fdt(cam_sections['dtb']).nodes!=cam_tree.nodes):
+        raise ValueError('Camera alternative DTB changed')
+    for module in ('s5kjn5','i2c_qcom_cci'):
+        if 'install '+module+' /bin/false\n' not in policy:raise ValueError('Camera modules must remain manual')
+    static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION' ,'pass':True,'source_commit':m['source_commit'],
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
             'container_files_verified':len(container_files),'container_daemon_auto_started':False,
@@ -160,6 +200,8 @@ def main():
             'desktop_audio_files_verified':len(desktop_audio_files),'desktop_audio_auto_started':False,
             'phone_timezone':'Asia/Shanghai',
             'experimental_microphone_files_verified':len(microphone_files),'microphone_auto_started':False,
+            'experimental_camera_files_verified':len(camera_files),'camera_auto_started':False,
+            'camera_probe_runtime_files_verified':len(camera_runtime),
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')
     if a.static_only:
