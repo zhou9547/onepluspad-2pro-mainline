@@ -1,5 +1,11 @@
 # Phone infrared board mapping
 
+A bounded rc-core SPI source candidate and disabled board fragment are now in
+`tools/oneplus13/infrared-draft`. They have not been compiled or tested. The
+driver requires the exact voltage and rejects the current incompatible L9B
+constraint; the fragment is not included in the phone DT. See the
+[source-only batch](SOURCE-ONLY-BATCH-20261029.md) for implementation and gaps.
+
 This is an offline stock-board and public-source review. No infrared transmission,
 power vote, pinmux change or functional acceptance has occurred.
 

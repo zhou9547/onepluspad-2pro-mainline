@@ -10,6 +10,10 @@ on:
         description: Optional runtime QEMU diagnostics
         type: boolean
         default: false
+      all_on_server:
+        description: Run every image job on the trusted ARM64 server, including rootfs and assembly
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -17,4 +21,5 @@ jobs:
     uses: ./.github/workflows/oneplus13-source-image.yml
     with:
       use_server: ${{ inputs.use_server }}
+      all_on_server: ${{ inputs.all_on_server }}
       runtime_qemu: ${{ inputs.runtime_qemu }}

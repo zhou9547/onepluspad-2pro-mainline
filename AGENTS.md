@@ -1,3 +1,14 @@
+# Current owner instruction, 2026-10-29: source changes only
+
+The owner now requests completing the remaining source/configuration work before
+any further compilation or testing. Do not start builds, workflow dispatches,
+unit/synthetic tests, emulator tests or phone operations until the owner resumes
+that phase. Earlier unattended phone windows do not override this newer pause.
+Read-only source inspection, source generation, editing and publishing reviewed
+source commits without CI dispatch are permitted. Keep uncompiled and untested
+candidates explicitly separate from hardware acceptance; do not claim all
+adaptation difficulties are solved by adding unverified code.
+
 # Current owner authorization, 2026-10-27
 
 The owner explicitly authorizes uploading the qualified firmware and calibration

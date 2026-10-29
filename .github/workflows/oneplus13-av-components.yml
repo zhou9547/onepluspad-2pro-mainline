@@ -18,6 +18,14 @@ on:
         description: Run existing complete offline gates without recompiling components
         type: boolean
         default: false
+      phone_cphy:
+        description: Include experimental phone C-PHY MMIO adapter (no enabled board graph)
+        type: boolean
+        default: false
+      infrared:
+        description: Include isolated bounded SPI infrared driver (no enabled board node)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -40,9 +48,16 @@ jobs:
       - name: Compile fixed camera prerequisites and actual amplifier functions
         env:
           CPHY: ${{ inputs.cphy }}
+          PHONE_CPHY: ${{ inputs.phone_cphy }}
+          INFRARED: ${{ inputs.infrared }}
         run: |
           args=()
-          if [[ "$CPHY" == true ]]; then args+=(--cphy); fi
+          if [[ "$PHONE_CPHY" == true ]]; then
+            args+=(--cphy --phone-cphy)
+          elif [[ "$CPHY" == true ]]; then
+            args+=(--cphy)
+          fi
+          if [[ "$INFRARED" == true ]]; then args+=(--infrared); fi
           python3 tools/oneplus13/camera-draft/build-components.py --output out/av-components "${args[@]}"
       - name: Run camera board-map contract tests without private FDT
         run: python3 -m unittest discover -s tests -p test_oneplus13_camera_board_map.py -v
@@ -55,6 +70,8 @@ jobs:
             out/av-components/compile.log
             out/av-components/verification.json
             out/av-components/kernel.config
+            out/av-components/infrared-source.json
+            out/av-components/linux/drivers/media/rc/ir-dodge-spi.o
             out/av-components/linux/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb
             out/av-components/audio-synthetic/verification.json
             out/av-components/camera-synthetic/verification.json

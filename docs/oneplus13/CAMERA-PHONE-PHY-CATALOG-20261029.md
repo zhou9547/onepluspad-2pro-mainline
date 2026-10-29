@@ -1,5 +1,11 @@
 # Phone-specific C-PHY register catalog
 
+An optional uncompiled phone MMIO adapter is now staged separately from this
+previously checked catalog and planner. It adds fixed timer/core-clock selection,
+IRQ handling and failed-start rollback; see
+[source-only batch](SOURCE-ONLY-BATCH-20261029.md). The historical results below
+apply to the original data/planner path, not the new adapter or camera capture.
+
 The isolated `--cphy` component build now reviews the original public GPL-2.0-only
 [dodge-ultrawide v2.3.0 table](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/d50b305f7da9e14715a25120a4ac7b1a4b8b97c3/vendor/qcom/opensource/camera-kernel/drivers/cam_sensor_module/cam_csiphy/include/cam_csiphy_2_3_0_hwreg_dodge_ultrawide.h).
 The unmodified source retains Qualcomm's copyright/license; repository pin,

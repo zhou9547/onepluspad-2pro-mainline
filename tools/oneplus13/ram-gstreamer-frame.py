@@ -77,21 +77,25 @@ def pipeline_frame(raw,device=None):
     report={'frame_verified':False,'pipeline_stopped':False,'software_fallback':False,
             'hardware_decoder_factory':factory_name,'scope':'GSTREAMER_EXPLICIT_V4L2_FRAME' if decoder else 'GSTREAMER_RAW_PIPELINE_SELFTEST_NO_DECODE_REQUEST'}
     try:
+        bus=pipe.get_bus()
         if pipe.set_state(Gst.State.PLAYING)==Gst.StateChangeReturn.FAILURE:
-            raise ValueError('Pipeline PLAYING failed')
+            error=bus.timed_pop_filtered(0,Gst.MessageType.ERROR)
+            raise ValueError(private_pipeline_error(error) if error else 'Pipeline PLAYING failed')
         buffer=Gst.Buffer.new_allocate(None,len(raw),None);buffer.fill(0,raw)
         buffer.pts=PTS;buffer.dts=PTS;buffer.duration=Gst.SECOND
         if source.emit('push-buffer',buffer)!=Gst.FlowReturn.OK:
             raise ValueError('Synthetic AU queue failed')
         if source.emit('end-of-stream')!=Gst.FlowReturn.OK:raise ValueError('Drain request failed')
-        until=time.monotonic()+12;bus=pipe.get_bus();sample=None
+        until=time.monotonic()+12;sample=None
         while time.monotonic()<until:
             error=bus.timed_pop_filtered(0,Gst.MessageType.ERROR)
             if error:
                 raise ValueError(private_pipeline_error(error))
             sample=sink.emit('try-pull-sample',100000000)
             if sample is not None:break
-        if sample is None:raise ValueError('Decoded frame timeout')
+        if sample is None:
+            error=bus.timed_pop_filtered(0,Gst.MessageType.ERROR)
+            raise ValueError(private_pipeline_error(error) if error else 'Decoded frame timeout')
         info=GstVideo.VideoInfo.new_from_caps(sample.get_caps())
         if info.width!=WIDTH or info.height!=HEIGHT or info.finfo.name!='NV12':
             raise ValueError('Unexpected decoded frame format')
@@ -108,6 +112,12 @@ def pipeline_frame(raw,device=None):
         result,state,pending=pipe.get_state(3*Gst.SECOND)
         report['pipeline_stopped']=(changed!=Gst.StateChangeReturn.FAILURE and
                                     result!=Gst.StateChangeReturn.FAILURE and state==Gst.State.NULL)
+        # Also report teardown after failed negotiation/decode. A failure must
+        # not erase evidence of whether the framework actually closed its FD.
+        print('GSTREAMER_PIPELINE_STATUS '+json.dumps({
+            'scope':report['scope'],'frame_verified':report['frame_verified'],
+            'pipeline_stopped':report['pipeline_stopped'],
+            'software_fallback':False},sort_keys=True),flush=True)
         if not report['pipeline_stopped']:raise ValueError('Pipeline teardown failed')
     return report
 

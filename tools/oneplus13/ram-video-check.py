@@ -134,7 +134,7 @@ def main():
             'gstreamer_requested':args.gstreamer,'gstreamer_frame_qualified':False,
             'software_fallback':False,'capture_input':False,'firmware_session_opened':False,
             'runtime_suspended':False,'module_unloaded':False,'video_nodes_removed':False}
-    attempted=False
+    attempted=False;device=None;suspend_waited=False
     try:
         ordered=audio.module_order((modules/'modules.dep').read_text(),['videocc_sm8750','qcom_iris'])
         attempted=True
@@ -162,6 +162,13 @@ def main():
                                    '--device',str(node),'--fixture',str(fixture)],
                                   capture_output=True,text=True,timeout=18,env=framework_env)
             print(result.stdout,flush=True);print(result.stderr,flush=True)
+            statuses=re.findall(r'^GSTREAMER_PIPELINE_STATUS (\{.*\})$',result.stdout,re.M)
+            if len(statuses)==1:
+                status=json.loads(statuses[0])
+                if (status.get('scope')=='GSTREAMER_EXPLICIT_V4L2_FRAME' and
+                    status.get('software_fallback') is False and
+                    type(status.get('pipeline_stopped')) is bool):
+                    report['gstreamer_pipeline_stopped']=status['pipeline_stopped']
             if result.returncode:raise ValueError('GStreamer V4L2 frame failed')
             rows=re.findall(r'^GSTREAMER_FRAME_RESULT (\{.*\})$',result.stdout,re.M)
             if len(rows)!=1:raise ValueError('Missing unique GStreamer result')
@@ -173,6 +180,7 @@ def main():
                 frame.get('width')!=320 or frame.get('height')!=240 or frame.get('pts_ns')!=12345000000):
                 raise ValueError('GStreamer pixels/decoder/cleanup not qualified')
             report['gstreamer_frame']=frame;report['gstreamer_frame_qualified']=True
+        suspend_waited=True
         until=time.monotonic()+8
         while time.monotonic()<until:
             if (device/'power/runtime_status').read_text().strip()=='suspended':
@@ -182,6 +190,17 @@ def main():
         report['hardware_decode_qualified']=True
     finally:
         cleanup_error=False
+        # Observe autosuspend even after framework failure. This does not turn
+        # a failed decode into acceptance; hardware_decode_qualified stays false.
+        if device is not None and not suspend_waited:
+            until=time.monotonic()+8
+            try:
+                while time.monotonic()<until:
+                    if (device/'power/runtime_status').read_text().strip()=='suspended':
+                        report['runtime_suspended']=True;break
+                    time.sleep(.2)
+            except OSError:
+                report['runtime_suspend_observation_failed']=True
         if attempted and Path('/sys/module/qcom_iris').exists():
             try:audio.run(['modprobe','--remove','qcom_iris'],8)
             except Exception:cleanup_error=True

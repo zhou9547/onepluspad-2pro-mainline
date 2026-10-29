@@ -1,3 +1,20 @@
+## Source-only owner request, 2026-10-29
+
+Compilation and all testing are paused by the newest owner instruction. The
+current batch adds an opt-in phone C-PHY MMIO/clock/IRQ/rollback candidate,
+bounded rc-core SPI infrared source with a separate disabled board fragment,
+GStreamer failure/teardown evidence and failed-path autosuspend observation,
+source-preparation-only modes, and an all-on-server Actions placement option.
+None of these changes has been compiled or tested. Publication does not dispatch
+CI. r64 remains the last accepted combined hardware image.
+
+See [the source-only batch](SOURCE-ONLY-BATCH-20261029.md) for exact code scope,
+provenance and unresolved work. Camera supplier initialization, complete receiver
+graph, IR shared-rail constraints, modem/GNSS/NFC, full USB roles and independent
+idle/suspend recovery remain open. Do not describe the remaining adaptations as
+complete, enable these candidates by default, or reuse earlier unattended
+authorization to start testing while this newer pause remains in effect.
+
 ## r66 framework stream error; parsed-caps candidate
 
 The exact54310783 image from Actions40847882940 and native gates40849346728

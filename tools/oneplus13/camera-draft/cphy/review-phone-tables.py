@@ -9,8 +9,10 @@ def main():
     parser.add_argument('--source',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--cross-compile',choices=('aarch64-linux-gnu-',),default='')
+    parser.add_argument('--emit-only',action='store_true',
+                        help='Generate source data only; no compiler or test execution')
     args=parser.parse_args()
-    if not args.cross_compile and platform.machine() not in ('aarch64','arm64'):
+    if not args.emit_only and not args.cross_compile and platform.machine() not in ('aarch64','arm64'):
         raise ValueError('Native ARM64 or explicit AArch64 cross compiler required')
     source=args.source
     if source.is_symlink() or not source.is_file() or source.stat().st_size>1048576:
@@ -79,6 +81,16 @@ def main():
     (out/'catalog.h').write_text(header)
     sequence=Path(__file__).with_name('phone-sequence.h')
     (out/'phone-sequence.h').write_bytes(sequence.read_bytes())
+    if args.emit_only:
+        report={'scope':'SOURCE_GENERATION_ONLY_NO_COMPILATION_OR_TESTS',
+                'source_sha256':hashlib.sha256(raw).hexdigest(),
+                'generated_header_sha256':hashlib.sha256(header.encode()).hexdigest(),
+                'sequence_source_sha256':hashlib.sha256(sequence.read_bytes()).hexdigest(),
+                'rate_tables':len(rates),'compiled':False,'tests_executed':False,
+                'phone_operations':0,'hardware_qualified':False}
+        (out/'source-generation.json').write_text(json.dumps(report,indent=2)+'\n')
+        print(json.dumps(report))
+        return
     harness='''#include <assert.h>
     #include <stdint.h>
     #include "catalog.h"

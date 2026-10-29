@@ -2,6 +2,10 @@ name: OnePlus 13 fresh source image
 on:
   workflow_dispatch:
     inputs:
+      all_on_server:
+        description: Run all jobs on the trusted ARM64 server
+        type: boolean
+        default: false
       use_server:
         description: Use the owner's trusted ARM64 component runners (requires oneplus13-arm64 label)
         type: boolean
@@ -12,6 +16,9 @@ on:
         default: false
   workflow_call:
     inputs:
+      all_on_server:
+        type: boolean
+        default: false
       use_server:
         type: boolean
         default: false
@@ -29,9 +36,9 @@ jobs:
   ssc:
     uses: ./.github/workflows/oneplus13-phone-ssc.yml
     with:
-      use_server: ${{ inputs.use_server }}
+      use_server: ${{ inputs.use_server || inputs.all_on_server }}
   kernel:
-    runs-on: ${{ inputs.use_server && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
+    runs-on: ${{ (inputs.use_server || inputs.all_on_server) && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
     timeout-minutes: 135
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +48,7 @@ jobs:
       - if: inputs.runtime_qemu
         run: flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y qemu-system-arm
       - uses: actions/cache/restore@v4
-        if: ${{ !inputs.use_server }}
+        if: ${{ !(inputs.use_server || inputs.all_on_server) }}
         id: kernel-cache
         with:
           path: ~/.cache/ccache
@@ -53,9 +60,9 @@ jobs:
       - run: bash tools/oneplus13/source-image.sh kernel
         env:
           CCACHE_MAXSIZE: 3G
-          ONEPLUS13_BUILD_JOBS: ${{ inputs.use_server && '4' || '' }}
+          ONEPLUS13_BUILD_JOBS: ${{ (inputs.use_server || inputs.all_on_server) && '4' || '' }}
       - uses: actions/cache/save@v4
-        if: ${{ always() && !inputs.use_server && steps.kernel-cache.outputs.cache-hit != 'true' }}
+        if: ${{ always() && !(inputs.use_server || inputs.all_on_server) && steps.kernel-cache.outputs.cache-hit != 'true' }}
         with:
           path: ~/.cache/ccache
           key: ${{ steps.kernel-cache.outputs.cache-primary-key }}
@@ -67,13 +74,13 @@ jobs:
           if-no-files-found: error
           retention-days: 14
   rootfs:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ inputs.all_on_server && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
     timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools zstd
+      - run: flock /tmp/oneplus13-apt-update.lock sudo apt-get update && flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y squashfs-tools zstd
       - uses: actions/cache/restore@v4
         id: deb-cache
         with:
@@ -105,7 +112,7 @@ jobs:
           compression-level: 0
           retention-days: 14
   mesa:
-    runs-on: ${{ inputs.use_server && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
+    runs-on: ${{ (inputs.use_server || inputs.all_on_server) && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
@@ -123,15 +130,15 @@ jobs:
           retention-days: 14
   image:
     needs: [kernel, rootfs, mesa, ssc]
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ inputs.all_on_server && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: sudo apt-get update && sudo apt-get install -y squashfs-tools alsa-utils m4 gcc
+      - run: flock /tmp/oneplus13-apt-update.lock sudo apt-get update && flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y squashfs-tools alsa-utils m4 gcc
       - if: inputs.runtime_qemu
-        run: sudo apt-get install -y qemu-system-arm
+        run: flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y qemu-system-arm
       # Only same-workflow, same-commit build products are downloaded here.
       - uses: actions/download-artifact@v4
         with:

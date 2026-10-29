@@ -8,6 +8,7 @@ PREFIX=r'''
 #include <assert.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
 typedef uint8_t u8;
@@ -28,8 +29,10 @@ struct phy_configure_opts_mipi_cphy { u64 symbol_rate;unsigned int trios;u32 t_p
 union phy_configure_opts { struct phy_configure_opts_mipi_dphy mipi_dphy;struct phy_configure_opts_mipi_cphy mipi_cphy; };
 struct mipi_csi2phy_stream_cfg { s64 link_freq;u8 num_data_lanes;u32 t_prepare_ns,t_preamble_ns; };
 struct mipi_csi2phy_device_regs { const void *cphy;unsigned int num_cphy; };
-struct mipi_csi2phy_soc_cfg { struct mipi_csi2phy_device_regs reg_info; };
-struct mipi_csi2phy_device { enum phy_mode phy_mode;struct mipi_csi2phy_stream_cfg stream_cfg;const struct mipi_csi2phy_soc_cfg *soc_cfg; };
+struct mipi_csi2phy_device;
+struct mipi_csi2phy_hw_ops { int (*validate)(struct mipi_csi2phy_device *,struct mipi_csi2phy_stream_cfg *); };
+struct mipi_csi2phy_soc_cfg { struct mipi_csi2phy_device_regs reg_info;const struct mipi_csi2phy_hw_ops *ops; };
+struct mipi_csi2phy_device { enum phy_mode phy_mode;struct mipi_csi2phy_stream_cfg stream_cfg;const struct mipi_csi2phy_soc_cfg *soc_cfg;int configured; };
 struct phy { struct mipi_csi2phy_device *data; };
 static struct mipi_csi2phy_device *phy_get_drvdata(struct phy *phy) { return phy->data; }
 struct v4l2_mbus_config { enum v4l2_mbus_type type;u64 link_freq;struct { struct { unsigned int num_data_lanes;u32 t_prepare_ns,t_preamble_ns; } mipi_csi2; } bus; };
@@ -68,7 +71,8 @@ SUFFIX=r'''
 int main(void)
 {
  int cases=0;
- struct mipi_csi2phy_soc_cfg soc={0};
+ const struct mipi_csi2phy_hw_ops ops={0};
+ struct mipi_csi2phy_soc_cfg soc={.ops=&ops};
  struct mipi_csi2phy_device device={.phy_mode=PHY_MODE_MIPI_DPHY,.soc_cfg=&soc,.stream_cfg={.num_data_lanes=4}};
  struct phy generic={.data=&device};
  struct format_info formats={0};struct resource res={.formats=&formats};

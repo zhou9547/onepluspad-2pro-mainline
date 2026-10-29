@@ -17,8 +17,16 @@ def main():
     parser.add_argument('--cross-compile',choices=('aarch64-linux-gnu-',))
     parser.add_argument('--cphy',action='store_true',
                         help='Compile isolated C-PHY framework candidate without phone tables')
+    parser.add_argument('--phone-cphy',action='store_true',
+                        help='Add experimental phone MMIO adapter; never enable a board node')
+    parser.add_argument('--prepare-only',action='store_true',
+                        help='Prepare source tree only, without compilation or tests')
+    parser.add_argument('--infrared',action='store_true',
+                        help='Stage isolated SPI infrared candidate; no enabled board node')
     args=parser.parse_args()
-    if platform.machine() not in ('aarch64','arm64') and not args.cross_compile:
+    if args.phone_cphy and not args.cphy:
+        raise ValueError('--phone-cphy requires --cphy')
+    if not args.prepare_only and platform.machine() not in ('aarch64','arm64') and not args.cross_compile:
         raise ValueError('Native ARM64 or explicit AArch64 cross compiler required')
     out=args.output.resolve()
     if out.exists():raise ValueError('Preserve prior evidence')
@@ -58,7 +66,7 @@ def main():
         patch=HERE/name
         if sha(patch)!=entry['sha256']:raise ValueError('Public patch hash mismatch')
         run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0','-i',patch])
-    cphy_lock=None
+    cphy_lock=None;phone_lock=None
     if args.cphy:
         directory=HERE/'cphy';cphy_lock=json.loads((directory/'sources.json').read_text())
         if (cphy_lock['scope']!='ISOLATED_CPHY_FRAMEWORK_ONLY_NO_PHONE_TABLE_OR_ACTIVATION' or
@@ -78,7 +86,34 @@ def main():
                  directory/'vendor/cam_csiphy_2_3_0_hwreg_dodge_ultrawide.h',
                  '--output',out/'phone-cphy-catalog']
         if args.cross_compile:catalog+=['--cross-compile',args.cross_compile]
+        if args.prepare_only:catalog+=['--emit-only']
         run(catalog)
+        if args.phone_cphy:
+            phone_lock=json.loads((directory/'phone-adapter-source.json').read_text())
+            if phone_lock['scope']!='EXPERIMENTAL_PHONE_CPHY_SOURCE_ONLY_NO_BOARD_ENABLE':
+                raise ValueError('Unreviewed phone adapter scope')
+            verify_paths(kernel,phone_lock['base_files'])
+            verify_paths(directory,phone_lock['input_files'])
+            run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0',
+                 '-i',directory/'phone-adapter.patch'])
+            verify_paths(kernel,phone_lock['generated_files'])
+            target=kernel/'drivers/phy/qualcomm'
+            (target/'dodge-cphy-mmio.h').write_bytes((directory/'dodge-cphy-mmio.h').read_bytes())
+            (target/'dodge-cphy-catalog.h').write_bytes((out/'phone-cphy-catalog/catalog.h').read_bytes())
+            (target/'phone-sequence.h').write_bytes((directory/'phone-sequence.h').read_bytes())
+    if args.infrared:
+        run(['python3',HERE.parent/'infrared-draft/prepare-source.py',
+             '--kernel',kernel,'--report',out/'infrared-source.json'])
+    if args.prepare_only:
+        report={'scope':'CAMERA_SOURCE_PREPARATION_ONLY','compiled':False,
+                'tests_executed':False,'phone_operations':0,'hardware_qualified':False,
+                'kernel_pin':PIN,'isolated_cphy_framework':args.cphy,
+                'phone_cphy_adapter_staged':args.phone_cphy,'phone_adapter_provenance':phone_lock,
+                'infrared_source_staged':args.infrared,
+                'board_node_enabled':False,'boot_image_created':False}
+        (out/'source-preparation.json').write_text(json.dumps(report,indent=2)+'\n')
+        print(json.dumps(report,indent=2))
+        return
     # Only this isolated tree gains disabled CCI/MCLK resources. No firmware,
     # rootfs or normal build output is touched. The amplifier
     # object shares the new build configuration, without Kconfig/DT integration.
@@ -94,16 +129,22 @@ def main():
         run([config,'--file',kernel/'.config','--enable',name])
     for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI','VIDEO_S5KJN5'):
         run([config,'--file',kernel/'.config','--module',name])
+    if args.infrared:
+        for name in ('RC_CORE','IR_DODGE_SPI'):
+            run([config,'--file',kernel/'.config','--module',name])
     run(['make','-C',kernel,'ARCH=arm64','olddefconfig'],timeout=120)
     cfg=(kernel/'.config').read_text()
     for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI','VIDEO_S5KJN5'):
         if f'CONFIG_{name}=m\n' not in cfg:raise ValueError('Required component disabled: '+name)
+    if args.infrared and 'CONFIG_IR_DODGE_SPI=m\n' not in cfg:
+        raise ValueError('Infrared candidate disabled by missing prerequisites')
     targets=['drivers/media/platform/qcom/camss/',
              'drivers/media/i2c/s5kjn5.o',
              'drivers/phy/qualcomm/phy-qcom-mipi-csi2.o',
              'drivers/i2c/busses/i2c-qcom-cci.o','drivers/clk/qcom/camcc-sm8750.o',
              'drivers/clk/qcom/cambistmclkcc-sm8750.o',
              'sound/soc/codecs/aw88461.o','sound/soc/codecs/aw88395/aw88395_lib.o']
+    if args.infrared:targets.append('drivers/media/rc/ir-dodge-spi.o')
     run(['make','-C',kernel,'ARCH=arm64','-j'+str(min(os.cpu_count() or 2,8)),'-k',
          'W=1','KCFLAGS=-Werror',*targets],timeout=600)
     phone_dts=HERE.parents[2]/'devices/oneplus13'
@@ -134,8 +175,10 @@ def main():
     (out/'kernel.config').write_text(cfg)
     proof={'scope':'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
        'isolated_cphy_framework':args.cphy,'cphy_provenance':cphy_lock,
-       'phone_cphy_catalog_staged_as_data_only':args.cphy,
-       'phone_cphy_register_table_present':False,'cphy_capture_qualified':False,
+       'phone_cphy_catalog_staged_as_data_only':args.cphy and not args.phone_cphy,
+       'phone_cphy_register_table_present':args.phone_cphy,'cphy_capture_qualified':False,
+       'phone_cphy_adapter_staged':args.phone_cphy,'phone_adapter_provenance':phone_lock,
+       'infrared_source_staged':args.infrared,'infrared_hardware_qualified':False,
        'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
        'disabled_cci_resources':lock['disabled_cci_resources'],'resource_rebases':lock['resource_rebases'],
        'sensor_patches':lock['sensor_patches'],'sensor_compat_fixes':lock['sensor_compat_fixes'],

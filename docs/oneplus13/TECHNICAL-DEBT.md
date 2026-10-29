@@ -1,3 +1,17 @@
+## Source-only candidates, no new acceptance, 2026-10-29
+
+The owner paused builds and all testing. The new optional phone C-PHY adapter
+implements fixed-timer/core-vote selection, bounded MMIO, IRQ handling and
+partial-setup teardown, but lacks a qualified sensor/board graph and has not
+compiled. The IR candidate adds bounded LIRC transmission and strict supply
+handling; the existing L9B voltage ceiling still prevents its required vote.
+Its board fragment is disabled and not included in the phone tree. Video
+cleanup/diagnostic edits and all-on-server workflow routing are likewise untested.
+See [source-only scope and remaining difficulties](SOURCE-ONLY-BATCH-20261029.md).
+No new image or hardware result is accepted; keep r64 evidence and all historical
+failed-run ledgers intact. Resume compilation/testing only after the owner
+changes the source-only instruction.
+
 ## r66 stream error and parsed-input contract
 
 r66 reaches the explicit hardware factory but reports stream-error1 before
