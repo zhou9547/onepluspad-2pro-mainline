@@ -48,8 +48,9 @@ for patch in "$repo"/devices/oneplus13/kernel-patches/*.patch; do
   git -C "$src" apply --check "$patch"
   git -C "$src" apply "$patch"
 done
-python3 tools/oneplus13/camera-draft/integrate-sensor.py --kernel "$src" \
-  --report "$dest/camera-sensor-integration.json"
+python3 tools/oneplus13/camera-draft/integrate-camera.py --kernel "$src" \
+  --report "$dest/camera-source-integration.json" \
+  --catalog-output "$dest/camera-cphy-catalog"
 python3 tools/oneplus13/check-wcn7860-scan.py --kernel-source "$src" \
   --output "$dest/wcn7860-scan-verification.json"
 python3 tools/oneplus13/check-wcn7860-priority.py --kernel-source "$src" \
@@ -159,6 +160,8 @@ make "${args[@]}" defconfig > "$kout/configure.log" 2>&1
 make "${args[@]}" olddefconfig >> "$kout/configure.log" 2>&1
 grep -qx 'CONFIG_I2C_QCOM_CCI=m' "$kout/.config"
 grep -qx 'CONFIG_VIDEO_S5KJN5=m' "$kout/.config"
+grep -qx 'CONFIG_VIDEO_QCOM_CAMSS=m' "$kout/.config"
+grep -qx 'CONFIG_PHY_QCOM_MIPI_CSI2=m' "$kout/.config"
 python3 tools/oneplus13/verify.py --config "$kout/.config"
 cp "$kout/.config" "$dest/kernel.config"
 config_id=$(sha256sum "$kout/.config" | cut -c1-12)

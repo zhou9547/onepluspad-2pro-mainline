@@ -128,6 +128,10 @@ def main():
     dest=stage/'usr/libexec/oneplus13-ram-camera-chip-id.py'
     shutil.copyfile(REPO/'tools/oneplus13/ram-camera-chip-id.py',dest);dest.chmod(0o755)
     camera_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    camera_capture_hashes={}
+    dest=stage/'usr/libexec/oneplus13-ram-camera-capture.py'
+    shutil.copyfile(REPO/'tools/oneplus13/ram-camera-capture.py',dest);dest.chmod(0o755)
+    camera_capture_hashes[str(dest.relative_to(stage))]=sha256(dest)
     nfc_hashes={}
     nfc_service=stage/'usr/lib/systemd/system/oneplus13-nfc.service'
     nfc_service.parent.mkdir(parents=True,exist_ok=True)
@@ -322,6 +326,8 @@ def main():
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
     result.update(camera_probe_runtime_files=camera_hashes,camera_probe_auto_started=False,camera_capture_qualified=False)
+    result.update(camera_capture_runtime_files=camera_capture_hashes,
+                  camera_capture_auto_started=False,camera_capture_hardware_qualified=False)
     result.update(video_probe_runtime_files=video_hashes,video_probe_auto_started=False,
                   video_hardware_decode_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
