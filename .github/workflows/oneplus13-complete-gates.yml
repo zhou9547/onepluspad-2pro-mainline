@@ -24,6 +24,10 @@ jobs:
           python3 -m py_compile tools/oneplus13/review-feature-gaps.py tools/oneplus13/review-mi2s-reset.py tools/oneplus13/review-sensor-loader.py
           mkdir -p out/complete-gates
           printf 'OFFLINE_SYNTHETIC_GATES_ONLY\nNo private FDT, ROM, credentials or device access.\n' > out/complete-gates/SCOPE.txt
+      - name: Check bounded watchdog probes and key-order-independent receipts
+        run: |
+          python3 -m unittest discover -s tests -p test_oneplus13_watchdog_recovery.py -v
+          python3 -m unittest discover -s tests -p test_oneplus13_watchdog_receipt.py -v
       - uses: actions/upload-artifact@v4
         with:
           name: oneplus13-complete-gates-${{ github.sha }}

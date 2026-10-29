@@ -1,5 +1,15 @@
 ## Isolated C-PHY framework boundary, 2026-10-29
 
+r61 passes awake countdown/keepalive but fails the host's key-order-dependent
+receipt regex. The premature recovery branch means no independent reset claim.
+Do not upgrade the unobserved final helper/disarm state from its armed receipt.
+Android return and matching baselines permit review of a corrected bounded host
+plan, while the historical halt flag remains. The replacement parser and native
+offline gates cover reordered fields, duplicate objects/keys and failed arm
+readbacks. After possible arming, allow the independent observation window to
+finish even if host protocol validation fails; parsing failure must not trigger
+an immediate host reboot that confounds recovery evidence.
+
 The optional C-PHY component candidate compiles with the exact kernel and
 checks actual setup/configuration/settle function boundaries in release and
 ASan/UBSan. It rejects a missing phone table and does not replace it with an

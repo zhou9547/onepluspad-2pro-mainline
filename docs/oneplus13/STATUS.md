@@ -1,3 +1,21 @@
+## r61 countdown passes; host protocol error prevents reset acceptance
+
+r61 on the retained5f37a1da Actions image with the separately published66756a58
+host-served helper passes all mature combined phases and the actual awake
+watchdog ioctl sequence12/10/12, with raw elapsed2000 across the busy2s interval.
+The host's old receipt regex incorrectly required armed as the first JSON key;
+the new active_wait_required field sorted first and caused premature recovery
+handling. Android returned after488.7s with matching baselines and clean bounded
+kernel evidence, but independent reset is not accepted. Preserve the stop flag.
+
+The new host-only watchdog_receipt.py parses a unique JSON line independent of
+key order, rejects ambiguous/duplicate/oversized receipts and rechecks all arm
+gates without treating a receipt as observed reset. Four regression tests include
+the new first-key ordering and journal-prefixed duplicate text. The complete
+native ARM64 offline-gates workflow now runs both watchdog suites. Before a new
+joint round, replay the actual r61 transcript and preserve the full independent
+observation window after possible arming, including host parsing errors.
+
 ## r60 clock comparison and retained regressions, 2026-10-29
 
 Actions40824286846 passed all five jobs on5f37a1da. Independent downloaded
