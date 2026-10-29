@@ -8,6 +8,20 @@ MARKER=Path('/run/oneplus13/audio-silence-attempted')
 POLICY=Path('/etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf')
 CARD='OnePlus13-Speaker-Test'
 
+
+def validate_policy(actual,expected):
+    """Allow only the base policy or its exact reviewed display-core no-ops."""
+    if hashlib.sha256(actual).hexdigest()==expected:return
+    original=actual
+    for name in ('cec','ubwc_config'):
+        allowed=('install '+name+' /bin/true\n').encode()
+        denied=('install '+name+' /bin/false\n').encode()
+        if original.count(allowed)!=1 or denied in original:
+            raise ValueError('Unknown post-display policy')
+        original=original.replace(allowed,denied,1)
+    if hashlib.sha256(original).hexdigest()!=expected:
+        raise ValueError('Peripheral denial changed')
+
 def run(argv,timeout=5):
     p=subprocess.run(argv,capture_output=True,text=True,timeout=timeout)
     if p.returncode:raise ValueError('Audio command failed: '+Path(argv[0]).name+' rc='+str(p.returncode))
@@ -96,7 +110,7 @@ def main():
             raise ValueError('Physical storage is writable')
     for unit in ['oneplus13-ram-guard.service','oneplus13-ram-deadline.timer']:
         run(['systemctl','is-active','--quiet',unit])
-    if hashlib.sha256(POLICY.read_bytes()).hexdigest()!=a.policy_sha256:raise ValueError('Wrong peripheral policy')
+    validate_policy(POLICY.read_bytes(),a.policy_sha256)
     if 'install snd_soc_aw88461 /bin/false\n' not in POLICY.read_text():raise ValueError('Missing amplifier policy')
     with MARKER.open('x') as f:f.write('ONE_BOUNDED_QUIET_TONE_TEST\n' if a.quiet_tone else 'ONE_MAX_ATTENUATION_DIGITAL_ZERO_TEST\n')
     dep=Path('/usr/lib/modules')/a.release/'modules.dep'

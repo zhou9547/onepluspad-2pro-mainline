@@ -8,6 +8,35 @@ spec=importlib.util.spec_from_file_location('gst_phone_frame',SCRIPT)
 video=importlib.util.module_from_spec(spec);spec.loader.exec_module(video)
 
 class GStreamerFrame(unittest.TestCase):
+    def test_fixed_au_profile_and_level_match_the_verified_sps(self):
+        import hashlib
+        fixture=json.loads((ROOT/'devices/oneplus13/video/synthetic-avc-bars.json').read_text())
+        raw=bytes.fromhex(fixture['hex'])
+        self.assertEqual(hashlib.sha256(raw).hexdigest(),fixture['sha256'])
+        sps=raw.index(b'\x00\x00\x00\x01\x67')+5
+        self.assertEqual(raw[sps:sps+3],bytes((66,0xc0,11)))
+        self.assertIn('profile=constrained-baseline',video.ENCODED_CAPS)
+        self.assertIn('level=(string)1.1',video.ENCODED_CAPS)
+
+    @unittest.skipUnless(os.name=='posix','Native GStreamer ACCEPT_CAPS contract')
+    def test_caps_include_driver_required_profile_level_and_colorimetry(self):
+        try:Gst,unused=video.gstreamer()
+        except (ImportError,ValueError):self.skipTest('GStreamer GI packages unavailable')
+        required=Gst.Caps.from_string(
+            'video/x-h264,width=(int)[96,8192],height=(int)[96,8192],'
+            'framerate=(fraction)[0/1,2147483647/1],stream-format=byte-stream,'
+            'alignment=au,parsed=(boolean)true,'
+            'profile=(string){baseline,constrained-baseline,main,high},'
+            'level=(string){1,1b,1.1,1.2,2,3,4,5,6},'
+            'colorimetry=(string){bt601,bt709,bt2020}')
+        actual=Gst.Caps.from_string(video.ENCODED_CAPS)
+        self.assertTrue(actual.is_subset(required))
+        for field in ('profile','level','colorimetry'):
+            incomplete=Gst.Caps.from_string(','.join(
+                item for item in video.ENCODED_CAPS.split(',')
+                if not item.startswith(field+'=')))
+            self.assertFalse(incomplete.is_subset(required),field)
+
     def test_caps_diagnostic_resynchronizes_without_an_unbounded_error_loop(self):
         iterator=Mock();iterator.next.return_value=(2,None)
         pipe=Mock();pipe.iterate_elements.return_value=iterator

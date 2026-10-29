@@ -5,6 +5,20 @@ P=Path(__file__).resolve().parents[1]/'tools/oneplus13/ram-audio-check.py'
 s=importlib.util.spec_from_file_location('ram_audio',P);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
 
 class AudioRuntime(unittest.TestCase):
+    def test_only_exact_reviewed_display_policy_can_precede_audio(self):
+        import hashlib
+        original=b'install cec /bin/false\ninstall ubwc_config /bin/false\ninstall snd_soc_aw88461 /bin/false\ninstall qcom_iris /bin/false\n'
+        digest=hashlib.sha256(original).hexdigest()
+        m.validate_policy(original,digest)
+        display=original.replace(b'install cec /bin/false',b'install cec /bin/true').replace(b'install ubwc_config /bin/false',b'install ubwc_config /bin/true')
+        m.validate_policy(display,digest)
+        bad=[display.replace(b'install snd_soc_aw88461 /bin/false',b'install snd_soc_aw88461 /bin/true'),
+             display.replace(b'install qcom_iris /bin/false',b'install qcom_iris /bin/true'),
+             display.replace(b'install cec /bin/true',b'install cec /bin/false'),
+             display+b'install cec /bin/true\n',display+b'\n']
+        for raw in bad:
+            with self.subTest(policy=raw),self.assertRaises(ValueError):m.validate_policy(raw,digest)
+
     def test_bounded_nonzero_signal_has_stereo_ramps_and_quiet_peak(self):
         blob=m.quiet_tone();values=struct.unpack('<'+str(len(blob)//2)+'h',blob)
         self.assertEqual(len(blob),48000*2*2*2)

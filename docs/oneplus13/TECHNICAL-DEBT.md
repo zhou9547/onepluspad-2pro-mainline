@@ -1,3 +1,16 @@
+## r69 diagnostic gaps and candidates, 2026-10-29
+
+Native Iris pixels/cleanup and mature network/desktop regressions pass on the
+fresh16f96cab image; WiFi SSH is identity-verified while USB remains attached.
+Full acceptance is false. Fixed-AU profile/level/colorimetry caps are now
+completed from the fixture's verified SPS/card contract. Native audio helpers
+now permit only the same two exact reviewed post-display no-op rules as the
+desktop helper. These edits need fresh hardware validation. Dynamic sampling
+was not triggered in time; upright inversion remains owner-confirmed. Normal
+speaker loudness/protection and all previously listed peripheral gaps remain
+open. See JOINT-R69-20261029.md and its sanitized evidence; preserve the halted
+ledger and all earlier failures.
+
 ## Phone callback evidence and remaining gaps, 2026-10-29
 
 The phone adapter now compiles and its actual MMIO callbacks pass45 bounded

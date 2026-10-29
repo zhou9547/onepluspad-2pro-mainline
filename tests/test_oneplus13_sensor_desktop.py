@@ -44,10 +44,26 @@ class DesktopSensor(unittest.TestCase):
             sleep=lambda delay: now.__setitem__(0, now[0] + 1))
         self.assertFalse(result['automatic_rotation_pass'])
 
-    def test_only_twenty_second_window_is_reviewed(self):
+    def test_only_bounded_twenty_or_forty_second_windows_are_reviewed(self):
         for seconds in (True, 0, 19, 21, 120):
             with self.subTest(seconds=seconds), self.assertRaises(ValueError):
                 desktop.collect(seconds, lambda: 'normal', lambda: (0,))
+
+    def test_forty_second_window_correlates_vertical_and_flat_poses(self):
+        now=[0.0]
+        poses=[('normal','vertical',(0,)),('left-up','vertical',(1,)),
+               ('right-up','vertical',(3,)),('undefined','face-up',(0,)),
+               ('undefined','face-down',(0,))]
+        def pose():return poses[min(int(now[0]//8),4)]
+        result=desktop.collect(40,lambda:pose()[0],lambda:pose()[2],
+            clock=lambda:now[0],sleep=lambda delay:now.__setitem__(0,now[0]+delay),
+            posture=lambda:pose()[:2])
+        self.assertEqual(result['samples'],160)
+        self.assertEqual(result['seconds'],40)
+        self.assertEqual({r['tilt'] for r in result['posture_transform_sequence']},
+                         {'vertical','face-up','face-down'})
+        self.assertEqual(result['normal_portrait_transforms'],[0])
+        self.assertFalse(result['physical_axes_calibration_accepted'])
 
     def test_static_right_up_requires_sensor_and_nonzero_transform(self):
         now = [0.0]

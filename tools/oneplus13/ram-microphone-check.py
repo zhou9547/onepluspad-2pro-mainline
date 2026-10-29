@@ -70,7 +70,7 @@ def main():
     audio=importlib.util.module_from_spec(s);s.loader.exec_module(audio)
     for unit in ['oneplus13-ram-guard.service','oneplus13-ram-deadline.timer']:
         audio.run(['systemctl','is-active','--quiet',unit])
-    if hashlib.sha256(POLICY.read_bytes()).hexdigest()!=a.policy_sha256:raise ValueError('Changed peripheral policy')
+    audio.validate_policy(POLICY.read_bytes(),a.policy_sha256)
     board_identity=validate_board()
     if Path('/proc/device-tree/sound/model').read_bytes().rstrip(b'\0').decode()!=CARD:raise ValueError('Separate microphone boot required')
     STATE.mkdir(mode=0o700,exist_ok=False)

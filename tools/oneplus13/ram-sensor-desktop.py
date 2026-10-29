@@ -154,8 +154,8 @@ def display_transforms(bus):
 
 def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.sleep,
             posture=None):
-    if type(seconds) is not int or seconds != 20:
-        raise ValueError('Only the twenty-second desktop orientation window is reviewed')
+    if type(seconds) is not int or seconds not in (20,40):
+        raise ValueError('Only the twenty/forty-second desktop orientation windows are reviewed')
     orientations = []
     display_states = []
     posture_transform_sequence = []
@@ -166,7 +166,7 @@ def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.s
         current_orientation = current_posture[0] if current_posture else orientation()
         current_transforms = transforms()
         samples += 1
-        if samples > 128:
+        if samples > (128 if seconds == 20 else 192):
             raise ValueError('Orientation sample bound exceeded')
         if not orientations or orientations[-1] != current_orientation:
             orientations.append(current_orientation)

@@ -1,3 +1,19 @@
+## r69 combined diagnostic and source repairs, 2026-10-29
+
+Hosted complete build40873139247 on16f96cab passes and returns Android in513.6s,
+seven matching baselines and zero partition writes. Native Iris pixels/cleanup,
+both WiFi bands, Docker, desktop/GPU, Chinese/SSH and Dock pass; WiFi SSH now
+verifies the exact RAM identity with USB retained. Upright portrait remains
+inverted; owner confirms no relogin and a visible Dock. Dynamic observation
+missed its host go trigger. Audio checks refused the known post-display policy
+before successful measurements. GStreamer still fails negotiation.
+
+Candidates now complete the fixed AU's profile/level/colorimetry caps, accept
+only the exact existing CEC/UBWC no-op policy transformation in native audio
+helpers, and reuse bounded verified-download caches in SSC/kernel packaging.
+They require a fresh combined round. No physical rotation/loudness/framework/
+camera acceptance is implied. See [r69 results and repairs](JOINT-R69-20261029.md).
+
 ## Camera callbacks and diagnostic cleanup, 2026-10-29
 
 Phone C-PHY compile-only Actions40869936054 passes. Downloaded archive digest

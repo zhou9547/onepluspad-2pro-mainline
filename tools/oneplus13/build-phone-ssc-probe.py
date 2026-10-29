@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 """Build isolated metadata and bounded sample probes, never a sensor service."""
-import argparse,hashlib,json,os,platform,re,shutil,struct,subprocess,tarfile,urllib.request
+import argparse,hashlib,json,os,platform,re,shutil,struct,subprocess,tarfile
 from pathlib import Path
 REPO=Path(__file__).resolve().parents[2]
 ARCHIVE_SHA='716d6bd6b34d2d753060c6b54c9a87e34fae75b724c763bf9ef487efa3621587'
@@ -35,6 +35,7 @@ def run(args,log,env=None):
     if r.returncode:raise RuntimeError('SSC offline build/check failed: '+str(args[0]))
     return r.stdout
 def main():
+    from verified_download import fetch
     p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True)
     p.add_argument('--archive',type=Path);p.add_argument('--meson',default='meson');p.add_argument('--host-check',action='store_true')
     a=p.parse_args();native=platform.machine() in ('aarch64','arm64')
@@ -51,8 +52,7 @@ def main():
         raise ValueError('Original recipe changed')
     archive=a.archive.resolve() if a.archive else out/entry['archive']
     if not a.archive:
-        request=urllib.request.Request(entry['mirror_url'].replace('http:','https:',1),headers={'User-Agent':'OnePlus13-offline-source-build'})
-        with urllib.request.urlopen(request,timeout=45) as response,archive.open('xb') as target:shutil.copyfileobj(response,target)
+        fetch(entry['mirror_url'].replace('http:','https:',1),ARCHIVE_SHA,archive)
     if sha(archive)!=ARCHIVE_SHA:raise ValueError('Original source hash changed')
     parent=out/'source';parent.mkdir()
     with tarfile.open(archive) as tf:

@@ -6,7 +6,12 @@ from pathlib import Path
 
 WIDTH,HEIGHT,PTS=320,240,12345000000
 ENCODED_CAPS=('video/x-h264,stream-format=byte-stream,alignment=au,parsed=(boolean)true,'
-              'width=320,height=240,framerate=1/1')
+              'width=320,height=240,framerate=1/1,'
+              'profile=constrained-baseline,level=(string)1.1,colorimetry=bt601')
+# This CLI accepts only the hash-bound synthetic AU below. Its SPS is
+# profile_idc=66, constraint_set0/1=1, level_idc=11; the generated limited-range
+# test card uses BT.601. The driver's probed sink caps constrain all three
+# fields, so parsed=true alone is insufficient for ACCEPT_CAPS.
 
 def negotiated_caps(pipe):
     rows = []
