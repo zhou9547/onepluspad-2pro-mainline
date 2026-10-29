@@ -230,6 +230,7 @@ def main():
         raise ValueError('Video module must remain manual')
     video_runtime=m.get('video_probe_runtime_files',{})
     video_runtime_names={'usr/libexec/oneplus13-ram-video-check.py','usr/libexec/oneplus13-decode-one-frame',
+                         'usr/libexec/oneplus13-ram-gstreamer-frame.py',
                          'usr/lib/oneplus13-video/synthetic-avc-bars.json','usr/lib/oneplus13-video/runtime-bindings.json'}
     if set(video_runtime)!=video_runtime_names:raise ValueError('Incomplete manual video runtime')
     for name,digest in video_runtime.items():

@@ -92,3 +92,20 @@ Android returns after501.4s with clean health, matching baselines and zero
 partition writes. This result qualifies only this bounded stateful V4L2 path.
 Desktop multimedia integration, VA-API, more codecs and long-duration playback
 remain open. The final host recovery stop flag is retained for boundary review.
+
+## Explicit multimedia framework candidate
+
+`ram-gstreamer-frame.py` uses GStreamer1.28's explicit video4linux2 decoder
+registration and appsrc/appsink APIs, reviewed against the public source hashes
+in `devices/oneplus13/video/gstreamer-review.json`. The rootfs now preinstalls
+the GI namespaces and gst-inspect/gst-launch diagnostics. This does not enable
+the Iris module automatically or qualify arbitrary player support.
+
+The manual coordinator's optional --gstreamer requires a second synthetic-frame
+check through the explicit V4L2 decoder, known product node, NV12, original
+PTS and bounded VideoMeta layout. A fresh RAM registry prevents a pre-module
+cache from hiding the stateful decoder. No decodebin or software decoder is
+present. Pipeline NULL, runtime suspend and module teardown remain mandatory.
+The fixed90s awake guard is not renewed; framework mode requires65s remaining
+before activation. Native raw-framework selftest and611 offline tests pass;
+actual framework hardware pixels still require the next combined round.

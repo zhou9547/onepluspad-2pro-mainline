@@ -1,3 +1,21 @@
+## Explicit GStreamer path prepared after accepted r64 native frame
+
+The next manual image adds a hash-bound GStreamer helper and the required GI
+and diagnostic packages. It uses appsrc -> explicit video4linux2 H264 decoder
+-> NV12 appsink; there is no decodebin or software decoder fallback. The
+synthetic frame, timestamp, visible luma and real VideoMeta stride are checked,
+then the pipeline must reach NULL. A fresh RAM plugin registry is built only
+after guarded Iris activation. The optional --gstreamer flag requires both
+the already accepted native frame and the framework frame, runtime suspend
+and full module teardown under the same fixed awake guard. At least65s of
+the original90s window must remain before activation; it cannot be extended.
+
+The real raw-GStreamer selftest passes on WSL and checks timestamps, pixels
+and NULL teardown without requesting decode. Bounds/corruption/guard tests
+pass. The full offline suite passes611 tests with5 environment skips. This
+is a candidate until fresh Actions/download verification and a combined phone
+round pass. Do not upgrade raw-framework selftest to hardware playback.
+
 ## r64 real Iris frame and retained regressions pass, 2026-10-29
 
 The exact ee214438 Actions40833999996 image passes all five source-build jobs,

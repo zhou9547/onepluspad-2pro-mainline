@@ -75,6 +75,7 @@ def decoder_nodes():
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--bindings-sha256',required=True)
+    parser.add_argument('--gstreamer',action='store_true',help='Also require an explicit V4L2 GStreamer frame')
     args=parser.parse_args()
     if os.geteuid()!=0 or sha(BINDINGS)!=args.bindings_sha256:raise ValueError('Wrong root/video bindings')
     bindings=json.loads(BINDINGS.read_text())
@@ -103,7 +104,10 @@ def main():
     node=guard.lstat()
     if not stat.S_ISREG(node.st_mode) or node.st_uid!=0 or node.st_size>16384:
         raise ValueError('Wrong awake video guard receipt')
-    validate_awake_guard(json.loads(guard.read_text()),time.monotonic())
+    guard_receipt=json.loads(guard.read_text())
+    validate_awake_guard(guard_receipt,time.monotonic())
+    if args.gstreamer and guard_receipt['guard_deadline_monotonic']-time.monotonic()<=65:
+        raise ValueError('Insufficient fixed guard window for native plus GStreamer frames')
     watchdogs=[p for p in Path('/sys/class/watchdog').glob('watchdog[0-9]*')
                if (p/'identity').read_text().strip()=='Gunyah Watchdog']
     if len(watchdogs)!=1 or (watchdogs[0]/'state').read_text().strip()!='active':
@@ -127,6 +131,7 @@ def main():
     STATE.mkdir(mode=0o700,exist_ok=False)
     fixture=STATE/'generated-frame.h264';fixture.write_bytes(raw);fixture.chmod(0o600)
     report={'scope':'BOUNDED_MANUAL_IRIS_AVC_FRAME','hardware_decode_qualified':False,
+            'gstreamer_requested':args.gstreamer,'gstreamer_frame_qualified':False,
             'software_fallback':False,'capture_input':False,'firmware_session_opened':False,
             'runtime_suspended':False,'module_unloaded':False,'video_nodes_removed':False}
     attempted=False
@@ -149,6 +154,25 @@ def main():
         report['firmware_session_opened']='IRIS_FIRMWARE_SESSION_OPENED' in result.stdout
         if result.returncode:raise ValueError('Iris native test failed')
         report['decoded_frame']=parse_frame(result.stdout)
+        if args.gstreamer:
+            # Fresh RAM registry is created after the guarded module binds, so
+            # its stateful decoder is probed even if the desktop cached no VPU.
+            framework_env=dict(environment,GST_REGISTRY_1_0=str(STATE/'gst-registry.bin'))
+            result=subprocess.run(['python3','/usr/libexec/oneplus13-ram-gstreamer-frame.py',
+                                   '--device',str(node),'--fixture',str(fixture)],
+                                  capture_output=True,text=True,timeout=18,env=framework_env)
+            print(result.stdout,flush=True);print(result.stderr,flush=True)
+            if result.returncode:raise ValueError('GStreamer V4L2 frame failed')
+            rows=re.findall(r'^GSTREAMER_FRAME_RESULT (\{.*\})$',result.stdout,re.M)
+            if len(rows)!=1:raise ValueError('Missing unique GStreamer result')
+            frame=json.loads(rows[0])
+            if (frame.get('scope')!='GSTREAMER_EXPLICIT_V4L2_FRAME' or
+                frame.get('frame_verified') is not True or frame.get('pipeline_stopped') is not True or
+                frame.get('software_fallback') is not False or
+                not re.fullmatch(r'v4l2(?:video[0-9]+)?h264dec',str(frame.get('hardware_decoder_factory'))) or
+                frame.get('width')!=320 or frame.get('height')!=240 or frame.get('pts_ns')!=12345000000):
+                raise ValueError('GStreamer pixels/decoder/cleanup not qualified')
+            report['gstreamer_frame']=frame;report['gstreamer_frame_qualified']=True
         until=time.monotonic()+8
         while time.monotonic()<until:
             if (device/'power/runtime_status').read_text().strip()=='suspended':

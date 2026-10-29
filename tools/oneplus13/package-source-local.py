@@ -140,6 +140,7 @@ def main():
         raise ValueError('Video client needs same-source native validation')
     video_hashes={}
     for source,name in [(REPO/'tools/oneplus13/ram-video-check.py','usr/libexec/oneplus13-ram-video-check.py'),
+                        (REPO/'tools/oneplus13/ram-gstreamer-frame.py','usr/libexec/oneplus13-ram-gstreamer-frame.py'),
                         (video_runtime/'decode-one-frame','usr/libexec/oneplus13-decode-one-frame'),
                         (REPO/'devices/oneplus13/video/synthetic-avc-bars.json','usr/lib/oneplus13-video/synthetic-avc-bars.json')]:
         dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)

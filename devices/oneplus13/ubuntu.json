@@ -16,7 +16,9 @@
     "language-pack-zh-hans", "language-pack-gnome-zh-hans", "fonts-noto-cjk",
     "ibus", "ibus-libpinyin", "im-config", "alsa-utils", "alsa-ucm-conf", "pipewire", "pipewire-bin", "pipewire-pulse", "wireplumber", "pulseaudio-utils",
     "docker.io", "iptables", "nftables", "iproute2", "strace", "tzdata", "python3-gi",
-    "libgudev-1.0-0", "libpolkit-gobject-1-0", "polkitd"
+    "libgudev-1.0-0", "libpolkit-gobject-1-0", "polkitd",
+    "gir1.2-gstreamer-1.0", "gir1.2-gst-plugins-base-1.0", "gstreamer1.0-tools",
+    "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good"
   ],
   "hardware_status": "NOT_DEVICE_TESTED",
   "accounts": "No default password or autologin. Create a user before deployment.",
