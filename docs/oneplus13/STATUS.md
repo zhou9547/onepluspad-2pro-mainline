@@ -1,3 +1,14 @@
+## Ultrawide C-PHY template family resolved, 2026-10-29
+
+The saved complete stock FDT supplies probe_intent0x30e0 for CCI0 sensor1.
+The pinned vendor pre-match callback ORs this into the module ID: L/S0x805
+becomes the observed0x38e5, while D0x30e0 remains a mismatch. This resolves
+the prior ID ambiguity and points to the inferred L/S three-trio C-PHY modes;
+supplier, timing and capture are still unqualified. The board review now
+checks this property and emits the effective IDs, with negative tests for
+missing/changed values. It passed against the saved full FDT. See
+[the revised mode review](CAMERA-MODE-SELECTION-20261029.md).
+
 ## r59 joint regression and raw timer evidence, 2026-10-29
 
 All five jobs in Actions40820121568 passed on da0f54cb. Independent downloaded

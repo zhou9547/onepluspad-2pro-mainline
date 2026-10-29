@@ -8,11 +8,12 @@ The next explicit six-second idle/busy/idle diagnostic records process and
 wall time on one CPU at32s, then disarms; it is not the reset acceptance path.
 Keep Iris activation and unattended suspend gated by independent recovery.
 
-The C.93 D/L/S camera templates disagree on inferred D-PHY/C-PHY mode and
-none of their ID fields directly equals the confirmed physical0x38e5.
-The selected stock HAL module/field override path remains unproven. Do not
-turn this into a physical C-PHY claim or use the easier D-PHY template without
-evidence. See [the mode review](CAMERA-MODE-SELECTION-20261029.md).
+The C.93 D/L/S camera template ambiguity is now narrowed by the saved FDT's
+probe_intent0x30e0 and public vendor's pre-match OR operation. Only L/S0x805
+becomes physical0x38e5, selecting their inferred three-trio C-PHY family.
+L/S supplier choice, actual link timing and a coherent sensor/PHY/CAMSS
+capture path remain open. Do not use the rejected four-lane D-PHY template.
+See [the mode review](CAMERA-MODE-SELECTION-20261029.md).
 
 ## Observed Gunyah countdown failure, 2026-10-29
 
