@@ -1,5 +1,10 @@
 # Phone-specific C-PHY register catalog
 
+Latest update: the isolated phone adapter compiles in Actions40869936054 and
+its callbacks pass45 host cases in release and ASan/UBSan. See
+[current evidence](CAMERA-MMIO-CHECKS-20261029.md). The uncompiled/data-only
+descriptions below are historical; neither result qualifies camera capture.
+
 An optional uncompiled phone MMIO adapter is now staged separately from this
 previously checked catalog and planner. It adds fixed timer/core-clock selection,
 IRQ handling and failed-start rollback; see

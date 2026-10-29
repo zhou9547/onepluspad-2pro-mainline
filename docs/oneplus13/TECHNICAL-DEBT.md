@@ -1,3 +1,14 @@
+## Phone callback evidence and remaining gaps, 2026-10-29
+
+The phone adapter now compiles and its actual MMIO callbacks pass45 bounded
+host cases under release and ASan/UBSan; clock/power/IRQ kernel frameworks and
+hardware capture remain unqualified. The archive's missing aw88395 library
+object upload is corrected. Repeated GStreamer iterator RESYNC now resets the
+iterator within a bounded error-collection loop, preserving the route to NULL
+cleanup. This is not a fix for the observed hardware not-negotiated result.
+See CAMERA-MMIO-CHECKS-20261029.md. Supplier, mode and full receiver graph remain
+required; current Android read-only observations did not resolve the supplier.
+
 ## Camera capture dependencies, 2026-10-29
 
 The public phone-specific CSIPHY table and MMIO adapter now have a compile-only

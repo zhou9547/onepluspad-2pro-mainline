@@ -8,6 +8,24 @@ spec=importlib.util.spec_from_file_location('gst_phone_frame',SCRIPT)
 video=importlib.util.module_from_spec(spec);spec.loader.exec_module(video)
 
 class GStreamerFrame(unittest.TestCase):
+    def test_caps_diagnostic_resynchronizes_without_an_unbounded_error_loop(self):
+        iterator=Mock();iterator.next.return_value=(2,None)
+        pipe=Mock();pipe.iterate_elements.return_value=iterator
+        self.assertEqual(video.negotiated_caps(pipe),[])
+        self.assertEqual(iterator.next.call_count,16)
+        self.assertEqual(iterator.resync.call_count,16)
+
+    def test_caps_diagnostic_continues_after_bin_resynchronization(self):
+        element=Mock();element.get_name.return_value='decoder'
+        pad=Mock();pad.get_current_caps.return_value=None
+        pad.query_caps.return_value.to_string.return_value='video/x-raw'
+        element.get_static_pad.return_value=pad
+        iterator=Mock();iterator.next.side_effect=[(2,None),(1,element),(0,None)]
+        pipe=Mock();pipe.iterate_elements.return_value=iterator
+        rows=video.negotiated_caps(pipe)
+        iterator.resync.assert_called_once_with()
+        self.assertEqual(rows[0]['pads']['src'],{'current':None,'query':'video/x-raw'})
+
     def test_private_bus_diagnostic_is_bounded_and_not_in_public_error(self):
         message=Mock();error=Mock(domain='gst-stream-error-quark',code=1,message='m'*2000)
         message.parse_error.return_value=error,'d'*8000

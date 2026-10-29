@@ -11,11 +11,14 @@ ENCODED_CAPS=('video/x-h264,stream-format=byte-stream,alignment=au,parsed=(boole
 def negotiated_caps(pipe):
     rows = []
     iterator = pipe.iterate_elements()
-    while True:
+    # A changing bin can keep returning RESYNC. Bound the diagnostic itself so
+    # collecting an error cannot prevent the pipeline's finally/NULL cleanup.
+    for attempt in range(16):
         result, element = iterator.next()
         if result == 0:
             break
         if result == 2:
+            iterator.resync()
             continue
         if result != 1:
             break

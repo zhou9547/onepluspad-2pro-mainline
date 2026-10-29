@@ -1,3 +1,14 @@
+## Camera callbacks and diagnostic cleanup, 2026-10-29
+
+Phone C-PHY compile-only Actions40869936054 passes. Downloaded archive digest
+and11 uploaded AArch64 objects match; the missing twelfth audio-library object
+is now added to the workflow upload list. A clean WSL phone-C-PHY/IR component
+build passes with13 objects and45 actual callback host cases in release and
+ASan/UBSan modes. Normal component builds now include these callback checks.
+The GStreamer error collector's repeated-RESYNC loop is bounded/resynchronized;
+nine focused tests pass. These changes do not establish camera pixels or fix
+hardware video negotiation. See [evidence and remaining work](CAMERA-MMIO-CHECKS-20261029.md).
+
 ## Camera source build path, 2026-10-29
 
 The camera component workflow now has an explicit compile-only path for the

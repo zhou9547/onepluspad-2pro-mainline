@@ -88,6 +88,13 @@ def main():
         verify_paths(directory,{'rebased.patch':cphy_lock['rebase_patch_sha256']})
         run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0','-i',directory/'rebased.patch'])
         verify_paths(kernel,cphy_lock['generated_files'])
+        if args.phone_cphy:
+            phone_lock=json.loads((directory/'phone-adapter-source.json').read_text())
+            if phone_lock['scope']!='EXPERIMENTAL_PHONE_CPHY_SOURCE_ONLY_NO_BOARD_ENABLE':
+                raise ValueError('Unreviewed phone adapter scope')
+            verify_paths(kernel,phone_lock['base_files'])
+            # Authenticate the generator before executing it, not afterwards.
+            verify_paths(directory,phone_lock['input_files'])
         catalog=['python3',directory/'review-phone-tables.py','--source',
                  directory/'vendor/cam_csiphy_2_3_0_hwreg_dodge_ultrawide.h',
                  '--output',out/'phone-cphy-catalog']
@@ -96,14 +103,13 @@ def main():
         elif args.compile_only:catalog+=['--compile-only']
         run(catalog)
         if args.phone_cphy:
-            phone_lock=json.loads((directory/'phone-adapter-source.json').read_text())
-            if phone_lock['scope']!='EXPERIMENTAL_PHONE_CPHY_SOURCE_ONLY_NO_BOARD_ENABLE':
-                raise ValueError('Unreviewed phone adapter scope')
-            verify_paths(kernel,phone_lock['base_files'])
-            verify_paths(directory,phone_lock['input_files'])
             run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0',
                  '-i',directory/'phone-adapter.patch'])
             verify_paths(kernel,phone_lock['generated_files'])
+            if not (args.prepare_only or args.compile_only):
+                run(['python3',directory/'check-phone-mmio.py',
+                     '--catalog',out/'phone-cphy-catalog',
+                     '--output',out/'phone-cphy-mmio'])
             target=kernel/'drivers/phy/qualcomm'
             (target/'dodge-cphy-mmio.h').write_bytes((directory/'dodge-cphy-mmio.h').read_bytes())
             (target/'dodge-cphy-catalog.h').write_bytes((out/'phone-cphy-catalog/catalog.h').read_bytes())
@@ -189,6 +195,7 @@ def main():
        'phone_cphy_register_table_present':args.phone_cphy,'cphy_capture_qualified':False,
        'phone_cphy_adapter_staged':args.phone_cphy,'phone_adapter_provenance':phone_lock,
        'compile_only':args.compile_only,'synthetic_checks_executed':not args.compile_only,
+       'phone_cphy_mmio_checks_executed':args.phone_cphy and not args.compile_only,
        'phone_cphy_translation_unit_compiled':args.phone_cphy and 'drivers/phy/qualcomm/phy-qcom-mipi-csi2-3ph-dphy.o' in files,
        'infrared_source_staged':args.infrared,'infrared_hardware_qualified':False,
        'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
