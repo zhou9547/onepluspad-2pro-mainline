@@ -55,7 +55,8 @@ class DesktopSensor(unittest.TestCase):
             8, lambda: 'right-up', lambda: (3,),
             clock=lambda: now[0],
             sleep=lambda delay: now.__setitem__(0, now[0] + .25))
-        self.assertTrue(result['automatic_rotation_pass'])
+        self.assertTrue(result['static_pose_pass'])
+        self.assertFalse(result['automatic_rotation_pass'])
         self.assertEqual(result['orientations'], ['right-up'])
         self.assertEqual(result['distinct_display_transforms'], [3])
 
@@ -65,7 +66,7 @@ class DesktopSensor(unittest.TestCase):
             8, lambda: 'right-up', lambda: (0,),
             clock=lambda: now[0],
             sleep=lambda delay: now.__setitem__(0, now[0] + .25))
-        self.assertFalse(result['automatic_rotation_pass'])
+        self.assertFalse(result['static_pose_pass'])
 
     def test_flat_pose_with_zero_transform_is_the_correct_static_state(self):
         now = [0.0]
@@ -74,7 +75,8 @@ class DesktopSensor(unittest.TestCase):
             clock=lambda: now[0],
             sleep=lambda delay: now.__setitem__(0, now[0] + .25),
             posture=lambda: ('undefined', 'face-down'))
-        self.assertTrue(result['automatic_rotation_pass'])
+        self.assertFalse(result['automatic_rotation_pass'])
+        self.assertTrue(result['static_pose_pass'])
         self.assertTrue(result['flat_zero_transform_pass'])
         self.assertEqual(result['tilts'], ['face-down'])
 
@@ -85,7 +87,19 @@ class DesktopSensor(unittest.TestCase):
             clock=lambda: now[0],
             sleep=lambda delay: now.__setitem__(0, now[0] + .25),
             posture=lambda: ('undefined', 'vertical'))
-        self.assertFalse(result['automatic_rotation_pass'])
+        self.assertFalse(result['static_pose_pass'])
+
+    def test_expected_left_up_requires_exact_transform(self):
+        for orientation, transform, passed in [('left-up',1,True), ('left-up',3,False),
+                                                ('right-up',3,False), ('undefined',0,False)]:
+            now = [0.0]
+            result = desktop.collect_static_right_up(
+                8, lambda: orientation, lambda: (transform,),
+                clock=lambda: now[0],
+                sleep=lambda delay: now.__setitem__(0, now[0]+.25),
+                posture=lambda: (orientation,'face-down'), expected_orientation='left-up')
+            self.assertEqual(result['static_pose_pass'], passed)
+            self.assertFalse(result['automatic_rotation_pass'])
 
     def test_mutter_transform_is_read_from_logical_monitor_tuple(self):
         physical=[('eDP-1','vendor','product','serial',[],{})]

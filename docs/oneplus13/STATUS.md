@@ -1,3 +1,41 @@
+## Exact Actions image: left-up and real desktop-volume response, 2026-10-29
+
+The unattended r51 joint RAM boot used the exact downloaded boot/rootfs from
+Actions40764560596, source30908706429e0aeb154b8b3a57f911cd5b3080f1, with
+source-bound diagnostic helpers. It returned to Android in440.1s with matching
+baselines, zero partition writes and clean kernel-health gates. Both WiFi bands,
+Docker IPv4 bridge/DNS/NAT/published ports, GNOME/Mesa, Chinese, SSH, Dock,
+Bluetooth and battery checks passed together.
+
+The owner placed the phone left-side-up. Thirty-two live samples reported
+`left-up / vertical`, and Mutter reported transform1, matching upstream's exact
+left-up mapping. Static observations now use `static_pose_pass` and never claim
+a multi-pose automatic-rotation transition. Flat poses cannot satisfy an explicit
+upright expectation; right-up requires3 rather than either landscape transform.
+The current combined test still used the SSC vector warmup before this check;
+ordinary startup without that diagnostic warmup remains to be checked.
+
+Fresh microphone capture and independent top/bottom speaker correlation passed.
+The new bounded desktop test recorded the same1000/1500Hz fixture through
+PipeWire at20%,50%,100% and mute. Both measured components increased strictly
+with system volume; full-volume/mute ratios were17518x and20336x, with zero
+clipped samples. Both amplifiers stopped cleanly, capture controls were restored,
+and raw recordings were deleted. Prior night tests deliberately used1%,2%,5%;
+they were not ordinary-volume qualification. The fixed896 hardware ceiling is
+unchanged. This validates actual software-volume effects, not calibrated SPL,
+long-duration dynamic protection or default speaker autostart.
+
+The r50 digital-zero pass is reused only for the identical Actions image.
+The native PCM helper permits one experiment per boot, so r51 reserved it for
+the nonzero check rather than attempting both modes with the same one-shot marker.
+The new acoustic volume checker is packaged explicitly and remains default-off.
+The full Linux offline suite passes580 tests with5 environment skips.
+
+See [scrubbed evidence](evidence/UNATTENDED-LEFT-UP-VOLUME-20261029.json).
+Camera is the next peripheral priority. The phone's four stock sensor graphs
+and OTA front-module inputs were re-inspected locally; no camera capture has
+been accepted and private OTA inputs have not been published.
+
 ## Unattended joint pass and final SensorProxy repair, 2026-10-29
 
 The r49 single RAM round on source candidate `da91d97a` passed every combined

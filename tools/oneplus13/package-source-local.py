@@ -195,7 +195,8 @@ def main():
         (REPO/'devices/oneplus13/audio/OnePlus13-Audio-Probe.conf','usr/share/alsa/ucm2/conf.d/sm8750/OnePlus13-Audio-Probe.conf'),
         (REPO/'devices/oneplus13/audio/HiFi.conf','usr/share/alsa/ucm2/Qualcomm/sm8750/OnePlus13/HiFi.conf'),
         (REPO/'devices/oneplus13/audio/95-oneplus13-desktop-audio.conf','usr/lib/oneplus13-audio/95-oneplus13-desktop-audio.conf'),
-        (REPO/'tools/oneplus13/ram-desktop-audio.py','usr/libexec/oneplus13-ram-desktop-audio.py')]
+        (REPO/'tools/oneplus13/ram-desktop-audio.py','usr/libexec/oneplus13-ram-desktop-audio.py'),
+        (REPO/'tools/oneplus13/ram-desktop-volume-check.py','usr/libexec/oneplus13-ram-desktop-volume-check.py')]
     for source,name in desktop_audio_sources:
         dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(source,dest);dest.chmod(0o755 if name.endswith('.py') else 0o644)

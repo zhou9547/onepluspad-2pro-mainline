@@ -97,7 +97,8 @@ def main():
     required_desktop_audio={'usr/share/alsa/ucm2/conf.d/sm8750/OnePlus13-Audio-Probe.conf',
         'usr/share/alsa/ucm2/Qualcomm/sm8750/OnePlus13/HiFi.conf',
         'usr/lib/oneplus13-audio/95-oneplus13-desktop-audio.conf',
-        'usr/libexec/oneplus13-ram-desktop-audio.py','usr/lib/oneplus13-audio/desktop-bindings.json'}
+        'usr/libexec/oneplus13-ram-desktop-audio.py','usr/libexec/oneplus13-ram-desktop-volume-check.py',
+        'usr/lib/oneplus13-audio/desktop-bindings.json'}
     if set(desktop_audio_files)!=required_desktop_audio or m.get('desktop_audio_auto_started') is not False:
         raise ValueError('Missing explicitly gated desktop audio files')
     for name,digest in desktop_audio_files.items():

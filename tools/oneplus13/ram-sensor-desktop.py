@@ -189,7 +189,7 @@ def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.s
 
 def collect_static_right_up(seconds, orientation, transforms,
                             clock=time.monotonic, sleep=time.sleep,
-                            posture=None):
+                            posture=None, expected_orientation=None):
     if type(seconds) is not int or seconds != 8:
         raise ValueError('Only the eight-second static right-up window is reviewed')
     orientations = set()
@@ -212,25 +212,30 @@ def collect_static_right_up(seconds, orientation, transforms,
             display_states.append(list(current_transforms))
         sleep(min(.25, max(0, until - clock())))
     transforms_seen = {value for state in display_states for value in state}
-    right_up_pass = ('right-up' in orientations
-                     and bool(transforms_seen & {1, 3}))
-    normal_pass = orientations == {'normal'} and transforms_seen == {0}
-    flat_pass = ('undefined' in orientations and transforms_seen == {0}
-                 and bool(tilts)
-                 and tilts <= {'face-up', 'face-down'})
-    passed = samples >= 8 and (right_up_pass or normal_pass or flat_pass)
+    expected_transforms = {'normal': 0, 'left-up': 1, 'bottom-up': 2, 'right-up': 3}
+    if expected_orientation is not None and expected_orientation not in expected_transforms:
+        raise ValueError('Unknown expected upright orientation')
+    upright_matches = (len(orientations) == 1 and
+                       next(iter(orientations)) in expected_transforms and
+                       transforms_seen == {expected_transforms[next(iter(orientations))]})
+    expected_matches = (expected_orientation is None or
+                        orientations == {expected_orientation})
+    flat_pass = (orientations == {'undefined'} and transforms_seen == {0}
+                 and bool(tilts) and tilts <= {'face-up', 'face-down'})
+    passed = samples >= 8 and expected_matches and upright_matches
     return {
-        'scope': 'STATIC_RIGHT_UP_AUTOMATIC_ORIENTATION',
+        'scope': 'STATIC_DESKTOP_ORIENTATION_OBSERVATION',
         'seconds': seconds,
         'samples': samples,
         'orientations': sorted(orientations),
         'tilts': sorted(tilts),
         'display_transform_sequence': display_states,
         'distinct_display_transforms': sorted(transforms_seen),
-        'right_up_nonzero_transform_pass': right_up_pass,
-        'normal_zero_transform_pass': normal_pass,
+        'expected_orientation': expected_orientation,
+        'upright_transform_matches': bool(upright_matches and expected_matches),
         'flat_zero_transform_pass': flat_pass,
-        'automatic_rotation_pass': passed,
+        'static_pose_pass': bool(passed or (expected_orientation is None and flat_pass)),
+        'automatic_rotation_pass': False,
         'physical_axes_calibration_accepted': False,
     }
 
@@ -287,7 +292,7 @@ def main():
             result = setup()
         elif args.mode == 'check-static':
             result = check_static_right_up(args.seconds)
-            if not result['automatic_rotation_pass']:
+            if not result['static_pose_pass']:
                 raise ValueError('Static posture and Mutter transform disagree: ' +
                                  json.dumps({
                                      'orientations': result['orientations'],

@@ -1,3 +1,20 @@
+## Updated unattended acceptance boundary, 2026-10-29
+
+r51 on the exact30908706 Actions artifact validates the owner's fixed left-up
+pose against Mutter transform1 and proves actual desktop volume response through
+microphone measurements at20/50/100% plus mute. This supersedes r49's flat-only
+static evidence. The static diagnostic now keeps `automatic_rotation_pass=false`
+and reports `static_pose_pass` separately, with exact mappings normal0, left1,
+bottom2, right3. Flat observations may establish a correct static state only
+when no upright pose was requested.
+
+The new volume test is explicitly invoked, bounded to four two-second captures,
+restores controls, deletes raw audio and keeps the896 ceiling. Monotonic gain,
+mute contrast and clipping are independent gates. No absolute SPL or long-term
+speaker-protection conclusion follows. The ordinary startup sensor path without
+the diagnostic SSC warmup and default audio activation remain open. Do not label
+all speaker/orientation adaptation complete based on the bounded diagnostic.
+
 ## Final desktop sensor and audio boundaries, 2026-10-29
 
 The r49 RAM round proves the combined desktop path with the final candidate
