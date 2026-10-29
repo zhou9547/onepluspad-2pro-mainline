@@ -1,3 +1,30 @@
+## Production sensor startup and disabled camera-resource build, 2026-10-29
+
+r52 repeats the fixed left-up observation without the diagnostic SSC vector
+warmup or restarting the sensor stack. The ordinary protected desktop startup
+reports left-up/vertical with Mutter transform1. Dual-band WiFi, Docker, GNOME,
+Chinese, SSH, Dock and silent current-audio setup passed together; r51's fresh
+acoustic evidence is explicitly reused for the identical30908706 image. Android
+returned in350.6s with matching baselines and zero partition writes. This closes
+the startup-warmup dependency in the previous entry, while an attended physical
+rotation transition and long-duration speaker protection remain open.
+
+The current source image passed all five jobs in
+[Actions40798138265](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40798138265)
+on e06f06bdd3d852712ee3ea4770a0c1e6851d3cc5. Independent download verification
+is in progress; this new artifact is not yet a hardware acceptance.
+
+Camera preparation now adds disabled CCI/MCLK resources only inside the isolated
+component build. The28 original/rebase/compiler patches preserve provenance;
+the original CCI v2 context depended on an unstaged old CAMSS node, so a separate
+reviewed rebase carries only the disabled CCI and pinctrl additions onto the exact
+kernel pin. WSL AArch64 cross compilation passes W=1/-Werror, synthetic PHY and
+amplifier checks, and an actual phone base-DTB check for3 disabled controllers
+and6 I2C hosts. This does not install or activate camera hardware. Front-camera
+sensor mode tables, the new PHY graph, phone power sequencing and libcamera/RDI
+capture remain the next implementation work. The maintainer rejected the resource
+series pending driver dependencies; it is not represented as merged support.
+
 ## Exact Actions image: left-up and real desktop-volume response, 2026-10-29
 
 The unattended r51 joint RAM boot used the exact downloaded boot/rootfs from

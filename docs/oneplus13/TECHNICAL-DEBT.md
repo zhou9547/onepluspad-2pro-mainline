@@ -1,3 +1,17 @@
+## Production startup confirmed; camera prerequisites remain isolated
+
+The r52 joint test no longer uses the SSC sample warmup. Current desktop startup
+alone reaches left-up/vertical and Mutter transform1, retaining WiFi, Docker,
+GNOME, Chinese, SSH and Dock. The prior warmup uncertainty is closed for this
+fixed pose. Do not convert the static check into a physical transition claim.
+
+The camera component builder supports pinned-source WSL cross compilation and
+native ARM64 Actions. Its CCI/MCLK resources stay disabled and outside the normal
+kernel/image build. Original resource messages and a separate exact-pin rebase
+are hash-bound. Build the new generic-PHY graph and a phone-specific sensor driver
+before scheduling a camera capture; do not reuse the older inline-PHY graph or
+copy another board's sensor power/calibration data.
+
 ## Updated unattended acceptance boundary, 2026-10-29
 
 r51 on the exact30908706 Actions artifact validates the owner's fixed left-up

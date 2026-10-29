@@ -181,5 +181,34 @@
       "reason": "native unused-local failure and checked timing/mode errors before PHY configuration or power",
       "author": "Codex <codex@openai.com>"
     }
+  ],
+  "disabled_cci_resources": [
+    {
+      "file": "patches/sm8750-dtsi-v2/02.patch",
+      "sha256": "9aa0e7fddd04efad690bebc1bd594e4a08bc52c76a8e9c8140251c082137b7b2",
+      "subject": "[PATCH v2 2/3] arm64: dts: qcom: sm8750: Add CCI definitions",
+      "message_id": "<20260618-pakala-camera-v2-2-9fbb729fd242@oss.qualcomm.com>",
+      "source_url": "https://patchew.org/linux/20260618-pakala-camera-v2-0-9fbb729fd242@oss.qualcomm.com/mbox"
+    },
+    {
+      "file": "patches/sm8750-dtsi-v2/03.patch",
+      "sha256": "5b068e04d9e76950150a3f8a4966aa2bdbbef5e4537190af9cd44b1bb16df574",
+      "subject": "[PATCH v2 3/3] arm64: dts: qcom: sm8750: Add camera MCLK pinctrl",
+      "message_id": "<20260618-pakala-camera-v2-3-9fbb729fd242@oss.qualcomm.com>",
+      "source_url": "https://patchew.org/linux/20260618-pakala-camera-v2-0-9fbb729fd242@oss.qualcomm.com/mbox"
+    }
+  ],
+  "kernel_archive": {
+    "url": "https://codeload.github.com/yzddmr6/linux-sm8750-erhai/legacy.tar.gz/7a81d184e3098624d4342d8f4eff5e23674bcc9f",
+    "sha256": "ab2c3b3eee24131a39ae28dde468810a1908efe180eef29038078d7b7f368d90"
+  },
+  "resource_series_review": "v2 was rejected pending driver dependencies; staged disabled CCI and pinctrl only, no CAMSS board enable or sensor activation",
+  "resource_rebases": [
+    {
+      "file": "fixes/0003-rebase-disabled-cci-mclk-resources.patch",
+      "sha256": "d6f1c546dace9d6bbc821813a17efeae846ed43e53d732988548aa1ca5e9ca97",
+      "author": "Codex <codex@openai.com>",
+      "reason": "Original CCI context references the unstaged old CAMSS node; move only disabled CCI and pinctrl additions to the exact kernel pin"
+    }
   ]
 }

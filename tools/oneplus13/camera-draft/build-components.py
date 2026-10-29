@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 """Compile isolated camera and amplifier components, never phone integration."""
-import argparse,hashlib,json,os,platform,subprocess
+import argparse,hashlib,json,os,platform,subprocess,tarfile,importlib.util
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
 PIN='7a81d184e3098624d4342d8f4eff5e23674bcc9f'
@@ -13,13 +13,17 @@ def sha(path):
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--source-archive',type=Path)
+    parser.add_argument('--cross-compile',choices=('aarch64-linux-gnu-',))
     args=parser.parse_args()
-    if platform.machine() not in ('aarch64','arm64'):raise ValueError('Native ARM64 only')
+    if platform.machine() not in ('aarch64','arm64') and not args.cross_compile:
+        raise ValueError('Native ARM64 or explicit AArch64 cross compiler required')
     out=args.output.resolve()
     if out.exists():raise ValueError('Preserve prior evidence')
     out.mkdir(parents=True);log=out/'compile.log'
     env={k:os.environ[k] for k in ('PATH','HOME','TMPDIR') if k in os.environ}
     env.update(LANG='C.UTF-8',LC_ALL='C.UTF-8')
+    if args.cross_compile:env['CROSS_COMPILE']=args.cross_compile
     def run(command,timeout=240):
         result=subprocess.run([str(x) for x in command],capture_output=True,env=env,timeout=timeout)
         with log.open('ab') as f:f.write(json.dumps([str(x) for x in command]).encode()+b'\n'+result.stdout+result.stderr+b'\n')
@@ -29,18 +33,31 @@ def main():
     if lock['kernel_pin']!=PIN or lock['kernel_repository']!=REPOSITORY or len(lock['patches'])!=23:
         raise ValueError('Unreviewed component inputs')
     kernel=out/'linux'
-    run(['git','init',kernel]);run(['git','-C',kernel,'remote','add','origin',REPOSITORY])
-    run(['git','-C',kernel,'fetch','--depth','1','origin',PIN],timeout=240)
-    run(['git','-C',kernel,'checkout','--detach','FETCH_HEAD'],timeout=180)
-    if run(['git','-C',kernel,'rev-parse','HEAD']).strip()!=PIN:raise ValueError('Kernel pin mismatch')
+    if args.source_archive:
+        if sha(args.source_archive)!=lock['kernel_archive']['sha256']:
+            raise ValueError('Kernel source archive mismatch')
+        scratch=out/'source-extract';scratch.mkdir()
+        with tarfile.open(args.source_archive) as archive:
+            archive.extractall(scratch,filter='data')
+        roots=list(scratch.iterdir())
+        if len(roots)!=1 or not roots[0].is_dir():raise ValueError('Unexpected source archive roots')
+        roots[0].rename(kernel);scratch.rmdir()
+    else:
+        run(['git','init',kernel]);run(['git','-C',kernel,'remote','add','origin',REPOSITORY])
+        run(['git','-C',kernel,'fetch','--depth','1','origin',PIN],timeout=240)
+        run(['git','-C',kernel,'checkout','--detach','FETCH_HEAD'],timeout=180)
+        if run(['git','-C',kernel,'rev-parse','HEAD']).strip()!=PIN:raise ValueError('Kernel pin mismatch')
     if len(lock.get('local_fixes',[]))!=2:raise ValueError('Missing reviewed compiler/error corrections')
-    for entry in lock['patches']+lock['local_fixes']:
+    for entry in lock['disabled_cci_resources']:
+        if sha(HERE/entry['file'])!=entry['sha256']:raise ValueError('Original resource patch changed')
+    for entry in lock['patches']+lock['local_fixes']+lock['resource_rebases']:
         name=Path(entry['file'])
         if name.is_absolute() or '..' in name.parts:raise ValueError('Unsafe patch name')
         patch=HERE/name
         if sha(patch)!=entry['sha256']:raise ValueError('Public patch hash mismatch')
         run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0','-i',patch])
-    # No DTS, firmware, rootfs or normal build output is touched. The amplifier
+    # Only this isolated tree gains disabled CCI/MCLK resources. No firmware,
+    # rootfs or normal build output is touched. The amplifier
     # object shares the new build configuration, without Kconfig/DT integration.
     audio=HERE.parent/'audio-draft'
     for name in ('aw88461.c','aw88461-profile.h'):
@@ -64,6 +81,20 @@ def main():
              'sound/soc/codecs/aw88461.o','sound/soc/codecs/aw88395/aw88395_lib.o']
     run(['make','-C',kernel,'ARCH=arm64','-j'+str(min(os.cpu_count() or 2,8)),'-k',
          'W=1','KCFLAGS=-Werror',*targets],timeout=600)
+    phone_dts=HERE.parents[2]/'devices/oneplus13'
+    for path in phone_dts.glob('sm8750-oneplus-dodge*.dts'):
+        (kernel/'arch/arm64/boot/dts/qcom'/path.name).write_bytes(path.read_bytes())
+    run(['make','-C',kernel,'ARCH=arm64','qcom/sm8750-oneplus-dodge.dtb'],timeout=120)
+    spec=importlib.util.spec_from_file_location('camera_stock',HERE.parent/'stock.py')
+    stock=importlib.util.module_from_spec(spec);spec.loader.exec_module(stock)
+    dtb=kernel/'arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb'
+    tree=stock.Fdt(dtb.read_bytes())
+    cci=[path for path,properties in tree.nodes.items()
+         if 'compatible' in properties and 'qcom,sm8750-cci' in tree.text(path,'compatible')]
+    if len(cci)!=3 or any(tree.text(path,'status')!=['disabled'] for path in cci):
+        raise ValueError('All three staged CCI controllers must remain disabled')
+    buses=[path for path in tree.nodes if any(path.startswith(parent+'/i2c-bus@') for parent in cci)]
+    if len(buses)!=6:raise ValueError('Expected six disabled-parent CCI I2C hosts')
     expected=['drivers/media/platform/qcom/camss/camss-csid-980.o',
               'drivers/media/platform/qcom/camss/camss-vfe-gen4.o',
               'drivers/media/platform/qcom/camss/camss-tpg-gen1.o',
@@ -78,6 +109,10 @@ def main():
     (out/'kernel.config').write_text(cfg)
     proof={'scope':'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
        'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
+       'disabled_cci_resources':lock['disabled_cci_resources'],'resource_rebases':lock['resource_rebases'],
+       'phone_base_dtb_compiled_with_disabled_cci':True,'disabled_cci_controllers':len(cci),
+       'cci_i2c_hosts':len(buses),'phone_base_dtb_sha256':sha(dtb),
+       'cross_compiler':args.cross_compile,'native_arm64_host':platform.machine() in ('aarch64','arm64'),
        'warning_errors_enabled':True,'phone_dts_or_candidate_changed':False,
        'module_install_or_boot_image_created':False,'firmware_or_private_data_included':False,
        'camera_sensor_driver_and_board_graph_complete':False,

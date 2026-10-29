@@ -40,6 +40,7 @@ jobs:
             out/av-components/compile.log
             out/av-components/verification.json
             out/av-components/kernel.config
+            out/av-components/linux/arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge.dtb
             out/av-components/audio-synthetic/verification.json
             out/av-components/camera-synthetic/verification.json
             out/av-components/camera-synthetic/*.log

@@ -35,3 +35,20 @@ synthetic parser/power failure checks against the same kernel configuration.
 This supplies neither missing factory calibration nor dynamic protection.
 No phone DTS, service, firmware, data, module installer or boot image is
 generated, and no running candidate is overwritten.
+
+2026-10-29: the isolated component builder also stages three disabled SM8750
+CCI controllers, six child I2C hosts and camera MCLK pinctrl definitions from
+Hangxiang Ma's 20260618 v2 resource series. The original two messages are kept
+byte-for-byte with SHA256 in sources.json. A separate Codex context rebase
+moves those additions onto the exact kernel pin without adding the old CAMSS
+node, sensor nodes or enabling any CCI controller. The series was rejected by
+the maintainer pending driver dependencies; this staging does not imply upstream
+acceptance. Source: https://patchew.org/linux/20260618-pakala-camera-v2-0-9fbb729fd242@oss.qualcomm.com/
+
+The component builder now accepts the pinned, SHA256-checked kernel source
+archive and an explicit aarch64-linux-gnu- cross compiler for WSL. Native ARM64
+remains the Actions default. It compiles the phone base DTB only in the isolated
+output, checks all three CCI controllers remain disabled and all six I2C hosts
+exist, and exports that DTB for independent review. The normal phone DTS source,
+module install, rootfs and RAM boot image remain unchanged. Neither the generic
+resource graph nor a build success establishes sensor power sequencing or capture.
