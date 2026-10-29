@@ -26,3 +26,10 @@ qualified. The1023 candidate therefore requires a short, low-risk physical test
 with both channels, monotonic system-volume changes, mute, and clip/fault checks.
 It must not be described as a production/default gain policy until those checks
 and stock dynamic-protection behavior are reviewed.
+
+Separate from speaker validation, a first NFC candidate now targets the publicly
+mapped I2C0 bus at address0x28 with IRQ GPIO75 and enable GPIO34. It uses the
+upstream `nxp,nxp-nci-i2c` driver already present in the kernel module set. The
+next RAM plan loads that driver and requires `/dev/nq-nci` before claiming a
+bind. This proves neither NCI initialization nor tag discovery; the SN220T
+secure-element path still needs a real protocol test.

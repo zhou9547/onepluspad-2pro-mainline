@@ -16,7 +16,7 @@ class CameraProbeTree(unittest.TestCase):
         allowed=set(report['additional_changed_nodes'])
         for path,properties in before.nodes.items():
             if path not in allowed:self.assertEqual(properties,after.nodes[path],path)
-        self.assertEqual(allowed,{probe.CAMCC,probe.MCLK,probe.CORE})
+        self.assertEqual(allowed,{probe.CAMCC,probe.MCLK,probe.CORE,probe.NFC_I2C})
         for path in (probe.CAMCC,probe.MCLK):
             self.assertEqual({k:v for k,v in after.nodes[path].items() if k!='phandle'},before.nodes[path])
         self.assertEqual(cells(after.nodes[probe.CORE]['regulator-max-microvolt']),[1000000])
@@ -41,6 +41,15 @@ class CameraProbeTree(unittest.TestCase):
         self.assertNotIn('vddio1p2-supply',sensor)
         self.assertEqual(sensor['vddm-supply'],sensor['vddd-supply'])
         self.assertTrue(report['requires_manual_sensor_and_cci_module_policy'])
+        self.assertEqual(report['nfc_candidate']['i2c'],probe.NFC_I2C)
+        self.assertEqual(report['nfc_candidate']['address'],0x28)
+        self.assertFalse(report['nfc_candidate']['hardware_qualified'])
+        nfc=tree.nodes[probe.NFC]
+        self.assertEqual(strings(nfc['compatible']),['nxp,nxp-nci-i2c'])
+        self.assertEqual(cells(nfc['reg']),[0x28])
+        self.assertEqual(cells(nfc['enable-gpios'])[1:],[34,0])
+        self.assertEqual(cells(nfc['interrupts']),[75,0])
+        self.assertEqual(strings(tree.nodes[probe.NFC_I2C]['status']),['okay'])
 
     def test_mutated_or_foreign_tree_is_rejected_before_derivation(self):
         blob=(ROOT/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes()

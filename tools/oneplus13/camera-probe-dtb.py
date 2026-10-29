@@ -12,6 +12,8 @@ CAMCC='/soc@0/clock-controller@ade0000'
 MCLK='/soc@0/clock-controller@1760000'
 CORE=RSC+'/regulators-4/ldo1'
 CCI='/soc@0/cci@ac7b000'
+NFC_I2C='/soc@0/geniqup@ac0000/i2c@a80000'
+NFC=NFC_I2C+'/nfc@28'
 BANK=RSC+'/regulators-camera'
 # C.93 D/L/S ultrawide module slaveInfo all carry 8-bit0x5a.
 # Linux I2C reg is the 7-bit address, not the reference-board0x10.
@@ -83,10 +85,26 @@ def derive(blob):
     tree.nodes[SENSOR+'/port']={}
     tree.nodes[SENSOR+'/port/endpoint']={'data-lanes':u32(1,2,3,4),
         'link-frequencies':u32(0,1248000000)}
+    if 'qcom,geni-i2c' not in strings(tree.nodes[NFC_I2C]['compatible']):
+        raise ValueError('Wrong NFC I2C provider')
+    irq=add(TLMM+'/nfc-irq-active-state',{})
+    enable=add(TLMM+'/nfc-enable-active-state',{})
+    sleep_nfc=add(TLMM+'/nfc-sleep-state',{})
+    tree.nodes[TLMM+'/nfc-irq-active-state/irq-pins']={
+        'pins':text('gpio75'),'function':text('gpio'),'drive-strength':u32(2),'bias-pull-up':b''}
+    tree.nodes[TLMM+'/nfc-enable-active-state/enable-pins']={
+        'pins':text('gpio34'),'function':text('gpio'),'drive-strength':u32(2),'bias-disable':b''}
+    tree.nodes[TLMM+'/nfc-sleep-state/sleep-pins']={
+        'pins':text('gpio34','gpio75'),'function':text('gpio'),'drive-strength':u32(2),'bias-pull-down':b''}
+    tree.nodes[NFC_I2C]['status']=text('okay')
+    add(NFC,{'compatible':text('nxp,nxp-nci-i2c'),'reg':u32(0x28),
+        'interrupt-parent':u32(gpio),'interrupts':u32(75,0),'wakeup-source':b'',
+        'enable-gpios':u32(gpio,34,0),'pinctrl-0':u32(irq,enable),
+        'pinctrl-1':u32(sleep_nfc),'pinctrl-names':text('default','sleep'),'status':text('okay')})
     changed={path for path in before if before[path]!=tree.nodes[path]}
-    if changed!={CAMCC,MCLK,CORE}:raise ValueError('Unexpected existing-node mutation')
+    if changed!={CAMCC,MCLK,CORE,NFC_I2C}:raise ValueError('Unexpected existing-node mutation')
     new=set(tree.nodes)-set(before)
-    allowed=(CCI,BANK,TLMM+'/cci0-probe-',TLMM+'/ultrawide-probe-')
+    allowed=(CCI,BANK,TLMM+'/cci0-probe-',TLMM+'/ultrawide-probe-',TLMM+'/nfc-',NFC)
     if any(not any(path.startswith(prefix) for prefix in allowed) for path in new):
         raise ValueError('Unexpected new camera node')
     final=tree.to_blob();check=Fdt(final)
@@ -104,4 +122,7 @@ def derive(blob):
         'camss_or_phy_enabled':False,'capture_pipeline_present':False,
         'sensor_driver_has_streaming_callbacks':True,
         'physical_power_sequence_qualified':False,'camera_capture_qualified':False,
-        'requires_manual_sensor_and_cci_module_policy':True,'default_boot_tree_changed':False}
+        'requires_manual_sensor_and_cci_module_policy':True,
+        'nfc_candidate':{'i2c':NFC_I2C,'address':0x28,'irq_gpio':75,
+            'enable_gpio':34,'driver':'nxp,nxp-nci-i2c','hardware_qualified':False},
+        'default_boot_tree_changed':False}
