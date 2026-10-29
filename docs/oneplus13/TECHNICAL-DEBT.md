@@ -1,3 +1,13 @@
+## Absolute speaker gain comparison, 2026-10-29
+
+The complete r71 combined round passes and the owner confirms corrected upright
+orientation. An identical WAV played through Android's media service at160/160
+is much louder than the Linux896 ceiling. The next RAM-only candidate uses1023,
+removing11.921875dB of artificial ceiling attenuation. It needs short dual-
+speaker/system-volume/mute and clipping/fault validation. Signed dynamic speaker
+protection remains unqualified and must not be bypassed in a production profile.
+See R72-SPEAKER-VOLUME-20261029.md.
+
 ## r70 hardware result and remaining ordering gaps, 2026-10-29
 
 The fixed AVC profile/level/colorimetry candidate resolves the observed

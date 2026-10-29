@@ -91,7 +91,7 @@ def main():
         raw.unlink(missing_ok=True);fixture.unlink(missing_ok=True)
     if errors:raise ValueError('Desktop volume cleanup failed')
     result={'scope':'RAM_DESKTOP_SYSTEM_VOLUME_ACOUSTIC_MEASUREMENT',
-            'hardware_level':896,'measurements':measurements,'raw_audio_deleted':True,
+            'hardware_level':1023,'measurements':measurements,'raw_audio_deleted':True,
             'capture_controls_restored':True,'software_muted_at_exit':True,**evaluate(measurements)}
     (state/'result.json').write_text(json.dumps(result,sort_keys=True)+'\n')
     print('DESKTOP_VOLUME_ACOUSTIC_RESULT '+json.dumps(result,sort_keys=True),flush=True)

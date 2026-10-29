@@ -42,7 +42,7 @@ class DesktopAudio(unittest.TestCase):
         self.assertIn("name='Secondary MI2S Audio Mixer MultiMedia1' 1,1",text)
         self.assertIn("name='Secondary MI2S Audio Mixer MultiMedia1' 0,0",text)
         for channel in (0,1):
-            self.assertIn("name='Amp"+str(channel)+" Playback Volume' 896",text)
+            self.assertIn("name='Amp"+str(channel)+" Playback Volume' 1023",text)
             self.assertIn("name='Amp"+str(channel)+" Playback Volume' 0",text)
         self.assertNotIn('Secondary TDM',text)
 

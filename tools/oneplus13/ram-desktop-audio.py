@@ -86,8 +86,8 @@ def prepare_explicit_route(card):
     run(['alsaucm','-c','hw:'+card,'set','_verb','HiFi'],8)
     # Apply the exact reviewed UCM EnableSequence. Some WirePlumber versions
     # reject the card before the UCM device verb can be exposed.
-    mixer(card,'Amp0 Playback Volume','896')
-    mixer(card,'Amp1 Playback Volume','896')
+    mixer(card,'Amp0 Playback Volume','1023')
+    mixer(card,'Amp1 Playback Volume','1023')
     mixer(card,'Secondary MI2S Audio Mixer MultiMedia1','on,on')
 
 
@@ -198,7 +198,7 @@ def enable(card):
     run(['wpctl','set-mute',str(sink['id']),'0'],user=True)
     return {'scope':'EXPLICIT_RAM_PIPEWIRE_SPEAKER_CANDIDATE','sink_id':sink['id'],'sink_name':sink['name'],
             'sink_method':sink_method,'ucm_speakers':True,'desktop_software_volume':True,'initial_volume':0.5,
-            'hardware_test_level':896,'extra_profile_attenuation_db':11.921875,
+            'hardware_test_level':1023,'extra_profile_attenuation_db':0,
             'dynamic_protection_qualified':False,'normal_desktop_playback_qualified':False}
 
 def main():

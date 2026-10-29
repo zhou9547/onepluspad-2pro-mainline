@@ -306,7 +306,7 @@ def main():
                   video_hardware_decode_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
     result.update(desktop_audio_files=desktop_audio_hashes,desktop_audio_auto_started=False,
-                  desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=896)
+                  desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=1023)
     result.update(container_files=container_hashes,container_daemon_auto_started=False,
                   container_hardware_qualified=False)
     result.update(sensor_runtime_files=runtime_hashes,sensor_runtime_host_private_inputs_required=False,

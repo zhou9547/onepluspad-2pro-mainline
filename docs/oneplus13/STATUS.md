@@ -1,3 +1,17 @@
+## r71 complete joint round and speaker-gain follow-up, 2026-10-29
+
+The d872a04e update passed every automated combined check in647.5s and returned
+Android with matching baselines and zero writes. The owner confirmed upright
+portrait is now correct after the pitch-only mapping fix; left/right mapping and
+Dock remain correct. Guarded GStreamer hardware decode, microphone, two-speaker
+correlation and the 20/50/100/mute system-volume sequence all pass.
+
+An identical-WAV Android comparison then showed Android maximum is much louder
+than Linux. The former896 Linux ceiling deliberately retained11.921875dB of
+profile attenuation. A1023 full-control-range RAM candidate is now prepared for
+short physical validation. Stock dynamic protection/calibration remain open. See
+[speaker comparison](R72-SPEAKER-VOLUME-20261029.md).
+
 ## r70 framework decode and pose mapping, 2026-10-29
 
 Build40885554785 on83768fc passes and its complete image/SSC/kernel are
