@@ -1,3 +1,16 @@
+## C-PHY framework compiles in isolation, 2026-10-29
+
+An explicit --cphy component-build option now rebases the six-message public
+Qualcomm PHY/CAMSS RFC onto the exact existing stack, with original authors/
+messages and eight-file pre/post hashes. A clean archive-based AArch64 WSL
+build passes all camera/clock/amplifier objects and disabled DT with W=1/-Werror.
+The actual staged functions pass26 release and26 ASan/UBSan boundary cases;
+the full Linux suite passes596 tests with5 environment skips. The component
+Actions workflow has an explicit cphy boolean for native ARM64 verification.
+The candidate remains outside the normal phone kernel and has no phone C-PHY
+register tables or capture qualification. See
+[CAMERA-CPHY-FRAMEWORK-20261029.md](CAMERA-CPHY-FRAMEWORK-20261029.md).
+
 ## Ultrawide C-PHY template family resolved, 2026-10-29
 
 The saved complete stock FDT supplies probe_intent0x30e0 for CCI0 sensor1.

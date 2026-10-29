@@ -1,3 +1,13 @@
+## Isolated C-PHY framework boundary, 2026-10-29
+
+The optional C-PHY component candidate compiles with the exact kernel and
+checks actual setup/configuration/settle function boundaries in release and
+ASan/UBSan. It rejects a missing phone table and does not replace it with an
+X1E sequence. Native Actions is pending. The sensor's C-PHY registers/timings,
+phone custom PHY tables, graph and real pixel capture remain unimplemented;
+do not call framework compilation a camera adaptation success. The normal
+phone kernel/image does not apply this candidate.
+
 ## Raw timer evidence and camera template ambiguity, 2026-10-29
 
 r59 retains all mature joint feature checks and clean Android recovery, but

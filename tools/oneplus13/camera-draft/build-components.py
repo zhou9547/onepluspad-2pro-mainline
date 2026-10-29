@@ -15,6 +15,8 @@ def main():
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--source-archive',type=Path)
     parser.add_argument('--cross-compile',choices=('aarch64-linux-gnu-',))
+    parser.add_argument('--cphy',action='store_true',
+                        help='Compile isolated C-PHY framework candidate without phone tables')
     args=parser.parse_args()
     if platform.machine() not in ('aarch64','arm64') and not args.cross_compile:
         raise ValueError('Native ARM64 or explicit AArch64 cross compiler required')
@@ -56,6 +58,22 @@ def main():
         patch=HERE/name
         if sha(patch)!=entry['sha256']:raise ValueError('Public patch hash mismatch')
         run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0','-i',patch])
+    cphy_lock=None
+    if args.cphy:
+        directory=HERE/'cphy';cphy_lock=json.loads((directory/'sources.json').read_text())
+        if (cphy_lock['scope']!='ISOLATED_CPHY_FRAMEWORK_ONLY_NO_PHONE_TABLE_OR_ACTIVATION' or
+            cphy_lock['phone_register_table_present'] or cphy_lock['hardware_qualified']):
+            raise ValueError('Unreviewed C-PHY integration scope')
+        def verify_paths(base,inventory):
+            for name,digest in inventory.items():
+                path=Path(name)
+                if path.is_absolute() or '..' in path.parts or sha(base/path)!=digest:
+                    raise ValueError('C-PHY source mismatch: '+name)
+        verify_paths(kernel,cphy_lock['base_files'])
+        verify_paths(directory,{item['file']:item['sha256'] for item in cphy_lock['upstream_messages']})
+        verify_paths(directory,{'rebased.patch':cphy_lock['rebase_patch_sha256']})
+        run(['patch','-d',kernel,'-p1','--batch','--forward','--fuzz=0','-i',directory/'rebased.patch'])
+        verify_paths(kernel,cphy_lock['generated_files'])
     # Only this isolated tree gains disabled CCI/MCLK resources. No firmware,
     # rootfs or normal build output is touched. The amplifier
     # object shares the new build configuration, without Kconfig/DT integration.
@@ -63,7 +81,8 @@ def main():
     for name in ('aw88461.c','aw88461-profile.h'):
         (kernel/'sound/soc/codecs'/name).write_bytes((audio/name).read_bytes())
     run(['python3',audio/'check.py','--output',out/'audio-synthetic'])
-    run(['python3',HERE/'check-phy-errors.py','--kernel',kernel,'--output',out/'camera-synthetic'])
+    checker='check-cphy-errors.py' if args.cphy else 'check-phy-errors.py'
+    run(['python3',HERE/checker,'--kernel',kernel,'--output',out/'camera-synthetic'])
     run(['make','-C',kernel,'ARCH=arm64','defconfig'],timeout=120)
     config=kernel/'scripts/config'
     for name in ('MEDIA_SUPPORT','MEDIA_CONTROLLER','VIDEO_DEV','MEDIA_PLATFORM_SUPPORT','V4L_PLATFORM_DRIVERS','PM_OPP'):
@@ -109,6 +128,8 @@ def main():
         files[name]={'sha256':sha(path),'bytes':len(data)}
     (out/'kernel.config').write_text(cfg)
     proof={'scope':'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
+       'isolated_cphy_framework':args.cphy,'cphy_provenance':cphy_lock,
+       'phone_cphy_register_table_present':False,'cphy_capture_qualified':False,
        'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
        'disabled_cci_resources':lock['disabled_cci_resources'],'resource_rebases':lock['resource_rebases'],
        'sensor_patches':lock['sensor_patches'],'sensor_compat_fixes':lock['sensor_compat_fixes'],

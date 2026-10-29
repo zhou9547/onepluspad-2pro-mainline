@@ -9,6 +9,11 @@ on:
       - tests/test_oneplus13_camera_board_map.py
       - docs/oneplus13/STATUS.md
   workflow_dispatch:
+    inputs:
+      cphy:
+        description: Compile isolated C-PHY framework (no phone register table or activation)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -28,7 +33,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends build-essential bc bison flex libssl-dev libelf-dev patch
           test "$(uname -m)" = aarch64
       - name: Compile fixed camera prerequisites and actual amplifier functions
-        run: python3 tools/oneplus13/camera-draft/build-components.py --output out/av-components
+        env:
+          CPHY: ${{ inputs.cphy }}
+        run: |
+          args=()
+          if [[ "$CPHY" == true ]]; then args+=(--cphy); fi
+          python3 tools/oneplus13/camera-draft/build-components.py --output out/av-components "${args[@]}"
       - name: Run camera board-map contract tests without private FDT
         run: python3 -m unittest discover -s tests -p test_oneplus13_camera_board_map.py -v
       - name: Preserve component review evidence only
