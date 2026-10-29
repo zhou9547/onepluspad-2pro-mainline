@@ -1,3 +1,14 @@
+## r65 read-only framework device selection
+
+r65 repeats the native Iris frame but fails before framework decode while
+writing a read-only device property. The corrected selector reads the exact
+factory-bound path and rejects other devices, plugins and software decoders.
+Targeted tests pass. Fresh Actions/download verification and combined hardware
+acceptance remain required; r64 native-frame acceptance stays intact. r65
+unloads Iris, removes nodes and returns Android with matching baselines and
+clean kernel health; its halted ledger remains. Later mature regressions were
+not reached, and runtime suspend/framework decode were not accepted.
+
 ## Explicit GStreamer path prepared after accepted r64 native frame
 
 The next manual image adds a hash-bound GStreamer helper and the required GI

@@ -1,3 +1,22 @@
+## r65 framework device-property failure and corrected selection
+
+The exact38df6a13 image passes all five Actions40844694343 jobs and independent
+download verification. The joint phone round repeats strict camera ID and the
+native Iris AVC frame, but GStreamer fails before decoding because the helper
+writes the dynamic mem2mem factory's read-only device property. The pinned
+GStreamer1.28.2 source confirms the device is bound at factory registration.
+Iris unloads, video nodes disappear and kernel health stays clean. Android
+returns after248.4s with seven matching baselines and zero partition writes.
+The consumed halted ledger is preserved; later mature regressions are not
+reached. No framework or idle/suspend reset acceptance is claimed. See
+[r65 evidence](evidence/joint-gstreamer-r65.sanitized.json).
+
+The corrected helper selects an explicit video4linux2 H264 factory by reading
+its exact registered device path, without setting the property. Tests exercise
+the read-only property, other device, wrong plugin and software decoder cases;
+all five framework tests, including real raw-GStreamer pixels/PTS/NULL, pass.
+A fresh source image and complete combined phone round remain required.
+
 ## Explicit GStreamer path prepared after accepted r64 native frame
 
 The next manual image adds a hash-bound GStreamer helper and the required GI

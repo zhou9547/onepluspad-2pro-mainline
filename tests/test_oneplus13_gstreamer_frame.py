@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib.util,json,os,subprocess,sys,unittest
+from unittest.mock import Mock
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 SCRIPT=ROOT/'tools/oneplus13/ram-gstreamer-frame.py'
@@ -7,6 +8,37 @@ spec=importlib.util.spec_from_file_location('gst_phone_frame',SCRIPT)
 video=importlib.util.module_from_spec(spec);spec.loader.exec_module(video)
 
 class GStreamerFrame(unittest.TestCase):
+    def decoder_registry(self,rows):
+        gst=Mock();factories=[];devices={}
+        for name,plugin,path in rows:
+            factory=Mock();factory.get_name.return_value=name;factory.get_plugin_name.return_value=plugin
+            factories.append(factory)
+            candidate=Mock();candidate.find_property.return_value=object()
+            candidate.get_property.return_value=path
+            candidate.set_property.side_effect=TypeError('property device is not writable')
+            devices[name]=candidate
+        gst.ElementFactory.list_get_elements.return_value=factories
+        gst.ElementFactory.make.side_effect=lambda name,unused:devices[name]
+        return gst,devices
+
+    def test_selects_exact_read_only_device_without_writing_property(self):
+        gst,devices=self.decoder_registry([
+            ('v4l2h264dec','video4linux2','/dev/video0'),
+            ('v4l2video1h264dec','video4linux2','/dev/video1')])
+        decoder,name=video.select_decoder(gst,'/dev/video1')
+        self.assertIs(decoder,devices['v4l2video1h264dec'])
+        self.assertEqual(name,'v4l2video1h264dec')
+        for item in devices.values():item.set_property.assert_not_called()
+
+    def test_rejects_other_device_plugin_and_software_decoder(self):
+        gst,devices=self.decoder_registry([
+            ('v4l2h264dec','video4linux2','/dev/video0'),
+            ('v4l2video1h264dec','untrusted','/dev/video1'),
+            ('avdec_h264','libav','/dev/video1')])
+        with self.assertRaises(ValueError):video.select_decoder(gst,'/dev/video1')
+        self.assertEqual([item.args[0] for item in gst.ElementFactory.make.call_args_list],['v4l2h264dec'])
+        for item in devices.values():item.set_property.assert_not_called()
+
     def test_pixels_reject_truncation_bad_layout_and_single_corrupted_pixel(self):
         stride=384;raw=bytearray(stride*256*3//2)
         for y in range(240):

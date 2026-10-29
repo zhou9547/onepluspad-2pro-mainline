@@ -24,6 +24,24 @@ def gstreamer():
     Gst.init(None)
     return Gst,GstVideo
 
+def select_decoder(Gst,device):
+    plugin=Gst.Registry.get().find_plugin('video4linux2')
+    if plugin is None:raise ValueError('Missing video4linux2 plugin')
+    Gst.Plugin.load_file(plugin.get_filename())
+    factories=sorted(Gst.ElementFactory.list_get_elements(
+        Gst.ELEMENT_FACTORY_TYPE_DECODER,Gst.Rank.NONE),key=lambda item:item.get_name())
+    for factory in factories:
+        name=factory.get_name()
+        if (not re.fullmatch(r'v4l2(?:video[0-9]+)?h264dec',name) or
+            factory.get_plugin_name()!='video4linux2'):continue
+        candidate=Gst.ElementFactory.make(name,None)
+        # Dynamic factories bind a device at registration; their inherited
+        # device property is read-only. Select by that exact registered path.
+        if (candidate is not None and candidate.find_property('device') and
+            candidate.get_property('device')==device):
+            return candidate,name
+    raise ValueError('No explicit V4L2 H264 decoder factory for guarded device')
+
 def pipeline_frame(raw,device=None):
     Gst,GstVideo=gstreamer()
     pipe=Gst.Pipeline.new('oneplus13-synthetic-hardware-frame')
@@ -32,23 +50,7 @@ def pipeline_frame(raw,device=None):
     if source is None or sink is None:raise ValueError('Missing appsrc/appsink')
     decoder=None;factory_name=None
     if device is not None:
-        plugin=Gst.Registry.get().find_plugin('video4linux2')
-        if plugin is None:raise ValueError('Missing video4linux2 plugin')
-        # The image may cache a registry before the guarded module is loaded.
-        # Loading this exact plugin registers its live mem2mem decoder factories.
-        Gst.Plugin.load_file(plugin.get_filename())
-        matches=sorted(f.get_name() for f in Gst.ElementFactory.list_get_elements(
-            Gst.ELEMENT_FACTORY_TYPE_DECODER,Gst.Rank.NONE)
-            if re.fullmatch(r'v4l2(?:video[0-9]+)?h264dec',f.get_name()))
-        for name in matches:
-            candidate=Gst.ElementFactory.make(name,None)
-            if candidate is not None and candidate.find_property('device'):
-                candidate.set_property('device',device)
-                if candidate.get_property('device')==device:
-                    decoder=candidate;factory_name=name;break
-        if decoder is None:raise ValueError('No explicit V4L2 H264 decoder factory')
-        if decoder.get_factory().get_plugin_name()!='video4linux2':
-            raise ValueError('Wrong decoder implementation')
+        decoder,factory_name=select_decoder(Gst,device)
     source.set_property('format',Gst.Format.TIME)
     source.set_property('block',False)
     source.set_property('max-bytes',16384 if decoder else 262144)
