@@ -3,12 +3,20 @@
 The optional C-PHY component candidate compiles with the exact kernel and
 checks actual setup/configuration/settle function boundaries in release and
 ASan/UBSan. It rejects a missing phone table and does not replace it with an
-X1E sequence. Native Actions is pending. The sensor's C-PHY registers/timings,
+X1E sequence. Native ARM64 Actions40826100382 passed. The sensor's C-PHY registers/timings,
 phone custom PHY tables, graph and real pixel capture remain unimplemented;
 do not call framework compilation a camera adaptation success. The normal
 phone kernel/image does not apply this candidate.
 
 ## Raw timer evidence and camera template ambiguity, 2026-10-29
+
+r60's idle/busy/idle STATUS sequence0/28/2028/83, followed by explicit ping0,
+shows a raw counter decrease during idle without a helper keepalive. Do not
+reduce this to a simple cumulative CPU-time interpretation. The explicit awake
+reset candidate preserves all original ioctl countdown/keepalive/expiry gates
+and can only qualify an awake CPU scope after independently observed Android
+return. General idle recovery, suspend and long-term watchdog behavior remain
+unqualified even if that candidate succeeds.
 
 r59 retains all mature joint feature checks and clean Android recovery, but
 still does not qualify independent watchdog reset. Raw elapsed advances44

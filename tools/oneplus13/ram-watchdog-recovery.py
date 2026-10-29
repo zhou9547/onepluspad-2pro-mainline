@@ -55,6 +55,12 @@ def record(doc):
     print('WATCHDOG_RECOVERY_RESULT '+json.dumps(doc,sort_keys=True),flush=True)
 
 
+def busy_wait(seconds):
+    """Keep this ordinary-priority process runnable without any keepalive."""
+    deadline=time.monotonic()+seconds
+    while time.monotonic()<deadline:pass
+
+
 def clock_probe(sample,report,keepalive):
     """Collect idle/busy STATUS evidence; never infer units or qualify recovery."""
     affinity=os.sched_getaffinity(0)
@@ -67,9 +73,7 @@ def clock_probe(sample,report,keepalive):
         for mode in ('idle','busy','idle'):
             wall=time.monotonic();process=time.process_time()
             if mode=='idle':time.sleep(2)
-            else:
-                deadline=wall+2
-                while time.monotonic()<deadline:pass
+            else:busy_wait(2)
             report['clock_intervals'].append({
                 'mode':mode,'wall_seconds':time.monotonic()-wall,
                 'process_seconds':time.process_time()-process})
@@ -87,8 +91,12 @@ def main():
     mode.add_argument('--arm-one-reset',action='store_true')
     mode.add_argument('--diagnose-clock',action='store_true',
                       help='Six-second STATUS sampling, then disarm; no reset qualification')
+    parser.add_argument('--hold-cpu-awake',action='store_true',
+                        help='Pin this reset test to one CPU and busy-wait; excludes idle/suspend qualification')
     parser.add_argument('--require-hypervisor-status',action='store_true')
     args=parser.parse_args()
+    if args.hold_cpu_awake and not args.arm_one_reset:
+        parser.error('--hold-cpu-awake requires --arm-one-reset')
     if os.geteuid()!=0 or os.uname().release!=args.release:raise ValueError('Wrong root/kernel')
     if not Path('/run/oneplus13/ram-session').is_file():raise ValueError('Protected RAM session required')
     if not any(x.startswith('overlay / overlay ') for x in Path('/proc/mounts').read_text().splitlines()):
@@ -110,14 +118,22 @@ def main():
         raise ValueError('Wrong watchdog character device')
     STATE.mkdir(mode=0o700,exist_ok=False)
     report={'scope':('ONE_MANUAL_RAM_GUNYAH_CLOCK_DIAGNOSTIC' if args.diagnose_clock else
+                     'ONE_MANUAL_RAM_GUNYAH_AWAKE_RESET' if args.hold_cpu_awake else
                      'ONE_MANUAL_RAM_GUNYAH_WATCHDOG_RESET'),'suspend_requested':False,
+            'active_wait_required':args.hold_cpu_awake,'idle_or_suspend_recovery_qualified':False,
             'partition_writes':0,'armed':False,'countdown_verified':False,
             'keepalive_verified':False,'reset_observed':False,'hardware_samples':[]}
     def sample(label):
         report['hardware_samples'].append(status_sample(
-            base,label,args.require_hypervisor_status or args.diagnose_clock))
-    fd=None
+            base,label,args.require_hypervisor_status or args.diagnose_clock or args.hold_cpu_awake))
+    fd=None;affinity=None
     try:
+        if args.hold_cpu_awake:
+            report['stage']='cpu-affinity'
+            affinity=os.sched_getaffinity(0)
+            if not affinity:raise ValueError('Empty CPU affinity')
+            report['awake_cpu']=min(affinity)
+            os.sched_setaffinity(0,{report['awake_cpu']})
         report['stage']='inactive-status'
         sample('inactive-before-open')
         report['stage']='device-open'
@@ -150,7 +166,8 @@ def main():
         first=ioctl_int(fd,WDIOC_GETTIMELEFT)
         report['first_timeleft']=first
         sample('first-timeleft')
-        time.sleep(2)
+        if args.hold_cpu_awake:busy_wait(2)
+        else:time.sleep(2)
         second=ioctl_int(fd,WDIOC_GETTIMELEFT)
         report['second_timeleft']=second
         sample('second-timeleft')
@@ -168,7 +185,8 @@ def main():
         record(report)
         # Keep the open descriptor alive without pings; do not ask PID1 to reboot.
         # If the hypervisor fails to reset, the finally block disarms after20s.
-        time.sleep(20)
+        if args.hold_cpu_awake:busy_wait(20)
+        else:time.sleep(20)
         report['reset_failed']=True
         raise RuntimeError('Watchdog failed to reset within bounded no-ping wait')
     except (OSError,ValueError,RuntimeError) as error:
@@ -177,11 +195,15 @@ def main():
         if isinstance(error,OSError):report['errno']=error.errno
         raise
     finally:
-        if fd is not None:
-            try:os.write(fd,b'V')
-            finally:os.close(fd)
-            report['disarmed_after_return']=(base/'state').read_text().strip()=='inactive'
-        record(report)
+        try:
+            if fd is not None:
+                try:os.write(fd,b'V')
+                finally:os.close(fd)
+                report['disarmed_after_return']=(base/'state').read_text().strip()=='inactive'
+        finally:
+            try:
+                if affinity is not None:os.sched_setaffinity(0,affinity)
+            finally:record(report)
 
 
 if __name__=='__main__':main()

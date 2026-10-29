@@ -9,6 +9,13 @@ wdt=importlib.util.module_from_spec(spec);spec.loader.exec_module(wdt)
 
 
 class WatchdogInventory(unittest.TestCase):
+    def test_busy_wait_has_no_sleep_or_keepalive(self):
+        with patch.object(wdt.time,'monotonic',side_effect=[10,10.5,11,12]), \
+             patch.object(wdt.time,'sleep') as sleep, \
+             patch.object(wdt,'ioctl_int') as ioctl:
+            wdt.busy_wait(2)
+        sleep.assert_not_called();ioctl.assert_not_called()
+
     def test_clock_probe_has_no_ping_during_measurement_and_restores_affinity(self):
         class Clock:
             now=0

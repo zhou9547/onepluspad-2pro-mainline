@@ -1,5 +1,22 @@
 # Manual RAM watchdog recovery check
 
+r60's CPU0 idle/busy/idle comparison gives elapsed0/28/2028/83, followed by0
+after the explicit final keepalive. Each interval lasted2s; the busy interval
+used1.99875s process time. The helper issues no intervening keepalive. The
+counter decrease after the busy interval means idle reset/control behavior or
+another feeding path must be considered; this is not proof of cumulative CPU
+time, exact ABI units or independent recovery.
+
+`--arm-one-reset --hold-cpu-awake` is a new explicit, separate scope. It pins
+only its own ordinary-priority process to one allowed CPU, busy-waits instead
+of sleeping during the original2s countdown and20s no-ping window, and retains
+all12s GETTIMEOUT/GETTIMELEFT/countdown/keepalive checks. STATUS is required
+before opening the device. Affinity is restored on return/error, including
+cleanup failures; magic-close and the external600s deadline remain. No cpuidle,
+CPU hotplug, PM or driver timer configuration is changed. The receipt explicitly
+marks active_wait_required and refuses to qualify idle/suspend recovery. Host
+observation of a reset and matching Android baseline is still mandatory.
+
 r59 on the exact da0f54cb Actions40820121568 image records raw STATUS elapsed
 0 immediately after keepalive and44 after2.0004s, with GETTIMELEFT12 both times.
 Enabled changes0 to1 on open; bit31 is already1 immediately after open. These

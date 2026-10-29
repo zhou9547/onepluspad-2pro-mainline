@@ -34,7 +34,10 @@ complete component builder, including CAMSS, PHY, CCI, S5KJN5, clock and amplifi
 objects, disabled board DT and both synthetic suites. The full Linux offline
 suite passes596 tests with5 environment skips. The manual **OnePlus13 camera
 and speaker offline components** workflow now accepts boolean `cphy=true` for
-the same native ARM64 build; new Actions verification is pending.
+the same native ARM64 build.
+[Actions40826100382](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40826100382)
+passed on9608015e with cphy=true, including the complete component build,
+synthetic suites and board-map tests.
 
 Remaining work is substantial: adapt the phone-specific public GPL CSIPHY
 v2.3.0 dodge-ultrawide register sequences/rate tables, establish the sensor's

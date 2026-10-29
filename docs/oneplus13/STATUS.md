@@ -1,3 +1,24 @@
+## r60 clock comparison and retained regressions, 2026-10-29
+
+Actions40824286846 passed all five jobs on5f37a1da. Independent downloaded
+image verification and r60 repeat all mature combined checks, including camera
+chip-ID/teardown, fresh microphone/separate-speaker correlation, actual desktop
+20/50/100% plus mute, both WiFi bands, Docker, ordinary left-up/Mutter1 and
+GNOME/Chinese/SSH/Dock. Kernel-health gates are clean; Android returned after
+473.9s with seven matching baselines and zero partition writes.
+
+On CPU0 the six-second diagnostic reads raw elapsed0, then28 after idle2s,
+2028 after busy2s, then83 after idle2s, and0 after the explicit final keepalive.
+The busy interval used1.99875s process time. No explicit keepalive occurred
+between the three intervals. The drop2028 to83 means simple paused cumulative
+CPU time is not a sufficient explanation: an idle-related reset or another
+feeding/control path remains possible. No independent reset was requested or
+qualified. The next explicit reset candidate pins its own process and busy-waits
+through the unchanged12s countdown/keepalive/20s expiry gates, records the awake
+requirement, and excludes idle/suspend qualification. It still requires host
+observation of Android return and baseline equality; no kernel timer semantics
+or get_timeleft calculation changes.
+
 ## C-PHY framework compiles in isolation, 2026-10-29
 
 An explicit --cphy component-build option now rebases the six-message public
@@ -6,7 +27,8 @@ messages and eight-file pre/post hashes. A clean archive-based AArch64 WSL
 build passes all camera/clock/amplifier objects and disabled DT with W=1/-Werror.
 The actual staged functions pass26 release and26 ASan/UBSan boundary cases;
 the full Linux suite passes596 tests with5 environment skips. The component
-Actions workflow has an explicit cphy boolean for native ARM64 verification.
+Actions40826100382 passed the complete native ARM64 cphy=true build, including
+both synthetic suites and all component/DT targets.
 The candidate remains outside the normal phone kernel and has no phone C-PHY
 register tables or capture qualification. See
 [CAMERA-CPHY-FRAMEWORK-20261029.md](CAMERA-CPHY-FRAMEWORK-20261029.md).
