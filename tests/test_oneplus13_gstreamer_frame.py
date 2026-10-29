@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-import importlib.util,json,os,subprocess,sys,unittest
+import contextlib,importlib.util,io,json,os,subprocess,sys,unittest
 from unittest.mock import Mock
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
@@ -8,6 +8,26 @@ spec=importlib.util.spec_from_file_location('gst_phone_frame',SCRIPT)
 video=importlib.util.module_from_spec(spec);spec.loader.exec_module(video)
 
 class GStreamerFrame(unittest.TestCase):
+    def test_private_bus_diagnostic_is_bounded_and_not_in_public_error(self):
+        message=Mock();error=Mock(domain='gst-stream-error-quark',code=1,message='m'*2000)
+        message.parse_error.return_value=error,'d'*8000
+        output=io.StringIO()
+        with contextlib.redirect_stderr(output):text=video.private_pipeline_error(message)
+        self.assertEqual(text,'GStreamer pipeline error gst-stream-error-quark:1')
+        record=json.loads(output.getvalue().removeprefix('GSTREAMER_PRIVATE_ERROR '))
+        self.assertEqual(len(record['message']),1024);self.assertEqual(len(record['debug']),4096)
+        self.assertFalse(record['raw_diagnostic_publishable'])
+
+    @unittest.skipUnless(os.name=='posix','Native GStreamer caps negotiation')
+    def test_exact_fixture_caps_satisfy_driver_parsed_au_contract(self):
+        try:Gst,unused=video.gstreamer()
+        except (ImportError,ValueError):self.skipTest('GStreamer GI packages unavailable')
+        required=Gst.Caps.from_string('video/x-h264,stream-format=byte-stream,alignment=au,parsed=(boolean)true')
+        actual=Gst.Caps.from_string(video.ENCODED_CAPS)
+        old=Gst.Caps.from_string(video.ENCODED_CAPS.replace('parsed=(boolean)true,',''))
+        self.assertTrue(actual.is_subset(required))
+        self.assertFalse(old.is_subset(required))
+
     def decoder_registry(self,rows):
         gst=Mock();factories=[];devices={}
         for name,plugin,path in rows:

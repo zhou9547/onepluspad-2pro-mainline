@@ -1,10 +1,20 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 """Bounded explicit V4L2 GStreamer path; no autoplug/software decoder fallback."""
-import argparse, hashlib, json, os, re, time
+import argparse, hashlib, json, os, re, sys, time
 from pathlib import Path
 
 WIDTH,HEIGHT,PTS=320,240,12345000000
+ENCODED_CAPS=('video/x-h264,stream-format=byte-stream,alignment=au,parsed=(boolean)true,'
+              'width=320,height=240,framerate=1/1')
+
+def private_pipeline_error(message):
+    error,debug=message.parse_error()
+    print('GSTREAMER_PRIVATE_ERROR '+json.dumps({
+        'domain':str(error.domain),'code':int(error.code),
+        'message':str(error.message)[:1024],'debug':str(debug)[:4096],
+        'raw_diagnostic_publishable':False},sort_keys=True),file=sys.stderr,flush=True)
+    return 'GStreamer pipeline error '+str(error.domain)+':'+str(error.code)
 
 def verify_pixels(data,stride,offset=0):
     if (type(stride) is not int or type(offset) is not int or
@@ -54,7 +64,7 @@ def pipeline_frame(raw,device=None):
     source.set_property('format',Gst.Format.TIME)
     source.set_property('block',False)
     source.set_property('max-bytes',16384 if decoder else 262144)
-    caps=('video/x-h264,stream-format=byte-stream,alignment=au,width=320,height=240,framerate=1/1'
+    caps=(ENCODED_CAPS
           if decoder else 'video/x-raw,format=NV12,width=320,height=240,framerate=1/1')
     source.set_property('caps',Gst.Caps.from_string(caps))
     sink.set_property('caps',Gst.Caps.from_string('video/x-raw,format=NV12'))
@@ -78,9 +88,7 @@ def pipeline_frame(raw,device=None):
         while time.monotonic()<until:
             error=bus.timed_pop_filtered(0,Gst.MessageType.ERROR)
             if error:
-                err,debug=error.parse_error()
-                # No paths or arbitrary plugin log text enter the public result.
-                raise ValueError('GStreamer pipeline error '+str(err.domain)+':'+str(err.code))
+                raise ValueError(private_pipeline_error(error))
             sample=sink.emit('try-pull-sample',100000000)
             if sample is not None:break
         if sample is None:raise ValueError('Decoded frame timeout')

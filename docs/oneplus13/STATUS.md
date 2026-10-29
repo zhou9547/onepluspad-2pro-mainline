@@ -1,3 +1,26 @@
+## r66 framework stream error; parsed-caps candidate
+
+The exact54310783 image from Actions40847882940 and native gates40849346728
+passes independent downloaded-byte verification. The combined phone round
+passes camera ID and native Iris pixels again. Read-only factory selection now
+succeeds, then GStreamer reports gst-stream-error-quark:1. Its old error handler
+omits the message/debug text, so the exact framework failure is not established.
+Iris unloads, nodes disappear and the guard acknowledges teardown and disarms.
+Kernel health remains clean; Android returns after187.5s with seven matching
+baselines and zero partition writes. The failed round's halted ledger and final
+host transport flag are preserved. The recovery transcript has no complete RAM
+identity receipt, so the socket reset remains fail-closed. Later mature
+regressions are not reached. See [r66 evidence](evidence/joint-gstreamer-r66.sanitized.json).
+
+Pinned GStreamer source requires parsed=true for encoded V4L2 input; the old
+synthetic-AU caps omit it. The candidate adds that field only for the exact
+hash-checked synthetic fixture. A real GI caps-subset test reproduces the old
+mismatch and accepts the corrected caps. Bounded private bus message/debug text
+is retained on failure while the public exception remains domain/code only.
+All seven framework tests pass. These source-derived changes still need fresh
+Actions/download verification and a combined phone run; they are not proof of
+the r66 error's sole cause or of hardware framework decoding.
+
 ## r65 framework device-property failure and corrected selection
 
 The exact38df6a13 image passes all five Actions40844694343 jobs and independent

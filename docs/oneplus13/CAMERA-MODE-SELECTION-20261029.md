@@ -55,3 +55,22 @@ PHY and CAMSS graph for that mode, with exact resources and supported APIs.
 Only a real frame with validated pixels followed by stop/runtime-suspend/
 teardown and retained-feature regression can qualify camera capture. Keep the
 default desktop camera-disabled and retain strict0x38e5 identification.
+
+## L/S sequence comparison
+
+A second offline pass checks the exact retained L/S files, all section bounds,
+CRC32 footers, reference bounds and724-byte sensor roots. It compares the21
+416-byte mode records and resolves each mode's56-byte register-setting rows,
+including optional fields, data arrays, operation and delay references before
+comparison. Both the mode records and all21 resolved setting sequences agree.
+The two power sequences agree as well. This is still an inferred V5.6.1 layout;
+it does not establish that all nested metadata or extension blocks are equal.
+
+The four selector rows at root+572 each write the known S5KJN5 test-pattern
+register0x0600. They agree between L/S, but are not initialization sequences.
+The separate root+564 candidate sequence contains54 setting rows in L and49
+in S and differs after reference resolution. Do not use the common mode tables
+to infer a common complete initialization, bypass supplier selection, or copy
+the public D-PHY initialization into this19.2MHz C-PHY phone. Proprietary
+register values and module contents remain private; this comparison does not
+program the phone or activate the camera graph.

@@ -1,3 +1,14 @@
+## r66 stream error and parsed-input contract
+
+r66 reaches the explicit hardware factory but reports stream-error1 before
+verified framework pixels. Native pixels, module teardown, guard disarm, clean
+kernel history and Android baseline checks pass. Preserve its halted ledger and
+final host flag; recovery has no complete identity receipt. Later regressions
+were not reached. The next candidate supplies the exact synthetic AU's missing
+parsed=true caps and bounded private error details. A native GI caps-subset test
+passes and demonstrates the old mismatch, but the r66 bus message was omitted;
+do not claim a proven sole cause until a new combined run succeeds.
+
 ## r65 read-only framework device selection
 
 r65 repeats the native Iris frame but fails before framework decode while
