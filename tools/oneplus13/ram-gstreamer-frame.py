@@ -8,11 +8,41 @@ WIDTH,HEIGHT,PTS=320,240,12345000000
 ENCODED_CAPS=('video/x-h264,stream-format=byte-stream,alignment=au,parsed=(boolean)true,'
               'width=320,height=240,framerate=1/1')
 
-def private_pipeline_error(message):
+def negotiated_caps(pipe):
+    rows = []
+    iterator = pipe.iterate_elements()
+    while True:
+        result, element = iterator.next()
+        if result == 0:
+            break
+        if result == 2:
+            continue
+        if result != 1:
+            break
+        pads = {}
+        for direction, getter in (('sink', element.get_static_pad),
+                                  ('src', element.get_static_pad)):
+            pad = getter(direction)
+            if pad is None:
+                continue
+            current = pad.get_current_caps()
+            queried = pad.query_caps(None)
+            pads[direction] = {
+                'current': current.to_string()[:2048] if current else None,
+                'query': queried.to_string()[:2048] if queried else None,
+            }
+        rows.append({'element': element.get_name()[:128], 'pads': pads})
+        if len(rows) >= 8:
+            break
+    return rows
+
+
+def private_pipeline_error(message, pipe=None):
     error,debug=message.parse_error()
     print('GSTREAMER_PRIVATE_ERROR '+json.dumps({
         'domain':str(error.domain),'code':int(error.code),
         'message':str(error.message)[:1024],'debug':str(debug)[:4096],
+        'negotiated_caps':negotiated_caps(pipe) if pipe is not None else [],
         'raw_diagnostic_publishable':False},sort_keys=True),file=sys.stderr,flush=True)
     return 'GStreamer pipeline error '+str(error.domain)+':'+str(error.code)
 
@@ -80,7 +110,7 @@ def pipeline_frame(raw,device=None):
         bus=pipe.get_bus()
         if pipe.set_state(Gst.State.PLAYING)==Gst.StateChangeReturn.FAILURE:
             error=bus.timed_pop_filtered(0,Gst.MessageType.ERROR)
-            raise ValueError(private_pipeline_error(error) if error else 'Pipeline PLAYING failed')
+            raise ValueError(private_pipeline_error(error,pipe) if error else 'Pipeline PLAYING failed')
         buffer=Gst.Buffer.new_allocate(None,len(raw),None);buffer.fill(0,raw)
         buffer.pts=PTS;buffer.dts=PTS;buffer.duration=Gst.SECOND
         if source.emit('push-buffer',buffer)!=Gst.FlowReturn.OK:
@@ -90,12 +120,12 @@ def pipeline_frame(raw,device=None):
         while time.monotonic()<until:
             error=bus.timed_pop_filtered(0,Gst.MessageType.ERROR)
             if error:
-                raise ValueError(private_pipeline_error(error))
+                raise ValueError(private_pipeline_error(error,pipe))
             sample=sink.emit('try-pull-sample',100000000)
             if sample is not None:break
         if sample is None:
             error=bus.timed_pop_filtered(0,Gst.MessageType.ERROR)
-            raise ValueError(private_pipeline_error(error) if error else 'Decoded frame timeout')
+            raise ValueError(private_pipeline_error(error,pipe) if error else 'Decoded frame timeout')
         info=GstVideo.VideoInfo.new_from_caps(sample.get_caps())
         if info.width!=WIDTH or info.height!=HEIGHT or info.finfo.name!='NV12':
             raise ValueError('Unexpected decoded frame format')

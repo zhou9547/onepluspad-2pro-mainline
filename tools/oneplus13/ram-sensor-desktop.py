@@ -152,15 +152,18 @@ def display_transforms(bus):
     return parse_display_transforms(value)
 
 
-def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.sleep):
+def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.sleep,
+            posture=None):
     if type(seconds) is not int or seconds != 20:
         raise ValueError('Only the twenty-second desktop orientation window is reviewed')
     orientations = []
     display_states = []
+    posture_transform_sequence = []
     samples = 0
     until = clock() + seconds
     while clock() < until:
-        current_orientation = orientation()
+        current_posture = posture() if posture else None
+        current_orientation = current_posture[0] if current_posture else orientation()
         current_transforms = transforms()
         samples += 1
         if samples > 128:
@@ -169,9 +172,24 @@ def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.s
             orientations.append(current_orientation)
         if not display_states or display_states[-1] != list(current_transforms):
             display_states.append(list(current_transforms))
+        state = {
+            'orientation': current_orientation,
+            'tilt': current_posture[1] if current_posture else None,
+            'transforms': list(current_transforms),
+        }
+        if not posture_transform_sequence or posture_transform_sequence[-1] != state:
+            posture_transform_sequence.append(state)
         sleep(min(.25, max(0, until - clock())))
     orientation_set = set(orientations)
     transform_set = {value for state in display_states for value in state}
+    vertical_states = [state for state in posture_transform_sequence
+                       if state['tilt'] == 'vertical']
+    normal_portrait_transforms = sorted({transform for state in vertical_states
+                                         if state['orientation'] == 'normal'
+                                         for transform in state['transforms']})
+    inverted_portrait_transforms = sorted({transform for state in vertical_states
+                                           if state['orientation'] == 'bottom-up'
+                                           for transform in state['transforms']})
     passed = (samples >= 20 and len(orientation_set) >= 3
               and len(transform_set) >= 2)
     return {
@@ -180,6 +198,14 @@ def collect(seconds, orientation, transforms, clock=time.monotonic, sleep=time.s
         'samples': samples,
         'orientation_sequence': orientations,
         'display_transform_sequence': display_states,
+        'posture_transform_sequence': posture_transform_sequence,
+        'normal_portrait_transforms': normal_portrait_transforms,
+        'bottom_up_portrait_transforms': inverted_portrait_transforms,
+        'portrait_mapping_matches_upright': (
+            normal_portrait_transforms == [0] if normal_portrait_transforms else None),
+        'portrait_inversion_observed': (
+            (2 in normal_portrait_transforms or 0 in inverted_portrait_transforms)
+            if normal_portrait_transforms or inverted_portrait_transforms else None),
         'distinct_orientations': sorted(orientation_set),
         'distinct_display_transforms': sorted(transform_set),
         'automatic_rotation_pass': passed,
@@ -254,7 +280,8 @@ def check(seconds=20, system_bus=None, session_bus=None):
     session_bus = session_bus or Gio.bus_get_sync(Gio.BusType.SESSION, None)
     result = collect(seconds,
                      lambda: system_orientation(system_bus),
-                     lambda: display_transforms(session_bus))
+                     lambda: display_transforms(session_bus),
+                     posture=lambda: system_posture(system_bus))
     if not result['automatic_rotation_pass']:
         raise ValueError('Automatic desktop rotation transition incomplete')
     return result

@@ -1,3 +1,16 @@
+## Orientation and audio follow-up, 2026-10-29
+
+The owner now confirms autorotation is active but upright portrait is upside
+down; maximum system volume rises with the slider but remains too quiet. The
+next source image records SensorProxy posture and Mutter transform together so
+the upright-versus-inverted mapping can be identified from one dynamic capture.
+It also records bounded per-pad GStreamer current/query caps with private error
+details when V4L2 negotiation fails. These are diagnostics, not fixes or new
+hardware acceptance. Keep the AW88461 ceiling at896 until the phone's dynamic
+speaker protection and calibration are understood; the current profile retains
+11.921875dB attenuation. This turn must not claim rotation, loudness or framework
+decoding resolved without subsequent owner-visible evidence.
+
 ## r68b compiled image and joint results, 2026-10-29
 
 Complete mixed image Actions 40858720951 passes all five jobs. Optional phone

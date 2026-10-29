@@ -1,3 +1,21 @@
+## Upright mapping and GStreamer caps evidence, 2026-10-29
+
+The owner confirms that automatic rotation works, but normal upright portrait
+is displayed upside down. Earlier acceptance retained posture and Mutter
+transform sets separately, losing their time correlation. The desktop collector
+now keeps bounded posture/tilt/transform tuples and reports the transform seen
+for `normal` and `bottom-up` vertical states. Use the next attended capture to
+identify whether the error is in sensor orientation or Mutter mapping before
+changing any mount matrix or applying a global rotation.
+
+The GStreamer RAM path now attaches bounded current and queried sink/source pad
+caps to its private pipeline error details. Public sanitized evidence must keep
+these details withheld. This should distinguish absent decoder formats from a
+downstream negotiation mismatch on the next authorized capture; it does not
+resolve the existing `not-negotiated` result. The speaker ceiling remains896:
+the owner reports low maximum loudness, while stock dynamic protection is not
+available to justify a higher AW88461 setting.
+
 ## r68b exposes physical-axis and loudness gaps
 
 Compilation and the mature combined regressions pass, but the image is not a
