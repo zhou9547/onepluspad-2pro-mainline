@@ -14,7 +14,7 @@
     "phone-adapter.patch": "25a9dda4bb56453b6ca5ced8c76325f768dc1a95300899c35c8c9e8f84e9b4cc",
     "dodge-cphy-mmio.h": "51ed0374d76b08a530b85c4eeb7f7fec662b0c19bc5d030ed557e5e38ccaea8f",
     "phone-sequence.h": "d36273502699af23bb44566bbf01dd2061bfb94c947f0521c932cff5994cb9c6",
-    "review-phone-tables.py": "5c765a64b694c495891a85cd4c335d6a41053804ec412dc8d0d62c03226b9182"
+    "review-phone-tables.py": "4398ed42162bfcd253e278c806ccd51d495825c76c51456ede0c3e45cb11bee9"
   },
   "public_sequence_provenance": "phone-sequence-sources.json",
   "compiled": false,
