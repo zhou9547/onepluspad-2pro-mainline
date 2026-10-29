@@ -1,3 +1,21 @@
+## Exact image acceptance and next camera probe boundary, 2026-10-29
+
+r53 qualifies the exact e06f06bd Actions artifact, including fresh independent
+speaker/microphone correlation and actual system-volume acoustic response.
+Production sensor startup does not need SSC warmup for the owner-reported left-up
+pose. Physical multi-pose display transitions, calibrated loudness and long-term
+speaker protection remain open; do not turn these into general completion claims.
+
+The S5KJN5 v6 driver is compiled for explicit future probe candidates. Media
+policy denies automatic sensor loading, and CCI is explicitly a module with a
+manual policy entry so a future alternative camera DT cannot start its I2C
+controller before the reviewed runtime guard. The current default DT adds no
+camera sensor. The phone needs its PM8010m rails and1.0V L1i core mapping;
+existing base L1i has no phandle/consumer. Do not guess additional regulator
+inputs or replace the custom ultrawide PHY with the generic D-PHY sequence.
+The public upstream sensor object and all mode tables compile after two
+unused callback arguments are removed for the pinned V4L2 API.
+
 ## Production startup confirmed; camera prerequisites remain isolated
 
 The r52 joint test no longer uses the SSC sample warmup. Current desktop startup

@@ -1,0 +1,144 @@
+{
+  "acoustic_response_pass": true,
+  "all_audio_measurements_fresh": true,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "boot_image_sha256": "4b7a28bf530bac9e2f70eeca105f32a8bc182a435b4192c5a5de85edf85001c8",
+  "camera_power_or_capture_tested": false,
+  "desktop_audio_volume": {
+    "absolute_loudness_or_dynamic_protection_qualified": false,
+    "acoustic_system_volume_pass": true,
+    "capture_controls_restored": true,
+    "clipped_samples": 0,
+    "frequency_responses": [
+      {
+        "amplitudes": {
+          "100": 0.11269426998793379,
+          "20": 0.0008958795918724432,
+          "50": 0.01375026161260434,
+          "muted": 3.5808670921529245e-06
+        },
+        "frequency_hz": 1000,
+        "increases_with_volume": true,
+        "live_to_mute_ratio": 31471.22389291992,
+        "microphone_channel": 1
+      },
+      {
+        "amplitudes": {
+          "100": 0.0675543416813082,
+          "20": 0.0005334792490216796,
+          "50": 0.008266045019149812,
+          "muted": 3.975259983202048e-06
+        },
+        "frequency_hz": 1500,
+        "increases_with_volume": true,
+        "live_to_mute_ratio": 16993.691473455172,
+        "microphone_channel": 1
+      }
+    ],
+    "hardware_level": 896,
+    "measurements": {
+      "100": {
+        "amplitudes": [
+          [
+            0.02394626595029967,
+            0.02572203521863301
+          ],
+          [
+            0.11269426998793379,
+            0.0675543416813082
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 1.00"
+      },
+      "20": {
+        "amplitudes": [
+          [
+            0.00019542065742759606,
+            0.00020775570344726664
+          ],
+          [
+            0.0008958795918724432,
+            0.0005334792490216796
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.20"
+      },
+      "50": {
+        "amplitudes": [
+          [
+            0.003047048358900108,
+            0.0032570665266208974
+          ],
+          [
+            0.01375026161260434,
+            0.008266045019149812
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.50"
+      },
+      "muted": {
+        "amplitudes": [
+          [
+            1.5991409638772865e-06,
+            1.4452515398759668e-06
+          ],
+          [
+            3.5808670921529245e-06,
+            3.975259983202048e-06
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.20 [MUTED]"
+      }
+    },
+    "raw_audio_deleted": true,
+    "scope": "RAM_DESKTOP_SYSTEM_VOLUME_ACOUSTIC_MEASUREMENT",
+    "software_muted_at_exit": true
+  },
+  "desktop_audio_volume_pass": true,
+  "desktop_orientation": {
+    "automatic_rotation_pass": false,
+    "display_transform_sequence": [
+      [
+        1
+      ]
+    ],
+    "distinct_display_transforms": [
+      1
+    ],
+    "expected_orientation": "left-up",
+    "flat_zero_transform_pass": false,
+    "orientations": [
+      "left-up"
+    ],
+    "physical_axes_calibration_accepted": false,
+    "samples": 31,
+    "scope": "STATIC_DESKTOP_ORIENTATION_OBSERVATION",
+    "seconds": 8,
+    "static_pose_pass": true,
+    "tilts": [
+      "vertical"
+    ],
+    "upright_transform_matches": true
+  },
+  "desktop_static_orientation_pass": true,
+  "dock_extension_pass": true,
+  "docker_bridge_pass": true,
+  "elapsed_seconds": 421.4,
+  "full_history_kernel_health_pass": true,
+  "joint_acceptance_pass": true,
+  "locale_defaults_pass": true,
+  "microphone_capture_pass": true,
+  "partition_writes": 0,
+  "physical_rotation_transition_tested": false,
+  "rootfs_sha256": "88c80aee0ec9209f6a7f5268c5eb3f23f06c3b30ad606c29a822e81597a0310b",
+  "scope": "EXACT_E06F06BD_ACTIONS_IMAGE_JOINT_RAM_ACCEPTANCE",
+  "source_commit": "e06f06bdd3d852712ee3ea4770a0c1e6851d3cc5",
+  "ssc_warmup_used": false,
+  "ssh_password_login_and_chinese_locale_pass": true,
+  "wifi_dualband_pass": true
+}

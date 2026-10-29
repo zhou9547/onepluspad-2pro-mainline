@@ -50,7 +50,7 @@ def main():
     if len(lock.get('local_fixes',[]))!=2:raise ValueError('Missing reviewed compiler/error corrections')
     for entry in lock['disabled_cci_resources']:
         if sha(HERE/entry['file'])!=entry['sha256']:raise ValueError('Original resource patch changed')
-    for entry in lock['patches']+lock['local_fixes']+lock['resource_rebases']:
+    for entry in lock['patches']+lock['local_fixes']+lock['resource_rebases']+lock['sensor_patches']+lock['sensor_compat_fixes']:
         name=Path(entry['file'])
         if name.is_absolute() or '..' in name.parts:raise ValueError('Unsafe patch name')
         patch=HERE/name
@@ -68,13 +68,14 @@ def main():
     config=kernel/'scripts/config'
     for name in ('MEDIA_SUPPORT','MEDIA_CONTROLLER','VIDEO_DEV','MEDIA_PLATFORM_SUPPORT','V4L_PLATFORM_DRIVERS','PM_OPP'):
         run([config,'--file',kernel/'.config','--enable',name])
-    for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI'):
+    for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI','VIDEO_S5KJN5'):
         run([config,'--file',kernel/'.config','--module',name])
     run(['make','-C',kernel,'ARCH=arm64','olddefconfig'],timeout=120)
     cfg=(kernel/'.config').read_text()
-    for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI'):
+    for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI','VIDEO_S5KJN5'):
         if f'CONFIG_{name}=m\n' not in cfg:raise ValueError('Required component disabled: '+name)
     targets=['drivers/media/platform/qcom/camss/',
+             'drivers/media/i2c/s5kjn5.o',
              'drivers/phy/qualcomm/phy-qcom-mipi-csi2.o',
              'drivers/i2c/busses/i2c-qcom-cci.o','drivers/clk/qcom/camcc-sm8750.o',
              'drivers/clk/qcom/cambistmclkcc-sm8750.o',
@@ -110,6 +111,7 @@ def main():
     proof={'scope':'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
        'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
        'disabled_cci_resources':lock['disabled_cci_resources'],'resource_rebases':lock['resource_rebases'],
+       'sensor_patches':lock['sensor_patches'],'sensor_compat_fixes':lock['sensor_compat_fixes'],
        'phone_base_dtb_compiled_with_disabled_cci':True,'disabled_cci_controllers':len(cci),
        'cci_i2c_hosts':len(buses),'phone_base_dtb_sha256':sha(dtb),
        'cross_compiler':args.cross_compile,'native_arm64_host':platform.machine() in ('aarch64','arm64'),

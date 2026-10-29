@@ -210,5 +210,33 @@
       "author": "Codex <codex@openai.com>",
       "reason": "Original CCI context references the unstaged old CAMSS node; move only disabled CCI and pinctrl additions to the exact kernel pin"
     }
-  ]
+  ],
+  "sensor_patches": [
+    {
+      "file": "patches/s5kjn5-v6/01.patch",
+      "sha256": "a55df776fd90b0baaa64b5feae7d42a9155864856d1c0f4c8960761708feab58",
+      "subject": "[PATCH v6 1/2] dt-bindings: media: i2c: Add Samsung S5KJN5 image\n sensor",
+      "message_id": "<20260930-sk5jn5-v6-1-517c9b34008a@oss.qualcomm.com>",
+      "source_url": "https://patchew.org/linux/20260930-sk5jn5-v6-0-517c9b34008a@oss.qualcomm.com/mbox"
+    },
+    {
+      "file": "patches/s5kjn5-v6/02.patch",
+      "sha256": "d8b1314a5c808e1e5f2d5d07dbbeb525336087f19e27760e8ebb578b0450980d",
+      "subject": "[PATCH v6 2/2] media: i2c: Add Samsung S5KJN5 image sensor driver",
+      "message_id": "<20260930-sk5jn5-v6-2-517c9b34008a@oss.qualcomm.com>",
+      "source_url": "https://patchew.org/linux/20260930-sk5jn5-v6-0-517c9b34008a@oss.qualcomm.com/mbox"
+    }
+  ],
+  "sensor_compat_fixes": [
+    {
+      "file": "fixes/0004-s5kjn5-pinned-v4l2-pad-api.patch",
+      "sha256": "8dd541ef16f69c61697383bc009e069ec5116448f89baceefda2fa1a150730f1",
+      "author": "Codex <codex@openai.com>",
+      "reason": "Match exact pinned pre-client-info V4L2 pad callback API; original mode tables untouched"
+    }
+  ],
+  "sensor_generated_files": {
+    "drivers/media/i2c/s5kjn5.c": "546fed8dfbba68438148fbccbb5c435a3d89d6bfc8a393f24352c143b523805c",
+    "Documentation/devicetree/bindings/media/i2c/samsung,s5kjn5.yaml": "fd0171ba32ee9a4716fa1017b76a6b314205a7d40ca64feb6a884a46c49d79a9"
+  }
 }

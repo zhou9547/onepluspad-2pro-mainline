@@ -52,3 +52,18 @@ output, checks all three CCI controllers remain disabled and all six I2C hosts
 exist, and exports that DTB for independent review. The normal phone DTS source,
 module install, rootfs and RAM boot image remain unchanged. Neither the generic
 resource graph nor a build success establishes sensor power sequencing or capture.
+
+2026-10-29 sensor preparation: Wenmeng Liu's public S5KJN5 v6 binding/driver
+messages are preserved with their original trailers and hashes. Source:
+https://patchew.org/linux/20260930-sk5jn5-v6-0-517c9b34008a@oss.qualcomm.com/
+A separate Codex compatibility patch removes only the unused client-info
+parameter from two pad callbacks to match the fixed phone kernel API. The
+sensor mode/register tables remain unchanged. WSL builds the actual AArch64
+sensor object with W=1/-Werror alongside CAMSS/PHY/CCI and the disabled phone
+base DTB. No camera sensor is added to the running board graph or powered.
+
+The saved phone's ultrawide chip-ID check is0x38e5 and its PHY1 explicitly
+selects the dodge-ultrawide variant. Public vendor PHY tables differ from the
+generic SM8750 sequence, including common0x108c and C-PHY rate tables. The
+upstream PHY currently supports D-PHY only. This is a graph/mode investigation,
+not permission to silently substitute the generic PHY or claim a captured frame.

@@ -1,3 +1,34 @@
+## Downloaded desktop image qualified; S5KJN5 driver staged, 2026-10-29
+
+The exact e06f06bd Actions40798138265 image passed r53 in421.4s, then returned
+to Android with matching baselines, zero writes and clean kernel-health gates.
+It repeated fresh microphone capture, independent speaker correlation, actual
+20/50/100% plus mute acoustic measurements, production sensor startup without
+SSC warmup and left-up/Mutter1, together with dual-band WiFi, Docker, GNOME,
+Chinese, SSH, Dock, Bluetooth and battery. Boot SHA256 is
+e7b8b3926982e51437bbc538d0bf439e7ef2b0422b16822f1996be89564c6e3a;
+rootfs SHA256 is88c80aee0ec9209f6a7f5268c5eb3f23f06c3b30ad606c29a822e81597a0310b.
+Independent download verification includes all hashes/sections,71 firmware
+files, SSC inputs and the new manual volume checker. No standalone digital-zero
+experiment was repeated in r53; the one-shot native PCM test used the quiet
+nonzero mode followed by the independent acoustic checks.
+
+Native ARM64 camera/CCI component
+[Actions40799459424](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40799459424)
+passed. Wenmeng Liu's public S5KJN5 v6 driver now also compiles with the exact
+phone kernel after a separate two-callback API compatibility patch. Both original
+messages, unchanged register/mode tables and compatibility hashes are retained.
+The normal phone kernel build stages this module with source/hash checks and
+idempotent rerun validation; the media module policy keeps it manual, and no
+camera node is added to the default phone DT. Fresh full Actions and native
+sensor-component builds are required for this addition.
+
+The phone ultrawide graph matches chip-ID0x38e5, CCI0/master0, PHY1, resetGPIO178
+and19.2MHz MCLK0. Its explicit PM8010m supply rails and the vendor's custom PHY
+must be mapped before any sensor power/probe. Android exposes no regulator_summary
+at either usual read-only path; the saved FDT retains the regulator resources and
+initial voltages. No camera was opened or powered by the inspection.
+
 ## Production sensor startup and disabled camera-resource build, 2026-10-29
 
 r52 repeats the fixed left-up observation without the diagnostic SSC vector
