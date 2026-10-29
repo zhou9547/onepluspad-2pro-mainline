@@ -1,0 +1,191 @@
+{
+  "scope": "R68B_FRAMEWORK_NEGOTIATION_FAILURE_AND_MATURE_REGRESSIONS",
+  "image_commit": "5120fbac6e9b29f94be4390d89af2f47d85fb6a8",
+  "actions_run": 40858720951,
+  "component_build_run": 40858838126,
+  "native_offline_gates_run": 40859294051,
+  "qualified_phase_results": {
+    "camera_chip_id_pass": true,
+    "video_frame_pass": false,
+    "awake_video_guard_cleanly_disarmed": true,
+    "desktop_sensor_stack_pass": true,
+    "microphone_capture_pass": true,
+    "audio_amplifier_inventory_pass": true,
+    "audio_quiet_nonzero_pass": true,
+    "acoustic_response_pass": true,
+    "docker_bridge_pass": true,
+    "preserved_features_completed": true,
+    "dock_extension_pass": true,
+    "locale_defaults_pass": true,
+    "ssh_password_login_and_chinese_locale_pass": true,
+    "desktop_static_orientation_pass": true,
+    "desktop_dynamic_orientation_pass": false,
+    "desktop_audio_volume_pass": true,
+    "full_history_kernel_health_pass": true,
+    "wifi_dualband_pass": true,
+    "joint_acceptance_pass": false
+  },
+  "video": {
+    "capture_input": false,
+    "cleanup_pass": true,
+    "decoded_frame": {
+      "frame_height": 240,
+      "frame_verified": true,
+      "frame_width": 320,
+      "software_fallback": false,
+      "streams_stopped": true
+    },
+    "firmware_session_opened": true,
+    "gstreamer_frame_qualified": false,
+    "gstreamer_pipeline_stopped": true,
+    "gstreamer_requested": true,
+    "hardware_decode_qualified": false,
+    "module_unloaded": true,
+    "runtime_suspended": true,
+    "scope": "BOUNDED_MANUAL_IRIS_AVC_FRAME",
+    "software_fallback": false,
+    "video_nodes_removed": true
+  },
+  "kernel_health_clean": true,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "baseline_key_count": 7,
+  "partition_writes": 0,
+  "elapsed_seconds": 546.1,
+  "recovery_transport_identity_receipt_present": true,
+  "verified_recovery_socket_close": "ConnectionResetError",
+  "framework_failure_category": "caps_negotiation_failed",
+  "framework_exact_root_cause_established": false,
+  "raw_diagnostics_published": false,
+  "single_use_ledger_preserved": true,
+  "historical_stop_flags_cleared": false,
+  "owner_observations": {
+    "automatic_rotation_visible": true,
+    "portrait_upside_down": true,
+    "volume_increases_with_system_setting": true,
+    "maximum_volume_still_too_quiet": true
+  },
+  "physical_pose_transition_qualified": false,
+  "absolute_loudness_qualified": false,
+  "camera_capture_qualified": false,
+  "desktop_player_or_vaapi_qualified": false,
+  "desktop_orientation": {
+    "automatic_rotation_pass": false,
+    "display_transform_sequence": [
+      [
+        1
+      ]
+    ],
+    "distinct_display_transforms": [
+      1
+    ],
+    "expected_orientation": "left-up",
+    "flat_zero_transform_pass": false,
+    "orientations": [
+      "left-up"
+    ],
+    "physical_axes_calibration_accepted": false,
+    "samples": 31,
+    "scope": "STATIC_DESKTOP_ORIENTATION_OBSERVATION",
+    "seconds": 8,
+    "static_pose_pass": true,
+    "tilts": [
+      "vertical"
+    ],
+    "upright_transform_matches": true
+  },
+  "desktop_audio_volume": {
+    "absolute_loudness_or_dynamic_protection_qualified": false,
+    "acoustic_system_volume_pass": true,
+    "capture_controls_restored": true,
+    "clipped_samples": 0,
+    "frequency_responses": [
+      {
+        "amplitudes": {
+          "100": 0.019601016787830414,
+          "20": 0.00017298893237420628,
+          "50": 0.0025757386808926155,
+          "muted": 5.222624515679275e-06
+        },
+        "frequency_hz": 1000,
+        "increases_with_volume": true,
+        "live_to_mute_ratio": 3753.0970738915985,
+        "microphone_channel": 0
+      },
+      {
+        "amplitudes": {
+          "100": 0.01839574337630622,
+          "20": 0.0002649348037925558,
+          "50": 0.0024388276920418697,
+          "muted": 4.5644276582414236e-07
+        },
+        "frequency_hz": 1500,
+        "increases_with_volume": true,
+        "live_to_mute_ratio": 40302.40975139851,
+        "microphone_channel": 0
+      }
+    ],
+    "hardware_level": 896,
+    "measurements": {
+      "100": {
+        "amplitudes": [
+          [
+            0.019601016787830414,
+            0.01839574337630622
+          ],
+          [
+            0.007216058528249032,
+            0.008712211212311086
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 1.00"
+      },
+      "20": {
+        "amplitudes": [
+          [
+            0.00017298893237420628,
+            0.0002649348037925558
+          ],
+          [
+            4.030033493981105e-05,
+            5.841105856269381e-05
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.20"
+      },
+      "50": {
+        "amplitudes": [
+          [
+            0.0025757386808926155,
+            0.0024388276920418697
+          ],
+          [
+            0.000903778990562705,
+            0.0011160798165265637
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.50"
+      },
+      "muted": {
+        "amplitudes": [
+          [
+            5.222624515679275e-06,
+            4.5644276582414236e-07
+          ],
+          [
+            4.14229304878577e-06,
+            9.994122517835497e-07
+          ]
+        ],
+        "clipped_samples": 0,
+        "volume_readback": "Volume: 0.20 [MUTED]"
+      }
+    },
+    "raw_audio_deleted": true,
+    "scope": "RAM_DESKTOP_SYSTEM_VOLUME_ACOUSTIC_MEASUREMENT",
+    "software_muted_at_exit": true
+  }
+}

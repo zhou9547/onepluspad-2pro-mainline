@@ -1,3 +1,37 @@
+## r68b compiled image and joint results, 2026-10-29
+
+Complete mixed image Actions 40858720951 passes all five jobs. Optional phone
+C-PHY and SPI IR components compile in 40858838126; downloaded artifact digest
+and 12 AArch64 objects are verified. Native gates 40859294051 pass. The local
+offline suite runs 615 tests with five environment skips. The framework selftest
+parser now treats frame and teardown receipts separately. No experimental
+camera PHY or IR board node is enabled.
+
+The immutable 5120fbac image completes a 546.1-second combined RAM round and
+returns Android with all seven baselines equal and zero partition writes.
+Camera ID, native Iris pixels, decoder autosuspend/unload, clean guard disarm,
+dual-band WiFi, Docker bridge/DNS/NAT/port, GNOME/Mesa/touch discovery, Chinese,
+SSH, Dock, microphone, two-amplifier correlation and system volume response
+pass. Full-history kernel health stays clean. GStreamer still fails caps
+negotiation; private bus details are retained, but its precise cause is not yet
+established. Failed framework decoding is not hardware framework acceptance.
+
+The owner sees automatic rotation, but normal portrait is upside down. The
+planned transition capture was skipped after its existing time cutoff; this
+physical report exposes a gap in the earlier fixed-left-up-only acceptance.
+The owner hears increasing system volume but says maximum remains too quiet.
+The current896 hardware ceiling adds at least11.9219dB profile attenuation;
+absolute loudness and dynamic protection remain unqualified. Do not raise
+limits or apply a global rotation based only on fixed-pose agreement. Next:
+correlate labeled upright/left/right physical poses with raw acceleration and
+Mutter state, move the human phase earlier, review speaker protection/gain,
+and retain bounded V4L2 negotiation traces in the next combined round.
+
+An earlier r68 attempt stopped before feature activation when the USB network
+disappeared; the owner reports manually rebooting then. Its halted ledger and
+stop flag remain intact. No driver failure is inferred from that interruption.
+See [r68b evidence](evidence/joint-gstreamer-r68b.sanitized.json).
+
 ## Compilation and joint validation resumed, 2026-10-29
 
 The owner resumed compilation and joint testing. Build the current source with trusted-server kernel/Mesa/SSC and hosted rootfs/assembly, and compile optional phone C-PHY and infrared components separately. These disabled candidates have no new hardware acceptance; r64 remains the accepted combined baseline pending fresh evidence.

@@ -1,3 +1,17 @@
+## r68b exposes physical-axis and loudness gaps
+
+Compilation and the mature combined regressions pass, but the image is not a
+full joint acceptance: explicit GStreamer still fails caps negotiation. The
+owner reports inverted normal portrait despite visible automatic transitions,
+and increasing software volume whose maximum is still too quiet. Fixed-pose
+left-up/Mutter agreement cannot qualify physical axes. Hardware level896
+retains at least11.9219dB added profile attenuation; acoustic monotonicity cannot
+qualify absolute loudness or protection. Preserve these failures in subsequent
+acceptance and schedule labeled human poses earlier in the same bounded joint
+round. Camera frame capture, IR shared rail and other phone peripherals remain
+open as documented. The optional C-PHY and IR objects now compile; this changes
+compile status only, not hardware acceptance.
+
 ## Validation resumed, 2026-10-29
 
 The source-only pause is superseded by the owner. Fresh compile and combined hardware evidence are required; experimental camera/infrared board activation remains blocked by the documented board and supply gaps.

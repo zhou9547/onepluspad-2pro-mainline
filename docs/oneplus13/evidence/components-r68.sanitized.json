@@ -1,0 +1,11 @@
+{
+  "run": 40858838126,
+  "commit": "5120fbac6e9b29f94be4390d89af2f47d85fb6a8",
+  "github_digest_matches": true,
+  "sha256": "cdc389cc31121ad34105bceaacd383dc82e803d0a2e376fd658d7f37388cdf67",
+  "aarch64_objects": 12,
+  "phone_cphy_compiled": true,
+  "infrared_compiled": true,
+  "board_nodes_enabled": false,
+  "hardware_qualified": false
+}
