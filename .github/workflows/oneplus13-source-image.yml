@@ -36,7 +36,9 @@ jobs:
   ssc:
     uses: ./.github/workflows/oneplus13-phone-ssc.yml
     with:
-      use_server: ${{ inputs.use_server || inputs.all_on_server }}
+      # This small native job is more reliable on GitHub's hosted ARM runner
+      # than on the constrained self-hosted runner.
+      use_server: false
   kernel:
     runs-on: ${{ (inputs.use_server || inputs.all_on_server) && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
     timeout-minutes: 135

@@ -246,6 +246,82 @@ def main():
     if (capture_sections['dtb']!=(root/'sm8750-oneplus13-camera-capture.dtb').read_bytes() or
             Fdt(capture_sections['dtb']).nodes!=capture_tree.nodes):
         raise ValueError('Camera capture DTB changed')
+    modem_files=m.get('modem_probe_artifacts',{})
+    modem_names={'boot-modem-gnss-ram-experimental.img','sm8750-oneplus13-modem-gnss-probe.dtb',
+                 'modem-gnss-probe-manifest.json','modem-gnss-dtb-review.json',
+                 'modem-firmware.tar.gz','modem-firmware-review.json'}
+    if (set(modem_files)!=modem_names or m.get('modem_probe_auto_started') is not False or
+            m.get('modem_hardware_functional_qualified') is not False or
+            m.get('gnss_hardware_functional_qualified') is not False):
+        raise ValueError('Missing manual modem/GNSS artifacts')
+    for name,digest in modem_files.items():
+        if sha256(root/name)!=digest:raise ValueError('Modem/GNSS artifact changed')
+    modem_manifest=json.loads((root/'modem-gnss-probe-manifest.json').read_text())
+    if (modem_manifest['scope']!='SEPARATE_MANUAL_MPSS_GNSS_RAM_BOOT_NEVER_FLASH' or
+            modem_manifest.get('remote_processor_started') is not False or
+            modem_manifest.get('modem_service_qualified') is not False or
+            modem_manifest.get('gnss_service_qualified') is not False or
+            modem_manifest['default_boot_image_sha256']!=m['boot_image_sha256'] or
+            modem_manifest['rootfs_sha256']!=m['rootfs_sha256'] or
+            modem_manifest['source_commit']!=m['source_commit']):
+        raise ValueError('Modem/GNSS alternative identity or qualification changed')
+    modem_nonce=modem_manifest['session_identity_nonce']
+    if (not re.fullmatch('[a-f0-9]{24}',modem_nonce) or
+            modem_nonce in (nonce,m['session_identity_nonce'],cam_nonce,capture_nonce)):
+        raise ValueError('Modem/GNSS alternative needs a separate session identity')
+    expected_modem_cmdline=m['cmdline'].replace('oneplus13.session='+m['session_identity_nonce'],
+        'oneplus13.session='+modem_nonce)+' oneplus13.audio_probe=1 oneplus13.camera_probe=1 oneplus13.video_probe=1 oneplus13.modem_probe=1'
+    if modem_manifest['cmdline']!=expected_modem_cmdline:
+        raise ValueError('Modem/GNSS boot arguments changed')
+    if (sha256(root/'boot-modem-gnss-ram-experimental.img')!=modem_manifest['boot_image_sha256'] or
+            sha256(root/'sm8750-oneplus13-modem-gnss-probe.dtb')!=modem_manifest['dtb_sha256']):
+        raise ValueError('Modem/GNSS manifest hashes disagree')
+    modem_sections=boot_sections((root/'boot-modem-gnss-ram-experimental.img').read_bytes())
+    for key in ('kernel','ramdisk'):
+        if modem_sections[key]!=default_sections[key]:raise ValueError('Modem/GNSS kernel/initramfs changed')
+    modem_dtb=importlib.import_module('modem-gnss-dtb')
+    modem_expected,_=modem_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    modem_tree=Fdt(modem_expected);modem_tree.nodes['/chosen']['bootargs']=(modem_manifest['cmdline']+'\0').encode()
+    if (modem_sections['dtb']!=(root/'sm8750-oneplus13-modem-gnss-probe.dtb').read_bytes() or
+            Fdt(modem_sections['dtb']).nodes!=modem_tree.nodes):
+        raise ValueError('Modem/GNSS DTB changed')
+    combined_files=m.get('camera_gnss_artifacts',{})
+    combined_names={'boot-camera-gnss-ram-experimental.img','sm8750-oneplus13-camera-gnss.dtb',
+                    'camera-gnss-manifest.json','camera-gnss-dtb-review.json'}
+    if set(combined_files)!=combined_names:
+        raise ValueError('Missing camera/GNSS combined artifacts')
+    for name,digest in combined_files.items():
+        if sha256(root/name)!=digest:raise ValueError('Camera/GNSS combined artifact changed')
+    camera_gnss=json.loads((root/'camera-gnss-manifest.json').read_text())
+    if (camera_gnss['scope']!='SEPARATE_MANUAL_CAMERA_CAPTURE_AND_MPSS_GNSS_RAM_BOOT' or
+            camera_gnss.get('camera_capture_pipeline_present') is not True or
+            camera_gnss.get('camera_capture_qualified') is not False or
+            camera_gnss.get('modem_hardware_functional_qualified') is not False or
+            camera_gnss.get('gnss_hardware_functional_qualified') is not False or
+            camera_gnss['default_boot_image_sha256']!=m['boot_image_sha256'] or
+            camera_gnss['rootfs_sha256']!=m['rootfs_sha256'] or
+            camera_gnss['source_commit']!=m['source_commit']):
+        raise ValueError('Camera/GNSS combined identity or qualification changed')
+    camera_gnss_nonce=camera_gnss['session_identity_nonce']
+    if (not re.fullmatch('[a-f0-9]{24}',camera_gnss_nonce) or
+            camera_gnss_nonce in (nonce,m['session_identity_nonce'],cam_nonce,capture_nonce,modem_nonce)):
+        raise ValueError('Camera/GNSS needs a separate session identity')
+    expected_combined_cmdline=m['cmdline'].replace('oneplus13.session='+m['session_identity_nonce'],
+        'oneplus13.session='+camera_gnss_nonce)+' oneplus13.audio_probe=1 oneplus13.camera_probe=1 oneplus13.video_probe=1 oneplus13.modem_probe=1 oneplus13.camera_capture=1'
+    if camera_gnss['cmdline']!=expected_combined_cmdline:
+        raise ValueError('Camera/GNSS combined boot arguments changed')
+    if (sha256(root/'boot-camera-gnss-ram-experimental.img')!=camera_gnss['boot_image_sha256'] or
+            sha256(root/'sm8750-oneplus13-camera-gnss.dtb')!=camera_gnss['dtb_sha256']):
+        raise ValueError('Camera/GNSS manifest hashes disagree')
+    combined_sections=boot_sections((root/'boot-camera-gnss-ram-experimental.img').read_bytes())
+    for key in ('kernel','ramdisk'):
+        if combined_sections[key]!=default_sections[key]:raise ValueError('Camera/GNSS kernel/initramfs changed')
+    combined_dtb=importlib.import_module('camera-capture-modem-dtb')
+    combined_expected,_=combined_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    combined_tree=Fdt(combined_expected);combined_tree.nodes['/chosen']['bootargs']=(camera_gnss['cmdline']+'\0').encode()
+    if (combined_sections['dtb']!=(root/'sm8750-oneplus13-camera-gnss.dtb').read_bytes() or
+            Fdt(combined_sections['dtb']).nodes!=combined_tree.nodes):
+        raise ValueError('Camera/GNSS combined DTB changed')
     nfc_files=m.get('nfc_files',{})
     if (set(nfc_files)!={'usr/lib/systemd/system/oneplus13-nfc.service'} or
             m.get('nfc_service_auto_started') is not True or

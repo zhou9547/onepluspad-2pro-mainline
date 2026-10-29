@@ -37,9 +37,17 @@ case "${1:-}" in
     python3 tools/oneplus13/verify_qualified_data.py devices/oneplus13/qualified-data
     sudo python3 tools/oneplus13/package-source-local.py --kernel out/oneplus13 --desktop out/oneplus13-source-desktop --rootfs out/oneplus13-source-image --qualified-data devices/oneplus13/qualified-data --runtime-checks "$runtime_checks" --output out/oneplus13-complete-image
     sudo python3 tools/oneplus13/build-microphone-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
+    python3 tools/oneplus13/review-modem-firmware.py \
+      --firmware devices/oneplus13/qualified-data/firmware/qcom/sm8750/oneplus/dodge \
+      --stock devices/oneplus13/qualified-data/calibrated.dtb \
+      --report out/oneplus13/modem-firmware-review.json
+    sudo python3 tools/oneplus13/build-modem-probe-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image \
+      --firmware devices/oneplus13/qualified-data/firmware/qcom/sm8750/oneplus/dodge \
+      --firmware-review out/oneplus13/modem-firmware-review.json
     sudo python3 tools/oneplus13/build-camera-probe-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
     sudo python3 tools/oneplus13/build-camera-capture-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
     sudo python3 tools/oneplus13/build-video-probe-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
+    sudo python3 tools/oneplus13/build-camera-capture-modem-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
     complete_args=(--static-only)
     if [[ $runtime_checks == qemu ]]; then complete_args=(); fi
     sudo python3 tools/oneplus13/verify-complete-image.py --kernel out/oneplus13 --image out/oneplus13-complete-image "${complete_args[@]}"
