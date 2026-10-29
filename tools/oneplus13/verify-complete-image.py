@@ -161,6 +161,14 @@ def main():
     for name,digest in camera_runtime.items():
         raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Camera runtime source hash changed')
+    capture_runtime=m.get('camera_capture_runtime_files',{})
+    if (set(capture_runtime)!={'usr/libexec/oneplus13-ram-camera-capture.py'} or
+            m.get('camera_capture_auto_started') is not False or
+            m.get('camera_capture_hardware_qualified') is not False):
+        raise ValueError('Camera capture runtime must be explicit and default-off')
+    for name,digest in capture_runtime.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Camera capture runtime hash changed')
     camera_files=m.get('camera_probe_artifacts',{})
     camera_names={'boot-camera-chip-id-ram-experimental.img',
                   'sm8750-oneplus13-camera-chip-id-probe.dtb',
@@ -195,6 +203,45 @@ def main():
         raise ValueError('Camera alternative DTB changed')
     for module in ('s5kjn5','i2c_qcom_cci'):
         if 'install '+module+' /bin/false\n' not in policy:raise ValueError('Camera modules must remain manual')
+    for executable in ('usr/bin/media-ctl','usr/bin/v4l2-ctl'):
+        blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),executable])
+        if blob[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(blob[18:20],'little')!=183:
+            raise ValueError('Native camera userspace tool missing')
+    capture_files=m.get('camera_capture_artifacts',{})
+    capture_names={'boot-camera-capture-ram-experimental.img',
+                   'sm8750-oneplus13-camera-capture.dtb',
+                   'camera-capture-manifest.json','camera-capture-dtb-review.json'}
+    if set(capture_files)!=capture_names:raise ValueError('Missing manual camera capture artifacts')
+    for name,digest in capture_files.items():
+        if sha256(root/name)!=digest:raise ValueError('Camera capture artifact changed')
+    capture=json.loads((root/'camera-capture-manifest.json').read_text())
+    if (capture['scope']!='SEPARATE_MANUAL_CAMERA_CPHY_CAPTURE_RAM_BOOT_NEVER_FLASH' or
+            capture.get('camera_capture_pipeline_present') is not True or
+            capture.get('camera_capture_qualified') is not False or
+            capture.get('camera_capture_auto_started') is not False or
+            capture['default_boot_image_sha256']!=m['boot_image_sha256'] or
+            capture['rootfs_sha256']!=m['rootfs_sha256'] or
+            capture['source_commit']!=m['source_commit']):
+        raise ValueError('Camera capture alternative identity or qualification changed')
+    capture_nonce=capture['session_identity_nonce']
+    if (not re.fullmatch('[a-f0-9]{24}',capture_nonce) or
+            capture_nonce in (nonce,m['session_identity_nonce'],cam_nonce)):
+        raise ValueError('Camera capture needs a separate session identity')
+    if capture['cmdline']!=m['cmdline'].replace('oneplus13.session='+m['session_identity_nonce'],
+            'oneplus13.session='+capture_nonce)+' oneplus13.camera_capture=1':
+        raise ValueError('Camera capture boot arguments changed')
+    if (sha256(root/'boot-camera-capture-ram-experimental.img')!=capture['boot_image_sha256'] or
+            sha256(root/'sm8750-oneplus13-camera-capture.dtb')!=capture['dtb_sha256']):
+        raise ValueError('Camera capture manifest hashes disagree')
+    capture_sections=boot_sections((root/'boot-camera-capture-ram-experimental.img').read_bytes())
+    for key in ('kernel','ramdisk'):
+        if capture_sections[key]!=default_sections[key]:raise ValueError('Camera capture kernel/initramfs changed')
+    capture_dtb=importlib.import_module('camera-capture-dtb')
+    capture_expected,_=capture_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    capture_tree=Fdt(capture_expected);capture_tree.nodes['/chosen']['bootargs']=(capture['cmdline']+'\0').encode()
+    if (capture_sections['dtb']!=(root/'sm8750-oneplus13-camera-capture.dtb').read_bytes() or
+            Fdt(capture_sections['dtb']).nodes!=capture_tree.nodes):
+        raise ValueError('Camera capture DTB changed')
     nfc_files=m.get('nfc_files',{})
     if (set(nfc_files)!={'usr/lib/systemd/system/oneplus13-nfc.service'} or
             m.get('nfc_service_auto_started') is not True or

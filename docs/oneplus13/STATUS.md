@@ -1,3 +1,21 @@
+## r77 phone C-PHY camera graph candidate, 2026-10-30
+
+Android stock logs now establish the exact ultrawide route for the installed
+S5KJN5: CCI0 address0x2d, CSIPHY1, CSID1 and IFE1 with three C-PHY trios,
+4096x3072 at30fps, a logged data rate of6085485713 and settle count45. The
+public Three-Phase PHY rate selection therefore uses a1.4GHz link frequency and
+the2.8Gsps table, not the reference driver's four-lane1.248GHz D-PHY mode.
+
+The source now stages the reviewed SM8750 CAMSS/CSID/VFE series, the public
+phone C-PHY MMIO adapter, a three-trio S5KJN5 mode with an explicit
+`get_mbus_config` callback and an isolated `CSIPHY1 -> CSID1 -> VFE1` device
+tree. A clean fixed-pin component build passes with warnings treated as errors,
+and the WSL offline suite passes507 tests with one environment skip. A separate
+RAM boot candidate embeds the capture graph and a manual one-frame V4L2 helper;
+the default desktop tree remains unchanged. No real sensor pixel frame has yet
+arrived, so camera capture is not qualified. See
+[r77 camera C-PHY source](R77-CAMERA-CPHY-SOURCE-20261030.md).
+
 ## r75 modem/NFC/suspend source candidate, 2026-10-30
 
 The quiet r74b RAM round passes strict S5KJN5 identity and cleanup, one native

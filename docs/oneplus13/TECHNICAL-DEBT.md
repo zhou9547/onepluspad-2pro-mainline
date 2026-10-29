@@ -1,3 +1,14 @@
+## r77 camera C-PHY graph requires real-frame validation, 2026-10-30
+
+Stock Android evidence selects the installed S5KJN5 ultrawide through
+CSIPHY1/CSID1/IFE1 as three C-PHY trios at4096x3072@30. The source now has a
+matching isolated graph and a one-frame V4L2 RAM candidate. The remaining
+high-risk item is the supplier-specific sensor initialized sequence: the public
+S5KJN5 tables are used with the three-trio lane setting, while C.93's L/S
+initialization tails differ. Only a real RAW frame with varied pixels, followed
+by stream stop and complete module teardown, can qualify capture. Do not enable
+this graph in the default desktop boot or publish private vendor register data.
+
 ## r75 peripheral boundaries, 2026-10-30
 
 MPSS firmware structure and RAM control-plane startup pass, but GNSS has no

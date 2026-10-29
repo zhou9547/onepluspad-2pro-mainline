@@ -314,6 +314,13 @@ def verify_artifacts(out):
                                    ('CONFIG_DRM_MSM=m', 'msm.ko'),
                                    ('CONFIG_ATH12K=m', 'ath12k.ko'),
                                    ('CONFIG_ATH12K=m', 'ath12k_wifi7.ko'),
+                                   ('CONFIG_VIDEO_QCOM_CAMSS=m', 'qcom-camss.ko'),
+                                   ('CONFIG_VIDEO_S5KJN5=m', 's5kjn5.ko'),
+                                   ('CONFIG_I2C_QCOM_CCI=m', 'i2c-qcom-cci.ko'),
+                                   ('CONFIG_PHY_QCOM_MIPI_CSI2=m', 'phy-qcom-mipi-csi2.ko'),
+                                   ('CONFIG_SM_CAMCC_8750=m', 'camcc-sm8750.ko'),
+                                   ('CONFIG_SM_CAMBISTMCLKCC_8750=m', 'cambistmclkcc-sm8750.ko'),
+                                   ('CONFIG_IR_DODGE_SPI=m', 'ir-dodge-spi.ko'),
                                    ('CONFIG_PCI_PWRCTRL_PWRSEQ=m', 'pci-pwrctrl-pwrseq.ko'),
                                    ('CONFIG_POWER_SEQUENCING_QCOM_WCN=m', 'pwrseq-qcom-wcn.ko')]:
             if setting in config and not any(Path(name).name in
