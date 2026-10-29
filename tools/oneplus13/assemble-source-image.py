@@ -66,7 +66,10 @@ def main():
     deps=(root/'usr/lib/modules'/release/'modules.dep').read_text()
     paths=['lib/modules/'+release+'/'+s.split(':')[0] for s in deps.splitlines() if s]
     blocked=set(policy.dependency_closure(policy.blocked_modules(paths,release),deps))
-    allowed=set(policy.dependency_closure(['ath12k_wifi7','pwrseq_qcom_wcn','pci_pwrctrl_pwrseq'],deps))
+    allowed=set(policy.dependency_closure(
+        ['ath12k_wifi7','pwrseq_qcom_wcn','pci_pwrctrl_pwrseq','nxp_nci_i2c'],
+        deps,
+    ))
     blocked-=allowed
     (root/'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf').write_text(policy.configuration(sorted(blocked)))
     (root/'etc/modprobe.d/92-oneplus13-manual-bringup.conf').write_text(''.join('blacklist '+n+'\n' for n in sorted(allowed|{'dodge_s3910','hci_uart'})))
@@ -90,6 +93,9 @@ def main():
         if name.endswith('vermagic') and release not in checks[name]:raise ValueError('Module mismatch')
     for name in ['usr/bin/bluetooth-sendto','usr/libexec/bluetooth/obexd','usr/bin/gnome-control-center','usr/bin/nmcli','usr/sbin/iw']:
         if not (root/name).is_file():raise ValueError('Missing preserved feature: '+name)
+    for module in ('nfc','nci','nxp_nci','nxp_nci_i2c'):
+        if 'install '+module+' /bin/false\n' in (root/'etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf').read_text():
+            raise ValueError('Reviewed NFC module remains denied: '+module)
     if (root/'etc/machine-id').read_bytes():raise ValueError('Machine identity in public image')
     image=out/'rootfs.squashfs'
     epoch=run(['git','show','-s','--format=%ct','HEAD']).strip()

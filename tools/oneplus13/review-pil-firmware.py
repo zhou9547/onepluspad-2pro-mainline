@@ -16,13 +16,14 @@ RELOCATABLE=1<<27
 EHDR=struct.Struct('<16sHHIIIIIHHHHHH')
 PHDR=struct.Struct('<8I')
 LIMIT=96*1024*1024
+MAX_CARVEOUT=LIMIT*4
 
 def require(condition,message):
     if not condition:raise ValueError(message)
 
 def inspect_split(directory,stem,mem_phys,mem_size):
-    require(re.fullmatch(r'adsp(?:_dtb)?',stem),'Unsupported firmware role')
-    require(mem_phys>0 and 0<mem_size<LIMIT*2,'Invalid carveout')
+    require(re.fullmatch(r'(?:adsp|modem)(?:_dtb)?',stem),'Unsupported firmware role')
+    require(mem_phys>0 and 0<mem_size<MAX_CARVEOUT,'Invalid carveout')
     data=(directory/(stem+'.mdt')).read_bytes()
     require(EHDR.size<=len(data)<1024*1024,'Invalid MDT size')
     h=EHDR.unpack_from(data)

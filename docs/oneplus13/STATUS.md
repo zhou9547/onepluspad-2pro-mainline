@@ -1,3 +1,25 @@
+## r75 modem/NFC/suspend source candidate, 2026-10-30
+
+The quiet r74b RAM round passes strict S5KJN5 identity and cleanup, one native
+Iris frame, NFC controller start/stop, the read-only peripheral matrix, Android
+return and all baseline properties. NFC now binds11-0028,nxp-nci_i2c, GPIO75
+IRQ212 and creates/powersnfc0; a physical tag remains to be presented.
+
+The exact C.93 modem split set size74,867,650 bytes passes MDT/carveout review.
+RAM MPSS reached running, exposed GLINK IPCRTR/SSM_RTR_MODEM_APPS and qrtr-tun,
+then cleanly returned offline. One RTC wake completes a14.334s deep suspend
+with0.103s monotonic time and a disarmed32s safety watchdog. The first
+coordinator rejected only an immediate watchdog-state read; the corrected
+helper waits for the transition and requires a repeat combined round.
+
+Source now carries online-build firmware, NFC/MPSS services, qmicli/QRTR/v4l
+userspace, reviewed IR and OTG trees, and RTC suspend tests. IR optical output,
+GNSS location/QMI, USB host peripherals, repeated idle/suspend, full modem
+services and supplier-specific camera capture remain open. See
+[r75 peripheral progress](R75-PERIPHERAL-PROGRESS-20261030.md).
+
+The full native Linux offline suite passes496 tests with one environment skip.
+
 ## r71 complete joint round and speaker-gain follow-up, 2026-10-29
 
 The d872a04e update passed every automated combined check in647.5s and returned

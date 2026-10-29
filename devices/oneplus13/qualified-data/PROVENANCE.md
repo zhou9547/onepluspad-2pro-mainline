@@ -49,3 +49,22 @@ Publication does not qualify copying this unit's calibration to another phone.
 The sensor userspace is built separately from pinned public sources in Actions,
 then joined to this allowlist. Its hardware revalidation remains required;
 no sensor service or radio is automatically started by the dataset.
+
+## Reviewed C.93 modem firmware, 2026-10-30
+
+The owner also authorized the generic modem firmware needed for online builds.
+The `qcom/sm8750/oneplus/dodge/modem*` files are the unchanged C.93 vendor
+firmware splits and modem resource JSON, retained under the phone-specific
+path required by the reviewed MPSS device tree. This set contains the signed
+`modem.mdt` and `modem_dtb.mdt` role files plus their referenced split segments;
+it contains no EFS, per-unit IMEI/IMSI store, SIM data, network credentials or
+firmware caches from the phone.
+
+The host review verifies every MDT program header, split length, hash-segment
+identity and load span against the saved 246 MiB MPSS and 512 KiB DTB carveouts.
+The owner-provided RAM test separately started MPSS, observed the modem GLINK
+`IPCRTR` and service router endpoints, and returned it to offline without a
+fault. Those runtime facts qualify this exact experiment only. Vendor terms
+still apply, QSEE authentication remains performed by the device, and the data
+does not authorize flashing, modem RF calibration copying or use on another
+product.

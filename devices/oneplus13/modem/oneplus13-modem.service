@@ -1,0 +1,13 @@
+[Unit]
+Description=OnePlus 13 SM8750 modem and GNSS remoteproc
+After=systemd-modules-load.service
+Before=ModemManager.service
+Wants=ModemManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'for rp in /sys/class/remoteproc/remoteproc*; do [ "$(cat "$rp/name")" = modem ] && exec_rp="$rp"; done; [ -n "$exec_rp" ]; echo start > "$exec_rp/state"; for i in $(seq 1 100); do [ "$(cat "$exec_rp/state")" = running ] && exit 0; sleep 0.1; done; exit 1'
+
+[Install]
+WantedBy=multi-user.target

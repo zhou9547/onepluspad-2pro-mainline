@@ -1,3 +1,27 @@
+## r75 peripheral boundaries, 2026-10-30
+
+MPSS firmware structure and RAM control-plane startup pass, but GNSS has no
+accepted position. The next image carries `qmicli` and QRTR tools; LOC engine
+startup, satellite reports and a real fix still need hardware execution.
+NFC controller binding and poll start pass, while target discovery needs a
+physically presented tag. The generic NXP NCI event multicast group was not
+resolved in the first helper, so target collection must fall back to bounded
+GET_TARGET polling.
+
+One RTC deep-suspend cycle resumed in the same RAM session with boottime
+advancing14.334 seconds and monotonic time pausing. The32s Gunyah safety watchdog
+was disarmed after wake. The original coordinator required an instantaneous
+sysfs state and rejected that otherwise-correct cycle; the source now waits for
+the transition. Repeated sleep, RTC independence, deep idle, wake-device
+behavior and long-term power remain open.
+
+NFC and modem source hooks are now default image candidates. IR remains manual
+until optical output is independently observed. DWC3 OTG defaults to device to
+retain USB recovery; host mode must still be switched after a non-USB control
+path is available and tested with an adapter/U disk/mouse. Supplier-specific
+S5KJN5 initialization and the complete camera receiver graph remain the
+largest unresolved adaptation.
+
 ## Absolute speaker gain comparison, 2026-10-29
 
 The complete r71 combined round passes and the owner confirms corrected upright

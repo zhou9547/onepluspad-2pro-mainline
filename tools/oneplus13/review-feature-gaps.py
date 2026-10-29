@@ -18,7 +18,7 @@ PATTERNS={
     'modem_remoteproc':r'^qcom,.*(?:mpss|modem).*pas$',
     'camera_pipeline_templates':r'^qcom,(?:cam-|cci$|.*camss)',
     'camera_sensor_templates':r'^camera_',
-    'nfc_software_nodes':r'^(oplus-nfc|nxp,.*nfc|st,st21)',
+    'nfc_software_nodes':r'^(oplus-nfc|nxp,.*(?:nfc|nci)|st,st21)',
     'fingerprint_software_nodes':r'^(oplus,fp|goodix,.*finger|fpc,)',
     'adsp_remoteproc':r'^qcom,.*adsp.*pas$',
     'fastrpc_controllers':r'^qcom,fastrpc$',

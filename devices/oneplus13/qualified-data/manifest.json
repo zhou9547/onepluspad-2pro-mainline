@@ -306,6 +306,198 @@
     "firmware/qcom/sm8750/oneplus/dodge/vpu35_4v.mbn": {
       "sha256": "e1b2cb6de867893537fe6a1ffba312c2a2949402ca9892d393e2f40de255690a",
       "bytes": 2417352
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b00": {
+      "sha256": "c4aac89fb2c626a818d59c8c84cfa28cb686eb8b803b67c1f7b0ab689b42a460",
+      "bytes": 1428
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b01": {
+      "sha256": "680885c2f45fa7553eb26adab3b4cd5bdd1b03871bc0838853435453f51011dd",
+      "bytes": 3992
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b02": {
+      "sha256": "3dfa279fb0d05c13f3f9799edf96c34c69cd810aff31acdfae795422296d8612",
+      "bytes": 1880
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b03": {
+      "sha256": "486fbdf30376cb5feac40a138abc02d1d18845802b7512568b99aa61a40f2282",
+      "bytes": 11584
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b04": {
+      "sha256": "669386dab9b47bbbef26637c6f65538be4a7ec25f4f3ed222237f98e4b534a0e",
+      "bytes": 46748
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b05": {
+      "sha256": "88d1196d17cde02ca3ea42adfb28bbe055d6f2effa7bdf904e2f54eff734d80d",
+      "bytes": 233568
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b06": {
+      "sha256": "094bf74bfbf3c12c945a2eca30d6ba230054a80d7dc63d4f2862872848e640eb",
+      "bytes": 21568
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b07": {
+      "sha256": "c68b6f2ff495c6c3f2dba3e7fedeb204aeda75d5d8af4969f119998c2aa3dde0",
+      "bytes": 13936
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b08": {
+      "sha256": "63bb54fc4e8098816e92c949ef4bc0ecdff106458f766d1adf17adcfc4779155",
+      "bytes": 106919
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b09": {
+      "sha256": "a6f72407afba21f3a135c746e13a62832925485698b973827c04bb5af61c08f8",
+      "bytes": 34012
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b10": {
+      "sha256": "8bd36fd4badc548ff94b6058894cb53baf69246dfb38cb6360969570148a2ad0",
+      "bytes": 9332
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b11": {
+      "sha256": "fd77446bb7920bb0eb2a68ee2da1013d1f5030b06c85c46b80a49821c299b082",
+      "bytes": 35020
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b12": {
+      "sha256": "02204c089d1552e04d51d05f870e21b8b61988cb663aaba128d2d02d0f544686",
+      "bytes": 40960
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b13": {
+      "sha256": "51d0ab405cb3fe5cd447a2a13e7d71601af9c18d48417368275ff30030f9ff30",
+      "bytes": 135168
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b14": {
+      "sha256": "c3a7f6e6170ac4232230d5a1c8c3eed90782bca3ff514944bd8d3f7a30838cb7",
+      "bytes": 56784
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b15": {
+      "sha256": "27792ad20ad7c5672f1bc4568656faa454960391253c5ada97036b11f984f37b",
+      "bytes": 3604480
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b16": {
+      "sha256": "b0414d733a4a018ea2554bdac3c3fb36e91e046b805203f9452cfac997ee8643",
+      "bytes": 65536
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b17": {
+      "sha256": "eb01c54e8738488204dae1a407720ff9587ee7ec10c626af37dec37d122bcb33",
+      "bytes": 53248
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b18": {
+      "sha256": "4a010198348a25092bc5fdd3d2fd1b0d6f6780410b4e5998c63ba92340e45d5f",
+      "bytes": 3646864
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b19": {
+      "sha256": "3536aafc5bcde5fd63ce5e3d04b99209bbb1691753b9c5b72fd91293f7b52d62",
+      "bytes": 212992
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b20": {
+      "sha256": "4bdaf88972b7a51d269c06b8160c4fd2f410695e3a2621b17ac3f6ac61184ac8",
+      "bytes": 269984
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b21": {
+      "sha256": "53680c7719064ca20d4592b149b28e1b5897f9f924641f288750f09f39bcd3d9",
+      "bytes": 212992
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b22": {
+      "sha256": "89c612cd96a5476d16b2520c44802e86e5f76e63576f3c4c589dad8051ce4f73",
+      "bytes": 1067992
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b23": {
+      "sha256": "9c8cc6f45238dcab5ff3130379f9a2f4b2cf423e8a4107bf256ec6daf3f3bf78",
+      "bytes": 9066
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b24": {
+      "sha256": "b32af0a87202ceb3a3f8780d9b72f8917ebef2d138f8edddbc710e88799ca5ad",
+      "bytes": 1974670
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b25": {
+      "sha256": "8d3d4130fc02d6ec03b1249663c974d96428da518edd0434b595714ac8791ca0",
+      "bytes": 2805597
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b26": {
+      "sha256": "f2d731961cf638f39641f1a2168d53cdc512aba03cd20e743e4e2f3d288f1904",
+      "bytes": 2628998
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b27": {
+      "sha256": "c840d4e61ff2c20e3b3718b16f54a2cd7bd4006320e56a06f5497a5eee95c970",
+      "bytes": 6260389
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b28": {
+      "sha256": "12b25adb73c327898a7bcaac81521f3f89d746ef7eef6e3549f0e5916d22c4c7",
+      "bytes": 107840
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b29": {
+      "sha256": "42871a8a0729ed683323218017c6198f11e615a0361b7a4cec0111c5f3768d42",
+      "bytes": 48537664
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b30": {
+      "sha256": "f0800a38708b534e5a468ecb7219d2309da83f09a58f47a62493df7247e520d7",
+      "bytes": 1547021
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b31": {
+      "sha256": "1f41947bce8b2b8ca7d7a1f84f6fd676bb638b08504900e9c1a1cf1cf9987e78",
+      "bytes": 9000
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b32": {
+      "sha256": "4ffdfc1b415c54649962d3ea1f38f21a0d09af29efb561dc64ba03254adc6133",
+      "bytes": 391744
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b33": {
+      "sha256": "ce8128654571b61fc0314bf0fe446a80edb6f6a5a9008e7a2d36be452d9ac481",
+      "bytes": 131072
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b34": {
+      "sha256": "8300074c402380a0a57856802504c5194f1572a67f05daf390f6d7cbe391242a",
+      "bytes": 1032
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b35": {
+      "sha256": "7c55476f290814001c422f3aded4263a4723603d9fa48a798929468703ff3356",
+      "bytes": 4096
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b36": {
+      "sha256": "155c772d001d71bfb9eee89303ffa9eeb9d64c3630efa74c93d12e2895d4fd6d",
+      "bytes": 307200
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b37": {
+      "sha256": "0537bbc32bbfb5039b652e7e219c4d1b559a5d8cd33f7a5309d97757171d071f",
+      "bytes": 51108
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b38": {
+      "sha256": "631244ff4cb1ed972fb7b150f832b4d92a0ad5d248e7e579f2faacf3cba31341",
+      "bytes": 24984
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b39": {
+      "sha256": "bcb9f3472444ff3bda9f2fe8f75a38e97e5a23f05369fe0cece1dd1499ff57d8",
+      "bytes": 21696
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b40": {
+      "sha256": "efa9f639c7a9526b8800a027a4f4601ea335d8b2498e55f9e85b6782fa33851b",
+      "bytes": 25156
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.b42": {
+      "sha256": "08913dad66e4fb86e65e739c5926493048be16c457399587de66c6d2eb36318e",
+      "bytes": 7588
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem.mdt": {
+      "sha256": "3532d866017aba57a64a759b920e18b1769ae007e767479abdf22409b5bfd97a",
+      "bytes": 9016
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem_dtb.b00": {
+      "sha256": "95b5ae65665727a2ea14c168e7aa5a3f67349ae79e2a7c7625150fa05340ae2b",
+      "bytes": 148
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem_dtb.b01": {
+      "sha256": "eba812c74a501a9061f572dedfd00f0d455d016fd79149de374400d7749fc1f3",
+      "bytes": 114224
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem_dtb.b02": {
+      "sha256": "6ace82c97ccd030d6be93c5f29151fd233c9f771180200e478f87610dd2d7d1b",
+      "bytes": 5248
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modem_dtb.mdt": {
+      "sha256": "eb70c591104f05bdfec354ec55efd91391597a908fc000a8e38e465d557dcfb2",
+      "bytes": 5396
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/modemr.jsn": {
+      "sha256": "07138bd0e249fa43db4eeb1a4516037db3bfe4bb88285e8c36f594be2b2a4b43",
+      "bytes": 710
     }
   },
   "removed_fields": [

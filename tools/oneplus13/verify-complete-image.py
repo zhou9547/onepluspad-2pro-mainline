@@ -137,9 +137,15 @@ def main():
     from stock import Fdt
     default_sections=boot_sections((root/'boot-desktop-ram-experimental.img').read_bytes())
     probe_sections=boot_sections((root/'boot-microphone-ram-experimental.img').read_bytes())
+    import importlib
+    usb_host_dtb=importlib.import_module('usb-host-dtb')
+    default_expected,_=usb_host_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    default_tree=Fdt(default_expected);default_tree.nodes['/chosen']['bootargs']=(m['cmdline']+'\0').encode()
+    if (default_sections['dtb']!=(root/'sm8750-oneplus-dodge-abl.dtb').read_bytes() or
+            Fdt(default_sections['dtb']).nodes!=default_tree.nodes):
+        raise ValueError('Reviewed default NFC DTB mismatch')
     for key in ('kernel','ramdisk'):
         if probe_sections[key]!=default_sections[key]:raise ValueError('Alternative kernel/initramfs changed')
-    import importlib
     mic_dtb=importlib.import_module('microphone-dtb')
     expected,_=mic_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
     expected_tree=Fdt(expected);expected_tree.nodes['/chosen']['bootargs']=(probe['cmdline']+'\0').encode()
@@ -189,6 +195,31 @@ def main():
         raise ValueError('Camera alternative DTB changed')
     for module in ('s5kjn5','i2c_qcom_cci'):
         if 'install '+module+' /bin/false\n' not in policy:raise ValueError('Camera modules must remain manual')
+    nfc_files=m.get('nfc_files',{})
+    if (set(nfc_files)!={'usr/lib/systemd/system/oneplus13-nfc.service'} or
+            m.get('nfc_service_auto_started') is not True or
+            m.get('nfc_controller_bind_hardware_qualified') is not False or
+            m.get('nfc_tag_poll_hardware_qualified') is not False):
+        raise ValueError('Missing reviewed default NFC service')
+    for name,digest in nfc_files.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('NFC service changed')
+    platform_review=m.get('platform_dtb_review',{})
+    if (platform_review.get('output_sha256')!=hashlib.sha256(default_expected).hexdigest() or
+            platform_review.get('default_boot_tree_changed') is not True):
+        raise ValueError('Platform DTB review binding changed')
+    for module in ('nfc','nci','nxp_nci','nxp_nci_i2c'):
+        if 'install '+module+' /bin/false\n' in policy:
+            raise ValueError('Reviewed NFC module remains denied')
+    modem_files=m.get('modem_files',{})
+    if (set(modem_files)!={'usr/lib/systemd/system/oneplus13-modem.service'} or
+            m.get('modem_service_auto_started') is not True or
+            m.get('modem_hardware_functional_qualified') is not False or
+            m.get('gnss_hardware_functional_qualified') is not False):
+        raise ValueError('Missing reviewed modem service')
+    for name,digest in modem_files.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Modem service changed')
     video_files=m.get('video_probe_artifacts',{})
     video_names={'boot-video-ram-experimental.img','sm8750-oneplus13-video-probe.dtb',
                  'video-probe-manifest.json','video-probe-dtb-review.json'}
@@ -265,6 +296,8 @@ def main():
             'experimental_microphone_files_verified':len(microphone_files),'microphone_auto_started':False,
             'experimental_camera_files_verified':len(camera_files),'camera_auto_started':False,
             'camera_probe_runtime_files_verified':len(camera_runtime),
+            'nfc_files_verified':len(nfc_files),'nfc_service_auto_started':True,
+            'modem_files_verified':len(modem_files),'modem_service_auto_started':True,
             'experimental_video_files_verified':len(video_files),'video_auto_started':False,
             'video_probe_runtime_files_verified':len(video_runtime),
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}

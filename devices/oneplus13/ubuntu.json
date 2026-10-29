@@ -10,12 +10,13 @@
   "packages": [
     "systemd-sysv", "ubuntu-standard", "gnome-shell", "gnome-session", "ubuntu-session",
     "gdm3", "gnome-control-center", "gnome-terminal", "gnome-initial-setup",
-    "nautilus", "network-manager", "wpasupplicant", "iw", "dbus-user-session", "bluez", "gnome-bluetooth-sendto", "bluez-obexd", "xwayland", "libgl1-mesa-dri",
+    "nautilus", "network-manager", "modemmanager", "libqmi-utils", "qrtr-tools", "wpasupplicant", "iw", "dbus-user-session", "bluez", "gnome-bluetooth-sendto", "bluez-obexd", "xwayland", "libgl1-mesa-dri",
     "mesa-utils", "systemd-resolved", "sudo", "locales", "console-setup", "busybox-static", "curl",
     "ca-certificates", "openssh-client", "openssh-server", "kmod", "zstd",
     "language-pack-zh-hans", "language-pack-gnome-zh-hans", "fonts-noto-cjk",
     "ibus", "ibus-libpinyin", "im-config", "alsa-utils", "alsa-ucm-conf", "pipewire", "pipewire-bin", "pipewire-pulse", "wireplumber", "pulseaudio-utils",
     "docker.io", "iptables", "nftables", "iproute2", "strace", "tzdata", "python3-gi",
+    "v4l-utils", "ir-keytable",
     "libgudev-1.0-0", "libpolkit-gobject-1-0", "polkitd",
     "gir1.2-gstreamer-1.0", "gir1.2-gst-plugins-base-1.0", "gstreamer1.0-tools",
     "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good"

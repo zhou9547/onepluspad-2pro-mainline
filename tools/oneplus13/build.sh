@@ -79,6 +79,19 @@ cp devices/oneplus13/sm8750-oneplus-dodge*.dts "$src/arch/arm64/boot/dts/qcom/"
 cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
 cp tools/oneplus13/audio-draft/aw88461.c tools/oneplus13/audio-draft/aw88461-profile.h "$src/sound/soc/codecs/"
+cp tools/oneplus13/infrared-draft/ir-dodge-spi.c "$src/drivers/media/rc/ir-dodge-spi.c"
+if ! grep -q '^config IR_DODGE_SPI$' "$src/drivers/media/rc/Kconfig"; then
+  cat >> "$src/drivers/media/rc/Kconfig" <<'KCONFIG'
+
+config IR_DODGE_SPI
+	tristate "Experimental OnePlus 13 SPI infrared transmitter"
+	depends on SPI && OF && REGULATOR && PINCTRL
+	help
+	  Bounded rc-core transmitter candidate for the exact OnePlus 13 wiring.
+	  Requires an explicit experimental DT node and exact shared-supply votes.
+KCONFIG
+  printf '\nobj-$(CONFIG_IR_DODGE_SPI) += ir-dodge-spi.o\n' >> "$src/drivers/media/rc/Makefile"
+fi
 if ! grep -q '^config SND_SOC_AW88461$' "$src/sound/soc/codecs/Kconfig"; then
   cat >> "$src/sound/soc/codecs/Kconfig" <<'KCONFIG'
 
@@ -132,6 +145,7 @@ git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*
   drivers/input/touchscreen/synaptics-dodge drivers/gpu/drm/panel/panel-aa569 \
   drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr*.[ch]
 git -C "$src" add --intent-to-add sound/soc/codecs/aw88461.c sound/soc/codecs/aw88461-profile.h
+git -C "$src" add --intent-to-add drivers/media/rc/ir-dodge-spi.c
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1

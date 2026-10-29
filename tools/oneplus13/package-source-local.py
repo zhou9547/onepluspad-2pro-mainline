@@ -128,6 +128,25 @@ def main():
     dest=stage/'usr/libexec/oneplus13-ram-camera-chip-id.py'
     shutil.copyfile(REPO/'tools/oneplus13/ram-camera-chip-id.py',dest);dest.chmod(0o755)
     camera_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    nfc_hashes={}
+    nfc_service=stage/'usr/lib/systemd/system/oneplus13-nfc.service'
+    nfc_service.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copyfile(REPO/'devices/oneplus13/nfc/oneplus13-nfc.service',nfc_service)
+    nfc_service.chmod(0o644)
+    nfc_hashes[str(nfc_service.relative_to(stage))]=sha256(nfc_service)
+    nfc_wants=stage/'etc/systemd/system/multi-user.target.wants/oneplus13-nfc.service'
+    nfc_wants.parent.mkdir(parents=True,exist_ok=True)
+    if nfc_wants.exists() or nfc_wants.is_symlink():raise ValueError('Unexpected NFC service link')
+    os.symlink('/usr/lib/systemd/system/oneplus13-nfc.service',nfc_wants)
+    modem_service=stage/'usr/lib/systemd/system/oneplus13-modem.service'
+    modem_service.parent.mkdir(parents=True,exist_ok=True)
+    shutil.copyfile(REPO/'devices/oneplus13/modem/oneplus13-modem.service',modem_service)
+    modem_service.chmod(0o644)
+    modem_hashes={'usr/lib/systemd/system/oneplus13-modem.service':sha256(modem_service)}
+    modem_wants=stage/'etc/systemd/system/multi-user.target.wants/oneplus13-modem.service'
+    modem_wants.parent.mkdir(parents=True,exist_ok=True)
+    if modem_wants.exists() or modem_wants.is_symlink():raise ValueError('Unexpected modem service link')
+    os.symlink('/usr/lib/systemd/system/oneplus13-modem.service',modem_wants)
     # Explicit manual Iris diagnostic. It decodes only a generated public card.
     video_runtime=REPO/'out/phone-video'
     video_evidence=json.loads((video_runtime/'verification.json').read_text())
@@ -264,9 +283,10 @@ def main():
     (out/'initramfs-desktop.cpio.gz').write_bytes(packed)
     nonce=secrets.token_hex(12)
     cmdline='rdinit=/init panic=15 oneplus13.desktop=1 oneplus13.rootfs.sha256='+sha256(image_rootfs)+' oneplus13.rootfs.bytes='+str(image_rootfs.stat().st_size)+' oneplus13.session='+nonce
-    audio_blob,audio_report=audio.derive((private/'calibrated.dtb').read_bytes())
-    (out/'audio-dtb-review.json').write_text(json.dumps(audio_report,indent=2)+'\n')
-    tree=Fdt(audio_blob);tree.nodes['/chosen']['bootargs']=(cmdline+'\0').encode()
+    usb_host=import_module('usb-host-dtb')
+    platform_blob,usb_host_report=usb_host.derive((private/'calibrated.dtb').read_bytes())
+    (out/'platform-dtb-review.json').write_text(json.dumps(usb_host_report,indent=2)+'\n')
+    tree=Fdt(platform_blob);tree.nodes['/chosen']['bootargs']=(cmdline+'\0').encode()
     dtb=out/'sm8750-oneplus-dodge-abl.dtb';dtb.write_bytes(tree.to_blob())
     geometry=json.loads((private/'boot-geometry.json').read_text())
     tool=json.loads((REPO/'kernel/source.json').read_text())['tool_inputs']['mkbootimg.py']
@@ -305,6 +325,13 @@ def main():
     result.update(video_probe_runtime_files=video_hashes,video_probe_auto_started=False,
                   video_hardware_decode_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
+    result.update(nfc_files=nfc_hashes,nfc_service_auto_started=True,
+                  platform_dtb_review=usb_host_report,
+                  nfc_controller_bind_hardware_qualified=False,
+                  nfc_tag_poll_hardware_qualified=False)
+    result.update(modem_files=modem_hashes,modem_service_auto_started=True,
+                  modem_hardware_functional_qualified=False,
+                  gnss_hardware_functional_qualified=False)
     result.update(desktop_audio_files=desktop_audio_hashes,desktop_audio_auto_started=False,
                   desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=1023)
     result.update(container_files=container_hashes,container_daemon_auto_started=False,
