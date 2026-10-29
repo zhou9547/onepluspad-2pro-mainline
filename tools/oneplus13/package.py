@@ -98,7 +98,6 @@ def main():
     for item in source['busybox_source']['files']:
         archive = cache / item['file']
         if not archive.is_file() or sha256(archive) != item['sha256']:
-            from verified_download import fetch
             fetch(item['url'].replace('http:', 'https:', 1), item['sha256'], archive)
         if archive.stat().st_size != item['bytes'] or sha256(archive) != item['sha256']:
             raise SystemExit('BusyBox source archive checksum/size mismatch')
