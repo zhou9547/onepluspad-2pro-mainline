@@ -19,7 +19,9 @@
 #define WIDTH 320U
 #define HEIGHT 240U
 #define MAX_BUFFERS 24U
-#define MAX_BUFFER_BYTES (2U * 1024U * 1024U)
+#define MAX_INPUT_BYTES (8U * 1024U * 1024U)
+#define MAX_CAPTURE_BYTES (2U * 1024U * 1024U)
+#define MAX_QUEUE_BYTES (64U * 1024U * 1024U)
 #define OUTPUT V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE
 #define CAPTURE V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE
 
@@ -82,19 +84,28 @@ static int selftest(void)
     return pass ? 0 : 1;
 }
 
-static int allocate_queue(int fd, struct queue *q, unsigned int requested)
+static int allocate_queue(int fd, struct queue *q, unsigned int requested,
+                          unsigned int sizeimage)
 {
+    unsigned int limit = q->type == OUTPUT ? MAX_INPUT_BYTES : MAX_CAPTURE_BYTES;
+    if (!sizeimage || sizeimage > limit) { errno=EOVERFLOW; return -1; }
     struct v4l2_requestbuffers request = {.type=q->type, .memory=V4L2_MEMORY_MMAP,
                                          .count=requested};
     if (call_ioctl(fd, VIDIOC_REQBUFS, &request)) return -1;
+    fprintf(stderr,"IRIS_QUEUE type=%u count=%u sizeimage=%u\n",
+            q->type,request.count,sizeimage);
     if (!request.count || request.count > MAX_BUFFERS) { errno=EOVERFLOW; return -1; }
+    if (request.count > MAX_QUEUE_BYTES / sizeimage) { errno=EOVERFLOW; return -1; }
     q->count = request.count;
     for (unsigned int i=0; i<q->count; i++) {
         struct v4l2_plane plane = {0};
         struct v4l2_buffer b = {.type=q->type, .memory=V4L2_MEMORY_MMAP,
                                .index=i, .length=1, .m.planes=&plane};
         if (call_ioctl(fd, VIDIOC_QUERYBUF, &b)) return -1;
-        if (b.length!=1 || !plane.length || plane.length>MAX_BUFFER_BYTES) {
+        fprintf(stderr,"IRIS_BUFFER type=%u index=%u planes=%u bytes=%u\n",
+                q->type,i,b.length,plane.length);
+        if (b.length!=1 || plane.length<sizeimage || plane.length>limit ||
+            plane.length>MAX_QUEUE_BYTES/q->count) {
             errno=EOVERFLOW; return -1;
         }
         void *mapping=mmap(NULL,plane.length,PROT_READ|PROT_WRITE,MAP_SHARED,fd,plane.m.mem_offset);
@@ -179,7 +190,8 @@ static int decode(const char *device, const char *fixture)
     if (call_ioctl(fd,VIDIOC_S_FMT,&format) || format.fmt.pix_mp.pixelformat!=V4L2_PIX_FMT_H264 ||
         format.fmt.pix_mp.num_planes!=1) goto fail;
     stage="output-buffers";
-    if (allocate_queue(fd,&output,4) || output.buffers[0].length<compressed_bytes) goto fail;
+    if (allocate_queue(fd,&output,4,format.fmt.pix_mp.plane_fmt[0].sizeimage) ||
+        output.buffers[0].length<compressed_bytes) goto fail;
     memcpy(output.buffers[0].data,compressed,compressed_bytes);
     if (enqueue(fd,&output,0,compressed_bytes) || start(fd,&output)) goto fail;
     while (now()<deadline && !verified) {
@@ -211,7 +223,7 @@ static int decode(const char *device, const char *fixture)
                 selection.r.height!=HEIGHT || selection.r.left<0 || selection.r.top<0) goto fail;
             left=selection.r.left; top=selection.r.top;
             stage="capture-buffers";
-            if (allocate_queue(fd,&capture,16)) goto fail;
+            if (allocate_queue(fd,&capture,16,format.fmt.pix_mp.plane_fmt[0].sizeimage)) goto fail;
             for (unsigned int i=0; i<capture.count; i++) if (enqueue(fd,&capture,i,0)) goto fail;
             if (start(fd,&capture)) goto fail;
         }

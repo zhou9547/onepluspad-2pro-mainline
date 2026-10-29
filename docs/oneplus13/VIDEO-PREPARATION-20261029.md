@@ -10,7 +10,8 @@ The owner's C.93 `vendor.img:/firmware/vpu35_4v.mbn` is2417352 bytes, SHA256
 `e1b2cb6de867893537fe6a1ffba312c2a2949402ca9892d393e2f40de255690a`.
 It differs from the Pad's same-sized firmware. The saved phone FDT and the
 qualified Linux tree both reserve8MiB at0x9c300000 for video, with no-map.
-PAS9 authentication and actual decoding remain untested.
+The first bounded r63 activation opens the firmware session without kernel faults;
+actual pixel decoding remains unqualified. See the r63 evidence below.
 
 `video-probe-dtb.py` prepares a future separate camera/video tree by changing
 only the existing Iris status and firmware-name, after the camera derivation.
@@ -43,8 +44,10 @@ The manual coordinator binds the live DT/resources, product firmware, module
 dependency bytes, executable and fixture to the exact image. It enforces the
 existing RAM/read-only-storage/absolute-deadline guards, requires idle camera,
 SSC and WiFi, waits for runtime suspend and removes Iris afterwards. Real-device
-activation is deferred until independent normal-running watchdog recovery has
-been observed in a combined round; suspend recovery remains a separate task.
+activation uses the independently verified r62 awake recovery scope and a fixed
+90s separate awake guard. r63 completed session setup and safe teardown, but its
+client rejected the input buffer size before decoding. Idle and suspend recovery
+remain separate tasks.
 
 Secure-memory source review pins OnePlusOSS modules/devicetree commit
 `d50b305f7da9e14715a25120a4ac7b1a4b8b97c3`. Its
@@ -58,4 +61,21 @@ for the SCM protection arguments. Both fetched files were checked against their
 Git blob IDs; SHA256 values are respectively
 `b167da87eb103471edfe4ccd30e1c88cedd573e2718f948c0745150dc14b29df`
 and `b8f28a1f5d9d54312584866bd2f95ec8ad2430dc9ec1018b3207604dbe1816e7`.
-This source agreement does not establish firmware authentication or decoding.
+This source agreement alone does not establish firmware authentication or decoding.
+
+## First hardware activation and allocator correction
+
+[The r63 sanitized result](evidence/joint-video-r63.sanitized.json) records a
+successful firmware session and clean teardown, but EOVERFLOW at input allocation.
+The pinned iris_dec_bitstream_buffer_size formula uses the4K baseline even for
+this small fixture:4096*2304*3/2/2 =7077888 bytes. The client's2MiB single-buffer
+limit was too small. The corrected client uses the negotiated sizeimage, an8MiB
+input ceiling, unchanged2MiB capture ceiling, and64MiB per-queue aggregate bound.
+It logs actual granted count and QUERYBUF plane lengths. Offline release and
+sanitizer tests exercise that real allocator, including partial-error unmapping.
+
+The V4L2 [REQBUFS contract](https://docs.kernel.org/userspace-api/media/v4l/vidioc-reqbufs.html)
+requires honoring the returned count; the driver negotiates buffer storage through
+S_FMT/QUERYBUF. No allocation or successful open substitutes for verified NV12
+pixels and timestamp. A new Actions image and retained-feature joint run are
+required before accepting this fix or claiming hardware decode/VA-API support.

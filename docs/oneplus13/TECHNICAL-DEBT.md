@@ -1,3 +1,24 @@
+## r63 Iris activation: input allocator limit, clean recovery
+
+The exact b1cf1932 Actions40831129105 image passes independent downloaded-byte
+verification. Its combined plan passes strict camera ID/teardown, then opens an
+Iris firmware session under the bounded awake watchdog guard. The native client
+stops at output-buffers with EOVERFLOW75 before any verified frame. The pinned
+Iris input formula returns7077888 bytes even for320x240 H.264, above the client's
+old2MiB bound. r63 did not log the returned size, so this cause is source-derived;
+the retry must record actual queue sizes. Both streams stop, Iris unloads and
+video nodes disappear. The guard verifies teardown and disarms. Kernel counters
+remain zero; host recovery returns Android after192.1s with seven matching
+baselines and zero partition writes. Later mature regressions were not reached.
+[Sanitized evidence](evidence/joint-video-r63.sanitized.json) retains the failed
+joint result and stop flag; no hardware decode acceptance is claimed.
+
+The revised allocator accepts the negotiated input size up to8MiB, keeps a2MiB
+capture bound and64MiB aggregate queue cap, and records granted counts/lengths.
+Release and ASan/UBSan tests exercise the actual allocator with the7MiB driver
+size, malformed returns, mapping/query errors and partial cleanup. Fresh Actions,
+downloaded-byte verification and the full guarded combined round remain required.
+
 ## Awake recovery acceptance and guarded video boundary
 
 r62 accepts independent recovery only while a CPU remains runnable. There

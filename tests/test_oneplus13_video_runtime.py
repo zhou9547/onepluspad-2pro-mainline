@@ -48,6 +48,18 @@ class VideoRuntime(unittest.TestCase):
             with self.assertRaises(ValueError):video.parse_frame(output)
 
     @unittest.skipUnless(os.name=='posix' and shutil.which('gcc'),'Linux C selftests')
+    def test_real_queue_allocator_driver_sizes_and_partial_cleanup(self):
+        source=ROOT/'tools/oneplus13/video-draft/test-queue.c'
+        with tempfile.TemporaryDirectory() as tmp:
+            for sanitizer in (False,True):
+                binary=Path(tmp)/('queue-sanitized' if sanitizer else 'queue')
+                flags=['-fsanitize=address,undefined'] if sanitizer else []
+                subprocess.run(['gcc','-std=c11','-O1','-Wall','-Wextra','-Werror',
+                                *flags,str(source),'-o',str(binary)],check=True,capture_output=True)
+                result=subprocess.run([str(binary)],check=True,capture_output=True,text=True,timeout=15)
+                self.assertEqual(result.stdout.strip(),'VIDEO_QUEUE_ALLOCATOR_SELFTEST_PASS_NO_DEVICE_OPEN')
+
+    @unittest.skipUnless(os.name=='posix' and shutil.which('gcc'),'Linux C selftests')
     def test_native_pixel_bounds_and_corruption_checks_under_sanitizers(self):
         source=ROOT/'tools/oneplus13/video-draft/decode-one-frame.c'
         with tempfile.TemporaryDirectory() as tmp:

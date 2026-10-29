@@ -1,0 +1,32 @@
+{
+  "scope": "R63_BOUNDED_IRIS_FIRST_ACTIVATION_CAMERA_AND_PLANNED_RETAINED_REGRESSIONS",
+  "image_commit": "b1cf1932d1b992baf7e24eb7bf4bd0be2b917f93",
+  "actions_run": 40831129105,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "baseline_key_count": 7,
+  "partition_writes": 0,
+  "elapsed_seconds": 192.1,
+  "camera_chip_id_and_teardown_pass": true,
+  "firmware_session_opened": true,
+  "video_frame_verified": false,
+  "native_failure": {
+    "stage": "output-buffers",
+    "errno": 75,
+    "client_input_limit_bytes": 2097152,
+    "driver_input_size_bytes_from_pinned_source": 7077888,
+    "returned_buffer_size_recorded": false
+  },
+  "video_cleanup_pass": true,
+  "module_unloaded": true,
+  "video_nodes_removed": true,
+  "awake_guard_cleanly_disarmed": true,
+  "kernel_health_clean": true,
+  "mature_joint_regressions_reached": false,
+  "joint_acceptance_pass": false,
+  "halt_further_runs": true,
+  "historical_stop_flags_cleared": false,
+  "host_recovery_requests": 1,
+  "hardware_decode_qualified": false,
+  "idle_or_suspend_recovery_qualified": false
+}
