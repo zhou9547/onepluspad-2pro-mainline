@@ -1,5 +1,29 @@
 # Manual RAM watchdog recovery check
 
+r62 completed the unchanged12s awake countdown/keepalive gates12/10/12 and
+the host observed Android return with matching baselines after490.2s. No host
+recovery/reboot request occurred. Retain this as awake-scope independent recovery;
+it does not qualify idle, suspend, exact physical reset latency or every fault
+mode. The old failed-run receipts/stop flags remain historical evidence.
+
+`--guard-one-video --stop-token <32-hex>` prepares one separate manual video
+window, only on the video RAM alternative before uptime300s and before Iris is
+loaded. It automatically pins its own process and passes the same12s countdown/
+keepalive gates before publishing an armed guard receipt. Its90s monotonic
+deadline is fixed once. The ordinary-priority process stays runnable, checks a
+stop marker periodically and pings every3s. At deadline/error it stops feeding
+and busy-waits45s for hardware recovery. This is an awake development guard,
+not idle/suspend or persistent power policy.
+
+Early disarm requires a root-owned regular0600 single-link RAM marker with the
+exact stop token, a bounded root-owned video result asserting cleanup/module/
+node removal, and actual absence of qcom_iris. Wrong tokens, links, broad file
+permissions and incomplete cleanup cannot stop the guard. The video helper
+also checks an active guard unit and real Gunyah watchdog and requires more
+than45s remaining before hardware activation. The absolute600s RAM deadline
+continues independently. Fresh Actions/image/hardware validation remains needed
+for this guard mode; r62 tested the underlying awake reset mode, not Iris.
+
 r60's CPU0 idle/busy/idle comparison gives elapsed0/28/2028/83, followed by0
 after the explicit final keepalive. Each interval lasted2s; the busy interval
 used1.99875s process time. The helper issues no intervening keepalive. The

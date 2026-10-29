@@ -24,7 +24,8 @@ checks cover each exact upper limit, the next symbol, zero and maximum unsigned
 input. An AArch64 object is compiled and its ELF machine checked.
 
 A clean archive-based WSL component build with the catalog passes. Native
-ARM64 Actions of this catalog addition is still required. Generated headers,
+ARM64 [Actions40829917850](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40829917850)
+also passed on3f2cdd5f with cphy=true. Generated headers,
 object and verification report are saved with component artifacts. The catalog
 is data only: no MMIO, compatible string, driver registration, phone DT change,
 module installation or capture is added. The existing isolated framework still

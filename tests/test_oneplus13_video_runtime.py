@@ -7,6 +7,25 @@ video=importlib.util.module_from_spec(spec);spec.loader.exec_module(video)
 
 
 class VideoRuntime(unittest.TestCase):
+    def test_video_requires_active_bounded_awake_guard_before_activation(self):
+        receipt={'scope':'ONE_MANUAL_RAM_GUNYAH_AWAKE_VIDEO_GUARD',
+                 'active_wait_required':True,'idle_or_suspend_recovery_qualified':False,
+                 'guard_running':True,'guard_seconds':90,'guard_deadline_monotonic':190,
+                 'armed':True,'countdown_verified':True,'keepalive_verified':True,
+                 'suspend_requested':False,'reset_observed':False,
+                 'set_timeout_readback':12,'get_timeout_readback':12,
+                 'first_timeleft':12,'second_timeleft':10,'third_timeleft':12}
+        video.validate_awake_guard(receipt,110)
+        for key,value in [('scope','ONE_MANUAL_RAM_GUNYAH_AWAKE_RESET'),
+                          ('active_wait_required',False),('guard_running',False),
+                          ('guard_seconds',180),('guard_deadline_monotonic',150),
+                          ('guard_deadline_monotonic',float('nan')),('guard_deadline_monotonic',float('inf')),
+                          ('guard_deadline_monotonic',210),('first_timeleft',True),
+                          ('countdown_verified',False),('third_timeleft',10)]:
+            changed={**receipt,key:value}
+            with self.subTest(key=key),self.assertRaises(ValueError):
+                video.validate_awake_guard(changed,110)
+
     def test_public_fixture_is_exact_and_foreign_or_changed_streams_are_rejected(self):
         value=json.loads((ROOT/'devices/oneplus13/video/synthetic-avc-bars.json').read_text())
         self.assertEqual(len(video.fixture_bytes(value)),905)

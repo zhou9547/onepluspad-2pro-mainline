@@ -34,5 +34,12 @@ class Receipt(unittest.TestCase):
         result=m.validate_armed(self.report(),self.report()['scope'])
         self.assertFalse(result['reset_observed'])
         self.assertFalse(result['idle_or_suspend_recovery_qualified'])
+    def test_video_guard_requires_active_fixed_window(self):
+        result=self.report();result.update(scope='ONE_MANUAL_RAM_GUNYAH_AWAKE_VIDEO_GUARD',
+                                          guard_running=True,guard_seconds=90)
+        m.validate_armed(result,result['scope'])
+        for key,value in [('guard_running',False),('guard_seconds',150)]:
+            bad=dict(result);bad[key]=value
+            with self.assertRaises(ValueError):m.validate_armed(bad,result['scope'])
 
 if __name__=='__main__':unittest.main()

@@ -1,3 +1,24 @@
+## r62 independent awake recovery accepted; guarded video window prepared
+
+r62 repeats every mature combined phase on the verified5f37a1da image with
+published66756a58 host-served watchdog code and e65db825 receipt parsing.
+The awake ioctl sequence12/10/12 passes, the host issues zero recovery/reboot
+requests, and Android returns independently after490.2s with seven matching
+baselines and clean pre-arm kernel health. This qualifies the explicit awake
+CPU scope only. Historical r58/r59/r61 stop records remain unchanged; idle and
+suspend recovery are not accepted.
+
+The next source image requires a separate awake guard before opening Iris.
+Its fixed90s window cannot be renewed, keeps one CPU runnable and pings every3s;
+expiry/errors stop feeding while retaining a45s awake reset observation window.
+An authenticated root-only RAM stop request is accepted only after the video
+helper reports complete teardown and qcom_iris is absent. The video helper
+requires an active guard unit, actual active Gunyah watchdog and more than45s
+remaining before any module insertion. The full Linux offline suite passes607
+tests with5 environment skips. No default watchdog/video policy changes.
+Fresh Actions, downloaded-image verification and a combined hardware round are
+required; no Iris hardware has been activated yet.
+
 ## Phone C-PHY data catalog prepared, 2026-10-29
 
 The isolated --cphy component build now includes a hash-bound review of the
@@ -6,8 +27,8 @@ each, three-trio address/parameter checks,72 base and4 common records, and
 the exact3048us reset-release delay. A symbol-rate selector avoids the mismatch
 between the vendor's rounded2.28 rate thresholds and the generic exact16/7
 formula. Sixty release/sanitizer boundary checks, AArch64 data-object compilation
-and a clean full WSL component rebuild pass. Native Actions is pending for this
-addition. No phone runtime table, MMIO or capture is enabled. See
+and a clean full WSL component rebuild pass. Native ARM64 Actions40829917850
+passed this addition and all component targets. No phone runtime table, MMIO or capture is enabled. See
 [CAMERA-PHONE-PHY-CATALOG-20261029.md](CAMERA-PHONE-PHY-CATALOG-20261029.md).
 
 ## r61 countdown passes; host protocol error prevents reset acceptance

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-only
-import importlib.util,tempfile,unittest
+import importlib.util,json,os,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
 
@@ -9,6 +9,62 @@ wdt=importlib.util.module_from_spec(spec);spec.loader.exec_module(wdt)
 
 
 class WatchdogInventory(unittest.TestCase):
+    def test_video_guard_deadline_does_not_extend_with_keepalives(self):
+        now=[0];pings=[];records=[]
+        def monotonic():now[0]+=1;return now[0]
+        report={}
+        with patch.object(wdt.time,'monotonic',side_effect=monotonic), \
+             patch.object(wdt,'record',side_effect=lambda r:records.append(dict(r))), \
+             patch.object(wdt,'busy_wait') as wait:
+            with self.assertRaisesRegex(RuntimeError,'did not reset'):
+                wdt.video_guard_window(lambda:False,lambda:pings.append(now[0]),report)
+        self.assertTrue(report['guard_deadline_expired'])
+        self.assertTrue(report['reset_failed'])
+        self.assertEqual(report['guard_deadline_monotonic'],91)
+        self.assertTrue(pings and max(pings)<91)
+        self.assertEqual({r['guard_deadline_monotonic'] for r in records},{91})
+        wait.assert_called_once_with(45)
+
+    def test_video_guard_clean_stop_requires_no_expiry_wait(self):
+        report={}
+        with patch.object(wdt.time,'monotonic',side_effect=[0,1]), \
+             patch.object(wdt,'record'),patch.object(wdt,'busy_wait') as wait, \
+             patch.object(wdt,'ioctl_int') as ioctl:
+            wdt.video_guard_window(lambda:True,lambda:ioctl(),report)
+        self.assertTrue(report['guard_completed']);self.assertFalse(report['guard_running'])
+        wait.assert_not_called();ioctl.assert_not_called()
+
+    def test_video_guard_ping_error_preserves_awake_expiry_window(self):
+        report={}
+        with patch.object(wdt.time,'monotonic',side_effect=[0,3]), \
+             patch.object(wdt,'record'),patch.object(wdt,'busy_wait') as wait:
+            with self.assertRaisesRegex(RuntimeError,'guard error did not reset'):
+                wdt.video_guard_window(lambda:False,lambda:(_ for _ in ()).throw(OSError('ping')),report)
+        self.assertEqual(report['guard_failure_category'],'OSError')
+        self.assertTrue(report['reset_failed']);wait.assert_called_once_with(45)
+
+    def test_video_stop_refuses_bad_token_active_module_and_incomplete_cleanup(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base=Path(folder);marker=base/'stop';result=base/'result';module=base/'module'
+            token='a'*32;marker.write_text(token+'\n');marker.chmod(0o600)
+            receipt={'cleanup_pass':True,'module_unloaded':True,'video_nodes_removed':True}
+            result.write_text(json.dumps(receipt))
+            original=Path.lstat
+            def root_owned(path,*args,**kwargs):
+                values=list(original(path,*args,**kwargs));values[4]=0
+                return os.stat_result(values)
+            with patch.object(Path,'lstat',root_owned):
+                self.assertTrue(wdt.video_stop_requested(token,marker,result,module))
+                self.assertFalse(wdt.video_stop_requested('b'*32,marker,result,module))
+                module.mkdir();self.assertFalse(wdt.video_stop_requested(token,marker,result,module));module.rmdir()
+                for key in receipt:
+                    bad=dict(receipt);bad[key]=False;result.write_text(json.dumps(bad))
+                    self.assertFalse(wdt.video_stop_requested(token,marker,result,module))
+                result.write_text(json.dumps(receipt));marker.chmod(0o644)
+                self.assertFalse(wdt.video_stop_requested(token,marker,result,module))
+                marker.chmod(0o600);marker.unlink();marker.symlink_to(result)
+                self.assertFalse(wdt.video_stop_requested(token,marker,result,module))
+
     def test_busy_wait_has_no_sleep_or_keepalive(self):
         with patch.object(wdt.time,'monotonic',side_effect=[10,10.5,11,12]), \
              patch.object(wdt.time,'sleep') as sleep, \

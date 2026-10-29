@@ -11,6 +11,26 @@ TARGET='/soc@0/video-codec@aa00000'
 FIXTURE_SHA='9abde2249b25b41fdd959f5d94901a0c865c5be2d242617991a77875cf3cb4d0'
 
 
+def validate_awake_guard(receipt,now):
+    if (receipt.get('scope')!='ONE_MANUAL_RAM_GUNYAH_AWAKE_VIDEO_GUARD' or
+        receipt.get('active_wait_required') is not True or
+        receipt.get('idle_or_suspend_recovery_qualified') is not False or
+        receipt.get('guard_running') is not True or receipt.get('guard_seconds')!=90 or
+        any(receipt.get(k) is not True for k in ('armed','countdown_verified','keepalive_verified')) or
+        any(receipt.get(k) is not False for k in ('suspend_requested','reset_observed'))):
+        raise ValueError('Missing qualified awake video guard')
+    deadline=receipt.get('guard_deadline_monotonic')
+    if type(deadline) not in (int,float) or not 45<deadline-now<=90:
+        raise ValueError('Insufficient fixed awake guard window')
+    values={k:receipt.get(k) for k in ('set_timeout_readback','get_timeout_readback',
+                                     'first_timeleft','second_timeleft','third_timeleft')}
+    if (any(type(v) is not int for v in values.values()) or
+        values['set_timeout_readback']!=12 or values['get_timeout_readback']!=12 or
+        not 0<values['second_timeleft']<values['first_timeleft']<=12 or
+        not values['second_timeleft']<values['third_timeleft']<=12):
+        raise ValueError('Awake guard ioctl gates failed')
+
+
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
@@ -78,6 +98,16 @@ def main():
             raise ValueError('Sensor service active during video test')
     for name in ('qcom_iris','s5kjn5','i2c_qcom_cci','ath12k_wifi7'):
         if Path('/sys/module',name).exists():raise ValueError('Peripheral active before manual video test: '+name)
+    audio.run(['systemctl','is-active','--quiet','oneplus13-awake-video-guard.service'])
+    guard=Path('/run/oneplus13/watchdog-recovery/result.json')
+    node=guard.lstat()
+    if not stat.S_ISREG(node.st_mode) or node.st_uid!=0 or node.st_size>16384:
+        raise ValueError('Wrong awake video guard receipt')
+    validate_awake_guard(json.loads(guard.read_text()),time.monotonic())
+    watchdogs=[p for p in Path('/sys/class/watchdog').glob('watchdog[0-9]*')
+               if (p/'identity').read_text().strip()=='Gunyah Watchdog']
+    if len(watchdogs)!=1 or (watchdogs[0]/'state').read_text().strip()!='active':
+        raise ValueError('Awake video watchdog is not active')
     if decoder_nodes():raise ValueError('Decoder already present')
     if sha(POLICY)!=bindings['module_policy_sha256'] or 'install qcom_iris /bin/false\n' not in POLICY.read_text():
         raise ValueError('Wrong manual video policy')

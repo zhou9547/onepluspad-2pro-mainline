@@ -18,7 +18,8 @@ def parse(text):
     return result
 
 def validate_armed(result,scope):
-    if scope not in ('ONE_MANUAL_RAM_GUNYAH_WATCHDOG_RESET','ONE_MANUAL_RAM_GUNYAH_AWAKE_RESET'):
+    if scope not in ('ONE_MANUAL_RAM_GUNYAH_WATCHDOG_RESET','ONE_MANUAL_RAM_GUNYAH_AWAKE_RESET',
+                     'ONE_MANUAL_RAM_GUNYAH_AWAKE_VIDEO_GUARD'):
         raise ValueError('Unknown watchdog reset scope')
     if result.get('scope')!=scope:raise ValueError('Wrong watchdog reset scope')
     for name in ('armed','countdown_verified','keepalive_verified'):
@@ -38,9 +39,12 @@ def validate_armed(result,scope):
     if not (0<values['second_timeleft']<values['first_timeleft']<=12 and
             values['second_timeleft']<values['third_timeleft']<=12):
         raise ValueError('Watchdog countdown/keepalive mismatch')
-    if scope=='ONE_MANUAL_RAM_GUNYAH_AWAKE_RESET':
+    if scope in ('ONE_MANUAL_RAM_GUNYAH_AWAKE_RESET','ONE_MANUAL_RAM_GUNYAH_AWAKE_VIDEO_GUARD'):
         if (result.get('active_wait_required') is not True or
             result.get('idle_or_suspend_recovery_qualified') is not False or
             type(result.get('awake_cpu')) is not int or not 0<=result['awake_cpu']<=255):
             raise ValueError('Missing awake-only qualification boundary')
+    if scope=='ONE_MANUAL_RAM_GUNYAH_AWAKE_VIDEO_GUARD':
+        if result.get('guard_running') is not True or result.get('guard_seconds')!=90:
+            raise ValueError('Missing fixed video guard window')
     return result

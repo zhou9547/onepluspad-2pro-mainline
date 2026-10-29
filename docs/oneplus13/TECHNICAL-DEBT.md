@@ -1,3 +1,18 @@
+## Awake recovery acceptance and guarded video boundary
+
+r62 accepts independent recovery only while a CPU remains runnable. There
+were zero host recovery requests, seven matching Android baselines and clean
+pre-arm kernel health. This does not close idle/suspend recovery or change the
+old failed-run records. Do not use that result to start an unguarded Iris test.
+
+The new manual90s guard keeps the validated awake condition, never extends its
+deadline and only disarms on a matching root-owned stop marker after complete
+video teardown. An error/deadline stops keepalives and retains an awake45s
+expiry window. The video helper checks live unit/watchdog state and a remaining
+budget before loading modules. Fresh source-image Actions, independent download
+verification and real pixels/stop/runtime-suspend/module teardown plus retained
+regressions are still required. No hardware decode is accepted yet.
+
 ## Isolated C-PHY framework boundary, 2026-10-29
 
 The public phone PHY data catalog is now parsed, range-checked, boundary-tested
