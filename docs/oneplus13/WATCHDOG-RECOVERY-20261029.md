@@ -21,3 +21,10 @@ clients are quiesced. Keep the existing absolute600s recovery deadline; never
 replace normal recovery with an unverified watchdog. This test does not suspend
 and does not enable any persistent watchdog policy. The driver stops it on
 suspend, so successful ordinary reset still does not qualify suspend recovery.
+
+The r57 final experiment returned `armed=false`, `countdown_verified=false`,
+`keepalive_verified=false` and `disarmed_after_return=true`. No independent reset
+was observed; normal host recovery returned Android with the baseline intact.
+The diagnostic now preserves the failing stage, ioctl errno or bounded validation
+reason and numeric readbacks. This adds evidence without relaxing countdown,
+keepalive, identity, timeout or cleanup checks. A fresh combined round is required.

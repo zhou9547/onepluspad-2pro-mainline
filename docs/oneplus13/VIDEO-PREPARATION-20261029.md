@@ -45,3 +45,17 @@ existing RAM/read-only-storage/absolute-deadline guards, requires idle camera,
 SSC and WiFi, waits for runtime suspend and removes Iris afterwards. Real-device
 activation is deferred until independent normal-running watchdog recovery has
 been observed in a combined round; suspend recovery remains a separate task.
+
+Secure-memory source review pins OnePlusOSS modules/devicetree commit
+`d50b305f7da9e14715a25120a4ac7b1a4b8b97c3`. Its
+`vendor/qcom/opensource/video-driver/driver/platform/sun/src/msm_vidc_sun.c`
+selects firmware `vpu35_4v`, PAS9, a nonsecure start of0x25800000 and secure
+nonpixel range0x01000000/0x24800000. `driver/vidc/src/firmware.c` derives SCM
+protection arguments0/0x25800000/0x01000000/0x24800000 from that table, matching
+the pinned mainline Iris VPU3 table. The original phone FDT IOVA partition and
+firmware carveout are different address spaces; do not substitute their sizes
+for the SCM protection arguments. Both fetched files were checked against their
+Git blob IDs; SHA256 values are respectively
+`b167da87eb103471edfe4ccd30e1c88cedd573e2718f948c0745150dc14b29df`
+and `b8f28a1f5d9d54312584866bd2f95ec8ad2430dc9ec1018b3207604dbe1816e7`.
+This source agreement does not establish firmware authentication or decoding.

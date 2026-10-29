@@ -1,3 +1,19 @@
+## r57 retained regressions passed; watchdog diagnostic stopped, 2026-10-29
+
+The exact36f14243 Actions image completed camera chip-ID/runtime-suspend/teardown,
+production sensors with left-up/Mutter1, microphone capture, separate speaker
+correlation,20/50/100% plus mute acoustic measurements, Docker bridge/DNS/NAT,
+both WiFi bands and GNOME/Chinese/SSH/Dock regressions. Kernel-health gates were
+clean. Android returned after484.7s with matching baseline and zero writes.
+
+The final independent watchdog experiment returned an unarmed, disarmed receipt
+without countdown or keepalive qualification. Host recovery was used; independent
+reset is not accepted. The old receipt omitted the failing ioctl/check and values.
+The helper now records stage, timeout/capability/countdown readbacks and a bounded
+failure reason before magic-close cleanup. Keep video activation deferred while
+this recovery gate remains open. Completed feature phases do not establish
+independent recovery acceptance.
+
 ## Source-built bounded video runtime prepared, 2026-10-29
 
 All five source-image jobs in Actions40813654094 passed on36f14243. The host

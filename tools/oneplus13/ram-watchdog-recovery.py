@@ -66,31 +66,48 @@ def main():
             'keepalive_verified':False,'reset_observed':False}
     fd=None
     try:
+        report['stage']='device-open'
         fd=os.open(device,os.O_WRONLY|os.O_CLOEXEC|os.O_NOFOLLOW)
+        report['stage']='support'
         support=bytearray(40);fcntl.ioctl(fd,WDIOC_GETSUPPORT,support,True)
         if bytes(support[8:]).split(b'\0')[0]!=b'Gunyah Watchdog':raise ValueError('Wrong ioctl identity')
         options=int.from_bytes(support[:4],'little')
+        report['support_options']=options
         if options&0x8180!=0x8180:raise ValueError('Missing timeout/keepalive/magic-close support')
-        if ioctl_int(fd,WDIOC_SETTIMEOUT,12)!=12 or ioctl_int(fd,WDIOC_GETTIMEOUT)!=12:
+        report['stage']='timeout'
+        report['set_timeout_readback']=ioctl_int(fd,WDIOC_SETTIMEOUT,12)
+        report['get_timeout_readback']=ioctl_int(fd,WDIOC_GETTIMEOUT)
+        if report['set_timeout_readback']!=12 or report['get_timeout_readback']!=12:
             raise ValueError('Watchdog timeout readback mismatch')
+        report['stage']='first-keepalive'
         ioctl_int(fd,WDIOC_KEEPALIVE)
+        report['stage']='countdown'
         first=ioctl_int(fd,WDIOC_GETTIMELEFT)
+        report['first_timeleft']=first
         time.sleep(2)
         second=ioctl_int(fd,WDIOC_GETTIMELEFT)
+        report['second_timeleft']=second
         if not 0<second<first<=12:raise ValueError('Watchdog countdown not observed')
         report['countdown_verified']=True
+        report['stage']='second-keepalive'
         ioctl_int(fd,WDIOC_KEEPALIVE)
         third=ioctl_int(fd,WDIOC_GETTIMELEFT)
+        report['third_timeleft']=third
         if not second<third<=12:raise ValueError('Watchdog keepalive not observed')
         if (base/'state').read_text().strip()!='active':raise ValueError('Watchdog not active')
         report.update(armed=True,keepalive_verified=True,timeout_seconds=12,
-                      last_timeleft=third,remaining_no_ping_wait_seconds=20)
+                      last_timeleft=third,remaining_no_ping_wait_seconds=20,stage='no-ping-wait')
         record(report)
         # Keep the open descriptor alive without pings; do not ask PID1 to reboot.
         # If the hypervisor fails to reset, the finally block disarms after20s.
         time.sleep(20)
         report['reset_failed']=True
         raise RuntimeError('Watchdog failed to reset within bounded no-ping wait')
+    except (OSError,ValueError,RuntimeError) as error:
+        report['failure_category']=type(error).__name__
+        report['failure_reason']=str(error)
+        if isinstance(error,OSError):report['errno']=error.errno
+        raise
     finally:
         if fd is not None:
             try:os.write(fd,b'V')
