@@ -302,6 +302,10 @@
     "sensors/reviewed-runtime-data.json": {
       "bytes": 1166001,
       "sha256": "3af3939c859d7f6cd115214c11a80a38170ab7daa5b10de0dbcd4711e2413b2f"
+    },
+    "firmware/qcom/sm8750/oneplus/dodge/vpu35_4v.mbn": {
+      "sha256": "e1b2cb6de867893537fe6a1ffba312c2a2949402ca9892d393e2f40de255690a",
+      "bytes": 2417352
     }
   },
   "removed_fields": [

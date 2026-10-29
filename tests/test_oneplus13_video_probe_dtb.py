@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib,sys,unittest
+import hashlib
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools/oneplus13'))
@@ -8,6 +9,14 @@ from stock import Fdt,strings
 
 
 class VideoProbeTree(unittest.TestCase):
+    def test_phone_firmware_is_present_and_phone_specific(self):
+        path=ROOT/'devices/oneplus13/qualified-data/firmware/qcom/sm8750/oneplus/dodge/vpu35_4v.mbn'
+        self.assertEqual(path.stat().st_size,video.FIRMWARE_BYTES)
+        self.assertEqual(hashlib.sha256(path.read_bytes()).hexdigest(),video.FIRMWARE_SHA256)
+        manifest=__import__('json').loads((ROOT/'devices/oneplus13/qualified-data/manifest.json').read_text())
+        self.assertEqual(manifest['files']['firmware/qcom/sm8750/oneplus/dodge/vpu35_4v.mbn'],
+                         {'sha256':video.FIRMWARE_SHA256,'bytes':video.FIRMWARE_BYTES})
+
     def test_real_phone_candidate_changes_only_video_status_and_firmware(self):
         blob=(ROOT/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes()
         camera,_=video.camera.derive(blob);before=Fdt(camera)

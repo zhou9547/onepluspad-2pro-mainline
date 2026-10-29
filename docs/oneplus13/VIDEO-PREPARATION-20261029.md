@@ -16,8 +16,13 @@ PAS9 authentication and actual decoding remain untested.
 only the existing Iris status and firmware-name, after the camera derivation.
 It preserves every other node/property, resource reference and memory reserve.
 The firmware path is explicitly phone-specific. Tests check exact preservation
-and reject an active/foreign core or altered memory range. This helper is not
-yet connected to image packaging; no video hardware was enabled by this change.
+and reject an active/foreign core or altered memory range. The exact phone
+firmware is now staged in the owner-authorized qualified data under
+`firmware/qcom/sm8750/oneplus/dodge/vpu35_4v.mbn` and is hash-checked during
+source-image packaging. `build-video-probe-boot.py` creates a separate manual
+RAM candidate with the Iris node enabled and the same kernel/initramfs as the
+desktop image. The default boot tree remains disabled and no video hardware is
+auto-started.
 
 Before a hardware round, stage only the reviewed phone firmware with provenance,
 build and independently verify the alternative in Actions, then check firmware

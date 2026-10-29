@@ -1,3 +1,26 @@
+## Camera chip ID confirmed; separate Iris source-image preparation, 2026-10-29
+
+Actions40807894969 completed all five source-image jobs on69f7fae0. Downloaded
+artifacts passed independent boot-section/source/firmware verification. In r55,
+S5KJN5 at the corrected7-bit0x2d bound successfully, reached runtime suspend,
+and its sensor/controller modules and I2C target were removed. The kernel-health
+checks stayed clean and Android baseline matched after166.2s. This establishes
+the bounded chip-ID path only; no frames were requested. The joint coordinator
+then stopped on an already-unloaded transient-unit cleanup status, so retained
+regressions did not complete. r56 was interrupted on the host after RAM boot;
+only subsequent Android recovery/baseline equality was observed. Neither round
+is reported as a complete joint pass or independent watchdog qualification.
+
+The phone-specific C.93 Iris firmware is now in the scrubbed data manifest
+(72 firmware files). A fourth, separate manual video RAM image is built by the
+normal source-image pipeline and independently rederived by the package verifier.
+Its kernel/initramfs must match the default desktop; only the reviewed separate
+DT and session identity differ. The default DT remains video-disabled and the
+Iris module retains its manual-load policy. Firmware authentication, actual
+decoding and VA-API support remain untested. Linux offline suite:588 tests pass,
+5 environment skips. A fresh full Actions build/download and combined hardware
+round are required before any new hardware claim.
+
 ## First camera probe isolated address error, 2026-10-29
 
 All five jobs of Actions40803790845 and native camera components40804095331

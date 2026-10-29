@@ -17,6 +17,7 @@ parameters; no old test session, network configuration or USB serial is needed.
   ROCKNIX extra-firmware is pinned there at
   `2b7207cfcb80c53c09dc6e04165789ecaf2d3348`.
 - `display-profile.bin`: the validated 176-byte AA569 SPR data profile.
+- `firmware/qcom/sm8750/oneplus/dodge/vpu35_4v.mbn`: the owner-provided C.93 vendor Iris VPU 3.5 image, retained under the phone-specific path named by the manual video DT candidate; its firmware authentication and decoding remain unqualified.
 - `calibrated.dtb`: the qualified ABL/memory/device tree for the owner's
   **PJZ110 24 GB** variant, compatible only with the public native DTB hash in
   `manifest.json`. It contains no serial-number or MAC-address properties.

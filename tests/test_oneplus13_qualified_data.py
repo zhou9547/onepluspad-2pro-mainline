@@ -9,8 +9,8 @@ from stock import Fdt
 class QualifiedDataTests(unittest.TestCase):
     def test_real_dataset_is_complete_and_identity_free(self):
         result=verify(ROOT/'devices/oneplus13/qualified-data')
-        self.assertEqual(result['files'],75)
-        self.assertEqual(result['firmware_files'],71)
+        self.assertEqual(result['files'],76)
+        self.assertEqual(result['firmware_files'],72)
 
     def fixture(self,path):
         data=ROOT/'devices/oneplus13/qualified-data'

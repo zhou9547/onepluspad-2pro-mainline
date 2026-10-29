@@ -1,3 +1,20 @@
+## Current camera and video boundaries, 2026-10-29
+
+r55 confirmed the strict S5KJN5 chip ID at0x2d and successful runtime-suspend/
+sensor-controller teardown, followed by clean kernel history and matching Android
+baseline. It did not capture frames or complete retained regressions because the
+host coordinator treated an absent completed transient unit as a stop failure.
+r56 has no live phase evidence after host interruption; later Android baseline
+equality is recovery evidence only. Independent watchdog expiry remains untested.
+
+The Iris firmware addition is exact C.93 ROM content with phone-specific naming,
+size/hash provenance and a separate boot artifact. It must not replace the Pad
+firmware or enable video in the default tree. Loading a V4L2 device and authenticating
+firmware alone cannot qualify decoding. Linear-format frame output, real pixels,
+stop/runtime-suspend/teardown and retained-feature regression remain required.
+The video candidate also carries the already-reviewed camera DT resources so
+these targets can share a future RAM round; both media module paths stay manual.
+
 ## Camera chip-ID alternative boundary
 
 The camera alternative preserves the qualified microphone tree except phandles

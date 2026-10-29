@@ -189,6 +189,45 @@ def main():
         raise ValueError('Camera alternative DTB changed')
     for module in ('s5kjn5','i2c_qcom_cci'):
         if 'install '+module+' /bin/false\n' not in policy:raise ValueError('Camera modules must remain manual')
+    video_files=m.get('video_probe_artifacts',{})
+    video_names={'boot-video-ram-experimental.img','sm8750-oneplus13-video-probe.dtb',
+                 'video-probe-manifest.json','video-probe-dtb-review.json'}
+    if set(video_files)!=video_names or m.get('video_probe_auto_started') is not False:
+        raise ValueError('Missing or auto-started manual video probe artifacts')
+    for name,digest in video_files.items():
+        if sha256(root/name)!=digest:raise ValueError('Video artifact changed')
+    video=json.loads((root/'video-probe-manifest.json').read_text())
+    if (video['scope']!='SEPARATE_MANUAL_IRIS_VIDEO_RAM_BOOT_NEVER_FLASH' or
+            video.get('firmware_authentication_qualified') is not False or
+            video.get('hardware_decode_qualified') is not False or
+            video['default_boot_image_sha256']!=m['boot_image_sha256'] or
+            video['rootfs_sha256']!=m['rootfs_sha256'] or
+            video['source_commit']!=m['source_commit']):
+        raise ValueError('Video alternative identity or qualification changed')
+    video_nonce=video['session_identity_nonce']
+    if not re.fullmatch('[a-f0-9]{24}',video_nonce) or video_nonce in (nonce,m['session_identity_nonce'],cam_nonce):
+        raise ValueError('Video alternative needs a separate session identity')
+    if video['cmdline']!=m['cmdline'].replace('oneplus13.session='+m['session_identity_nonce'],
+            'oneplus13.session='+video_nonce)+' oneplus13.audio_probe=1 oneplus13.camera_probe=1 oneplus13.video_probe=1':
+        raise ValueError('Video alternative boot arguments changed')
+    if (sha256(root/'boot-video-ram-experimental.img')!=video['boot_image_sha256'] or
+            sha256(root/'sm8750-oneplus13-video-probe.dtb')!=video['dtb_sha256']):
+        raise ValueError('Video alternative manifest hashes disagree')
+    video_sections=boot_sections((root/'boot-video-ram-experimental.img').read_bytes())
+    for key in ('kernel','ramdisk'):
+        if video_sections[key]!=default_sections[key]:raise ValueError('Video kernel/initramfs changed')
+    video_dtb=importlib.import_module('video-probe-dtb')
+    video_expected,_=video_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    video_tree=Fdt(video_expected);video_tree.nodes['/chosen']['bootargs']=(video['cmdline']+'\0').encode()
+    if (video_sections['dtb']!=(root/'sm8750-oneplus13-video-probe.dtb').read_bytes() or
+            Fdt(video_sections['dtb']).nodes!=video_tree.nodes):
+        raise ValueError('Video alternative DTB changed')
+    if (video['video_firmware']!='usr/lib/firmware/'+video_dtb.FIRMWARE or
+            video['video_firmware_sha256']!=video_dtb.FIRMWARE_SHA256 or
+            data.get(video_dtb.FIRMWARE)!=video_dtb.FIRMWARE_SHA256):
+        raise ValueError('Video alternative must use the exact phone firmware')
+    if 'install qcom_iris /bin/false\n' not in policy:
+        raise ValueError('Video module must remain manual')
     static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION' ,'pass':True,'source_commit':m['source_commit'],
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
@@ -202,6 +241,7 @@ def main():
             'experimental_microphone_files_verified':len(microphone_files),'microphone_auto_started':False,
             'experimental_camera_files_verified':len(camera_files),'camera_auto_started':False,
             'camera_probe_runtime_files_verified':len(camera_runtime),
+            'experimental_video_files_verified':len(video_files),'video_auto_started':False,
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')
     if a.static_only:
