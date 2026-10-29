@@ -93,8 +93,9 @@ def main():
         raise RuntimeError('Watchdog failed to reset within bounded no-ping wait')
     finally:
         if fd is not None:
-            os.write(fd,b'V');os.close(fd)
-            report['disarmed_after_return']=True
+            try:os.write(fd,b'V')
+            finally:os.close(fd)
+            report['disarmed_after_return']=(base/'state').read_text().strip()=='inactive'
         record(report)
 
 
