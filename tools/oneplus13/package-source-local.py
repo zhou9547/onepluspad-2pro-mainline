@@ -283,10 +283,10 @@ def main():
     (out/'initramfs-desktop.cpio.gz').write_bytes(packed)
     nonce=secrets.token_hex(12)
     cmdline='rdinit=/init panic=15 oneplus13.desktop=1 oneplus13.rootfs.sha256='+sha256(image_rootfs)+' oneplus13.rootfs.bytes='+str(image_rootfs.stat().st_size)+' oneplus13.session='+nonce
-    usb_host=import_module('usb-host-dtb')
-    platform_blob,usb_host_report=usb_host.derive((private/'calibrated.dtb').read_bytes())
-    (out/'platform-dtb-review.json').write_text(json.dumps(usb_host_report,indent=2)+'\n')
-    tree=Fdt(platform_blob);tree.nodes['/chosen']['bootargs']=(cmdline+'\0').encode()
+    nfc=import_module('nfc-dtb')
+    nfc_blob,nfc_report=nfc.derive((private/'calibrated.dtb').read_bytes())
+    (out/'nfc-dtb-review.json').write_text(json.dumps(nfc_report,indent=2)+'\n')
+    tree=Fdt(nfc_blob);tree.nodes['/chosen']['bootargs']=(cmdline+'\0').encode()
     dtb=out/'sm8750-oneplus-dodge-abl.dtb';dtb.write_bytes(tree.to_blob())
     geometry=json.loads((private/'boot-geometry.json').read_text())
     tool=json.loads((REPO/'kernel/source.json').read_text())['tool_inputs']['mkbootimg.py']
@@ -326,7 +326,7 @@ def main():
                   video_hardware_decode_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
     result.update(nfc_files=nfc_hashes,nfc_service_auto_started=True,
-                  platform_dtb_review=usb_host_report,
+                  nfc_dtb_review=nfc_report,
                   nfc_controller_bind_hardware_qualified=False,
                   nfc_tag_poll_hardware_qualified=False)
     result.update(modem_files=modem_hashes,modem_service_auto_started=True,

@@ -36,10 +36,12 @@ that transition and the next combined round must repeat this acceptance.
 
 ## Source candidate in this change
 
-- Default review-tree composition now starts with the qualified phone tree and
-  adds NFC, enabled-but-non-auto-boot MPSS, IR and DWC3 OTG role control.
-- The DWC3 default remains device so the existing USB recovery transport works;
-  debugfs can switch to host because `dr_mode` becomes `otg`.
+- Default review-tree composition adds NFC and enabled-but-non-auto-boot MPSS.
+  IR and DWC3 OTG remain isolated RAM candidates because the first OTG boot
+  caused Windows NCM DHCP loss before the host-role phase.
+- The DWC3 host candidate defaults to device and changes `dr_mode` to `otg` so
+  debugfs can switch roles. It must be controlled over Wi-Fi after the adapter
+  is moved from the recovery cable.
 - IR uses SPI5, CS0, GPIO53, one-third-duty38kHz waveform and the exact
   `3.056V` L9B vote. L9B's maximum is raised from3.008V while its minimum and
   other consumers remain unchanged.
