@@ -1,3 +1,30 @@
+# r78 exact target image, NFC bind pass and camera dependency repair, 2026-10-30
+
+The exact public commit `fbcfa258` built successfully in Actions run40936864371.
+The complete image, kernel and SSC archives were downloaded independently,
+their GitHub SHA-256 digests matched, and the actual SquashFS readback contains
+the expected AArch64 `qmicli`, `media-ctl`, `v4l2-ctl` and ModemManager tools.
+
+One bounded RAM boot of that exact image proved the NXP NCI controller bind:
+I2C `1-0028` bound to `nxp-nci_i2c`, all four NCI modules loaded, `nfc0`
+appeared, and GPIO75 was present as IRQ204. The before/after kernel-health
+counters remained zero. The physical tag was not present, so tag discovery is
+still unqualified and the retained single-use ledger stays failed.
+
+The real S5KJN5 capture attempt reached CAMSS module loading but `qcom_camss`
+dependency `mc` was blocked by the generic peripheral deny policy. The capture
+helper now derives the exact camera module closure from `modules.dep`, removes
+only matching deny pairs, caps the closure at64 entries, and restores the
+original policy bytes after capture. The modem helper can likewise verify the
+47 reviewed firmware files already installed in the SquashFS instead of
+requiring the separate75 MB archive during the RAM session.
+
+USB NCM/ACM and the Wi-Fi reverse-control path were not stable enough to keep a
+live control channel through every long probe. Those failed attempts returned
+Android with matching baselines and zero partition writes. They do not qualify
+real frame pixels, a GNSS fix, tag I/O, infrared emission, USB-host I/O,
+repeated suspend or the remaining peripherals.
+
 ## r77 phone C-PHY camera graph candidate, 2026-10-30
 
 Android stock logs now establish the exact ultrawide route for the installed

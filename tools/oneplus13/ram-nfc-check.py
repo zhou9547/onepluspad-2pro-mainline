@@ -47,6 +47,10 @@ def allow_exact_modules():
             continue
         output.append(line)
     counts = {module: changed.count(module) for module in ALLOWED}
+    if counts == {module: 0 for module in ALLOWED}:
+        # The source image may build the reviewed NCI closure in and carry no
+        # deny entries. No policy mutation is then required.
+        return []
     if counts != {module: 2 for module in ALLOWED}:
         raise ValueError(
             "Policy does not contain the exact NFC deny set: "

@@ -25,8 +25,12 @@ class ModemFirmwareInstallTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         self.original_marker = MODEM.RAM_MARKER
         self.original_firmware = MODEM.FIRMWARE_ROOT
+        self.original_installed = MODEM.INSTALLED_ROOT
         MODEM.RAM_MARKER = self.root / "ram-session"
         MODEM.FIRMWARE_ROOT = self.root / "firmware"
+        MODEM.INSTALLED_ROOT = (
+            MODEM.FIRMWARE_ROOT / "qcom/sm8750/oneplus/dodge"
+        )
         MODEM.FIRMWARE_ROOT.mkdir()
         MODEM.RAM_MARKER.write_text("", encoding="utf-8")
         self.archive = self.root / "modem.tar.gz"
@@ -61,6 +65,7 @@ class ModemFirmwareInstallTests(unittest.TestCase):
     def tearDown(self):
         MODEM.RAM_MARKER = self.original_marker
         MODEM.FIRMWARE_ROOT = self.original_firmware
+        MODEM.INSTALLED_ROOT = self.original_installed
         self.temp.cleanup()
 
     def test_safe_archive_installs_exact_reviewed_files(self):
@@ -89,6 +94,22 @@ class ModemFirmwareInstallTests(unittest.TestCase):
             MODEM.install_firmware(
                 self.archive, self.review, MODEM.sha256(self.archive)
             )
+
+    def test_preinstalled_reviewed_firmware_is_verified_without_archive(self):
+        MODEM.install_firmware(
+            self.archive, self.review, MODEM.sha256(self.archive)
+        )
+        result = MODEM.verify_installed_firmware(self.review)
+        self.assertEqual(result["source"], "installed_rootfs")
+        self.assertEqual(result["file_count"], 5)
+
+    def test_preinstalled_firmware_mismatch_is_rejected(self):
+        MODEM.install_firmware(
+            self.archive, self.review, MODEM.sha256(self.archive)
+        )
+        (MODEM.INSTALLED_ROOT / "modem.b00").write_bytes(b"changed")
+        with self.assertRaisesRegex(ValueError, "differs"):
+            MODEM.verify_installed_firmware(self.review)
 
 
 if __name__ == "__main__":

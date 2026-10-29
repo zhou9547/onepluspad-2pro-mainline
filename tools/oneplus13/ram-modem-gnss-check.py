@@ -15,6 +15,7 @@ RAM_MARKER = Path("/run/oneplus13/ram-session")
 FIRMWARE_ROOT = Path("/usr/lib/firmware")
 MAX_FILES = 64
 MAX_BYTES = 96 * 1024 * 1024
+INSTALLED_ROOT = FIRMWARE_ROOT / "qcom/sm8750/oneplus/dodge"
 
 
 def sha256(path):
@@ -107,6 +108,37 @@ def install_firmware(archive, review_path, expected_archive_sha):
     }
 
 
+def verify_installed_firmware(review_path):
+    """Verify the exact reviewed files already packaged in the rootfs."""
+    if not RAM_MARKER.is_file():
+        raise RuntimeError("Protected phone RAM session required")
+    review = json.loads(review_path.read_text())
+    expected = review["firmware_sha256"] | {
+        "modemr.jsn": review["resource_json_sha256"]
+    }
+    if not 4 <= len(expected) <= MAX_FILES:
+        raise ValueError("Unexpected modem firmware inventory size")
+    actual = {}
+    total = 0
+    for name, digest in expected.items():
+        path = INSTALLED_ROOT / name
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"Missing installed modem firmware: {name}")
+        size = path.stat().st_size
+        total += size
+        if total > MAX_BYTES:
+            raise ValueError("Installed modem firmware exceeds the size bound")
+        if sha256(path) != digest:
+            raise ValueError(f"Installed modem firmware differs: {name}")
+        actual[name] = digest
+    return {
+        "source": "installed_rootfs",
+        "file_count": len(actual),
+        "installed_bytes_bounded_input": total,
+        "files": actual,
+    }
+
+
 def write_state(path, value, timeout):
     end = time.monotonic() + timeout
     last_error = None
@@ -151,11 +183,19 @@ def main():
         print("RAM_MODEM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
         return
     if args.mode == "start":
-        if not args.archive or not args.review or not args.archive_sha256:
-            parser.error("start requires firmware inputs")
-        result["firmware"] = install_firmware(
-            args.archive, args.review, args.archive_sha256
-        )
+        if not args.review:
+            parser.error("start requires --review")
+        if args.archive or args.archive_sha256:
+            if not args.archive or not args.archive_sha256:
+                parser.error(
+                    "archive installation requires --archive and "
+                    "--archive-sha256"
+                )
+            result["firmware"] = install_firmware(
+                args.archive, args.review, args.archive_sha256
+            )
+        else:
+            result["firmware"] = verify_installed_firmware(args.review)
         control_modules = {}
         for module in ("rpmsg_char", "rpmsg_ctrl", "qrtr_tun"):
             process = subprocess.run(

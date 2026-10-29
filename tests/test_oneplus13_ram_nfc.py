@@ -60,6 +60,16 @@ class NfcPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exact NFC deny set"):
             NFC.allow_exact_modules()
 
+    def test_default_enabled_policy_needs_no_mutation(self):
+        NFC.RAM_MARKER.write_text("", encoding="utf-8")
+        NFC.POLICY.write_text(
+            "# reviewed image leaves the NCI closure enabled\n",
+            encoding="utf-8",
+        )
+        before = NFC.POLICY.read_bytes()
+        self.assertEqual(NFC.allow_exact_modules(), [])
+        self.assertEqual(NFC.POLICY.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,3 +1,23 @@
+# r78 camera and modem test blockers, 2026-10-30
+
+The reviewed `fbcfa258` image proves the NFC controller binding and exposes the
+expected camera userspace tools, but it does not qualify a real camera frame.
+`qcom_camss` previously failed because `mc` is denied by the generic module
+policy. The helper now uses the exact dependency closure and restores the
+policy, but this change needs a fresh Actions image and real varied-pixel frame.
+
+The MPSS helper now has an installed-rootfs verification path because the
+reviewed modem files are already present in the image. A future runner should
+avoid downloading the duplicate archive and verify all47 files before starting
+the remoteproc.
+
+The host test control plane is not yet suitable for a full unattended round:
+USB NCM/ACM is removed during the bounded session, and the Wi-Fi reverse path
+does not remain connected through every long probe. Every observed disconnect
+returned Android with all seven baseline properties matching and zero
+partition writes. Do not treat partial module logs as camera, GNSS, tag,
+infrared, USB-host or suspend acceptance.
+
 ## r77 camera C-PHY graph requires real-frame validation, 2026-10-30
 
 Stock Android evidence selects the installed S5KJN5 ultrawide through

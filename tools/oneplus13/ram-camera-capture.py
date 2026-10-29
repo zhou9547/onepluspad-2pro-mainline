@@ -4,6 +4,7 @@
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import re
@@ -14,6 +15,10 @@ from pathlib import Path
 
 STATE = Path("/run/oneplus13/camera-capture")
 FRAME = STATE / "frame-sgbgr10.raw"
+POLICY = Path(
+    "/etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf"
+)
+AUDIO_HELPER = Path("/usr/libexec/oneplus13-ram-audio-check.py")
 WIDTH = 4096
 HEIGHT = 3072
 MIN_BYTES = WIDTH * HEIGHT * 2
@@ -41,6 +46,25 @@ def module_loaded(name):
 def unload(name):
     if module_loaded(name):
         run(["modprobe", "--remove", name], timeout=15, check=False)
+
+
+def policy_without_camera_denials(text, module_names):
+    """Remove only deny pairs for the reviewed camera dependency closure."""
+    if len(module_names) > 64 or any(
+        not re.fullmatch(r"[A-Za-z0-9_+-]+", name) for name in module_names
+    ):
+        raise ValueError("Unsafe camera module dependency closure")
+    denied = {
+        line
+        for name in module_names
+        for line in (
+            "blacklist " + name,
+            "install " + name + " /bin/false",
+        )
+    }
+    return "\n".join(
+        line for line in text.splitlines() if line not in denied
+    ) + "\n"
 
 
 def parse_media(output):
@@ -183,8 +207,28 @@ def main():
         "s5kjn5",
         "qcom_camss",
     )
+    module_root = Path("/usr/lib/modules") / args.release
+    spec = importlib.util.spec_from_file_location(
+        "camera_module_order", AUDIO_HELPER
+    )
+    audio = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(audio)
+    ordered = audio.module_order(
+        (module_root / "modules.dep").read_text(), list(modules)
+    )
+    original_policy = POLICY.read_bytes()
+    POLICY.write_text(
+        policy_without_camera_denials(
+            original_policy.decode(), ordered
+        ),
+        encoding="utf-8",
+    )
+    report["module_closure"] = ordered
+    report["policy_sha256_before"] = hashlib.sha256(
+        original_policy
+    ).hexdigest()
     try:
-        for module in modules:
+        for module in ordered:
             run(["modprobe", "--ignore-install", module], timeout=20)
             loaded.append(module)
         device = None
@@ -245,6 +289,14 @@ def main():
     finally:
         for module in reversed(loaded):
             unload(module)
+        POLICY.write_bytes(original_policy)
+        os.chmod(POLICY, 0o644)
+        report["policy_sha256_after"] = hashlib.sha256(
+            POLICY.read_bytes()
+        ).hexdigest()
+        report["policy_restored"] = (
+            report["policy_sha256_after"] == report["policy_sha256_before"]
+        )
         report["modules_unloaded"] = not any(
             module_loaded(module) for module in modules
         )
@@ -257,7 +309,9 @@ def main():
             for path in Path("/dev").glob("media*")
         )
         report["cleanup_pass"] = (
-            report["modules_unloaded"] and report["media_graph_removed"]
+            report["policy_restored"]
+            and report["modules_unloaded"]
+            and report["media_graph_removed"]
         )
         (STATE / "result.json").write_text(
             json.dumps(report, indent=2, sort_keys=True) + "\n",

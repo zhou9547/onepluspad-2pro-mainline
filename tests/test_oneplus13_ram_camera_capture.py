@@ -60,6 +60,32 @@ class CameraCaptureRuntime(unittest.TestCase):
             self.assertEqual(report["bytes"], capture.MIN_BYTES)
             self.assertGreaterEqual(report["sampled_unique_values"], 8)
 
+    def test_camera_policy_removes_only_reviewed_dependency_denials(self):
+        text = "\n".join(
+            (
+                "# policy",
+                "blacklist mc",
+                "install mc /bin/false",
+                "blacklist unrelated",
+                "install unrelated /bin/false",
+            )
+        ) + "\n"
+        changed = capture.policy_without_camera_denials(text, ["mc"])
+        self.assertNotIn("blacklist mc\n", changed)
+        self.assertNotIn("install mc /bin/false\n", changed)
+        self.assertIn("blacklist unrelated\n", changed)
+        self.assertIn("install unrelated /bin/false\n", changed)
+
+    def test_camera_policy_rejects_oversized_or_unsafe_closure(self):
+        with self.assertRaisesRegex(ValueError, "Unsafe"):
+            capture.policy_without_camera_denials(
+                "", ["safe", "../unsafe"]
+            )
+        with self.assertRaisesRegex(ValueError, "Unsafe"):
+            capture.policy_without_camera_denials(
+                "", ["module" + str(index) for index in range(65)]
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
