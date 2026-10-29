@@ -87,7 +87,14 @@ class GStreamerFrame(unittest.TestCase):
         except (ImportError,ValueError):self.skipTest('GStreamer GI packages unavailable')
         r=subprocess.run([sys.executable,str(SCRIPT),'--selftest'],check=True,
                          capture_output=True,text=True,timeout=15)
-        row=json.loads(r.stdout.strip().removeprefix('GSTREAMER_FRAME_RESULT '))
+        frames=[json.loads(line.removeprefix('GSTREAMER_FRAME_RESULT '))
+                for line in r.stdout.splitlines() if line.startswith('GSTREAMER_FRAME_RESULT ')]
+        statuses=[json.loads(line.removeprefix('GSTREAMER_PIPELINE_STATUS '))
+                  for line in r.stdout.splitlines() if line.startswith('GSTREAMER_PIPELINE_STATUS ')]
+        self.assertEqual(len(frames),1)
+        self.assertEqual(len(statuses),1)
+        self.assertTrue(statuses[0]['frame_verified'] and statuses[0]['pipeline_stopped'])
+        row=frames[0]
         self.assertTrue(row['frame_verified'] and row['pipeline_stopped'])
         self.assertIsNone(row['hardware_decoder_factory'])
         self.assertFalse(row['software_fallback'])
