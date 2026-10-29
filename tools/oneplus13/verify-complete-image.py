@@ -228,6 +228,29 @@ def main():
         raise ValueError('Video alternative must use the exact phone firmware')
     if 'install qcom_iris /bin/false\n' not in policy:
         raise ValueError('Video module must remain manual')
+    video_runtime=m.get('video_probe_runtime_files',{})
+    video_runtime_names={'usr/libexec/oneplus13-ram-video-check.py','usr/libexec/oneplus13-decode-one-frame',
+                         'usr/lib/oneplus13-video/synthetic-avc-bars.json','usr/lib/oneplus13-video/runtime-bindings.json'}
+    if set(video_runtime)!=video_runtime_names:raise ValueError('Incomplete manual video runtime')
+    for name,digest in video_runtime.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Changed video runtime file')
+    video_bindings=json.loads(subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),
+        'usr/lib/oneplus13-video/runtime-bindings.json']))
+    if video_bindings['kernel_release']!=release or video_bindings['module_policy_sha256']!=hashlib.sha256(policy.encode()).hexdigest():
+        raise ValueError('Video runtime kernel/policy binding differs')
+    if set(video_bindings['files'])!=video_runtime_names-{'usr/lib/oneplus13-video/runtime-bindings.json'}:
+        raise ValueError('Video runtime binding inventory changed')
+    for name,digest in video_bindings['files'].items():
+        if video_runtime.get(name)!=digest:raise ValueError('Video runtime binding changed')
+    for name,digest in video_bindings['module_files'].items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'usr/lib/modules/'+release+'/'+name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Video module binding changed')
+    if set(video_bindings['live_nodes'])!={video_dtb.VIDEO,video_dtb.MEMORY}:
+        raise ValueError('Video live resource inventory changed')
+    for path,properties in video_bindings['live_nodes'].items():
+        if {key:bytes.fromhex(value) for key,value in properties.items()}!=video_tree.nodes[path]:
+            raise ValueError('Video live resource binding changed')
     static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION' ,'pass':True,'source_commit':m['source_commit'],
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
@@ -242,6 +265,7 @@ def main():
             'experimental_camera_files_verified':len(camera_files),'camera_auto_started':False,
             'camera_probe_runtime_files_verified':len(camera_runtime),
             'experimental_video_files_verified':len(video_files),'video_auto_started':False,
+            'video_probe_runtime_files_verified':len(video_runtime),
             'qemu_executed':not a.static_only,'hardware_tested':False,'phone_operations':0}
     (root/'complete-verification.json').write_text(json.dumps(static,indent=2)+'\n')
     if a.static_only:

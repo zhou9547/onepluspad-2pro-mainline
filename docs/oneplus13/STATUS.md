@@ -1,3 +1,19 @@
+## Source-built bounded video runtime prepared, 2026-10-29
+
+All five source-image jobs in Actions40813654094 passed on36f14243. The host
+downloaded and independently verified its boot sections, four alternative video
+artifacts,72 firmware files and retained desktop/sensor/audio inputs. r57 is a
+combined camera and retained-feature test on this exact image, ending with an
+independent normal-running watchdog expiry experiment; its outcome is pending.
+
+The next image adds a source-built static AArch64 stateful V4L2 client and a
+manual RAM coordinator. One generated AVC color-bar frame must yield real linear
+NV12 pixels with the correct timestamp, followed by stream stop, runtime suspend
+and module teardown. The package binds runtime files, live DT resources and module
+dependencies and requires native ARM64 plus sanitizer selftests. The full Linux
+offline suite passes591 tests with5 environment skips. No video hardware has
+been activated; decoding, firmware authentication and VA-API remain unqualified.
+
 ## Camera chip ID confirmed; separate Iris source-image preparation, 2026-10-29
 
 Actions40807894969 completed all five source-image jobs on69f7fae0. Downloaded

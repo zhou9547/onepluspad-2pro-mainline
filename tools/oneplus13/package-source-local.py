@@ -128,6 +128,39 @@ def main():
     dest=stage/'usr/libexec/oneplus13-ram-camera-chip-id.py'
     shutil.copyfile(REPO/'tools/oneplus13/ram-camera-chip-id.py',dest);dest.chmod(0o755)
     camera_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    # Explicit manual Iris diagnostic. It decodes only a generated public card.
+    video_runtime=REPO/'out/phone-video'
+    video_evidence=json.loads((video_runtime/'verification.json').read_text())
+    if (video_evidence['integration_commit']!=km['integration_commit'] or
+        video_evidence.get('native_arm64_selftest') is not True or
+        video_evidence.get('pixel_validator_negative_controls_passed') is not True or
+        video_evidence.get('asan_ubsan_pass') is not True or
+        video_evidence['source_sha256']!=sha256(REPO/'tools/oneplus13/video-draft/decode-one-frame.c') or
+        video_evidence['binary_sha256']!=sha256(video_runtime/'decode-one-frame')):
+        raise ValueError('Video client needs same-source native validation')
+    video_hashes={}
+    for source,name in [(REPO/'tools/oneplus13/ram-video-check.py','usr/libexec/oneplus13-ram-video-check.py'),
+                        (video_runtime/'decode-one-frame','usr/libexec/oneplus13-decode-one-frame'),
+                        (REPO/'devices/oneplus13/video/synthetic-avc-bars.json','usr/lib/oneplus13-video/synthetic-avc-bars.json')]:
+        dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,dest);dest.chmod(0o644 if name.endswith('.json') else 0o755)
+        video_hashes[name]=sha256(dest)
+    video=import_module('video-probe-dtb')
+    video_blob,_=video.derive((private/'calibrated.dtb').read_bytes())
+    video_tree=Fdt(video_blob)
+    audio_guard=import_module('ram-audio-check')
+    module_root=stage/'usr/lib/modules'/release
+    ordered=audio_guard.module_order((module_root/'modules.dep').read_text(),['videocc_sm8750','qcom_iris'])
+    module_paths={Path(line.split(':')[0]).stem.replace('-','_'):line.split(':')[0]
+                  for line in (module_root/'modules.dep').read_text().splitlines()}
+    module_hashes={module_paths[name]:sha256(module_root/module_paths[name]) for name in ordered}
+    video_bindings={'kernel_release':release,'module_policy_sha256':bindings['MODULE_POLICY_SHA256'],
+                    'files':dict(video_hashes),'module_files':module_hashes,
+                    'live_nodes':{path:{key:value.hex() for key,value in video_tree.nodes[path].items()}
+                                  for path in (video.VIDEO,video.MEMORY)}}
+    dest=stage/'usr/lib/oneplus13-video/runtime-bindings.json'
+    dest.write_text(json.dumps(video_bindings,indent=2)+'\n');dest.chmod(0o644)
+    video_hashes[str(dest.relative_to(stage))]=sha256(dest)
     dest=stage/'etc/wireplumber/wireplumber.conf.d/90-oneplus13-manual-audio.conf'
     dest.parent.mkdir(parents=True,exist_ok=True)
     shutil.copyfile(REPO/'devices/oneplus13/audio/90-oneplus13-manual-audio.conf',dest)
@@ -268,6 +301,8 @@ def main():
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
     result.update(camera_probe_runtime_files=camera_hashes,camera_probe_auto_started=False,camera_capture_qualified=False)
+    result.update(video_probe_runtime_files=video_hashes,video_probe_auto_started=False,
+                  video_hardware_decode_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
     result.update(desktop_audio_files=desktop_audio_hashes,desktop_audio_auto_started=False,
                   desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=896)

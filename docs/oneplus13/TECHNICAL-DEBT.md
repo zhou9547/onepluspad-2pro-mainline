@@ -1,3 +1,14 @@
+## Bounded video runtime acceptance still required, 2026-10-29
+
+The source-built video runtime rejects missing pixels, incorrect dimensions,
+corruption, incomplete stream teardown and software fallback. Native and
+sanitizer selftests do not establish real decoding. Before its first activation,
+independently observe normal-running Gunyah watchdog recovery, review the phone's
+secure-video memory configuration against the pinned Iris driver, and verify a
+fresh Actions artifact. Keep the camera, video, default desktop and Pad firmware
+identities separate. Camera frame capture, visible multi-pose rotation, VA-API,
+long-duration speaker protection and suspend recovery remain open.
+
 ## Current camera and video boundaries, 2026-10-29
 
 r55 confirmed the strict S5KJN5 chip ID at0x2d and successful runtime-suspend/

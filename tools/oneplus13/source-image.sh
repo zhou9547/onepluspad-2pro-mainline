@@ -33,6 +33,7 @@ case "${1:-}" in
   complete)
     python3 tools/oneplus13/audio-draft/check.py --output out/phone-audio-synthetic
     python3 tools/oneplus13/audio-draft/build-topology-drafts.py --output out/phone-audio
+    python3 tools/oneplus13/build-video-runtime.py --output out/phone-video
     python3 tools/oneplus13/verify_qualified_data.py devices/oneplus13/qualified-data
     sudo python3 tools/oneplus13/package-source-local.py --kernel out/oneplus13 --desktop out/oneplus13-source-desktop --rootfs out/oneplus13-source-image --qualified-data devices/oneplus13/qualified-data --runtime-checks "$runtime_checks" --output out/oneplus13-complete-image
     sudo python3 tools/oneplus13/build-microphone-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image

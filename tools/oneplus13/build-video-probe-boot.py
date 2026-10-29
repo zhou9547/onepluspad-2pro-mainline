@@ -19,6 +19,8 @@ def main():
     kernel = args.kernel.resolve()
     out = args.image.resolve()
     original = json.loads((out / 'manifest.json').read_text())
+    if len(original.get('video_probe_runtime_files', {})) != 4 or original.get('video_probe_auto_started') is not False:
+        raise ValueError('Missing manual source-built video runtime')
     firmware = json.loads(subprocess.check_output([
         'unsquashfs', '-cat', str(out / 'rootfs.squashfs'),
         'usr/lib/oneplus13-desktop/private-firmware.json'], text=True))

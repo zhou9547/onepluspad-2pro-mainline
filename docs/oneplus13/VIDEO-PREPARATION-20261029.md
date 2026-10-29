@@ -29,3 +29,19 @@ build and independently verify the alternative in Actions, then check firmware
 authentication, one bounded linear-format decode, result frames, runtime suspend,
 teardown and the retained desktop/radio/audio/sensor features together. A device
 node or successful query alone must not be reported as decoding or VA-API support.
+
+The next source-built runtime includes a static AArch64 V4L2 client and a guarded
+manual coordinator. The only input is a generated905-byte AVC frame containing
+four public synthetic color bars. The client waits for a stateful source-change
+event, uses mmap queues, requests linear NV12, checks the returned timestamp and
+visible luma pixels against all four bars, then stops both queues. There is no
+software decoder fallback. Native/QEMU pixel-validator checks reject short,
+invalid-stride, corrupted and blank output under ASan/UBSan; these are offline
+checks, not hardware decoding.
+
+The manual coordinator binds the live DT/resources, product firmware, module
+dependency bytes, executable and fixture to the exact image. It enforces the
+existing RAM/read-only-storage/absolute-deadline guards, requires idle camera,
+SSC and WiFi, waits for runtime suspend and removes Iris afterwards. Real-device
+activation is deferred until independent normal-running watchdog recovery has
+been observed in a combined round; suspend recovery remains a separate task.
