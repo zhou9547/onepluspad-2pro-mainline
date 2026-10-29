@@ -13,7 +13,9 @@ MCLK='/soc@0/clock-controller@1760000'
 CORE=RSC+'/regulators-4/ldo1'
 CCI='/soc@0/cci@ac7b000'
 BANK=RSC+'/regulators-camera'
-SENSOR=CCI+'/i2c-bus@0/camera@10'
+# C.93 D/L/S ultrawide module slaveInfo all carry 8-bit0x5a.
+# Linux I2C reg is the 7-bit address, not the reference-board0x10.
+SENSOR=CCI+'/i2c-bus@0/camera@2d'
 
 
 def derive(blob):
@@ -73,7 +75,7 @@ def derive(blob):
              '#address-cells':u32(1),'#size-cells':u32(0)})
     tree.nodes[CCI+'/i2c-bus@0']={'reg':u32(0),'clock-frequency':u32(100000),
         '#address-cells':u32(1),'#size-cells':u32(0)}
-    tree.nodes[SENSOR]={'compatible':text('samsung,s5kjn5'),'reg':u32(0x10),
+    tree.nodes[SENSOR]={'compatible':text('samsung,s5kjn5'),'reg':u32(0x2d),
         'clocks':u32(mclk,0),'assigned-clocks':u32(mclk,0),'assigned-clock-rates':u32(19200000),
         'reset-gpios':u32(gpio,178,1),'pinctrl-0':u32(sensor_pin),'pinctrl-names':text('default'),
         'vddio-supply':u32(rails[5]),'vddd-supply':u32(core),'vddm-supply':u32(core),
@@ -93,7 +95,8 @@ def derive(blob):
     return final,{'scope':'SEPARATE_MANUAL_CCI_S5KJN5_CHIP_ID_RAM_TREE',
         'base_sha256':hashlib.sha256(blob).hexdigest(),'output_sha256':hashlib.sha256(final).hexdigest(),
         'microphone_derivation':microphone,'additional_changed_nodes':sorted(changed),
-        'additional_nodes':sorted(new),'cci_i2c_address':16,'cci_master':0,'reset_gpio':178,
+        'additional_nodes':sorted(new),'cci_i2c_address':45,'cci_master':0,'reset_gpio':178,
+        'cci_i2c_address_source':'C93_ULTRAWIDE_D_L_S_SLAVEINFO_8BIT_0X5A',
         'camera_core_microvolt':1000000,'camera_analog_microvolt':2200000,
         'camera_io_microvolt':1800000,'camera_af_microvolt':2800000,'mclk_hz':19200000,
         'vddm_shared_core_vote_is_inferred':True,'optional_1p2_io_rail_absent':True,

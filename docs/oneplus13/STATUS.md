@@ -1,3 +1,23 @@
+## First camera probe isolated address error, 2026-10-29
+
+All five jobs of Actions40803790845 and native camera components40804095331
+passed. The downloaded b01bf7ce image passed independent hashes, boot-section
+and camera-tree rederivation checks. In r54 the camera client at the unverified
+reference address0x10 returned I2C ENXIO. Sensor/controller teardown passed,
+kernel-health counters stayed zero, and Android returned in170.9s with matching
+baselines and zero partition writes. No capture or successful chip ID is claimed.
+
+Local C.93 D/L/S ultrawide module slaveInfo records all specify8-bit0x5a.
+The separate camera tree/helper now consistently use Linux7-bit0x2d and retain
+the strict0x38e5 hardware ID check. Proprietary raw module tables stay private.
+This correction requires a fresh Actions image and joint hardware regression.
+
+Read-only power readiness found RTC wake support and an inactive Gunyah watchdog,
+timeout32s. The exposed deep sleep mode alone is not suspend acceptance. Verify
+independent recovery before any unattended suspend. USB role/typec and video
+class nodes remain absent in this early pre-platform observation. No USB role,
+RTC alarm, charging policy or power state was changed.
+
 ## Separate camera chip-ID candidate prepared, 2026-10-29
 
 A separate camera/microphone boot recipe now derives CCI0/master0, the phone's

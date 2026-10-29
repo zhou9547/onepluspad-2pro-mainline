@@ -5,7 +5,7 @@ import argparse,hashlib,importlib.util,json,os,re,subprocess,time
 from pathlib import Path
 STATE=Path('/run/oneplus13/camera-chip-id')
 POLICY=Path('/etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf')
-TARGET='/soc@0/cci@ac7b000/i2c-bus@0/camera@10'
+TARGET='/soc@0/cci@ac7b000/i2c-bus@0/camera@2d'
 
 
 def load(name,path):
@@ -53,7 +53,7 @@ def main():
         if path.read_bytes()!=raw:raise ValueError('Wrong live camera graph: '+path.name)
     import struct
     def u32(*values):return struct.pack('>'+'I'*len(values),*values)
-    expect(sensor/'compatible',b'samsung,s5kjn5\0');expect(sensor/'reg',u32(0x10))
+    expect(sensor/'compatible',b'samsung,s5kjn5\0');expect(sensor/'reg',u32(0x2d))
     expect(sensor/'assigned-clock-rates',u32(19200000))
     def ph(path):return (dt/path/'phandle').read_bytes()
     expect(sensor/'reset-gpios',ph('soc@0/pinctrl@f100000')+u32(178,1))
@@ -84,7 +84,7 @@ def main():
     attempted=False;cleanup=[]
     def targets():
         result=[]
-        for path in Path('/sys/bus/i2c/devices').glob('*-0010'):
+        for path in Path('/sys/bus/i2c/devices').glob('*-002d'):
             node=path/'of_node'
             if node.exists() and str(node.resolve()).endswith(TARGET):result.append(path)
         if len(result)>1:raise ValueError('Ambiguous camera probe target')

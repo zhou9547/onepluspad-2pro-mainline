@@ -30,7 +30,9 @@ class CameraProbeTree(unittest.TestCase):
         result,report=probe.derive(blob);tree=Fdt(result)
         sensor=tree.nodes[probe.SENSOR];cci=tree.nodes[probe.CCI]
         self.assertEqual(strings(sensor['compatible']),['samsung,s5kjn5'])
-        self.assertEqual(cells(sensor['reg']),[0x10])
+        self.assertEqual(cells(sensor['reg']),[0x2d])
+        self.assertEqual(report['cci_i2c_address'],0x5a>>1)
+        self.assertEqual(probe.SENSOR.rsplit('/',1)[1],'camera@2d')
         self.assertEqual(cells(sensor['reset-gpios'])[1:],[178,1])
         self.assertEqual(cells(sensor['assigned-clock-rates']),[19200000])
         self.assertEqual(cells(cci['interrupts']),[0,426,1])

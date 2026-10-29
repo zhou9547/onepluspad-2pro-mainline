@@ -9,7 +9,9 @@ The saved C.93 phone graph identifies ultrawide cell1 as CCI0/master0, PHY1,
 resetGPIO178,19.2MHz MCLK0 and chip-ID0x38e5. CCI0 registers0xac7b000 and IRQ426
 match Hangxiang Ma's public resource series. Pin113 is SDA and114 is SCL;
 pin89 carries MCLK0. The candidate contains only CCI0/master0 and one camera
-client at7-bit address0x10. CAMSS, CSI PHY and streaming commands are absent
+client at7-bit address0x2d. The C.93 D/L/S module slaveInfo records all contain
+the 8-bit address0x5a; Linux requires shifting that address once. The reference
+binding example's0x10 was not a phone address. CAMSS, CSI PHY and streaming commands are absent
 from the test protocol. The sensor driver retains its standard streaming API,
 but this tree supplies no capture pipeline and the probe helper never calls it.
 
@@ -51,3 +53,11 @@ Public sources retain original authors, licenses and hashes in
 are unchanged; the local compatibility patch only removes two unused V4L2 callback
 arguments for the pinned kernel. Original CCI messages and the separate exact-pin
 resource rebase are likewise retained.
+
+The first r54 RAM attempt used0x10 and returned I2C ENXIO before reading the ID.
+Both camera modules and their target were removed, kernel health remained clean,
+and Android returned in170.9s with matching baselines and no partition writes.
+The corrected address is not a successful probe claim. The module BINs contain
+vendor-specific identification fields which do not directly match the stock FTM
+chip ID; the driver retains its strict0x38e5 check. No broad bus scan or alternate
+ID acceptance is used. Raw proprietary module data remains private.
