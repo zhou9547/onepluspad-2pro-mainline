@@ -1,3 +1,15 @@
+## r70 framework decode and pose mapping, 2026-10-29
+
+Build40885554785 on83768fc passes and its complete image/SSC/kernel are
+independently verified. Guarded GStreamer hardware decode now passes one fixed
+AVC-to-NV12 frame, pixels/PTS/cleanup and Iris suspend/unload. The40-second
+physical collection confirms upright falsely maps to bottom-up/transform2 while
+left/right map1/3. A pitch-only udev candidate requires the next physical
+retest. Microphone and two-speaker acoustic correlation pass after display.
+The software-volume step was reached too late in the fixed600-second window and
+did not run; Android returned with matching baselines and zero partition writes.
+See [r70 evidence](R70-HARDWARE-AND-ORIENTATION-20261029.md).
+
 ## r69 combined diagnostic and source repairs, 2026-10-29
 
 Hosted complete build40873139247 on16f96cab passes and returns Android in513.6s,

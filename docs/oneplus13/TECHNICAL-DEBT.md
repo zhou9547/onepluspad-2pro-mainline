@@ -1,3 +1,14 @@
+## r70 hardware result and remaining ordering gaps, 2026-10-29
+
+The fixed AVC profile/level/colorimetry candidate resolves the observed
+GStreamer negotiation failure and qualifies one bounded hardware frame. Dynamic
+pose collection now works and proves the upright orientation inversion is a
+pitch mapping error; a pitch-only mount-matrix candidate needs physical retest.
+Native microphone/acoustic checks pass after display. Desktop software-volume
+measurement was still ordered after long Docker/WiFi stages and hit the fixed
+recovery-budget refusal. Reorder it before radio/container tests next. Absolute
+loudness/protection remain open. See R70-HARDWARE-AND-ORIENTATION-20261029.md.
+
 ## r69 diagnostic gaps and candidates, 2026-10-29
 
 Native Iris pixels/cleanup and mature network/desktop regressions pass on the

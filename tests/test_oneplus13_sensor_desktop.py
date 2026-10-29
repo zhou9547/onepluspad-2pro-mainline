@@ -204,6 +204,10 @@ class DesktopSensor(unittest.TestCase):
         self.assertIn('CapabilityBoundingSet=', proxy)
         self.assertNotIn('WantedBy=', fileserver+proxy)
         self.assertIn('ENV{IIO_SENSOR_PROXY_TYPE}="ssc-accel ssc-compass ssc-gyro"', udev)
+        # Physical upright was observed as bottom-up with transform2. The SSC
+        # already exports handset X/Z axes; invert only the pitch axis once
+        # so upright maps to normal while left-up/right-up retain transforms1/3.
+        self.assertIn('ENV{ACCEL_MOUNT_MATRIX}="1, 0, 0; 0, -1, 0; 0, 0, 1"', udev)
         self.assertIn('modprobe --ignore-install fastrpc', bringup)
         self.assertIn('orientation-lock false', bringup)
 
