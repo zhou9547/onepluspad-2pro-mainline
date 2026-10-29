@@ -16,6 +16,17 @@ magic close disarms it and the report records failure. A successful reset must
 be observed independently by the host together with the original Android
 baseline. The armed RAM receipt alone never claims an observed reset.
 
+r58 identified the failure at countdown: both timeout readbacks were12,
+support options were0x8180, but timeleft remained12 after2s. Cleanup returned
+the watchdog to inactive. The new kernel patch exposes root-only
+`/sys/devices/platform/gunyah-wdt/hypervisor_status`; it performs only the
+existing STATUS SMC and returns result, enabled, expired and elapsed_raw.
+It neither pings nor changes timeout/control/PM behavior. The helper records
+monotonic samples before open and around existing pings/timeleft reads.
+`--require-hypervisor-status` refuses a missing diagnostic before opening the
+device. The raw value is evidence, not a second software countdown or a guessed
+ABI conversion. The original countdown/keepalive/reset checks remain required.
+
 Run it only at the end of a combined bounded hardware session, after other
 clients are quiesced. Keep the existing absolute600s recovery deadline; never
 replace normal recovery with an unverified watchdog. This test does not suspend

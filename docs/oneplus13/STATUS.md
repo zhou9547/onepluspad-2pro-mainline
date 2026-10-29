@@ -1,3 +1,24 @@
+## r58 exact source image regression; Gunyah countdown diagnosis, 2026-10-29
+
+All five jobs in Actions40816388596 passed on297a5a69. Independent downloaded
+image verification and r58 completed the camera chip-ID/teardown, microphone,
+separate-speaker correlation, actual20/50/100% and mute, dual-band WiFi,
+Docker bridge/DNS/NAT, production left-up/Mutter1, GNOME/Chinese/SSH/Dock
+regressions. The source-built AArch64 video client's selftest passed without
+opening video hardware. Android returned after495.0s with seven matching
+baseline fields, clean kernel-health gates and zero partition writes.
+
+The final Gunyah experiment set/read12s successfully and passed capabilities
+0x8180. GETTIMELEFT returned12 both immediately and after2s; it stopped at the
+countdown gate and magic-close disarmed it. No independent reset was observed.
+Retain the existing stop flag and keep Iris activation and suspend deferred.
+The next kernel adds a root-only STATUS-read diagnostic for the hypervisor's
+enabled/expired flags and raw elapsed value, with monotonic samples in the
+manual helper. It issues no control/timeout/ping calls and changes no timer
+semantics. AArch64 W=1/-Werror object compilation and the full Linux offline
+suite (592 tests, 5 environment skips) pass; fresh Actions and
+combined hardware evidence are still required to diagnose the underlying timer.
+
 ## r57 retained regressions passed; watchdog diagnostic stopped, 2026-10-29
 
 The exact36f14243 Actions image completed camera chip-ID/runtime-suspend/teardown,

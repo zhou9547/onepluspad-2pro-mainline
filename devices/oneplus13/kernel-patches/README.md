@@ -1,5 +1,11 @@
 # Isolated phone kernel patches
 
+0019 adds a root-only read-only Gunyah STATUS diagnostic on its platform device.
+It returns the hypervisor result, enabled/expired flags and raw elapsed value to
+investigate r58's unchanged12s countdown. No control, timeout, ping, PM behavior
+or restart path changes. The exact patched source compiles for AArch64 with
+W=1/-Werror. It is diagnostic preparation, not watchdog recovery qualification.
+
 Apply to the exact platform commit recorded in ../source.json, currently
 7a81d184e3098624d4342d8f4eff5e23674bcc9f. build.sh checks/applies them and exports
 the resulting real kernel diff in phone-kernel.patch with the phone sources.

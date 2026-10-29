@@ -29,6 +29,25 @@ def ioctl_int(fd,request,value=0):
     return data[0]
 
 
+def status_sample(base,label,required=False):
+    """Read the driver's STATUS-only diagnostic, without petting the timer."""
+    path=base/'device/hypervisor_status'
+    if not path.is_file():
+        if required:raise ValueError('Required hypervisor status diagnostic is absent')
+        return {'label':label,'available':False}
+    with path.open() as stream:text=stream.read(257)
+    if len(text)>256:raise ValueError('Oversized hypervisor status diagnostic')
+    pairs=[item.split('=') for item in text.split()]
+    if (len(pairs)!=4 or any(len(p)!=2 for p in pairs) or
+        {p[0] for p in pairs}!={'result','enabled','expired','elapsed_raw'}):
+        raise ValueError('Malformed hypervisor status diagnostic')
+    values={key:int(value) for key,value in pairs}
+    if (values['result']!=0 or values['enabled'] not in (0,1) or
+        values['expired'] not in (0,1) or not 0<=values['elapsed_raw']<=0xffffffff):
+        raise ValueError('Invalid hypervisor status diagnostic values')
+    return {'label':label,'available':True,'monotonic_seconds':time.monotonic(),**values}
+
+
 def record(doc):
     temporary=STATE/'result.tmp'
     temporary.write_text(json.dumps(doc,sort_keys=True)+'\n')
@@ -40,6 +59,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release',required=True)
     parser.add_argument('--arm-one-reset',action='store_true',required=True)
+    parser.add_argument('--require-hypervisor-status',action='store_true')
     args=parser.parse_args()
     if os.geteuid()!=0 or os.uname().release!=args.release:raise ValueError('Wrong root/kernel')
     if not Path('/run/oneplus13/ram-session').is_file():raise ValueError('Protected RAM session required')
@@ -63,11 +83,16 @@ def main():
     STATE.mkdir(mode=0o700,exist_ok=False)
     report={'scope':'ONE_MANUAL_RAM_GUNYAH_WATCHDOG_RESET','suspend_requested':False,
             'partition_writes':0,'armed':False,'countdown_verified':False,
-            'keepalive_verified':False,'reset_observed':False}
+            'keepalive_verified':False,'reset_observed':False,'hardware_samples':[]}
+    def sample(label):
+        report['hardware_samples'].append(status_sample(base,label,args.require_hypervisor_status))
     fd=None
     try:
+        report['stage']='inactive-status'
+        sample('inactive-before-open')
         report['stage']='device-open'
         fd=os.open(device,os.O_WRONLY|os.O_CLOEXEC|os.O_NOFOLLOW)
+        sample('after-open')
         report['stage']='support'
         support=bytearray(40);fcntl.ioctl(fd,WDIOC_GETSUPPORT,support,True)
         if bytes(support[8:]).split(b'\0')[0]!=b'Gunyah Watchdog':raise ValueError('Wrong ioctl identity')
@@ -81,16 +106,20 @@ def main():
             raise ValueError('Watchdog timeout readback mismatch')
         report['stage']='first-keepalive'
         ioctl_int(fd,WDIOC_KEEPALIVE)
+        sample('first-keepalive')
         report['stage']='countdown'
         first=ioctl_int(fd,WDIOC_GETTIMELEFT)
         report['first_timeleft']=first
+        sample('first-timeleft')
         time.sleep(2)
         second=ioctl_int(fd,WDIOC_GETTIMELEFT)
         report['second_timeleft']=second
+        sample('second-timeleft')
         if not 0<second<first<=12:raise ValueError('Watchdog countdown not observed')
         report['countdown_verified']=True
         report['stage']='second-keepalive'
         ioctl_int(fd,WDIOC_KEEPALIVE)
+        sample('second-keepalive')
         third=ioctl_int(fd,WDIOC_GETTIMELEFT)
         report['third_timeleft']=third
         if not second<third<=12:raise ValueError('Watchdog keepalive not observed')

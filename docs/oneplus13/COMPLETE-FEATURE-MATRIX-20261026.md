@@ -8,57 +8,55 @@ flashing acceptance.
 
 | Function | Current evidence | Remaining work |
 | --- | --- | --- |
-| Native display | run68 exact-phone-firmware/new-rootfs single AA569 activation; prior visible-display owner evidence | Visual artifacts, brightness range, blank/unblank, rotation, refresh modes and sustained use |
-| GNOME ordinary user | run68 active Wayland user session, project Mesa, Settings process and application bus on new guarded rootfs | Visual usability, scaling, on-screen keyboard and UI interaction |
-| GPU | run68 exact-phone graphics plus Adreno 830/Mesa 26.2.3 4×4 pixel readback and compositor mappings | Wider rendering/API workload, performance, stability and power |
-| Touch | Native input device; run50/51 real touch-down counts | Entire panel, coordinates, gestures, multitouch and palm behavior |
-| WiFi | Actual Android peach BDF/regdb selection; pinned USER half-dBm versus V2 index semantics and missing WiFi7 SAR callback/sender established; historical HTTPS used inherited reference firmware and legacy payload is held | Effective phone policy/capabilities/ack and Linux enforcement before further RF; then exact-phone-firmware automatic scan/auth/DHCP/HTTPS, UI, bands, roaming, resume and sustained traffic |
+| Native display | r58 exact Actions297a5a69 AA569/GNOME regression; owner previously confirmed manual rotation no longer logs out | Brightness range, artifacts, refresh modes, blank/unblank and sustained use |
+| GNOME ordinary user | r58 Wayland/Mesa/Chinese/SSH/Dock regression; owner confirmed taskbar, Chinese and touch | Wider application, keyboard, scaling and sustained usability |
+| GPU | r58 project Mesa pixel/compositor regression with exact phone firmware | Wider rendering/API workload, performance, stability and power |
+| Touch | Owner confirmed usable touch and manual orientation behavior; retained device regression | Entire panel, coordinates, gestures, multitouch and palm behavior |
+| WiFi | r58 exact-phone-firmware5GHz5240MHz and2.4GHz2437MHz authentication/DHCP/default route/LAN HTTP, radio policy checks | Roaming, resume, sustained traffic, Internet/TLS and UI coverage beyond these bounded checks |
 | Bluetooth transfer | Owner confirmed run51 peer file receipt using inherited reference inputs; later component regressions | Exact phone firmware/address/power path review before new radio run; reverse transfer, reconnection and other profiles; A2DP/HFP unaccepted |
 | Battery | run68 exact phone ADSP58/58 single start with battery capacity/voltage/current/temperature inventory; old telemetry used reference ADSP | Accuracy over time, charging policy and power consumption |
 | CPU frequency | run66 two SCMI schedutil policies and CPU cooling devices after reviewed module delivery | Frequency transition accuracy, load/power and thermal behavior; no manual clock or voltage overrides |
 | Charging / USB-C / PD | PMIC/ADSP services and tethered test transport; UCSI bound but deferred initialization with fixed peripheral role | Resolve role provider with independent recovery, then roles/current/PD/charging/peripherals; do not switch current recovery transport unattended |
 | Thermal management | run63 48 readable temperature zones; run66 CPU/GPU/WLAN cooling devices registered | Trip policy and actual thermal intervention; controlled load only after review |
-| Speakers / receiver | Two enabled stock AWINIC nodes; WSA quarantined; offline object compile; saved owner ACF bytes match and actual parser preflight passes | Actual PID, independent calibration/dynamic protection, secondary MI2S route, gain and recovery gates before any stream |
-| Microphones / headset / audio routing | No accepted phone capture/playback path | Codec/DMIC/MI2S endpoints, topology and PipeWire policy; independent stream review first |
-| Accelerometer / gyroscope / compass / light / proximity | Exact ABI libraries/data/runtime links and normalized phone DT contexts pass; run69 registers FastRPC but refuses faulty misc ancestry guard before ioctl; corrected RPMSG guard remains offline | First attach, reverse RPC/registry, calibration meaning, streams and physical orientation unaccepted; retain hardware halt, no Pad automatic hooks or matrix |
+| Speakers / receiver | Owner confirmed top/bottom independently; r58 fresh separate-speaker/microphone correlation and real20/50/100% plus mute response, no clipped samples | Absolute loudness, long-duration dynamic protection, normal default activation and wider content; keep896 hardware ceiling |
+| Microphones / headset / audio routing | r58 native microphone capture, restored controls and independent speaker correlation; explicit PipeWire speaker candidate follows system volume | Headset, wider routes, echo cancellation and ordinary default policy; raw test audio is deleted |
+| Accelerometer / gyroscope / compass / light / proximity | r58 ordinary production startup without diagnostic warmup,32 samples left-up/vertical and Mutter1; earlier multi-pose raw data exists | Visible multi-pose automatic transitions on current image; other sensor streams/calibration and power |
 | Haptics | Saved Android qcom-hv-haptics input and effective PMIH010x HV node; candidate has no matching node, AW86927 substitution held | Exact HV driver, motor/calibration/protection and bounded control before physical feedback test |
-| IR transmitter / Hall / cover / ToF | Saved tof8801 I2C input with effective phone node and virtual Hall-key registration, not raw IDs or functional acceptance | Candidate ToF integration missing; exact device/electrical/API review, physical targets or magnets later |
+| IR transmitter / Hall / cover / ToF | Saved phone FDT and public IR driver map SPI5/MOSI53/L9B3.056V; see INFRARED-BOARD-REVIEW-20261029.md; ToF/Hall stock inventory only | Isolated IR pin/rail/waveform candidate and independent optical acceptance; ToF/Hall drivers and physical validation |
 | Power / volume / alert keys | GPIO/power-key software nodes; input inventory only | Map actual events, short/long behavior and desktop integration |
-| Cameras / flash | No candidate camera pipeline or sensor nodes in software review | Identify populated sensors independently of stock templates; clocks/power/CSI/ISP/firmware/libcamera; flash safety review |
+| Cameras / flash | r58 S5KJN5 at7-bit0x2d, strict0x38e5 ID, runtime suspend and complete CCI/sensor teardown; upstream camera components compile offline | Phone custom C-PHY/D-PHY mode, PHY/CAMSS graph, real pixel capture/libcamera and flash; chip ID is not capture |
 | Modem / mobile data / SMS / calls | Candidate MPSS remoteproc exists but disabled | Phone firmware, memory/transport/power and modem recovery; calls/IMS/emergency functionality unaccepted |
 | GNSS | No functional acceptance | Modem/DSP/service transport and bounded location checks; DT absence does not mean hardware absence |
-| NFC | Stock software node, no candidate integration | Actual controller identity, transport/power, userspace and bounded protocol test |
+| NFC | Saved stock chipset label SN220T; no candidate integration | Actual controller/protocol identity, transport/power, userspace and bounded protocol test |
 | Fingerprint / secure biometrics | Stock generic SPI software node, no candidate integration | Actual chip, trusted execution dependencies and userspace support; never overwrite enrollment/calibration |
-| RTC / network time | RAM host clock bridge preserves monotonic deadline; run63 raw RTC count read without writing | Independent epoch offset and trusted time policy; do not write or guess offset from raw count |
-| Suspend / resume / idle power | Not accepted | Prove independent wake/recovery before any unattended suspend; timers alone do not prove wake |
+| RTC / network time | r58 host clock bridge; PM8xxx RTC wakeup exposed with no alarm changes | Epoch/time policy and independently verified wake; no guessed offset or RTC write |
+| Suspend / resume / idle power | Not accepted; r58 Gunyah12s timeout readbacks succeed but timeleft stays12 after2s; disarmed and host-recovered | Diagnose raw STATUS and prove independent recovery before suspend; then RTC wake and power/charging measurements |
 | USB host / display / storage peripherals | USB gadget test link works | Physically attached peripherals and role switching later, after isolated theoretical checks |
 | Internal storage / installation / updates | Block read-only RAM guard; repeated Android return checks | No install, partition, boot slot or OTA design is accepted; current scope prohibits writing them |
-| Recovery / endurance | Multiple bounded boots recover automatically; seven baseline samples per run | Sampling is not a full partition audit or a guarantee against all failures; no new test after recovery/health failure |
+| Recovery / endurance | r58 Android return495.0s, seven matching baseline fields, clean kernel health and zero writes | Independent watchdog reset unqualified; stop flags remain preserved and require reviewed diagnosis before a new combined test |
 
-`review-feature-gaps.py` checks only aggregate compatible-node counts with all
-ancestor statuses. The current quarantined DT has no AW nodes, no camera pipeline,
-NFC or fingerprint integration, and disables MPSS. Those are substantive open
-adaptation tasks, not merely a pending owner click. The stock camera tree contains
-many simultaneously enabled software templates; do not choose a sensor from
-their presence alone, repeating the former WSA mistake.
+The retained acceptance above is bound to Actions40816388596 and source297a5a69,
+with r58 downloaded-artifact verification. A newer diagnostic commit is not a
+new accepted image. Video runtime native selftests pass, but Iris hardware has
+not been activated and actual video pixels/VA-API remain unqualified.
+
+`review-feature-gaps.py` counts effective compatible nodes only. Defaults keep
+camera/video manual, MPSS disabled and unreviewed phone peripherals absent.
+Stock template presence is never sensor identity or full functional acceptance.
 
 ## Deferred owner session
 
-The owner is not operating the phone during the autonomous window. Accumulate a
-single later acceptance session covering visible desktop/display, actual touch,
-WiFi UI after automatic network success, key behavior, Bluetooth reverse transfer
-and any ready external-peripheral tests. Audio listening, microphone recordings
-and physical sensor motion join that session only after their independent
-identity, protection, calibration and recovery prerequisites pass. Suspend is
-not a substitute for such prerequisites, even with an owner present.
+The owner is not operating the phone before19:00 on2026-10-29 and left it
+left-side-up. Autonomous checks use that fixed pose; no physical transition is
+claimed. A later attended session can cover visible automatic rotation, normal
+loudness, UI/key behavior and externally observable peripheral output together.
 
 ## Autonomous work order
 
-The exact phone ADSP/new guarded rootfs isolated-platform regression is now
-accepted at run68. Keep that candidate separate from held legacy payloads.
-Resolve exact phone
-WLAN/BT source/selection/SAR before further radio tests. Then resolve AW/MI2S and phone sensor loader
-prerequisites offline, and research unimplemented peripherals against pinned
-phone/community/vendor sources. Each candidate needs its own theoretical,
-build and recovery evidence before a bounded combined test. Do not rerun a
-successful test solely to consume the authorization window.
+Preserve accepted desktop, both WiFi bands, Docker, audio, Chinese/SSH/Dock and
+sensor startup in every relevant combined regression. Resolve the observed
+watchdog countdown before Iris activation or unattended suspend. Continue the
+phone camera PHY/mode review, then GNSS, NFC, infrared, full USB roles, power and
+remaining phone services according to owner priorities. Reuse pinned public
+implementations after checking exact phone electrical and firmware identities.
+Keep tests combined and bounded; no flashing, partition changes or installation.

@@ -1,10 +1,15 @@
 # Hardware evidence and reuse boundary
 
-The initial references below were collected before the owner's phone was
-available. Read-only stock Android evidence was added on 2026-10-23; see
-STOCK-CALIBRATION.md, NATIVE-INPUT.md and NATIVE-DISPLAY.md. No mainline kernel
-or experimental driver has run on the phone. Stock Android evidence confirms
-parameters, not Linux hardware acceptance.
+The table below preserves the initial source inventory, not the current
+acceptance register. The exact source image from Actions40816388596 completed
+r58 joint RAM regression on2026-10-29: display/GNOME/Mesa, Chinese/SSH/Dock,
+dual-band WiFi, Docker bridge/NAT, microphone and separate-speaker correlation,
+actual desktop volume response, production left-up/Mutter1 and S5KJN5 chip-ID
+with teardown. Android returned with matching baseline and zero writes.
+Read STATUS.md and COMPLETE-FEATURE-MATRIX-20261026.md for current limits.
+Camera frames, video decode, independent watchdog recovery, suspend and the
+remaining phone peripherals are not qualified. Stock evidence alone is not
+Linux hardware acceptance.
 
 | Area | Pinned source evidence | Implementation / gap |
 | --- | --- | --- |

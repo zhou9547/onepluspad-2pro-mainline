@@ -21,5 +21,29 @@ class WatchdogInventory(unittest.TestCase):
                     with self.assertRaises(ValueError):wdt.validate_inventory(base)
                     (base/key).write_text(original[key])
 
+    def test_read_only_status_samples_and_reject_bad_hypervisor_values(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base=Path(folder);(base/'device').mkdir();path=base/'device/hypervisor_status'
+            self.assertFalse(wdt.status_sample(base,'legacy')['available'])
+            with self.assertRaises(ValueError):wdt.status_sample(base,'required',True)
+            path.write_text('result=0 enabled=1 expired=0 elapsed_raw=2011\n')
+            result=wdt.status_sample(base,'countdown',True)
+            self.assertEqual(result['elapsed_raw'],2011)
+            self.assertEqual(result['enabled'],1)
+            self.assertEqual(result['label'],'countdown')
+            self.assertGreater(result['monotonic_seconds'],0)
+            for text in ('result=1 enabled=1 expired=0 elapsed_raw=0',
+                         'result=0 enabled=2 expired=0 elapsed_raw=0',
+                         'result=0 enabled=1 expired=2 elapsed_raw=0',
+                         'result=0 enabled=1 expired=0 elapsed_raw=-1',
+                         'result=0 enabled=1 expired=0 elapsed_raw=4294967296',
+                         'result=0 enabled=1 enabled=0 elapsed_raw=1',
+                         'result=0 enabled=1 expired=0 elapsed_raw=1 unknown=0',
+                         'result=0 enabled=1 expired=0 elapsed_raw=abc',
+                         'x'*257):
+                with self.subTest(text=text):
+                    path.write_text(text)
+                    with self.assertRaises(ValueError):wdt.status_sample(base,'bad',True)
+
 
 if __name__=='__main__':unittest.main()

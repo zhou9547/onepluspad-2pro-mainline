@@ -1,3 +1,15 @@
+## Observed Gunyah countdown failure, 2026-10-29
+
+r58 reproduces unchanged12s GETTIMELEFT across a2s interval, with matching
+SETTIMEOUT/GETTIMEOUT and all expected capabilities. Cleanup disarms it and
+normal host recovery returns matching Android. Do not call this a successful
+watchdog experiment or clear its historical stop flag. Read the new STATUS-only
+driver diagnostic alongside monotonic timestamps to distinguish timer/control
+behavior from the elapsed-time report; the countdown and keepalive gates remain
+strict. No inferred unit conversion, software countdown substitution or unobserved
+reset qualifies independent recovery. Iris activation and unattended suspend wait
+for that evidence.
+
 ## Bounded video runtime acceptance still required, 2026-10-29
 
 The source-built video runtime rejects missing pixels, incorrect dimensions,
