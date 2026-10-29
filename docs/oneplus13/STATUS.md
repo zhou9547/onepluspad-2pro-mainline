@@ -10,10 +10,12 @@ The source now stages the reviewed SM8750 CAMSS/CSID/VFE series, the public
 phone C-PHY MMIO adapter, a three-trio S5KJN5 mode with an explicit
 `get_mbus_config` callback and an isolated `CSIPHY1 -> CSID1 -> VFE1` device
 tree. A clean fixed-pin component build passes with warnings treated as errors,
-and the WSL offline suite passes507 tests with one environment skip. A separate
+and the WSL offline suite passes510 tests with one environment skip. A separate
 RAM boot candidate embeds the capture graph and a manual one-frame V4L2 helper;
-the default desktop tree remains unchanged. No real sensor pixel frame has yet
-arrived, so camera capture is not qualified. See
+the default desktop tree remains unchanged. A second isolated tree combines that
+camera graph with the manual MPSS/GNSS node and firmware archive so one RAM test
+can capture a frame and exercise QMI location. No real sensor pixel frame has
+yet arrived, so camera capture is not qualified. See
 [r77 camera C-PHY source](R77-CAMERA-CPHY-SOURCE-20261030.md).
 
 ## r75 modem/NFC/suspend source candidate, 2026-10-30

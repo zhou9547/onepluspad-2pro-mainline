@@ -43,10 +43,15 @@ A separate DTB derivation creates:
 The graph exists only in `boot-camera-capture-ram-experimental.img`. The default
 desktop DTB and USB recovery path are unchanged.
 
+`boot-camera-gnss-ram-experimental.img` combines the capture tree with the
+manual MPSS node and C.93 firmware archive. This permits one RAM session to
+capture a sensor frame, start MPSS, run QMI LOC/NMEA acquisition and stop MPSS
+without adding a second reboot for each target.
+
 ## Verification boundary
 
 The clean fixed-pin component build compiles CAMSS, CSID/VFE, S5KJN5, CCI and
-the phone C-PHY PHY with `W=1` and `Werror`. The WSL offline suite passes507
+the phone C-PHY PHY with `W=1` and `Werror`. The WSL offline suite passes510
 tests with one environment skip. The generated graph round-trips through the
 FDT parser and the capture helper rejects short or uniform frames.
 
