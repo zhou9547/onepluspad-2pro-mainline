@@ -1,3 +1,7 @@
+# Owner resumes compilation and joint testing, 2026-10-29
+
+The newest owner instruction resumes builds and testing and offers human assistance. This supersedes the source-only pause below. Preserve temporary RAM boot only, source-bound joint plans and the existing 19:00 Asia/Shanghai device deadline unless explicitly extended.
+
 # Current owner instruction, 2026-10-29: source changes only
 
 The owner now requests completing the remaining source/configuration work before

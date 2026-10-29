@@ -1,3 +1,7 @@
+## Compilation and joint validation resumed, 2026-10-29
+
+The owner resumed compilation and joint testing. Build the current source with trusted-server kernel/Mesa/SSC and hosted rootfs/assembly, and compile optional phone C-PHY and infrared components separately. These disabled candidates have no new hardware acceptance; r64 remains the accepted combined baseline pending fresh evidence.
+
 ## Source-only owner request, 2026-10-29
 
 Compilation and all testing are paused by the newest owner instruction. The

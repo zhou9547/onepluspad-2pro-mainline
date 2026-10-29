@@ -1,3 +1,7 @@
+## Validation resumed, 2026-10-29
+
+The source-only pause is superseded by the owner. Fresh compile and combined hardware evidence are required; experimental camera/infrared board activation remains blocked by the documented board and supply gaps.
+
 ## Source-only candidates, no new acceptance, 2026-10-29
 
 The owner paused builds and all testing. The new optional phone C-PHY adapter
