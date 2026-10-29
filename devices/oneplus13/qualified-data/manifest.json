@@ -1,6 +1,6 @@
 {
   "format": "ONEPLUS13_QUALIFIED_DATA_V1",
-  "compatible_public_native_dtb_sha256": "8380b9ff51b1329a4dc65418496fed4cd0ba8f0050b7d448c4b8bfa6ed632062",
+  "compatible_public_native_dtb_sha256": "2175a04be947625f718aed1f76e7a0c614b1e1c00c9b11e8dfd9d647bc1c4936",
   "scope": "RUN90_QUALIFIED_DATA_OWNER_AUTHORIZED_PUBLICATION_NO_CREDENTIALS_OR_DEVICE_IDENTIFIERS",
   "files": {
     "boot-geometry.json": {
