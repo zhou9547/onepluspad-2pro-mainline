@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib
 import json
+import re
 import secrets
 import subprocess
 import sys
