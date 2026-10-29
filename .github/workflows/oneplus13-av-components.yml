@@ -14,6 +14,10 @@ on:
         description: Compile isolated C-PHY framework (no phone register table or activation)
         type: boolean
         default: false
+      offline_gates_only:
+        description: Run existing complete offline gates without recompiling components
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -21,6 +25,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   components:
+    if: ${{ !inputs.offline_gates_only }}
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 25
     steps:
@@ -63,3 +68,6 @@ jobs:
             out/av-components/linux/sound/soc/codecs/aw88461.o
           if-no-files-found: error
           retention-days: 14
+  offline-gates:
+    if: ${{ inputs.offline_gates_only }}
+    uses: ./.github/workflows/oneplus13-complete-gates.yml
