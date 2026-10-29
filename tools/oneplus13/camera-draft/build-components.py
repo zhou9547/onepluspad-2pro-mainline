@@ -21,11 +21,17 @@ def main():
                         help='Add experimental phone MMIO adapter; never enable a board node')
     parser.add_argument('--prepare-only',action='store_true',
                         help='Prepare source tree only, without compilation or tests')
+    parser.add_argument('--compile-only',action='store_true',
+                        help='Compile camera objects without synthetic or unit checks')
     parser.add_argument('--infrared',action='store_true',
                         help='Stage isolated SPI infrared candidate; no enabled board node')
     args=parser.parse_args()
     if args.phone_cphy and not args.cphy:
         raise ValueError('--phone-cphy requires --cphy')
+    if args.compile_only and not (args.cphy and args.phone_cphy):
+        raise ValueError('--compile-only requires the phone C-PHY candidate')
+    if args.compile_only and args.prepare_only:
+        raise ValueError('--compile-only and --prepare-only are mutually exclusive')
     if not args.prepare_only and platform.machine() not in ('aarch64','arm64') and not args.cross_compile:
         raise ValueError('Native ARM64 or explicit AArch64 cross compiler required')
     out=args.output.resolve()
@@ -87,6 +93,7 @@ def main():
                  '--output',out/'phone-cphy-catalog']
         if args.cross_compile:catalog+=['--cross-compile',args.cross_compile]
         if args.prepare_only:catalog+=['--emit-only']
+        elif args.compile_only:catalog+=['--compile-only']
         run(catalog)
         if args.phone_cphy:
             phone_lock=json.loads((directory/'phone-adapter-source.json').read_text())
@@ -120,9 +127,10 @@ def main():
     audio=HERE.parent/'audio-draft'
     for name in ('aw88461.c','aw88461-profile.h'):
         (kernel/'sound/soc/codecs'/name).write_bytes((audio/name).read_bytes())
-    run(['python3',audio/'check.py','--output',out/'audio-synthetic'])
-    checker='check-cphy-errors.py' if args.cphy else 'check-phy-errors.py'
-    run(['python3',HERE/checker,'--kernel',kernel,'--output',out/'camera-synthetic'])
+    if not args.compile_only:
+        run(['python3',audio/'check.py','--output',out/'audio-synthetic'])
+        checker='check-cphy-errors.py' if args.cphy else 'check-phy-errors.py'
+        run(['python3',HERE/checker,'--kernel',kernel,'--output',out/'camera-synthetic'])
     run(['make','-C',kernel,'ARCH=arm64','defconfig'],timeout=120)
     config=kernel/'scripts/config'
     for name in ('MEDIA_SUPPORT','MEDIA_CONTROLLER','VIDEO_DEV','MEDIA_PLATFORM_SUPPORT','V4L_PLATFORM_DRIVERS','PM_OPP'):
@@ -165,6 +173,8 @@ def main():
               'drivers/media/platform/qcom/camss/camss-vfe-gen4.o',
               'drivers/media/platform/qcom/camss/camss-tpg-gen1.o',
               'drivers/media/platform/qcom/camss/camss.o',*targets[1:]]
+    if args.phone_cphy:
+        expected.append('drivers/phy/qualcomm/phy-qcom-mipi-csi2-3ph-dphy.o')
     files={}
     for name in expected:
         path=kernel/name
@@ -173,11 +183,13 @@ def main():
             raise ValueError('Expected AArch64 object: '+name)
         files[name]={'sha256':sha(path),'bytes':len(data)}
     (out/'kernel.config').write_text(cfg)
-    proof={'scope':'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
+    proof={'scope':'OFFLINE_CAMERA_COMPILE_ONLY' if args.compile_only else 'OFFLINE_CAMERA_AND_AMPLIFIER_OBJECTS_ONLY','phone_operations':0,
        'isolated_cphy_framework':args.cphy,'cphy_provenance':cphy_lock,
        'phone_cphy_catalog_staged_as_data_only':args.cphy and not args.phone_cphy,
        'phone_cphy_register_table_present':args.phone_cphy,'cphy_capture_qualified':False,
        'phone_cphy_adapter_staged':args.phone_cphy,'phone_adapter_provenance':phone_lock,
+       'compile_only':args.compile_only,'synthetic_checks_executed':not args.compile_only,
+       'phone_cphy_translation_unit_compiled':args.phone_cphy and 'drivers/phy/qualcomm/phy-qcom-mipi-csi2-3ph-dphy.o' in files,
        'infrared_source_staged':args.infrared,'infrared_hardware_qualified':False,
        'kernel_pin':PIN,'patches':lock['patches'],'local_fixes':lock['local_fixes'],'aarch64_objects':files,
        'disabled_cci_resources':lock['disabled_cci_resources'],'resource_rebases':lock['resource_rebases'],

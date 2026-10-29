@@ -1,3 +1,14 @@
+## Camera source build path, 2026-10-29
+
+The camera component workflow now has an explicit compile-only path for the
+source-derived phone C-PHY table and the CAMSS, sensor, CCI and phone PHY
+objects. It records the phone C-PHY translation unit and skips synthetic and
+unit checks in that mode. The candidate remains isolated: no camera node is
+enabled or installed into the normal image. Full camera capture is still
+incomplete because the C.93 L/S module initialization differs and the selected
+supplier and mode have not been established. This compile path does not claim
+a usable camera or qualify a physical frame.
+
 ## Orientation and audio follow-up, 2026-10-29
 
 The owner now confirms autorotation is active but upright portrait is upside

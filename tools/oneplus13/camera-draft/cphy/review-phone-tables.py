@@ -11,7 +11,11 @@ def main():
     parser.add_argument('--cross-compile',choices=('aarch64-linux-gnu-',),default='')
     parser.add_argument('--emit-only',action='store_true',
                         help='Generate source data only; no compiler or test execution')
+    parser.add_argument('--compile-only',action='store_true',
+                        help='Compile generated phone tables without synthetic checks')
     args=parser.parse_args()
+    if args.emit_only and args.compile_only:
+        raise ValueError('--emit-only and --compile-only are mutually exclusive')
     if not args.emit_only and not args.cross_compile and platform.machine() not in ('aarch64','arm64'):
         raise ValueError('Native ARM64 or explicit AArch64 cross compiler required')
     source=args.source
@@ -89,6 +93,34 @@ def main():
                 'rate_tables':len(rates),'compiled':False,'tests_executed':False,
                 'phone_operations':0,'hardware_qualified':False}
         (out/'source-generation.json').write_text(json.dumps(report,indent=2)+'\n')
+        print(json.dumps(report))
+        return
+    if args.compile_only:
+        source=out/'catalog-compile.c'
+        source.write_text('''#include <stdint.h>
+#include "catalog.h"
+int catalog_compile_reference(void)
+{
+    struct phone_cphy_plan plan;
+    int result = phone_cphy_build_plan(&plan, rates[0].max_symbol_rate,
+                                      400000000U, 1000U, 3000U, 7U);
+    return result ? result : phone_cphy_execute(&plan, 0, 0);
+}
+''')
+        target=out/'catalog-arm64.o'
+        compiler=(args.cross_compile+'gcc') if args.cross_compile else 'gcc'
+        subprocess.run([compiler,'-std=c11','-Wall','-Wextra','-Werror','-c',
+                        str(source),'-o',str(target)],check=True)
+        obj=target.read_bytes()
+        if obj[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(obj[18:20],'little')!=183:
+            raise ValueError('Expected an AArch64 phone C-PHY table object')
+        report={'scope':'PUBLIC_GPL_PHONE_CPHY_TABLE_COMPILE_ONLY',
+                'source_sha256':hashlib.sha256(raw).hexdigest(),
+                'generated_header_sha256':hashlib.sha256(header.encode()).hexdigest(),
+                'rate_tables':len(rates),'aarch64_object_sha256':hashlib.sha256(obj).hexdigest(),
+                'compiled':True,'tests_executed':False,'phone_operations':0,
+                'hardware_qualified':False}
+        (out/'verification.json').write_text(json.dumps(report,indent=2)+'\n')
         print(json.dumps(report))
         return
     harness='''#include <assert.h>

@@ -1,3 +1,15 @@
+## Camera capture dependencies, 2026-10-29
+
+The public phone-specific CSIPHY table and MMIO adapter now have a compile-only
+Actions path, including the exact AArch64 object for the adapter translation
+unit. This verifies compilation only and leaves the board graph disabled. Full
+sensor streaming still requires selecting the C.93 L/S supplier, implementing
+its corresponding initialization and 19.2 MHz C-PHY mode, and completing the
+phone CAMSS/CSID graph with reviewed power and interconnect resources. The
+local records show that L and S initialization sequences differ; publishing raw
+proprietary tables is not part of this change. Do not mark camera adaptation
+complete or add the candidate graph to the default image from this compile.
+
 ## Upright mapping and GStreamer caps evidence, 2026-10-29
 
 The owner confirms that automatic rotation works, but normal upright portrait
