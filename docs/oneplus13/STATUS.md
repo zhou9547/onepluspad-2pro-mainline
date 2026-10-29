@@ -1,3 +1,28 @@
+## r59 joint regression and raw timer evidence, 2026-10-29
+
+All five jobs in Actions40820121568 passed on da0f54cb. Independent downloaded
+image verification and r59 repeat camera chip-ID/teardown, microphone, separate
+speaker correlation, actual20/50/100% plus mute, both WiFi bands, Docker,
+production left-up/Mutter1 and GNOME/Chinese/SSH/Dock. Kernel-health gates are
+clean. Android returned after493.6s with seven matching baselines and zero
+partition writes. Native video selftest passed without opening hardware.
+
+The read-only Gunyah STATUS diagnostic now gives direct evidence: enabled0
+before open, enabled1 after open, raw elapsed0 immediately after keepalive and44
+after2.0004s, while GETTIMELEFT remains12. The ABI's bit31 is1 immediately after
+open as well as later; its asserted state alone is not reset evidence. Units,
+idle-time behavior and the meaning of that flag on this firmware remain open.
+Cleanup disarmed the watchdog; host recovery, not independent expiry, returned
+Android. Keep the historical stop flag and video/suspend recovery gates.
+
+A separate --diagnose-clock mode samples idle2s/busy2s/idle2s on one allowed
+CPU at the original32s timeout, records wall/process time and raw STATUS,
+checks the final keepalive response and magic-closes. It does not infer units,
+change the driver or relax the existing12s reset acceptance path. Its fresh
+Actions/source-bound combined diagnostic remains pending. Camera template
+selection is reviewed separately in
+[CAMERA-MODE-SELECTION-20261029.md](CAMERA-MODE-SELECTION-20261029.md).
+
 ## r58 exact source image regression; Gunyah countdown diagnosis, 2026-10-29
 
 All five jobs in Actions40816388596 passed on297a5a69. Independent downloaded

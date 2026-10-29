@@ -55,10 +55,38 @@ def record(doc):
     print('WATCHDOG_RECOVERY_RESULT '+json.dumps(doc,sort_keys=True),flush=True)
 
 
+def clock_probe(sample,report,keepalive):
+    """Collect idle/busy STATUS evidence; never infer units or qualify recovery."""
+    affinity=os.sched_getaffinity(0)
+    if not affinity:raise ValueError('Empty CPU affinity')
+    cpu=min(affinity)
+    report.update(clock_probe_cpu=cpu,clock_intervals=[])
+    try:
+        os.sched_setaffinity(0,{cpu})
+        sample('clock-probe-start')
+        for mode in ('idle','busy','idle'):
+            wall=time.monotonic();process=time.process_time()
+            if mode=='idle':time.sleep(2)
+            else:
+                deadline=wall+2
+                while time.monotonic()<deadline:pass
+            report['clock_intervals'].append({
+                'mode':mode,'wall_seconds':time.monotonic()-wall,
+                'process_seconds':time.process_time()-process})
+            sample('clock-probe-'+mode+'-'+str(len(report['clock_intervals'])))
+        keepalive()
+        sample('clock-probe-after-keepalive')
+    finally:
+        os.sched_setaffinity(0,affinity)
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release',required=True)
-    parser.add_argument('--arm-one-reset',action='store_true',required=True)
+    mode=parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--arm-one-reset',action='store_true')
+    mode.add_argument('--diagnose-clock',action='store_true',
+                      help='Six-second STATUS sampling, then disarm; no reset qualification')
     parser.add_argument('--require-hypervisor-status',action='store_true')
     args=parser.parse_args()
     if os.geteuid()!=0 or os.uname().release!=args.release:raise ValueError('Wrong root/kernel')
@@ -81,11 +109,13 @@ def main():
     if not stat.S_ISCHR(node.st_mode) or (os.major(node.st_rdev),os.minor(node.st_rdev))!=(major,minor):
         raise ValueError('Wrong watchdog character device')
     STATE.mkdir(mode=0o700,exist_ok=False)
-    report={'scope':'ONE_MANUAL_RAM_GUNYAH_WATCHDOG_RESET','suspend_requested':False,
+    report={'scope':('ONE_MANUAL_RAM_GUNYAH_CLOCK_DIAGNOSTIC' if args.diagnose_clock else
+                     'ONE_MANUAL_RAM_GUNYAH_WATCHDOG_RESET'),'suspend_requested':False,
             'partition_writes':0,'armed':False,'countdown_verified':False,
             'keepalive_verified':False,'reset_observed':False,'hardware_samples':[]}
     def sample(label):
-        report['hardware_samples'].append(status_sample(base,label,args.require_hypervisor_status))
+        report['hardware_samples'].append(status_sample(
+            base,label,args.require_hypervisor_status or args.diagnose_clock))
     fd=None
     try:
         report['stage']='inactive-status'
@@ -100,13 +130,22 @@ def main():
         report['support_options']=options
         if options&0x8180!=0x8180:raise ValueError('Missing timeout/keepalive/magic-close support')
         report['stage']='timeout'
-        report['set_timeout_readback']=ioctl_int(fd,WDIOC_SETTIMEOUT,12)
+        requested_timeout=32 if args.diagnose_clock else 12
+        report['set_timeout_readback']=ioctl_int(fd,WDIOC_SETTIMEOUT,requested_timeout)
         report['get_timeout_readback']=ioctl_int(fd,WDIOC_GETTIMEOUT)
-        if report['set_timeout_readback']!=12 or report['get_timeout_readback']!=12:
+        if (report['set_timeout_readback']!=requested_timeout or
+            report['get_timeout_readback']!=requested_timeout):
             raise ValueError('Watchdog timeout readback mismatch')
         report['stage']='first-keepalive'
         ioctl_int(fd,WDIOC_KEEPALIVE)
         sample('first-keepalive')
+        if args.diagnose_clock:
+            # The existing reset/countdown gate below remains unchanged.
+            # No keepalive occurs during the six-second comparison window.
+            report['stage']='clock-probe'
+            clock_probe(sample,report,lambda:ioctl_int(fd,WDIOC_KEEPALIVE))
+            report.update(stage='clock-probe-complete',clock_probe_completed=True)
+            return
         report['stage']='countdown'
         first=ioctl_int(fd,WDIOC_GETTIMELEFT)
         report['first_timeleft']=first

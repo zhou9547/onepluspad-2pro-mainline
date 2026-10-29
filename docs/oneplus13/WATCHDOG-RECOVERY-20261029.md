@@ -1,5 +1,24 @@
 # Manual RAM watchdog recovery check
 
+r59 on the exact da0f54cb Actions40820121568 image records raw STATUS elapsed
+0 immediately after keepalive and44 after2.0004s, with GETTIMELEFT12 both times.
+Enabled changes0 to1 on open; bit31 is already1 immediately after open. These
+are direct values, not a confirmed interpretation of firmware time/flags.
+The watchdog was disarmed and ordinary host recovery returned Android with
+matching baselines. Independent reset remains unqualified.
+
+The mutually exclusive `--diagnose-clock` mode uses the same root/RAM/kernel/
+storage/device/guard checks, requires the STATUS diagnostic before open,
+retains32s timeout, and pins only its own process to the lowest allowed CPU.
+It samples idle2s, busy2s and idle2s without keepalives between samples, then
+records a final keepalive response on that CPU and magic-close disarms. Wall
+time and process CPU time accompany the samples; original affinity is restored
+even on a sampling failure. No CPU is offlined and no cpuidle/PM configuration
+is modified. No units or pass/fail reset criterion are inferred from this
+comparison. The original `--arm-one-reset`12s countdown/keepalive/expiry gates
+are unchanged. Both modes must be invoked explicitly at the end of a combined
+session; neither enables a default watchdog policy.
+
 The exact pinned `drivers/watchdog/gunyah_wdt.c` implements the hypervisor's
 start/stop, timeout, keepalive and elapsed-time interfaces. It limits timeouts
 to32s, supports magic close and stops an active watchdog in its suspend callback.

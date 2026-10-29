@@ -1,3 +1,19 @@
+## Raw timer evidence and camera template ambiguity, 2026-10-29
+
+r59 retains all mature joint feature checks and clean Android recovery, but
+still does not qualify independent watchdog reset. Raw elapsed advances44
+across2.0004s and bit31 is already1 immediately after open. Do not guess units,
+equate that bit with an observed reboot, or substitute a software timer.
+The next explicit six-second idle/busy/idle diagnostic records process and
+wall time on one CPU at32s, then disarms; it is not the reset acceptance path.
+Keep Iris activation and unattended suspend gated by independent recovery.
+
+The C.93 D/L/S camera templates disagree on inferred D-PHY/C-PHY mode and
+none of their ID fields directly equals the confirmed physical0x38e5.
+The selected stock HAL module/field override path remains unproven. Do not
+turn this into a physical C-PHY claim or use the easier D-PHY template without
+evidence. See [the mode review](CAMERA-MODE-SELECTION-20261029.md).
+
 ## Observed Gunyah countdown failure, 2026-10-29
 
 r58 reproduces unchanged12s GETTIMELEFT across a2s interval, with matching
