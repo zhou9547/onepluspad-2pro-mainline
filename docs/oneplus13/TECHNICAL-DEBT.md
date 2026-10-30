@@ -1,3 +1,14 @@
+# Native GNSS entry-point coverage, 2026-10-31
+
+The first single-client image compiled successfully but its Python dispatch
+branch referenced the unimported `os` module and returned a Path object that
+could not be encoded in the result JSON. Collector-only tests used a string
+and did not exercise this branch. The new main-entry regression reproduces
+both failures and passes with the import and path conversion corrected.
+This is an offline software correction;
+GNSS engine start, a real fix, and clean stop remain unqualified until a fresh
+image is independently verified and run with owner confirmation.
+
 # r188 single-client GNSS and physical USB data path, 2026-10-31
 
 `qmicli` performs one LOC operation and exits. Direct QRTR sessions therefore

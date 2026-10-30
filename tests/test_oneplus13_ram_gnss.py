@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib.util
+import io
+import json
 from pathlib import Path
 import unittest
 from unittest.mock import Mock, patch
@@ -20,6 +22,38 @@ def sentence(payload):
 
 
 class GnssNmeaTests(unittest.TestCase):
+    def test_main_selects_executable_native_client(self):
+        # Exercise the real entry point: collector-only tests cannot catch a
+        # missing module import in the native-helper selection branch.
+        response = {
+            "returncode": 0,
+            "stdout": (
+                "LOCATION_SESSION_STARTED seconds=30\n"
+                "NMEA " + sentence(
+                    "GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,"
+                ) + "\nLOCATION_SESSION_STOPPED nmea=1\n"
+            ),
+            "stderr": "",
+        }
+        output = io.StringIO()
+        with patch("sys.argv", [str(PATH), "--seconds", "30"]), patch.object(
+            GNSS.Path, "is_file", return_value=True
+        ), patch("os.access", return_value=True), patch.object(
+            GNSS, "run", return_value=response
+        ) as run, patch.object(GNSS, "probe_devices") as legacy, patch(
+            "sys.stdout", output
+        ):
+            with self.assertRaises(SystemExit) as stopped:
+                GNSS.main()
+        self.assertEqual(stopped.exception.code, 0)
+        run.assert_called_once_with(
+            [str(Path("/usr/libexec/oneplus13-location-session")), "--seconds", "30"], 80
+        )
+        legacy.assert_not_called()
+        result = json.loads(output.getvalue().removeprefix("RAM_GNSS_RESULT "))
+        self.assertTrue(result["pass"])
+        self.assertTrue(result["cleanup_complete"])
+
     def test_rmc_and_gga_fix_are_parsed(self):
         fixes = GNSS.parse_fix(
             [

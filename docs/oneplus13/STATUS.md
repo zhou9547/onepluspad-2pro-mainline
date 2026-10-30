@@ -1,3 +1,15 @@
+# Native GNSS entry-point correction, 2026-10-31
+
+Actions run 41090987923 built the single-client LOC candidate at `0477f68f`
+successfully in all five jobs. Resume review found that the Python entry point
+uses `os.access()` without importing `os`, then attempts to encode a Path
+object into JSON, so that candidate must not be used for hardware acceptance.
+A new entry-point test reproduces both failures; importing `os` and converting
+the helper path to a string makes all ten GNSS tests pass. The test exercises native
+client selection, checked NMEA, stop/cleanup, and the emitted result without
+opening QRTR or touching the phone. A fresh source-bound image and explicit
+owner start confirmation remain required before the next combined RAM round.
+
 # r188 single-client LOC helper and physical USB evidence, 2026-10-31
 
 The `4ad0ae4a` Actions image completed a combined RAM round and returned

@@ -5,6 +5,7 @@
 import argparse
 import json
 import math
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -192,6 +193,7 @@ def collect_session(qmicli, device, seconds):
 
 def collect_native_session(native, seconds):
     """Run one native QRTR client for setup, start, follow and stop."""
+    native = str(native)
     process = run([native, "--seconds", str(seconds)], seconds + 50)
     lines = process.get("stdout", "").splitlines()
     nmea = [
