@@ -73,6 +73,12 @@ class CameraCaptureModemTree(unittest.TestCase):
                 self.assertEqual(
                     self.tree.nodes[endpoint]["reg"], b"\0\0\0\0"
                 )
+                if port == 0:
+                    from stock import cells
+                    self.assertEqual(
+                        cells(self.tree.nodes[endpoint]["bus-type"]),
+                        [combined.capture.V4L2_FWNODE_BUS_TYPE_CSI2_CPHY],
+                    )
         selected = (
             combined.capture.PHYS[1]["path"]
             + "/ports/port@0/endpoint@0"
@@ -86,6 +92,26 @@ class CameraCaptureModemTree(unittest.TestCase):
             cells(self.tree.nodes[sensor_endpoint]["bus-type"]),
             [combined.capture.V4L2_FWNODE_BUS_TYPE_CSI2_CPHY],
         )
+        camss_endpoint = (
+            combined.capture.CAMSS + "/ports/port@1/endpoint@0"
+        )
+        phy_output = (
+            combined.capture.PHYS[1]["path"]
+            + "/ports/port@1/endpoint@0"
+        )
+        self.assertEqual(
+            cells(self.tree.nodes[camss_endpoint]["remote-endpoint"]),
+            [cells(self.tree.nodes[phy_output]["phandle"])[0]],
+        )
+        self.assertEqual(
+            cells(self.tree.nodes[camss_endpoint]["bus-type"]),
+            [combined.capture.V4L2_FWNODE_BUS_TYPE_CSI2_CPHY],
+        )
+        for index in (0, 2, 3, 4, 5):
+            port = combined.capture.CAMSS + f"/ports/port@{index}"
+            self.assertNotIn(port, self.tree.nodes)
+        selected_port = combined.capture.CAMSS + "/ports/port@1"
+        self.assertNotIn("status", self.tree.nodes[selected_port])
 
 
 if __name__ == "__main__":

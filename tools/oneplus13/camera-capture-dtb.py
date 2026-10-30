@@ -266,6 +266,10 @@ def derive(blob):
             "opp-hz": u32(0, 300000000),
             "required-opps": u32(rpmhpd_low_svs_d1, rpmhpd_low_svs_d1),
         }
+        tree.nodes[path + "/opp-table/opp-400000000"] = {
+            "opp-hz": u32(0, 400000000),
+            "required-opps": u32(rpmhpd_low_svs_d1, rpmhpd_low_svs_d1),
+        }
         tree.nodes[path]["operating-points-v2"] = u32(
             phandle(path + "/opp-table")
         )
@@ -280,6 +284,7 @@ def derive(blob):
         }
         tree.nodes[path + "/ports/port@0/endpoint@0"] = {
             "reg": u32(0),
+            "bus-type": u32(V4L2_FWNODE_BUS_TYPE_CSI2_CPHY),
             "data-lanes": u32(0, 1, 2),
         }
         tree.nodes[path + "/ports/port@1"] = {
@@ -292,13 +297,19 @@ def derive(blob):
         }
 
     # FWNODE_GRAPH filters unconnected input endpoints. Keep unused PHY inputs
-    # internally connected to their own output endpoint, then replace the
-    # selected CSIPHY1 input with the real sensor link below.
+    # paired to their own outputs, then connect the selected CSIPHY1 input to
+    # the S5KJN5. CAMSS discovers that sensor through the single enabled CAMSS
+    # port and creates the immutable sensor->CSIPHY media link.
     for phy in PHYS:
         tree.nodes[
             phy["path"] + "/ports/port@0/endpoint@0"
         ]["remote-endpoint"] = u32(
             phandle(phy["path"] + "/ports/port@1/endpoint@0")
+        )
+        tree.nodes[
+            phy["path"] + "/ports/port@1/endpoint@0"
+        ]["remote-endpoint"] = u32(
+            phandle(phy["path"] + "/ports/port@0/endpoint@0")
         )
 
     sensor_phy_endpoint = (
@@ -389,7 +400,7 @@ def derive(blob):
         "#address-cells": u32(1),
         "#size-cells": u32(0),
     }
-    for phy in PHYS:
+    for phy in (PHYS[1],):
         port = CAMSS + f"/ports/port@{phy['id']}"
         endpoint = port + "/endpoint@0"
         tree.nodes[port] = {
@@ -399,6 +410,7 @@ def derive(blob):
         }
         tree.nodes[endpoint] = {
             "reg": u32(0),
+            "bus-type": u32(V4L2_FWNODE_BUS_TYPE_CSI2_CPHY),
             "data-lanes": u32(*(range(3) if phy["id"] == 1 else range(4))),
         }
         tree.nodes[endpoint]["remote-endpoint"] = u32(
@@ -447,7 +459,9 @@ def derive(blob):
         "csiphy_index": 1,
         "csid_index": 1,
         "vfe_index": 1,
+        "camss_ports_present": [1],
         "cphy_trios": 3,
+        "phy_opp_rates_hz": [300000000, 400000000],
         "link_frequency_hz": 1400000000,
         "symbol_rate_hz": 2800000000,
         "settle_count_expected": 45,

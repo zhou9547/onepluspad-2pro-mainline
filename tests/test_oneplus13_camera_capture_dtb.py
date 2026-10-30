@@ -26,6 +26,10 @@ class CameraCaptureTree(unittest.TestCase):
         self.assertEqual(self.report["csid_index"], 1)
         self.assertEqual(self.report["vfe_index"], 1)
         self.assertEqual(self.report["cphy_trios"], 3)
+        self.assertEqual(
+            self.report["phy_opp_rates_hz"],
+            [300_000_000, 400_000_000],
+        )
         self.assertEqual(self.report["link_frequency_hz"], 1_400_000_000)
         self.assertEqual(self.report["settle_count_expected"], 45)
 
@@ -45,6 +49,28 @@ class CameraCaptureTree(unittest.TestCase):
             ["oneplus,dodge-ultrawide-csi2-phy-experimental"],
         )
 
+    def test_sensor_reaches_camss_through_the_selected_cphy_path(self):
+        sensor = capture.probe.SENSOR + "/port/endpoint"
+        camss = capture.CAMSS + "/ports/port@1/endpoint@0"
+        phy_input = capture.PHYS[1]["path"] + "/ports/port@0/endpoint@0"
+        phy_output = capture.PHYS[1]["path"] + "/ports/port@1/endpoint@0"
+        self.assertEqual(
+            cells(self.tree.nodes[camss]["bus-type"]),
+            [capture.V4L2_FWNODE_BUS_TYPE_CSI2_CPHY],
+        )
+        self.assertEqual(
+            cells(self.tree.nodes[sensor]["remote-endpoint"]),
+            [cells(self.tree.nodes[phy_input]["phandle"])[0]],
+        )
+        self.assertEqual(
+            cells(self.tree.nodes[phy_input]["remote-endpoint"]),
+            [cells(self.tree.nodes[sensor]["phandle"])[0]],
+        )
+        self.assertEqual(
+            cells(self.tree.nodes[phy_output]["remote-endpoint"]),
+            [cells(self.tree.nodes[camss]["phandle"])[0]],
+        )
+
     def test_camss_has_sm8750_resources_and_full_phy_array(self):
         node = self.tree.nodes[capture.CAMSS]
         self.assertEqual(strings(node["compatible"]), ["qcom,sm8750-camss"])
@@ -60,6 +86,11 @@ class CameraCaptureTree(unittest.TestCase):
                                            0x4000007C, 5,
                                            0x4000007C, 0]
         )
+        for index in (0, 2, 3, 4, 5):
+            self.assertNotIn(
+                capture.CAMSS + f"/ports/port@{index}",
+                self.tree.nodes,
+            )
 
     def test_default_tree_and_qualification_remain_false(self):
         self.assertFalse(self.report["default_boot_tree_changed"])

@@ -1,3 +1,63 @@
+# r178/r179 camera receive follow-up, 2026-10-30
+
+The stock normal-preview C-PHY table selects output selector `0x0b30 = 0x0102`;
+the two-exposure variant uses `0x0103`. The source now carries the normal-preview
+selector as a bounded candidate, with its generated sensor source and patch hash
+updated. r178 retained NFC binding, infrared transmit, USB role switching and
+one s2idle plus two RTC-woken deep-suspend cycles, and returned to Android with
+all seven baseline properties unchanged. It still produced no real sensor frame,
+so the selector is not presented as a camera fix.
+
+A separate r179 diagnostic PHY attempted to sample 24 lane-status groups from
+its IRQ handler. The node maps `0x2000` bytes, but indices six and above exceed
+that mapping. The session stopped responding and the diagnostic candidate was
+withdrawn. No such register-range expansion or IRQ sampling block is included
+in the product source. Further receive work must use existing bounded logs or
+explicitly reviewed address-range mappings before another combined RAM test.
+Camera, physical NFC-tag detection, optical IR receipt, physical USB peripheral
+I/O, GNSS fix and modem qualification remain open.
+
+# r177 C-PHY receive boundary and live sensor frame proof, 2026-10-30
+
+The current candidate was exercised in four bounded combined RAM sessions. Each
+returned to Android with all seven baseline properties matching and no partition
+writes. NFC controller binding, infrared LIRC transmit, DWC3
+`device -> host -> device`, and one s2idle plus two RTC-woken deep-suspend cycles
+were included in the same sessions.
+
+Camera topology now reaches a single immutable path through
+`S5KJN5 -> CSIPHY1 -> CSID1 -> VFE1/RDI0 -> video3`. The same CSID/VFE capture
+node produced a complete 15,728,640-byte TPG frame, so camera negotiation, V4L2
+buffers, CSID1, VFE1 and the downstream video path are functioning. The
+400 MHz CSIPHY operating point was required before the generic PHY stream could
+start.
+
+The live S5KJN5 CCI initialization and mode write complete, and its frame-count
+register advances while the PHY reports interrupts. This proves that the sensor
+is producing internal frames. However, CSID1 receives no packet or frame
+interrupt and VFE1 remains at zero, so real pixels are not yet qualified.
+
+Stock C.93 camera logs and debugfs were compared at the same point:
+
+- stock and mainline both select CPHY1, CSID1, lane assignment `0x210`,
+  lane-enable `0x2a`, settle count 45, and the 6,384,000,000 bps PHY table;
+- the mainline plan statically matches the stock v2.3.0 register image;
+- the mainline lane-control value reads `0x1014 = 0x2a` after the plan, matching
+  stock; and
+- stock trios after streaming report `0x0, 0x5, 0x5`, while the current
+  mainline capture reports `0x0, 0x10, 0x0`.
+
+The remaining fault is therefore at the boundary between the sensor's selected
+three-trio output format and CSID1 receive/decode. The helper now keeps the
+sensor test pattern off by default, records controls and short summaries,
+attempts RDI0/RDI1/RDI2 mappings, preserves a verified TPG fallback, and can
+load exact-build diagnostic CAMSS, PHY and sensor modules only from the
+session-local `/run/oneplus13/core` directory.
+
+This is substantial runtime evidence but not camera acceptance. Camera remains
+manual and default-off until a real frame is verified and the retained combined
+hardware matrix still passes on the exact source-bound image.
+
 # r81 bounded GNSS sessions and shared-module preservation, 2026-10-30
 
 # r82 exact target runtime boundaries, 2026-10-30
@@ -1566,7 +1626,7 @@ partition image or per-run private evidence is stored on this branch.
 
 The owner requires subsequent images to retain every previously tested feature.
 The prior isolated image is a diagnostic draft, not a feature-complete upgrade.
-Run82/83 restored the fixed previously tested WLAN/BT software/firmware bytes
+Run82/83 restored the fixed previously tested WLAN/` software/firmware bytes
 while replacing reference ADSP/GPU with independently verified phone inputs.
 Display, hardware GPU readback, ordinary-user desktop, powered Bluetooth
 controller/sender/OBEX, touch-device inventory, battery and read-only platform

@@ -15,6 +15,7 @@ from pathlib import Path
 
 STATE = Path("/run/oneplus13/camera-capture")
 FRAME = STATE / "frame-sgbgr10.raw"
+TPG_FRAME = STATE / "frame-tpg-sgbgr10.raw"
 POLICY = Path(
     "/etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf"
 )
@@ -27,6 +28,9 @@ MIN_BYTES = WIDTH * HEIGHT * 5 // 4
 VFE_ENTITY = "msm_vfe1_rdi0"
 VIDEO_ENTITY = "msm_vfe1_video0"
 PROGRESS = STATE / "progress.json"
+DEBUG_CPHY_MODULE = Path("/run/oneplus13/core/phy-qcom-mipi-csi2.ko")
+DEBUG_CAMSS_MODULE = Path("/run/oneplus13/core/qcom-camss.ko")
+DEBUG_SENSOR_MODULE = Path("/run/oneplus13/core/s5kjn5.ko")
 
 
 def progress(stage, **facts):
@@ -128,6 +132,18 @@ def entity_node(entities, name):
     return videos[0]
 
 
+def entity_subdev_node(entities, name):
+    nodes = entities[name]["nodes"]
+    subdevs = [
+        node for node in nodes if node.startswith("/dev/v4l-subdev")
+    ]
+    if len(subdevs) != 1:
+        raise ValueError(
+            f"Expected one V4L2 subdevice node for {name}: {nodes}"
+        )
+    return subdevs[0]
+
+
 def module_diagnostics(module_names):
     rows = {}
     for name in module_names:
@@ -151,14 +167,226 @@ def module_diagnostics(module_names):
     return {"modules": rows, "matching_drivers": buses}
 
 
-def set_link(device, source, source_pad, sink, sink_pad):
+def camss_probe_trace():
+    """Capture return values while retrying CAMSS probe after module load."""
+    trace = Path("/sys/kernel/debug/tracing")
+    events = trace / "kprobe_events"
+    driver = Path("/sys/bus/platform/drivers/qcom-camss")
+    device = Path("/sys/bus/platform/devices/ad27000.isp")
+    if not events.is_file() or not (driver / "bind").is_file() or not device.is_dir():
+        return {"available": False}
+    original = events.read_text()
+    names = (
+        "camss_probe", "camss_icc_get", "camss_configure_pd",
+        "camss_init_subdevices", "dma_set_mask_and_coherent",
+        "camss_parse_ports", "camss_register_entities",
+        "camss_link_entities",
+    )
+    created = []
+    try:
+        events.write_text(original)
+        for name in names:
+            event = "oneplus13_" + name
+            with events.open("a") as stream:
+                stream.write(f"r:{event} {name} ret=$retval\n")
+            created.append(event)
+        (trace / "trace").write_text("")
+        (trace / "tracing_on").write_text("1\n")
+        if not Path("/sys/bus/platform/devices/ad27000.isp/driver").exists():
+            (driver / "bind").write_text(device.name + "\n")
+        time.sleep(2)
+        (trace / "tracing_on").write_text("0\n")
+        output = (trace / "trace").read_text()
+        return {
+            "available": True,
+            "created": created,
+            "driver_bound": Path(
+                "/sys/bus/platform/devices/ad27000.isp/driver"
+            ).exists(),
+            "trace": [line for line in output.splitlines()
+                      if "oneplus13_" in line][-128:],
+        }
+    except Exception as error:
+        return {
+            "available": True,
+            "created": created,
+            "error": type(error).__name__ + ": " + str(error),
+        }
+    finally:
+        try:
+            events.write_text(original)
+            (trace / "tracing_on").write_text("0\n")
+        except OSError:
+            pass
+
+
+def stream_trace_start():
+    trace = Path("/sys/kernel/debug/tracing")
+    events = trace / "kprobe_events"
+    if not events.is_file():
+        available = trace / "available_filter_functions"
+        selector = trace / "set_ftrace_filter"
+        tracer = trace / "current_tracer"
+        if not (available.is_file() and selector.is_file() and tracer.is_file()):
+            return None
+        names = {
+            "s5kjn5_enable_streams", "csid_isr", "vfe_isr",
+            "vfe_buf_done", "dodge_cphy_irq",
+        }
+        functions = [
+            line.split()[0]
+            for line in available.read_text().splitlines()
+            if line.split() and line.split()[0] in names
+        ]
+        if not functions:
+            return None
+        previous = tracer.read_text().strip()
+        try:
+            selector.write_text("\n".join(functions) + "\n")
+            (trace / "trace").write_text("")
+            tracer.write_text("function\n")
+            (trace / "tracing_on").write_text("1\n")
+        except OSError as error:
+            return {
+                "state": None,
+                "report": {
+                    "available": True,
+                    "mode": "function",
+                    "error": type(error).__name__ + ": " + str(error),
+                },
+            }
+        return {
+            "state": {
+                "mode": "function",
+                "trace": trace,
+                "tracer": tracer,
+                "selector": selector,
+                "previous": previous,
+            },
+            "report": {
+                "available": True,
+                "mode": "function",
+                "functions": functions,
+            },
+        }
+    original = events.read_text()
+    entries = (
+        ("stream_enter", "s5kjn5_enable_streams", "p"),
+        ("stream_exit", "s5kjn5_enable_streams", "r"),
+        ("csid_irq", "csid_isr", "p"),
+        ("vfe_irq", "vfe_isr", "p"),
+        ("vfe_buf_done", "vfe_buf_done", "p"),
+        ("cphy_irq", "dodge_cphy_irq", "p"),
+    )
+    created = []
+    try:
+        events.write_text(original)
+        for suffix, symbol, kind in entries:
+            line = f"{kind}:oneplus13_{suffix} {symbol}"
+            if kind == "r":
+                line += " ret=$retval"
+            line += "\n"
+            try:
+                events.write_text(original + "".join(created) + line)
+            except OSError:
+                continue
+            created.append(line)
+        (trace / "trace").write_text("")
+        (trace / "tracing_on").write_text("1\n")
+    except OSError as error:
+        try:
+            events.write_text(original)
+        except OSError:
+            pass
+        return {
+            "state": None,
+            "report": {
+                "available": True,
+                "error": type(error).__name__ + ": " + str(error),
+                "created": [line.split()[0] for line in created],
+            },
+        }
+    return {
+        "state": {
+            "trace": trace,
+            "events": events,
+            "original": original,
+        },
+        "report": {
+            "available": True,
+            "mode": "kprobe",
+            "created": [line.split()[0] for line in created],
+        },
+    }
+
+
+def stream_trace_stop(started):
+    if not started:
+        return {"available": False}
+    state = started["state"]
+    report = dict(started["report"])
+    if not state:
+        return report
+    trace = state["trace"]
+    if state["mode"] == "function":
+        try:
+            (trace / "tracing_on").write_text("0\n")
+            lines = [
+                line for line in (trace / "trace").read_text().splitlines()
+                if re.search(r"\s(" + "|".join(re.escape(name) for name in report["functions"]) + r")\s*$", line)
+            ]
+            counts = {}
+            for line in lines:
+                match = re.search(r"\s([^\s]+)\s*$", line)
+                if match:
+                    counts[match.group(1)] = counts.get(match.group(1), 0) + 1
+            report["counts"] = counts
+            report["lines"] = lines[-128:]
+        except OSError as error:
+            report["error"] = type(error).__name__ + ": " + str(error)
+        finally:
+            try:
+                state["tracer"].write_text(state["previous"] + "\n")
+                state["selector"].write_text("")
+                (trace / "tracing_on").write_text("0\n")
+            except OSError:
+                pass
+        return report
+    try:
+        (trace / "tracing_on").write_text("0\n")
+        lines = [
+            line for line in (trace / "trace").read_text().splitlines()
+            if "oneplus13_" in line
+        ]
+        counts = {}
+        for line in lines:
+            match = re.search(r": oneplus13_([^:]+):", line)
+            if match:
+                counts[match.group(1)] = counts.get(match.group(1), 0) + 1
+        report["counts"] = counts
+        report["lines"] = lines[-128:]
+    except OSError as error:
+        report["error"] = type(error).__name__ + ": " + str(error)
+    finally:
+        try:
+            state["events"].write_text(state["original"])
+            (trace / "tracing_on").write_text("0\n")
+        except OSError:
+            pass
+    return report
+
+
+def set_link(device, source, source_pad, sink, sink_pad, enabled=True):
     run(
         [
             "media-ctl",
             "--device",
             device,
             "--link",
-            f'"{source}":{source_pad} -> "{sink}":{sink_pad}[1]',
+            (
+                f'"{source}":{source_pad} -> "{sink}":{sink_pad}'
+                f'[{1 if enabled else 0}]'
+            ),
         ]
     )
 
@@ -205,6 +433,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", required=True)
     parser.add_argument("--frame-timeout", type=int, default=25)
+    parser.add_argument(
+        "--sensor-test-pattern",
+        type=int,
+        default=-1,
+        help="Optionally select a sensor test pattern before streaming",
+    )
     args = parser.parse_args()
     if os.geteuid() != 0 or os.uname().release != args.release:
         raise ValueError("Wrong camera root/kernel")
@@ -271,7 +505,26 @@ def main():
             progress("module-load", module=module)
             if module_loaded(module):
                 continue
-            run(["modprobe", "--ignore-install", module], timeout=20)
+            if (
+                module == "phy_qcom_mipi_csi2"
+                and DEBUG_CPHY_MODULE.is_file()
+            ):
+                run(
+                    ["insmod", str(DEBUG_CPHY_MODULE)],
+                    timeout=20,
+                )
+            elif module == "qcom_camss" and DEBUG_CAMSS_MODULE.is_file():
+                run(
+                    ["insmod", str(DEBUG_CAMSS_MODULE)],
+                    timeout=20,
+                )
+            elif module == "s5kjn5" and DEBUG_SENSOR_MODULE.is_file():
+                run(
+                    ["insmod", str(DEBUG_SENSOR_MODULE)],
+                    timeout=20,
+                )
+            else:
+                run(["modprobe", "--ignore-install", module], timeout=20)
             loaded.append(module)
         report["module_diagnostics"] = module_diagnostics(ordered)
         report["module_dmesg"] = run(
@@ -291,6 +544,10 @@ def main():
                 }
                 time.sleep(0.25)
         if device is None:
+            report["camss_probe_trace"] = camss_probe_trace()
+            report["module_dmesg_after_retry"] = run(
+                ["dmesg"], timeout=8, check=False
+            ).stdout[-16000:]
             report["failure_media_inventory"] = {
                 str(path): run(
                     ["media-ctl", "--device", path, "--print-topology"],
@@ -303,15 +560,17 @@ def main():
             media_device=str(device),
             sensor_entity=sensor,
             entities=sorted(entities),
+            topology=run(
+                ["media-ctl", "--device", device, "--print-topology"],
+                check=False,
+            ).stdout[-32768:],
         )
         progress("media-discovered", media_device=str(device),
                  entities=sorted(entities))
-        set_link(device, sensor, 0, "msm_csiphy1", 0)
         set_link(device, "msm_csiphy1", 1, "msm_csid1", 0)
         set_link(device, "msm_csid1", 1, VFE_ENTITY, 0)
         progress("links-enabled")
         for entity, pads in (
-            (sensor, (0,)),
             ("msm_csiphy1", (0, 1)),
             ("msm_csid1", (0, 1)),
             (VFE_ENTITY, (0, 1)),
@@ -319,6 +578,35 @@ def main():
             for pad in pads:
                 progress("format", entity=entity, pad=pad)
                 set_format(device, entity, pad)
+        report["post_format_topology"] = run(
+            ["media-ctl", "--device", device, "--print-topology"],
+            check=False,
+        ).stdout[-32768:]
+        time.sleep(0.25)
+        sensor_video = entity_subdev_node(entities, sensor)
+        report["sensor_controls"] = run(
+            ["v4l2-ctl", "--device", sensor_video, "--list-ctrls"],
+            check=False,
+        ).stdout[-8000:]
+        if args.sensor_test_pattern >= 0:
+            pattern = run(
+                [
+                    "v4l2-ctl",
+                    "--device",
+                    sensor_video,
+                    f"--set-ctrl=test_pattern={args.sensor_test_pattern}",
+                ],
+                check=False,
+            )
+            report["sensor_test_pattern"] = {
+                "returncode": pattern.returncode,
+                "stdout": pattern.stdout[-2000:],
+                "stderr": pattern.stderr[-2000:],
+            }
+            report["sensor_controls_after_test_pattern"] = run(
+                ["v4l2-ctl", "--device", sensor_video, "--list-ctrls"],
+                check=False,
+            ).stdout[-8000:]
         video = entity_node(entities, VIDEO_ENTITY)
         run(
             [
@@ -333,25 +621,273 @@ def main():
         if (not re.search(r"Width/Height\s*:\s*4096/3072", selected)
                 or not re.search(r"Pixel Format\s*:\s*'pGAA'", selected)):
             raise ValueError("Capture format was coerced away from reviewed packed RAW10")
+        stream_trace = stream_trace_start()
         progress("stream-start", video=video)
-        result = run(
-            [
-                "v4l2-ctl",
-                "--device",
-                video,
-                "--stream-mmap=16",
-                "--stream-count=1",
-                f"--stream-to={FRAME}",
-                f"--stream-poll",
-            ],
-            timeout=args.frame_timeout,
-            check=False,
+        try:
+            attempts = []
+            for attempt in range(3):
+                if attempt:
+                    time.sleep(0.75)
+                command = [
+                    "v4l2-ctl",
+                    "--device",
+                    video,
+                    "--stream-mmap=16",
+                    "--stream-count=1",
+                    f"--stream-to={FRAME}",
+                    "--stream-poll",
+                ]
+                before_irq = Path("/proc/interrupts").read_text()
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
+                time.sleep(2)
+                during_irq = Path("/proc/interrupts").read_text()
+                try:
+                    stdout, stderr = process.communicate(
+                        timeout=args.frame_timeout
+                    )
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    stdout, stderr = process.communicate()
+                    stderr += "\nv4l2-ctl process timeout\n"
+                attempts.append({
+                    "attempt": attempt + 1,
+                    "returncode": process.returncode,
+                    "stdout": stdout[-2000:],
+                    "stderr": stderr[-4000:],
+                    "frame_bytes": FRAME.stat().st_size
+                    if FRAME.exists() else 0,
+                    "interrupts_before": [
+                        line for line in before_irq.splitlines()
+                        if (
+                            re.match(r"^\s*(426|436|478|603):", line)
+                            or re.search(
+                                r"camss|csid|csiphy|vfe|mipi|cphy|adab000",
+                                line,
+                                re.I,
+                            )
+                        )
+                    ],
+                    "interrupts_during": [
+                        line for line in during_irq.splitlines()
+                        if (
+                            re.match(r"^\s*(426|436|478|603):", line)
+                            or re.search(
+                                r"camss|csid|csiphy|vfe|mipi|cphy|adab000",
+                                line,
+                                re.I,
+                            )
+                        )
+                    ],
+                    "interrupts_all_during": during_irq[-16000:],
+                })
+                if (
+                    process.returncode == 0
+                    and "VIDIOC_STREAMON returned" not in stderr
+                    and FRAME.is_file()
+                    and FRAME.stat().st_size >= MIN_BYTES
+                ):
+                    break
+        finally:
+            report["stream_trace"] = stream_trace_stop(stream_trace)
+        report["stream_attempts"] = attempts
+        report["stream_returncode"] = attempts[-1]["returncode"]
+        report["stream_stdout"] = attempts[-1]["stdout"]
+        report["stream_stderr"] = attempts[-1]["stderr"]
+        report["post_stream_dmesg"] = run(
+            ["dmesg"], timeout=8, check=False
+        ).stdout[-16000:]
+        sensor_frame_ready = (
+            FRAME.is_file() and FRAME.stat().st_size >= MIN_BYTES
         )
-        report["stream_returncode"] = result.returncode
-        report["stream_stdout"] = result.stdout[-2000:]
-        report["stream_stderr"] = result.stderr[-4000:]
-        progress("stream-finished", returncode=result.returncode)
-        if result.returncode:
+        if not sensor_frame_ready:
+            variants = []
+            report["rdi_fallbacks"] = variants
+            for pad, vfe_entity, video_entity in (
+                (2, "msm_vfe1_rdi1", "msm_vfe1_video1"),
+                (3, "msm_vfe1_rdi2", "msm_vfe1_video2"),
+            ):
+                variant_frame = STATE / f"frame-rdi{pad - 1}.raw"
+                variant = {
+                    "rdi_index": pad - 1,
+                    "frame": str(variant_frame),
+                    "attempts": [],
+                }
+                variants.append(variant)
+                try:
+                    set_link(
+                        device, "msm_csid1", 1, VFE_ENTITY, 0,
+                        enabled=False,
+                    )
+                    if pad > 2:
+                        set_link(
+                            device, "msm_csid1", pad - 1,
+                            f"msm_vfe1_rdi{pad - 2}", 0,
+                            enabled=False,
+                        )
+                    set_link(
+                        device, "msm_csid1", pad, vfe_entity, 0,
+                        enabled=True,
+                    )
+                    set_format(device, "msm_csid1", pad)
+                    set_format(device, vfe_entity, 0)
+                    set_format(device, vfe_entity, 1)
+                    variant_video = entity_node(entities, video_entity)
+                    run(
+                        [
+                            "v4l2-ctl",
+                            "--device",
+                            variant_video,
+                            (
+                                f"--set-fmt-video=width={WIDTH},"
+                                f"height={HEIGHT},pixelformat=pGAA"
+                            ),
+                        ]
+                    )
+                    for attempt in range(2):
+                        if attempt:
+                            time.sleep(0.75)
+                        variant_result = run(
+                            [
+                                "v4l2-ctl",
+                                "--device",
+                                variant_video,
+                                "--stream-mmap=16",
+                                "--stream-count=1",
+                                f"--stream-to={variant_frame}",
+                                "--stream-poll",
+                            ],
+                            timeout=args.frame_timeout,
+                            check=False,
+                        )
+                        variant["attempts"].append({
+                            "attempt": attempt + 1,
+                            "returncode": variant_result.returncode,
+                            "stdout": variant_result.stdout[-2000:],
+                            "stderr": variant_result.stderr[-4000:],
+                            "frame_bytes": variant_frame.stat().st_size
+                            if variant_frame.exists() else 0,
+                        })
+                        if (
+                            variant_result.returncode == 0
+                            and "VIDIOC_STREAMON returned"
+                            not in variant_result.stderr
+                            and variant_frame.is_file()
+                            and variant_frame.stat().st_size >= MIN_BYTES
+                        ):
+                            break
+                    if (
+                        variant_frame.is_file()
+                        and variant_frame.stat().st_size >= MIN_BYTES
+                    ):
+                        variant["pixels"] = validate_frame(variant_frame)
+                        variant["frame_verified"] = True
+                        FRAME.write_bytes(variant_frame.read_bytes())
+                        sensor_frame_ready = True
+                        break
+                except Exception as error:
+                    variant["error"] = (
+                        type(error).__name__ + ": " + str(error)
+                    )
+        if not sensor_frame_ready:
+            tpg_report = {"attempts": []}
+            report["tpg_fallback"] = tpg_report
+            try:
+                if "rdi_fallbacks" in report:
+                    try:
+                        set_link(
+                            device, "msm_csid1", 3,
+                            "msm_vfe1_rdi2", 0, enabled=False,
+                        )
+                    except RuntimeError:
+                        pass
+                set_link(
+                    device, "msm_csiphy1", 1, "msm_csid1", 0,
+                    enabled=False,
+                )
+                set_link(
+                    device, "msm_tpg1", 0, "msm_csid1", 0,
+                    enabled=True,
+                )
+                set_link(
+                    device, "msm_csid1", 1, VFE_ENTITY, 0,
+                    enabled=True,
+                )
+                set_format(device, "msm_tpg1", 0)
+                tpg_video = entity_subdev_node(entities, "msm_tpg1")
+                tpg_control = run(
+                    [
+                        "v4l2-ctl",
+                        "--device",
+                        tpg_video,
+                        "--set-ctrl=test_pattern=5",
+                    ],
+                    check=False,
+                )
+                tpg_report["control"] = {
+                    "returncode": tpg_control.returncode,
+                    "stdout": tpg_control.stdout[-2000:],
+                    "stderr": tpg_control.stderr[-2000:],
+                }
+                run(
+                    [
+                        "v4l2-ctl",
+                        "--device",
+                        video,
+                        (
+                            f"--set-fmt-video=width={WIDTH},"
+                            f"height={HEIGHT},pixelformat=pGAA"
+                        ),
+                    ]
+                )
+                for attempt in range(2):
+                    if attempt:
+                        time.sleep(0.75)
+                    tpg_result = run(
+                        [
+                            "v4l2-ctl",
+                            "--device",
+                            video,
+                            "--stream-mmap=16",
+                            "--stream-count=1",
+                            f"--stream-to={TPG_FRAME}",
+                            "--stream-poll",
+                        ],
+                        timeout=args.frame_timeout,
+                        check=False,
+                    )
+                    tpg_report["attempts"].append({
+                        "attempt": attempt + 1,
+                        "returncode": tpg_result.returncode,
+                        "stdout": tpg_result.stdout[-2000:],
+                        "stderr": tpg_result.stderr[-4000:],
+                        "frame_bytes": TPG_FRAME.stat().st_size
+                        if TPG_FRAME.exists() else 0,
+                    })
+                    if (
+                        tpg_result.returncode == 0
+                        and "VIDIOC_STREAMON returned" not in tpg_result.stderr
+                        and TPG_FRAME.is_file()
+                        and TPG_FRAME.stat().st_size >= MIN_BYTES
+                    ):
+                        break
+                if (
+                    TPG_FRAME.is_file()
+                    and TPG_FRAME.stat().st_size >= MIN_BYTES
+                ):
+                    tpg_report["pixels"] = validate_frame(TPG_FRAME)
+                    tpg_report["frame_verified"] = True
+            except Exception as error:
+                tpg_report["error"] = type(error).__name__ + ": " + str(error)
+        progress("stream-finished", returncode=attempts[-1]["returncode"])
+        if (
+            attempts[-1]["returncode"]
+            or "VIDIOC_STREAMON returned" in attempts[-1]["stderr"]
+        ):
             raise ValueError("V4L2 capture failed")
         report["pixels"] = validate_frame(FRAME)
         report["frame_verified"] = True
@@ -390,6 +926,35 @@ def main():
         progress("finished", cleanup_pass=report["cleanup_pass"],
                  frame_verified=report["frame_verified"])
         print("CAMERA_CAPTURE_RESULT " + json.dumps(report, sort_keys=True))
+        print(
+            "CAMERA_CAPTURE_SUMMARY "
+            + json.dumps(
+                {
+                    "cleanup_pass": report["cleanup_pass"],
+                    "frame_verified": report["frame_verified"],
+                    "sensor_test_pattern": report.get("sensor_test_pattern"),
+                    "sensor_controls_after_test_pattern": report.get(
+                        "sensor_controls_after_test_pattern"
+                    ),
+                    "stream_attempts": report.get("stream_attempts"),
+                    "rdi_fallbacks": report.get("rdi_fallbacks"),
+                    "tpg_fallback": report.get("tpg_fallback"),
+                    "post_stream_dmesg": [
+                        line
+                        for line in report.get(
+                            "post_stream_dmesg", ""
+                        ).splitlines()
+                        if re.search(
+                            r"camss|csiphy|csid|vfe|s5kjn5|phy|"
+                            r"timeout|failed|error|warning",
+                            line,
+                            re.I,
+                        )
+                    ][-80:],
+                },
+                sort_keys=True,
+            )
+        )
     if not report["frame_verified"] or not report["cleanup_pass"]:
         raise SystemExit(1)
 

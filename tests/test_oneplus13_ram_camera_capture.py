@@ -47,6 +47,10 @@ class CameraCaptureRuntime(unittest.TestCase):
         self.assertEqual(capture.entity_node(entities, "msm_vfe1_video0"),
                          "/dev/video7")
         self.assertEqual(entities["msm_csiphy1"]["pads"], {0, 1})
+        self.assertEqual(
+            capture.entity_subdev_node(entities, "s5kjn5 1-002d"),
+            "/dev/v4l-subdev0",
+        )
 
     def test_vfe_subdevice_is_not_the_capture_device(self):
         entities = capture.parse_media(TOPOLOGY)

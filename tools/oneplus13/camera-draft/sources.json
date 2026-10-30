@@ -236,13 +236,13 @@
     },
     {
       "file": "fixes/0005-s5kjn5-cphy-3trio.patch",
-      "sha256": "d1df20831308f1500a87eea58ed956bfa3ce343f0e909982456700a50385708f",
+      "sha256": "b553347e836279f224cd60c0b58ea597b3f509a3c4a6fe85a3721020dca31ad3",
       "author": "Codex <codex@openai.com>",
-      "reason": "Use the phone's 19.2MHz three-trio C-PHY timing and report link/PHY timing to CAMSS"
+      "reason": "Use the phone's 19.2MHz three-trio C-PHY timing and report link/PHY timing to CAMSS; select the stock normal-preview C-PHY output format"
     }
   ],
   "sensor_generated_files": {
-    "drivers/media/i2c/s5kjn5.c": "78ca70e3ea6f74a31d8bf77abc426a4a03cde0c22c3ea2835eab96fc1d8416c0",
+    "drivers/media/i2c/s5kjn5.c": "5007f0d0ce236a34f19b811a9adaeb658a871feb0e383f90ecbae80908e758cd",
     "Documentation/devicetree/bindings/media/i2c/samsung,s5kjn5.yaml": "fd0171ba32ee9a4716fa1017b76a6b314205a7d40ca64feb6a884a46c49d79a9"
   }
 }

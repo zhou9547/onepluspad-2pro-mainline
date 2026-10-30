@@ -184,8 +184,7 @@ def main():
     candidates = (
         [args.device]
         if args.device
-        else ["qrtr://0", "qrtr://1", "qrtr://2", "qrtr://3",
-              "qrtr://4", "qrtr://5", "qrtr://6", "qrtr://7"]
+        else ["qrtr://0", "qrtr://1"]
     )
     selected, probes = probe_devices(qmicli, candidates, args.ready_seconds)
     result = {

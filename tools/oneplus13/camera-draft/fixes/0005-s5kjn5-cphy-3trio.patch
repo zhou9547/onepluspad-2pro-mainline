@@ -41,6 +41,8 @@
  struct s5kjn5_mode {
  	u32 width;
  	u32 height;
+@@ -1691,0 +1693,1 @@
++	{ CCI_REG16(0x0b30), 0x0102 },
 @@ -1737,13 +1739,13 @@
  	{ S5KJN5_REG_EXPOSURE, 20 },
  	{ CCI_REG16(0x0226), 0x0014 },
