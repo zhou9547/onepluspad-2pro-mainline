@@ -322,6 +322,59 @@ def main():
     if (combined_sections['dtb']!=(root/'sm8750-oneplus13-camera-gnss.dtb').read_bytes() or
             Fdt(combined_sections['dtb']).nodes!=combined_tree.nodes):
         raise ValueError('Camera/GNSS combined DTB changed')
+    peripheral_runtime=m.get('peripheral_probe_runtime_files',{})
+    required_peripheral_runtime={
+        'usr/libexec/oneplus13-ram-ir-check.py',
+        'usr/libexec/oneplus13-ram-usb-role-check.py',
+        'usr/libexec/oneplus13-ram-suspend-check.py'}
+    if (set(peripheral_runtime)!=required_peripheral_runtime or
+            m.get('peripheral_probe_auto_started') is not False):
+        raise ValueError('Missing manual peripheral probe runtime')
+    for name,digest in peripheral_runtime.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Manual peripheral runtime changed')
+    target_files=m.get('targets_ir_usb_artifacts',{})
+    target_names={'boot-targets-ir-usb-ram-experimental.img',
+                  'sm8750-oneplus13-targets-ir-usb.dtb',
+                  'targets-ir-usb-manifest.json','targets-ir-usb-dtb-review.json'}
+    if (set(target_files)!=target_names or
+            m.get('target_ir_usb_auto_started') is not False or
+            m.get('target_ir_optical_output_qualified') is not False or
+            m.get('target_usb_host_peripheral_qualified') is not False):
+        raise ValueError('Missing manual infrared/USB-role alternative')
+    for name,digest in target_files.items():
+        if sha256(root/name)!=digest:raise ValueError('Infrared/USB-role artifact changed')
+    targets_manifest=json.loads((root/'targets-ir-usb-manifest.json').read_text())
+    if (targets_manifest['scope']!='MANUAL_CAMERA_GNSS_IR_USB_ROLE_RAM_BOOT' or
+            targets_manifest.get('ir_probe_auto_started') is not False or
+            targets_manifest.get('usb_host_probe_auto_started') is not False or
+            targets_manifest.get('optical_output_qualified') is not False or
+            targets_manifest.get('usb_host_peripheral_receipt') is not False or
+            targets_manifest['default_boot_image_sha256']!=m['boot_image_sha256'] or
+            targets_manifest['rootfs_sha256']!=m['rootfs_sha256'] or
+            targets_manifest['source_commit']!=m['source_commit']):
+        raise ValueError('Infrared/USB-role identity or qualification changed')
+    targets_nonce=targets_manifest['session_identity_nonce']
+    if (not re.fullmatch('[a-f0-9]{24}',targets_nonce) or
+            targets_nonce in (nonce,m['session_identity_nonce'],cam_nonce,capture_nonce,modem_nonce,camera_gnss_nonce)):
+        raise ValueError('Infrared/USB-role needs a separate session identity')
+    expected_targets_cmdline=camera_gnss['cmdline'].replace(
+        'oneplus13.session='+camera_gnss_nonce,
+        'oneplus13.session='+targets_nonce)+' oneplus13.ir_probe=1 oneplus13.usb_host_probe=1'
+    if targets_manifest['cmdline']!=expected_targets_cmdline:
+        raise ValueError('Infrared/USB-role boot arguments changed')
+    if (sha256(root/'boot-targets-ir-usb-ram-experimental.img')!=targets_manifest['boot_image_sha256'] or
+            sha256(root/'sm8750-oneplus13-targets-ir-usb.dtb')!=targets_manifest['dtb_sha256']):
+        raise ValueError('Infrared/USB-role manifest hashes disagree')
+    target_sections=boot_sections((root/'boot-targets-ir-usb-ram-experimental.img').read_bytes())
+    for key in ('kernel','ramdisk'):
+        if target_sections[key]!=default_sections[key]:raise ValueError('Infrared/USB-role kernel/initramfs changed')
+    target_dtb=importlib.import_module('camera-gnss-ir-usb-dtb')
+    target_expected,_=target_dtb.derive((Path(__file__).resolve().parents[2]/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    target_tree=Fdt(target_expected);target_tree.nodes['/chosen']['bootargs']=(targets_manifest['cmdline']+'\0').encode()
+    if (target_sections['dtb']!=(root/'sm8750-oneplus13-targets-ir-usb.dtb').read_bytes() or
+            Fdt(target_sections['dtb']).nodes!=target_tree.nodes):
+        raise ValueError('Infrared/USB-role DTB changed')
     nfc_files=m.get('nfc_files',{})
     if (set(nfc_files)!={'usr/lib/systemd/system/oneplus13-nfc.service'} or
             m.get('nfc_service_auto_started') is not True or
@@ -423,6 +476,11 @@ def main():
             'experimental_microphone_files_verified':len(microphone_files),'microphone_auto_started':False,
             'experimental_camera_files_verified':len(camera_files),'camera_auto_started':False,
             'camera_probe_runtime_files_verified':len(camera_runtime),
+            'camera_capture_runtime_files_verified':len(capture_runtime),'camera_capture_auto_started':False,
+            'peripheral_probe_runtime_files_verified':len(peripheral_runtime),
+            'peripheral_probe_auto_started':False,
+            'targets_ir_usb_files_verified':len(target_files),
+            'targets_ir_usb_auto_started':False,
             'nfc_files_verified':len(nfc_files),'nfc_service_auto_started':True,
             'modem_files_verified':len(modem_files),'modem_service_auto_started':True,
             'experimental_video_files_verified':len(video_files),'video_auto_started':False,

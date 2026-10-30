@@ -18,6 +18,18 @@ returned Android with all seven baseline properties matching and zero
 partition writes. Do not treat partial module logs as camera, GNSS, tag,
 infrared, USB-host or suspend acceptance.
 
+## r79 combined target tree, 2026-10-30
+
+The camera/GNSS tree now has a derived alternative that also enables SPI5
+infrared and DWC3 OTG role control. The USB default remains device, and the IR
+encoder can be exercised manually through `/dev/lirc0`. These board changes
+are static-test only until an exact Actions image is downloaded and tested.
+
+IR optical output still needs an external observer or receiver. USB host mode
+still needs a physically attached USB-C peripheral before enumeration and I/O
+can be qualified. Repeated deep-suspend and long-term power behavior remain
+pending. None of the source tests can substitute for those physical results.
+
 ## r77 camera C-PHY graph requires real-frame validation, 2026-10-30
 
 Stock Android evidence selects the installed S5KJN5 ultrawide through
