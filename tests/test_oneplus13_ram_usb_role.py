@@ -28,6 +28,24 @@ class UsbRolePathTests(unittest.TestCase):
                 {"usb_devices", "xhci_platform_devices", "udc"},
             )
 
+    def test_platform_device_mode_file_is_discovered(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            mode = root / "a600000.usb" / "mode"
+            mode.parent.mkdir()
+            mode.write_text("device\n", encoding="utf-8")
+            self.assertEqual(USB.mode_paths(root), mode)
+
+    def test_multiple_mode_files_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for parent in ("a600000.usb", "dwc3.duplicate"):
+                mode = root / parent / "mode"
+                mode.parent.mkdir()
+                mode.write_text("device\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "found 2"):
+                USB.mode_paths(root)
+
 
 if __name__ == "__main__":
     unittest.main()

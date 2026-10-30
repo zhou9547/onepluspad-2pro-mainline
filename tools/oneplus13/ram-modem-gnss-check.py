@@ -63,6 +63,9 @@ def runtime_facts(entry):
     result["qmi_devices"] = sorted(
         path.name for path in Path("/dev").glob("qmi*") if path.exists()
     )
+    result["rpmsg_has_ipcrtr"] = any(
+        "IPCRTR" in name for name in result["rpmsg_devices"]
+    )
     return result
 
 
@@ -164,7 +167,9 @@ def wait_state(path, wanted, timeout):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", choices=("start", "inspect", "stop"), required=True)
+    parser.add_argument(
+        "--mode", choices=("start", "inspect", "verify", "stop"), required=True
+    )
     parser.add_argument("--archive", type=Path)
     parser.add_argument("--review", type=Path)
     parser.add_argument("--archive-sha256")
@@ -182,6 +187,16 @@ def main():
         result["pass"] = True
         print("RAM_MODEM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
         return
+    if args.mode == "verify":
+        if not args.review:
+            parser.error("verify requires --review")
+        result["firmware"] = verify_installed_firmware(args.review)
+        result["facts"] = runtime_facts(entry)
+        result["pass"] = (
+            entry["state"] == "running" and result["facts"]["rpmsg_has_ipcrtr"]
+        )
+        print("RAM_MODEM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
+        raise SystemExit(0 if result["pass"] else 1)
     if args.mode == "start":
         if not args.review:
             parser.error("start requires --review")

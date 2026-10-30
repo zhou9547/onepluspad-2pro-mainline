@@ -1,5 +1,29 @@
 # r81 bounded GNSS sessions and shared-module preservation, 2026-10-30
 
+# r82 exact target runtime boundaries, 2026-10-30
+
+The exact `49931bcc` image completed one bounded combined RAM boot and returned
+to Android with all seven baseline properties matching and zero partition
+writes. NFC controller binding and `nfc0` power-up/down passed; no physical tag
+was present. The infrared module and rc-core device loaded, but the kernel had
+`CONFIG_LIRC` disabled, so `/dev/lirc0` could not exist. The config now enables
+the LIRC character-device layer before the next real transmission test.
+
+The MPSS remained running and exposed the expected `IPCRTR` and rpmsg service
+router endpoints. No GNSS attempt ran because the host verification command
+imported the standalone helper as a Python module; the helper now has a
+dedicated firmware and control-plane `verify` mode.
+
+The DWC3 role helper searched only for `dwc3*` debugfs directories. The platform
+device is named `a600000.usb`, so the attempted role switch stopped before
+writing a role. The helper now searches the platform-specific and standard DWC3
+locations and rejects ambiguous matches.
+
+An RTC-woken deep suspend request returned to Android before the helper could
+write a post-resume receipt. This is a failed deep-suspend acceptance, not a
+source-test pass. A later round will select s2idle explicitly for a bounded
+suspend check and preserve deep-suspend recovery work as an open item.
+
 Additional camera review against the pinned kernel's `camss-vfe.c` found that
 the RDI subdevice is `msm_vfe1_rdi0` and its separate capture entity is
 `msm_vfe1_video0`. The former `msm_vfe1` topology fixture was incorrect.

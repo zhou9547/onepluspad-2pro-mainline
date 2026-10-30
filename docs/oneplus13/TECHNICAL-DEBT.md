@@ -1,5 +1,18 @@
 # r81 runtime acceptance remains pending, 2026-10-30
 
+# r82 hardware blockers corrected after exact image boot, 2026-10-30
+
+The exact `49931bcc` runtime review exposed three harness/configuration defects:
+`CONFIG_LIRC` was off, modem verification attempted a false Python import, and
+USB role discovery missed the `a600000.usb` debugfs directory. Those paths are
+corrected in source. They still require a rebuilt and readback-verified image.
+
+One deep-suspend request did not resume before Android recovery. The subsequent
+test will select s2idle explicitly and require a BOOTTIME-versus-MONOTONIC gap.
+That test can qualify platform suspend, but the earlier deep attempt remains a
+failure. Camera capture still requires varied packed RAW10 pixels and a clean
+teardown; a kernel reset is not accepted as sensor output.
+
 The capture helper's VFE entity names and packed RAW10 size have been corrected
 against the fixed upstream kernel source. Sensor initialization, real CAMSS
 binding and a variable-pixel frame still need direct hardware evidence.

@@ -144,13 +144,15 @@ def main():
     for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI','VIDEO_S5KJN5'):
         run([config,'--file',kernel/'.config','--module',name])
     if args.infrared:
+        run([config,'--file',kernel/'.config','--enable','LIRC'])
         for name in ('RC_CORE','IR_DODGE_SPI'):
             run([config,'--file',kernel/'.config','--module',name])
     run(['make','-C',kernel,'ARCH=arm64','olddefconfig'],timeout=120)
     cfg=(kernel/'.config').read_text()
     for name in ('VIDEO_QCOM_CAMSS','PHY_QCOM_MIPI_CSI2','I2C_QCOM_CCI','VIDEO_S5KJN5'):
         if f'CONFIG_{name}=m\n' not in cfg:raise ValueError('Required component disabled: '+name)
-    if args.infrared and 'CONFIG_IR_DODGE_SPI=m\n' not in cfg:
+    if args.infrared and ('CONFIG_LIRC=y\n' not in cfg or
+                          'CONFIG_IR_DODGE_SPI=m\n' not in cfg):
         raise ValueError('Infrared candidate disabled by missing prerequisites')
     targets=['drivers/media/platform/qcom/camss/',
              'drivers/media/i2c/s5kjn5.o',

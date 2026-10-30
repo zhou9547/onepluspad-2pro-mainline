@@ -76,7 +76,11 @@ def allow_modules(module_names):
 
 def devices():
     result = []
+    lirc = sorted(Path("/sys/class/lirc").glob("lirc[0-9]*"))
     for path in sorted(Path("/sys/class/rc").glob("rc[0-9]*")):
+        index = path.name.removeprefix("rc")
+        lirc_path = Path("/sys/class/lirc/lirc" + index)
+        dev = lirc_path / "dev"
         result.append(
             {
                 "name": path.name,
@@ -84,12 +88,15 @@ def devices():
                 if (path / "device/driver").exists()
                 else None,
                 "device": str(path.resolve(strict=False)),
+                "lirc_class_present": lirc_path.is_dir(),
+                "lirc_device": Path("/dev/lirc" + index).is_char_device(),
+                "lirc_dev": dev.read_text().strip() if dev.is_file() else None,
                 "protocols": (path / "protocols").read_text().strip()
                 if (path / "protocols").is_file()
                 else None,
             }
         )
-    return result
+    return result, [path.name for path in lirc]
 
 
 def main():
@@ -136,14 +143,16 @@ def main():
         rows = []
         selected = []
         while time.monotonic() < deadline:
-            rows = devices()
+            rows, lirc_entries = devices()
             selected = [
-                row for row in rows if row["driver"] == "ir-dodge-spi"
+                row for row in rows
+                if row["driver"] == "ir-dodge-spi" and row["lirc_device"]
             ]
             if selected:
                 break
             time.sleep(0.25)
         result["devices"] = rows
+        result["lirc_class_entries"] = lirc_entries
         result["selected"] = selected
         result["rc_device_present"] = bool(selected)
         pass_ = result["driver_loaded"] and result["rc_device_present"]
@@ -194,10 +203,11 @@ def main():
         result["policy_restored"] = (
             result["policy_sha256_after"] == before_policy
         )
+        cleanup_rows, _ = devices()
         cleanup = not any(
             Path("/sys/module", name.replace("-", "_")).exists() for name in loaded
         ) and not any(
-            row["driver"] == "ir-dodge-spi" for row in devices()
+            row["driver"] == "ir-dodge-spi" for row in cleanup_rows
         )
         result["cleanup_complete"] = (
             result["policy_restored"]

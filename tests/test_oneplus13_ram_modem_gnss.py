@@ -111,6 +111,34 @@ class ModemFirmwareInstallTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "differs"):
             MODEM.verify_installed_firmware(self.review)
 
+    def test_runtime_facts_require_ipcrtr_endpoint(self):
+        entry = {
+            "path": self.root / "remoteproc0",
+            "target": "/soc@0/4080000.remoteproc",
+            "name": "modem",
+            "state": "running",
+            "firmware": "modem.mdt",
+        }
+        endpoints = self.root / "rpmsg"
+        endpoints.mkdir()
+        (endpoints / "modem.IPCRTR.-1.-1").mkdir()
+        original = MODEM.Path
+        class ScopedPath:
+            def __new__(cls, value):
+                if value == "/sys/bus/rpmsg/devices":
+                    return endpoints
+                if value == "/dev":
+                    return self.root / "dev"
+                if value == "/sys/class/qrtr":
+                    return self.root / "qrtr"
+                return original(value)
+        try:
+            MODEM.Path = ScopedPath
+            result = MODEM.runtime_facts(entry)
+        finally:
+            MODEM.Path = original
+        self.assertTrue(result["rpmsg_has_ipcrtr"])
+
 
 if __name__ == "__main__":
     unittest.main()

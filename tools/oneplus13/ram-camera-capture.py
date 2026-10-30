@@ -26,6 +26,16 @@ HEIGHT = 3072
 MIN_BYTES = WIDTH * HEIGHT * 5 // 4
 VFE_ENTITY = "msm_vfe1_rdi0"
 VIDEO_ENTITY = "msm_vfe1_video0"
+PROGRESS = STATE / "progress.json"
+
+
+def progress(stage, **facts):
+    """Leave a bounded checkpoint that an independent host sender can collect."""
+    STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
+    value = {"stage": stage, "utc": time.time(), **facts}
+    temporary = PROGRESS.with_suffix(".tmp")
+    temporary.write_text(json.dumps(value, sort_keys=True) + "\n")
+    temporary.replace(PROGRESS)
 
 
 def run(command, timeout=20, check=True):
@@ -235,10 +245,12 @@ def main():
     ).hexdigest()
     try:
         for module in ordered:
+            progress("module-load", module=module)
             if module_loaded(module):
                 continue
             run(["modprobe", "--ignore-install", module], timeout=20)
             loaded.append(module)
+        progress("media-discovery")
         device = None
         until = time.monotonic() + 12
         while time.monotonic() < until:
@@ -258,9 +270,12 @@ def main():
             sensor_entity=sensor,
             entities=sorted(entities),
         )
+        progress("media-discovered", media_device=str(device),
+                 entities=sorted(entities))
         set_link(device, sensor, 0, "msm_csiphy1", 0)
         set_link(device, "msm_csiphy1", 1, "msm_csid1", 0)
         set_link(device, "msm_csid1", 1, VFE_ENTITY, 0)
+        progress("links-enabled")
         for entity, pads in (
             (sensor, (0,)),
             ("msm_csiphy1", (0, 1)),
@@ -268,6 +283,7 @@ def main():
             (VFE_ENTITY, (0, 1)),
         ):
             for pad in pads:
+                progress("format", entity=entity, pad=pad)
                 set_format(device, entity, pad)
         video = entity_node(entities, VIDEO_ENTITY)
         run(
@@ -283,6 +299,7 @@ def main():
         if (not re.search(r"Width/Height\s*:\s*4096/3072", selected)
                 or not re.search(r"Pixel Format\s*:\s*'pGAA'", selected)):
             raise ValueError("Capture format was coerced away from reviewed packed RAW10")
+        progress("stream-start", video=video)
         result = run(
             [
                 "v4l2-ctl",
@@ -299,11 +316,13 @@ def main():
         report["stream_returncode"] = result.returncode
         report["stream_stdout"] = result.stdout[-2000:]
         report["stream_stderr"] = result.stderr[-4000:]
+        progress("stream-finished", returncode=result.returncode)
         if result.returncode:
             raise ValueError("V4L2 capture failed")
         report["pixels"] = validate_frame(FRAME)
         report["frame_verified"] = True
     finally:
+        progress("cleanup")
         for module in reversed(loaded):
             unload(module)
         POLICY.write_bytes(original_policy)
@@ -334,6 +353,8 @@ def main():
             json.dumps(report, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        progress("finished", cleanup_pass=report["cleanup_pass"],
+                 frame_verified=report["frame_verified"])
         print("CAMERA_CAPTURE_RESULT " + json.dumps(report, sort_keys=True))
     if not report["frame_verified"] or not report["cleanup_pass"]:
         raise SystemExit(1)

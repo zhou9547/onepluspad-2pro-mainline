@@ -56,6 +56,28 @@ class SuspendPreparationTests(unittest.TestCase):
         self.assertEqual((SUSPEND.RTC / "wakealarm").read_text().strip(), "1015")
         self.assertEqual((SUSPEND.RTC / "device/power/wakeup").read_text().strip(), "enabled")
 
+    def test_prepare_selects_requested_s2idle_mode(self):
+        (SUSPEND.MEM_SLEEP).write_text("s2idle [deep]\n", encoding="utf-8")
+        original_write = SUSPEND.write
+        def kernel_write(path, value):
+            if path == SUSPEND.MEM_SLEEP and value == "s2idle":
+                path.write_text("[s2idle] deep\n", encoding="utf-8")
+                return
+            original_write(path, value)
+        SUSPEND.write = kernel_write
+        try:
+            SUSPEND.prepare(15, "s2idle")
+        finally:
+            SUSPEND.write = original_write
+        result = SUSPEND.json.loads(
+            (SUSPEND.STATE / "result.json").read_text()
+        )
+        self.assertEqual(result["sleep_mode"], "s2idle")
+        self.assertEqual(
+            SUSPEND.MEM_SLEEP.read_text(encoding="utf-8"),
+            "[s2idle] deep\n",
+        )
+
     def test_bad_duration_is_rejected_before_alarm_change(self):
         for value in (4, 21, 32, 45, 46):
             with self.subTest(value=value), self.assertRaises(ValueError):

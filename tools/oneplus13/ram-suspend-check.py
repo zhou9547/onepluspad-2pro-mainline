@@ -54,7 +54,7 @@ def protected():
         subprocess.run(["systemctl", "is-active", "--quiet", unit], check=True, timeout=4)
 
 
-def prepare(seconds):
+def prepare(seconds, sleep_mode="deep"):
     protected()
     if not 5 <= seconds <= 20:
         raise ValueError("Suspend duration must stay between 5 and 20 seconds, below the 32-second recovery watchdog")
@@ -62,8 +62,14 @@ def prepare(seconds):
     if "mem" not in states:
         raise ValueError("System memory suspend is unavailable")
     modes = read(MEM_SLEEP)
-    if "[deep]" not in modes:
-        raise ValueError("Deep memory sleep is unavailable")
+    mode_names = [value.strip("[]") for value in modes.split()]
+    if sleep_mode not in mode_names:
+        raise ValueError(f"{sleep_mode} memory sleep is unavailable")
+    if f"[{sleep_mode}]" not in modes:
+        write(MEM_SLEEP, sleep_mode)
+        modes = read(MEM_SLEEP)
+        if f"[{sleep_mode}]" not in modes:
+            raise ValueError(f"Could not select {sleep_mode} memory sleep")
     wakealarm = RTC / "wakealarm"
     if not wakealarm.is_file():
         raise ValueError("RTC wakealarm is unavailable")
@@ -84,6 +90,7 @@ def prepare(seconds):
         "pass": True,
         "power_states": states,
         "mem_sleep": modes,
+        "sleep_mode": sleep_mode,
         "rtc_name": read(RTC / "name"),
         "rtc_epoch": now,
         "wakealarm_epoch": readback,
@@ -204,9 +211,12 @@ def main():
     parser.add_argument(
         "--mode", choices=("prepare", "enter", "inspect", "cleanup"), required=True
     )
+    parser.add_argument(
+        "--sleep-mode", choices=("s2idle", "deep"), default="deep"
+    )
     parser.add_argument("--seconds", type=int, default=15)
     args = parser.parse_args()
-    {"prepare": lambda: prepare(args.seconds), "enter": enter,
+    {"prepare": lambda: prepare(args.seconds, args.sleep_mode), "enter": enter,
      "inspect": inspect, "cleanup": cleanup}[args.mode]()
 
 

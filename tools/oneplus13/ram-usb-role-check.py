@@ -26,15 +26,23 @@ def ensure_debugfs():
             raise RuntimeError("Could not mount debugfs")
 
 
-def mode_paths():
-    ensure_debugfs()
+def mode_paths(root=None):
+    if root is None:
+        ensure_debugfs()
+        root = DEBUGFS
+    root = Path(root)
     rows = []
-    for root in sorted(DEBUGFS.glob("dwc3*")):
-        mode = root / "mode"
+    candidates = [root / "a600000.usb/mode"]
+    candidates += [path / "mode" for path in sorted(root.glob("dwc3*"))]
+    candidates += [path / "mode" for path in sorted(root.glob("*/dwc3*"))]
+    for mode in candidates:
         if mode.is_file():
             rows.append(mode)
     if len(rows) != 1:
-        raise RuntimeError(f"Expected one DWC3 debugfs mode file, found {len(rows)}")
+        found = ",".join(str(path) for path in rows) or "none"
+        raise RuntimeError(
+            f"Expected one DWC3 debugfs mode file, found {len(rows)}: {found}"
+        )
     return rows[0]
 
 
