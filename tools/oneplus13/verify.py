@@ -20,7 +20,7 @@ REQUIRED = ['ARCH_QCOM', 'ARCH_VEXPRESS', 'BLK_DEV_INITRD', 'RD_GZIP',
             'SM_GCC_8750', 'SM_TCSRCC_8750', 'REGULATOR_QCOM_RPMH',
             'QCOM_COMMAND_DB', 'QCOM_RPMH', 'QCOM_SMEM', 'QCOM_RPMHPD',
             'INTERCONNECT_QCOM_SM8750', 'SCSI_UFS_QCOM', 'PHY_QCOM_QMP_UFS',
-            'LIRC']
+            'RC_CORE', 'LIRC']
 
 
 def check_config(path):
