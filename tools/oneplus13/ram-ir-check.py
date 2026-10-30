@@ -118,6 +118,8 @@ def main():
     pass_ = False
     try:
         for name in ordered:
+            if Path("/sys/module", name.replace("-", "_")).is_dir():
+                continue
             load = run(["modprobe", "--ignore-install", name], timeout=20)
             if load.returncode:
                 result["load"] = {
@@ -193,7 +195,7 @@ def main():
             result["policy_sha256_after"] == before_policy
         )
         cleanup = not any(
-            Path("/sys/module", name).exists() for name in ordered
+            Path("/sys/module", name.replace("-", "_")).exists() for name in loaded
         ) and not any(
             row["driver"] == "ir-dodge-spi" for row in devices()
         )

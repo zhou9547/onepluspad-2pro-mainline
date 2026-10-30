@@ -57,7 +57,7 @@ class SuspendPreparationTests(unittest.TestCase):
         self.assertEqual((SUSPEND.RTC / "device/power/wakeup").read_text().strip(), "enabled")
 
     def test_bad_duration_is_rejected_before_alarm_change(self):
-        for value in (4, 46):
+        for value in (4, 21, 32, 45, 46):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 SUSPEND.prepare(value)
             self.assertEqual((SUSPEND.RTC / "wakealarm").read_text().strip(), "0")

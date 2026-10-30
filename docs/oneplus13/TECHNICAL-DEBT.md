@@ -1,3 +1,11 @@
+# r81 runtime acceptance remains pending, 2026-10-30
+
+GNSS now uses separate LOC actions and requires valid NMEA checksums, but a real
+fix and successful stop are still unobserved. The suspend repair prevents a
+post-resume sysfs fsync failure and requires measurable sleeping time; it does
+not establish repeated deep suspend or standby current. Shared-module teardown
+preservation needs verification on the exact next Actions artifact.
+
 # r78 camera and modem test blockers, 2026-10-30
 
 The reviewed `fbcfa258` image proves the NFC controller binding and exposes the

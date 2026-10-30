@@ -4,9 +4,11 @@
 
 import argparse
 import json
+import math
 from pathlib import Path
 import re
 import subprocess
+import signal
 
 
 NMEA = re.compile(r"^\$(?:GP|GN|GL|GA|GB)(?:GGA|RMC),.*\*[0-9A-Fa-f]{2}$")
@@ -43,8 +45,16 @@ def nmea_coordinate(value, direction):
     split = 2 if direction in ("N", "S") else 3
     if len(value) <= split:
         return None
-    degrees = int(value[:split])
-    minutes = float(value[split:])
+    try:
+        degrees = int(value[:split])
+        minutes = float(value[split:])
+    except ValueError:
+        return None
+    limit = 90 if direction in ("N", "S") else 180
+    if not math.isfinite(minutes) or not 0 <= minutes < 60 or not 0 <= degrees <= limit:
+        return None
+    if degrees == limit and minutes != 0:
+        return None
     result = degrees + minutes / 60
     return -result if direction in ("S", "W") else result
 
@@ -53,6 +63,12 @@ def parse_fix(lines):
     fixes = []
     for line in lines:
         if not NMEA.fullmatch(line):
+            continue
+        payload, checksum = line[1:].rsplit("*", 1)
+        actual = 0
+        for character in payload:
+            actual ^= ord(character)
+        if actual != int(checksum, 16):
             continue
         fields = line[1:].split("*", 1)[0].split(",")
         if fields[0].endswith("RMC") and len(fields) >= 7 and fields[2] == "A":
@@ -67,7 +83,9 @@ def parse_fix(lines):
                         "date": fields[9] if len(fields) > 9 else None,
                     }
                 )
-        if fields[0].endswith("GGA") and len(fields) >= 6 and fields[6] not in ("", "0"):
+        if (fields[0].endswith("GGA") and len(fields) >= 8
+                and fields[6] in ("1", "2", "3", "4", "5")
+                and fields[7].isdigit()):
             latitude = nmea_coordinate(fields[2], fields[3])
             longitude = nmea_coordinate(fields[4], fields[5])
             if latitude is not None and longitude is not None:
@@ -81,6 +99,50 @@ def parse_fix(lines):
                     }
                 )
     return fixes[-8:]
+
+
+def collect_session(qmicli, device, seconds):
+    """Keep one LOC client/session across separate start, follow and stop actions."""
+    base = [qmicli, "-d", device]
+    started = run(base + ["--loc-start", "--loc-session-id=1", "--client-no-release-cid"], 15)
+    result = {"start": started, "fixes": [], "fix_acquired": False,
+              "engine_control_qualified": False, "cleanup_complete": False}
+    match = re.search(r"CID:\s*'?(\d+)'?", started.get("stdout", ""))
+    cid = ["--client-cid=" + match[1]] if match else []
+    if started["returncode"] != 0:
+        return result
+    process = None
+    try:
+        result["engine_control_qualified"] = True
+        # libqmi rejects --loc-start and --loc-get-position-report together.
+        # A follow is bounded here, then interrupted gracefully before LOC stop.
+        process = subprocess.Popen(
+            base + cid + ["--loc-follow-nmea", "--client-no-release-cid"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        try:
+            stdout, stderr = process.communicate(timeout=seconds)
+        except subprocess.TimeoutExpired:
+            process.send_signal(signal.SIGINT)
+            try:
+                stdout, stderr = process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate(timeout=5)
+        result["follow_returncode"] = process.returncode
+        result["follow_stderr"] = stderr[-4096:]
+        result["nmea"] = [line.strip() for line in stdout.splitlines()
+                          if NMEA.fullmatch(line.strip())][-64:]
+        result["fixes"] = parse_fix(result["nmea"])
+        result["fix_acquired"] = bool(result["fixes"])
+    finally:
+        if process is not None and process.poll() is None:
+            process.kill()
+            process.communicate(timeout=5)
+        stopped = run(base + cid + ["--loc-stop", "--loc-session-id=1"], 15)
+        result["stop"] = stopped
+        result["cleanup_complete"] = stopped["returncode"] == 0
+    return result
 
 
 def main():
@@ -121,35 +183,9 @@ def main():
     if selected is None:
         print("RAM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
         raise SystemExit(1)
-    started = run(
-        [qmicli, "-d", selected, "--loc-start", "--loc-get-position-report",
-         "--loc-timeout", str(args.seconds)],
-        args.seconds + 8,
-    )
-    result["position_start"] = started
-    follow = run(
-        [qmicli, "-d", selected, "--loc-follow-nmea"],
-        args.seconds,
-    )
-    result["nmea_follow"] = {
-        key: value for key, value in follow.items() if key not in ("stdout",)
-    }
-    lines = []
-    for document in (started, follow):
-        lines.extend(document.get("stdout", "").splitlines())
-        lines.extend(document.get("stderr", "").splitlines())
-    result["nmea"] = [line for line in lines if NMEA.fullmatch(line)][-64:]
-    result["fixes"] = parse_fix(result["nmea"])
-    result["fix_acquired"] = bool(result["fixes"]) and (
-        started["returncode"] == 0 or follow["returncode"] in (0, 124)
-    )
-    stopped = run([qmicli, "-d", selected, "--loc-stop"], 12)
-    result["stop"] = {
-        key: value for key, value in stopped.items() if key not in ("stdout",)
-    }
-    result["cleanup_complete"] = stopped["returncode"] == 0
-    result["engine_control_qualified"] = True
-    result["pass"] = result["engine_control_qualified"] and result["fix_acquired"]
+    result.update(collect_session(qmicli, selected, args.seconds))
+    result["pass"] = (result["engine_control_qualified"] and result["fix_acquired"]
+                      and result["cleanup_complete"])
     print("RAM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
     raise SystemExit(0 if result["pass"] else 1)
 

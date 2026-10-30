@@ -229,6 +229,8 @@ def main():
     ).hexdigest()
     try:
         for module in ordered:
+            if module_loaded(module):
+                continue
             run(["modprobe", "--ignore-install", module], timeout=20)
             loaded.append(module)
         device = None
@@ -298,7 +300,7 @@ def main():
             report["policy_sha256_after"] == report["policy_sha256_before"]
         )
         report["modules_unloaded"] = not any(
-            module_loaded(module) for module in modules
+            module_loaded(module) for module in loaded
         )
         report["media_graph_removed"] = not any(
             "msm_vfe1"

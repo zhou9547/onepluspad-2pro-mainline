@@ -56,8 +56,8 @@ def protected():
 
 def prepare(seconds):
     protected()
-    if not 5 <= seconds <= 45:
-        raise ValueError("Suspend duration must stay between 5 and 45 seconds")
+    if not 5 <= seconds <= 20:
+        raise ValueError("Suspend duration must stay between 5 and 20 seconds, below the 32-second recovery watchdog")
     states = read(POWER_STATE).split()
     if "mem" not in states:
         raise ValueError("System memory suspend is unavailable")
@@ -135,7 +135,6 @@ def enter():
         with POWER_STATE.open("w", encoding="ascii") as stream:
             stream.write("mem")
             stream.flush()
-            os.fsync(stream.fileno())
     finally:
         if fd is not None:
             try:
@@ -165,7 +164,10 @@ def enter():
         if result["watchdog_state_after_resume"] == "inactive":
             break
         time.sleep(0.1)
-    result["resume_verified"] = result["boottime_elapsed_seconds"] >= 5
+    result["suspended_seconds"] = round(
+        result["boottime_elapsed_seconds"] - result["monotonic_elapsed_seconds"], 3
+    )
+    result["resume_verified"] = result["suspended_seconds"] >= 5
     result["pass"] = bool(
         result["suspend_entered"]
         and result["resume_verified"]

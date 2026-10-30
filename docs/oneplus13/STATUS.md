@@ -1,3 +1,23 @@
+# r81 bounded GNSS sessions and shared-module preservation, 2026-10-30
+
+The QMI LOC helper previously combined two mutually exclusive actions in one
+qmicli invocation. Upstream `src/qmicli/qmicli-loc.c` explicitly rejects that
+combination. The helper now starts, follows NMEA, and stops separately while
+retaining the client ID and session ID. NMEA acceptance checks the checksum,
+coordinate bounds and fix quality; a failed start cannot qualify engine control,
+and a successful test also requires LOC stop to succeed.
+
+Camera and infrared teardown now removes only modules loaded by that probe,
+preserving providers already loaded before it. RTC suspend no longer fsyncs a
+sysfs attribute after resume; its permitted duration stays below the independent
+32-second watchdog. Suspend evidence uses BOOTTIME minus MONOTONIC to distinguish
+actual sleeping from time spent executing the suspend request.
+
+These repairs passed targeted offline tests. They are not new hardware passes.
+The host is preparing an incremental result receiver so a lost USB/WLAN control
+connection cannot silently discard all completed probes. Physical tag, receiver
+and attached USB-peripheral evidence remain required for their respective goals.
+
 # r78 exact target image, NFC bind pass and camera dependency repair, 2026-10-30
 
 The exact public commit `fbcfa258` built successfully in Actions run40936864371.
