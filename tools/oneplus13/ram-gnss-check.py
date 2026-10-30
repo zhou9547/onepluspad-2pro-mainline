@@ -167,12 +167,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", default=None)
     parser.add_argument("--seconds", type=int, default=45)
-    parser.add_argument("--ready-seconds", type=int, default=30)
+    parser.add_argument("--ready-seconds", type=int, default=60)
     args = parser.parse_args()
     if not 5 <= args.seconds <= 240:
         raise ValueError("GNSS collection must stay between 5 and 240 seconds")
-    if not 0 <= args.ready_seconds <= 60:
-        raise ValueError("GNSS readiness wait must stay between 0 and 60 seconds")
+    if not 0 <= args.ready_seconds <= 90:
+        raise ValueError("GNSS readiness wait must stay between 0 and 90 seconds")
     if not Path("/run/oneplus13/ram-session").is_file():
         raise RuntimeError("Protected phone RAM session required")
     qmicli = next(
@@ -181,7 +181,12 @@ def main():
     )
     if not qmicli:
         raise RuntimeError("qmicli is unavailable")
-    candidates = [args.device] if args.device else ["qrtr://", "qrtr://0", "qrtr://1"]
+    candidates = (
+        [args.device]
+        if args.device
+        else ["qrtr://0", "qrtr://1", "qrtr://2", "qrtr://3",
+              "qrtr://4", "qrtr://5", "qrtr://6", "qrtr://7"]
+    )
     selected, probes = probe_devices(qmicli, candidates, args.ready_seconds)
     result = {
         "scope": "ONEPLUS13_RAM_QMI_GNSS",

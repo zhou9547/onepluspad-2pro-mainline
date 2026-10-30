@@ -51,6 +51,14 @@ def runtime_facts(entry):
     result["rpmsg_devices"] = sorted(
         path.name for path in Path("/sys/bus/rpmsg/devices").glob("*")
     )[:64]
+    result["rpmsg_drivers"] = {
+        path.name: (
+            path.resolve(strict=False).name
+            if (path / "driver").exists()
+            else None
+        )
+        for path in sorted(Path("/sys/bus/rpmsg/devices").glob("*"))[:64]
+    }
     result["qrtr_devices"] = sorted(
         path.name for path in Path("/dev").glob("qrtr*") if path.exists()
     )
