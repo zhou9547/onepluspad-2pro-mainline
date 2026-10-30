@@ -22,6 +22,14 @@ and three RTC-woken suspend cycles passed. GNSS, real camera pixels, NFC tag
 discovery, and USB peripheral I/O did not. A new source-bound Actions image
 and an operator-gated combined round remain required.
 
+The same run showed that the sensor accepted initialization and stream
+commands but produced no CSID packets; the previously verified TPG path still
+reached the VFE. Vendor tracing shows `0x0b30 = 0x0102` is written after
+entering register page `0x4000`. The candidate had been writing it before the
+page switch, so it could not select the intended sensor output format. The
+patched mode table now preserves the vendor order. This remains a candidate
+until a varied real RAW10 frame arrives over CSIPHY1.
+
 # r180 MPSS RMTFS shared-memory candidate, 2026-10-30
 
 The previous GNSS result was not an NMEA failure: the QRTR registry had no LOC

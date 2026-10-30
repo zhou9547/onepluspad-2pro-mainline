@@ -106,6 +106,16 @@ class CameraCaptureTree(unittest.TestCase):
         self.assertEqual(parsed.nodes, self.tree.nodes)
         self.assertEqual(parsed.reservations, self.tree.reservations)
 
+    def test_output_format_is_selected_in_the_vendor_register_page(self):
+        patch = (
+            ROOT
+            / "tools/oneplus13/camera-draft/"
+            "fixes/0005-s5kjn5-cphy-3trio.patch"
+        ).read_text(encoding="utf-8")
+        page = "\t{ CCI_REG16(0xfcfc), 0x4000 },\n"
+        output = "\t{ CCI_REG16(0x0b30), 0x0102 },\n"
+        self.assertEqual(patch.count(page + "+" + output), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

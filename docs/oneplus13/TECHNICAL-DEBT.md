@@ -18,6 +18,11 @@ finished the automatic sequence. Its evidence is retained, but a tag absent
 from the NFC field and an empty USB host inventory mean those physical goals
 remain unqualified.
 
+Camera diagnostics now also retain the register-page ordering defect: the
+normal-preview output selector must be written under page `0x4000`. A fresh
+image must prove nonzero CSID packets, varied packed RAW10 pixels, stream
+stop, and full module removal before camera capture is accepted.
+
 # r81 runtime acceptance remains pending, 2026-10-30
 
 # r82 hardware blockers corrected after exact image boot, 2026-10-30
