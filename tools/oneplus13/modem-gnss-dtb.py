@@ -14,6 +14,7 @@ from stock import Fdt, cells, strings
 video = importlib.import_module("video-probe-dtb")
 MPSS = "/soc@0/remoteproc@4080000"
 RMTFS = "/soc@0/qcom,rmtfs_sharedmem@0"
+RMTFS_SHAREDMEM_SIZE = 0x400000
 FIRMWARE = (
     "qcom/sm8750/oneplus/dodge/modem.mdt",
     "qcom/sm8750/oneplus/dodge/modem_dtb.mdt",
@@ -79,7 +80,10 @@ def add_rmtfs_sharedmem(tree):
         raise ValueError("RMTFS shared-memory node already exists")
     tree.nodes[RMTFS] = {
         "compatible": video.text("qcom,sharedmem-uio"),
-        "reg": struct.pack(">II", 0, 0x400000),
+        # The stock DTSI uses a one-cell address/size parent. The mainline
+        # /soc@0 parent uses two cells for each field, so preserve the stock
+        # semantics (address zero, 4 MiB size) with the local cell layout.
+        "reg": struct.pack(">IIII", 0, 0, 0, RMTFS_SHAREDMEM_SIZE),
         "reg-names": video.text("rmtfs"),
         "qcom,client-id": struct.pack(">I", 1),
     }
@@ -96,7 +100,7 @@ def derive(blob):
         raise ValueError("RMTFS shared-memory node already exists")
     tree.nodes[RMTFS] = {
         "compatible": video.text("qcom,sharedmem-uio"),
-        "reg": struct.pack(">II", 0, 0x400000),
+        "reg": struct.pack(">IIII", 0, 0, 0, RMTFS_SHAREDMEM_SIZE),
         "reg-names": video.text("rmtfs"),
         "qcom,client-id": struct.pack(">I", 1),
     }

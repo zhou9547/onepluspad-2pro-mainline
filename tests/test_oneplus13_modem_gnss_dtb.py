@@ -47,7 +47,19 @@ class ModemGnssTree(unittest.TestCase):
         node = self.tree.nodes[modem.RMTFS]
         self.assertEqual(strings(node["compatible"]), ["qcom,sharedmem-uio"])
         self.assertEqual(strings(node["reg-names"]), ["rmtfs"])
-        self.assertEqual(node["reg"], bytes([0, 0, 0, 0, 0, 0x40, 0, 0]))
+        self.assertEqual(
+            node["reg"],
+            bytes([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x40, 0, 0]),
+        )
+        self.assertEqual(len(node["reg"]), 16)
+        self.assertEqual(
+            self.tree.nodes["/soc@0"]["#address-cells"],
+            bytes([0, 0, 0, 2]),
+        )
+        self.assertEqual(
+            self.tree.nodes["/soc@0"]["#size-cells"],
+            bytes([0, 0, 0, 2]),
+        )
         self.assertEqual(node["qcom,client-id"], bytes([0, 0, 0, 1]))
         self.assertEqual(self.report["rmtfs_sharedmem_node"], modem.RMTFS)
 

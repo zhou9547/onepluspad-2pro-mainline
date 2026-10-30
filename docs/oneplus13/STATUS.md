@@ -1,3 +1,27 @@
+# r181 RMTFS cell-layout repair, 2026-10-30
+
+The exact `2b01837b` Actions image completed one temporary RAM boot. The
+5 GHz path returned on 5240 MHz, MPSS reached running and verified all 48
+installed firmware files. The first runtime GNSS candidate did not publish a
+usable fix because `msm_sharedmem` loaded but did not create a UIO device.
+
+Kernel evidence identifies the fault before SCM or LOC: the original
+`qcom,sharedmem-uio` node used `<address size>` in a one-cell vendor parent,
+while the merged `/soc@0` parent declares two address and two size cells.
+Copying the two-cell property left the memory resource without a translated
+size, so probe exited with `resource not found`. The DTB derivation now emits
+the equivalent four-cell `<0 0 0 0x400000>` property, preserving address zero
+and the reviewed 4 MiB dynamic allocation. Targeted modem, combined camera,
+and IR/USB DTB tests pass.
+
+The host orchestration stopped after the operator requested an interactive
+checkpoint before physical actions. The guest worker had already entered its
+hardware sequence and completed the remaining automatic probes before
+rebooting to Android. Five GHz Wi-Fi, MPSS startup/stop, controller binding,
+and three RTC-woken suspend cycles passed. GNSS, real camera pixels, NFC tag
+discovery, and USB peripheral I/O did not. A new source-bound Actions image
+and an operator-gated combined round remain required.
+
 # r180 MPSS RMTFS shared-memory candidate, 2026-10-30
 
 The previous GNSS result was not an NMEA failure: the QRTR registry had no LOC

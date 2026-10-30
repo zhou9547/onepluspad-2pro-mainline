@@ -1,3 +1,23 @@
+# r181 RMTFS UIO resource repair, 2026-10-30
+
+The first live r180 candidate loaded `msm_sharedmem` but failed probe with
+`resource not found`, so `/dev/qcom_rmtfs_uio1` never appeared. The root cause
+is a flattened-DTB cell mismatch: the vendor source expressed
+`reg = <0 0x400000>` under a one-cell address/size parent, while the mainline
+`/soc@0` parent has two cells for both fields. The property must be encoded as
+`<0 0 0 0x400000>` in the mainline tree.
+
+The repair is covered by modem, combined camera/MPSS, and IR/USB DTB tests.
+It still requires a fresh Actions image and live proof that UIO is registered,
+`rmtfs.service` remains active, `loc` appears in the QRTR registry, and a
+checked NMEA fix can be obtained and stopped cleanly.
+
+The r180 host orchestration was stopped because the owner requested an
+interaction card before any NFC or USB physical step. The guest worker still
+finished the automatic sequence. Its evidence is retained, but a tag absent
+from the NFC field and an empty USB host inventory mean those physical goals
+remain unqualified.
+
 # r81 runtime acceptance remains pending, 2026-10-30
 
 # r82 hardware blockers corrected after exact image boot, 2026-10-30
