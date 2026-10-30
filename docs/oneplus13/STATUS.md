@@ -1,3 +1,33 @@
+# r182 RMTFS udev binding and combined runtime evidence, 2026-10-30
+
+Actions run 41050325340 built commit `6e9911d6` successfully in all five
+jobs. Independent download verification matched all 37 runtime files, the
+kernel module set, the four-cell RMTFS DTB resource, and the revised S5KJN5
+source hash.
+
+The combined RAM boot then reached `msm_sharedmem_probe: Device created for
+client 'rmtfs'` and created `/sys/class/uio/uio0`. The udev symlink was absent
+because the rule matched `ENV{UIO_NAME}` while the UIO class exposes the name
+as the `name` attribute. The rule now matches `ATTR{name}`, and an rmtfs
+drop-in waits up to 20 seconds for `/dev/qcom_rmtfs_uio1` before starting.
+
+The same run reconfirmed 5 GHz at 5240 MHz and -17 dBm, MPSS startup with all
+48 firmware files, clean MPSS stop, NFC controller binding, IR transmit
+acceptance, and s2idle plus two deep suspend cycles with RTC wake. GNSS still
+failed before a LOC session because the userspace RMTFS device was missing.
+Camera still received no real CSID packets even after fixing the output
+selector's register-page order; TPG again produced a complete varied frame.
+The NFC tag poll returned `-121`, and the USB test was not valid because the
+operator cable swap prompt was missed. Those three physical checks remain
+open.
+
+Offline decoding of the phone's L sensor-module blob resolved the complete
+normal mode sequence as three entries under page `0x4000`:
+`0x0b30 = 0x0102` and `0x0264 = 0x0606` in addition to the page selector.
+The previous candidate supplied only the first output value. Source now adds
+the full three-register sequence; it remains a candidate until real CSID
+packets and varied RAW10 pixels arrive.
+
 # r181 RMTFS cell-layout repair, 2026-10-30
 
 The exact `2b01837b` Actions image completed one temporary RAM boot. The

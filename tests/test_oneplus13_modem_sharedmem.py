@@ -30,8 +30,11 @@ class ModemSharedmemSource(unittest.TestCase):
         self.assertIn("config UIO_MSM_SHAREDMEM", patch)
         self.assertIn("obj-DOLLAR(CONFIG_UIO_MSM_SHAREDMEM)".replace("DOLLAR", chr(36)), patch)
         rules = (ROOT / "devices/oneplus13/rmtfs-uio.rules").read_text()
-        self.assertIn('ENV{UIO_NAME}=="rmtfs"', rules)
+        self.assertIn('ATTR{name}=="rmtfs"', rules)
         self.assertIn('SYMLINK+="qcom_rmtfs_uio1"', rules)
+        wait = (ROOT / "devices/oneplus13/rmtfs-wait.conf").read_text()
+        self.assertIn("/dev/qcom_rmtfs_uio1", wait)
+        self.assertIn("TimeoutStartSec=30s", wait)
 
 
 if __name__ == "__main__":

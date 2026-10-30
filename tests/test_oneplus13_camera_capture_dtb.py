@@ -115,6 +115,10 @@ class CameraCaptureTree(unittest.TestCase):
         page = "\t{ CCI_REG16(0xfcfc), 0x4000 },\n"
         output = "\t{ CCI_REG16(0x0b30), 0x0102 },\n"
         self.assertEqual(patch.count(page + "+" + output), 1)
+        self.assertEqual(
+            patch.count("+\t{ CCI_REG16(0x0264), 0x0606 },\n"),
+            1,
+        )
 
 
 if __name__ == "__main__":

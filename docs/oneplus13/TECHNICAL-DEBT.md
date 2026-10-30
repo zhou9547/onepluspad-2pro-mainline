@@ -1,3 +1,18 @@
+# r182 UIO userspace binding and remaining hardware gaps, 2026-10-30
+
+The first corrected DTB successfully registered the UIO device, proving the
+four-cell resource layout was necessary. The remaining failure was userspace
+naming: the udev rule used an unset environment property instead of the UIO
+class device's `name` attribute. Source now emits
+`/dev/qcom_rmtfs_uio1` from `ATTR{name}=="rmtfs"` and gives `rmtfs` a bounded
+pre-start wait for the link.
+
+This fix still needs an exact Actions image and live proof that `rmtfs`
+remains active, the LOC service accepts client creation, NMEA carries a valid
+fix, and the modem stops cleanly. Camera real-frame capture, physical NFC tag
+discovery, infrared optical receipt, USB host peripheral I/O, long-term power,
+charging policy, and complete modem services remain open.
+
 # r181 RMTFS UIO resource repair, 2026-10-30
 
 The first live r180 candidate loaded `msm_sharedmem` but failed probe with
@@ -18,10 +33,11 @@ finished the automatic sequence. Its evidence is retained, but a tag absent
 from the NFC field and an empty USB host inventory mean those physical goals
 remain unqualified.
 
-Camera diagnostics now also retain the register-page ordering defect: the
-normal-preview output selector must be written under page `0x4000`. A fresh
-image must prove nonzero CSID packets, varied packed RAW10 pixels, stream
-stop, and full module removal before camera capture is accepted.
+Camera diagnostics now also retain the complete vendor normal-mode selector
+set: the output values `0x0b30=0x0102` and `0x0264=0x0606` must be written
+under page `0x4000`. A fresh image must prove nonzero CSID packets, varied
+packed RAW10 pixels, stream stop, and full module removal before camera
+capture is accepted.
 
 # r81 runtime acceptance remains pending, 2026-10-30
 

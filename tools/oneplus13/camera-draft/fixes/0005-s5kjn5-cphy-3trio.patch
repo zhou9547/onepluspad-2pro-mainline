@@ -29,12 +29,13 @@
  	"afvdd",
  };
  
-@@ -1689,6 +1691,7 @@
+@@ -1689,6 +1691,8 @@
  };
  
  static const struct cci_reg_sequence s5kjn5_4096x3072_regs[] = {
  	{ CCI_REG16(0xfcfc), 0x4000 },
 +	{ CCI_REG16(0x0b30), 0x0102 },
++	{ CCI_REG16(0x0264), 0x0606 },
  	{ CCI_REG16(0x6170), 0xffff },
  	{ CCI_REG16(0x6180), 0x0000 },
 @@ -1740,7 +1743,7 @@

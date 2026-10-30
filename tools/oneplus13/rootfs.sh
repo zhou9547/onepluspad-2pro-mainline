@@ -154,6 +154,8 @@ ln -sfn /usr/lib/systemd/system/tqftpserv.service \
   "$root/etc/systemd/system/multi-user.target.wants/tqftpserv.service"
 
 install -Dm0644 devices/oneplus13/rmtfs-uio.rules "$root/etc/udev/rules.d/90-oneplus13-rmtfs-uio.rules"
+install -Dm0644 devices/oneplus13/rmtfs-wait.conf \
+  "$root/etc/systemd/system/rmtfs.service.d/50-oneplus13-wait.conf"
 rm -f "$root"/etc/ssh/ssh_host_*
 desktop_args=("$root")
 if [[ -n ${ONEPLUS13_KERNEL_ARTIFACT:-} ]]; then
@@ -168,7 +170,7 @@ chroot "$root" /usr/bin/systemd-analyze verify \
   oneplus13-ram-evidence.service oneplus13-ram-usb.service \
   oneplus13-ram-dhcp.service oneplus13-ram-http.service \
   oneplus13-ram-shell.service oneplus13-ram-serial.service \
-  ssh.service oneplus13-ssh-host-keys.service
+  ssh.service oneplus13-ssh-host-keys.service rmtfs.service tqftpserv.service
 udevadm verify "$root/usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules"
 chroot "$root" dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' > "$dest/packages.tsv"
 chroot "$root" /usr/bin/gnome-shell --version > "$dest/gnome-version.txt"
