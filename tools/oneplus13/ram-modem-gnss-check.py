@@ -177,13 +177,22 @@ def wait_control_plane(entry, timeout):
     end = time.monotonic() + timeout
     facts = runtime_facts(entry)
     while time.monotonic() < end:
-        facts = runtime_facts(entry)
-        if entry["state"] == "running" and facts["rpmsg_has_ipcrtr"]:
+        current = find_mpss()
+        facts = runtime_facts(current)
+        if current["state"] == "running" and facts["rpmsg_has_ipcrtr"]:
             return facts
-        if entry["state"] in ("crashed", "offline"):
+        if current["state"] in ("crashed", "offline"):
             return facts
         time.sleep(0.5)
     return facts
+
+
+def reusable_running_control_plane(entry, timeout=10):
+    """Return facts for an already running MPSS without cycling remoteproc."""
+    if entry["state"] != "running":
+        return None
+    facts = wait_control_plane(entry, timeout)
+    return facts if facts["rpmsg_has_ipcrtr"] else None
 
 
 def main():
@@ -247,6 +256,14 @@ def main():
         result["control_modules"] = control_modules
         if any(item["returncode"] for item in control_modules.values()):
             raise RuntimeError("Required modem control-plane module failed to load")
+        facts = reusable_running_control_plane(entry)
+        if facts:
+            result["pass"] = True
+            result["facts"] = facts
+            result["started_state"] = "running"
+            result["reused_running_session"] = True
+            print("RAM_MODEM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
+            return
         if entry["state"] != "offline":
             if entry["state"] not in ("running", "crashed"):
                 raise RuntimeError("MPSS must be offline, running or crashed before start")

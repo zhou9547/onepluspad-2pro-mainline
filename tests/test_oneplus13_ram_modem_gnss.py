@@ -139,6 +139,68 @@ class ModemFirmwareInstallTests(unittest.TestCase):
             MODEM.Path = original
         self.assertTrue(result["rpmsg_has_ipcrtr"])
 
+    def test_wait_control_plane_reads_fresh_remoteproc_state(self):
+        original_find = MODEM.find_mpss
+        original_runtime = MODEM.runtime_facts
+        original_sleep = MODEM.time.sleep
+        rows = [
+            {
+                "path": self.root / "remoteproc0",
+                "name": "modem",
+                "state": "running",
+                "firmware": "modem.mdt",
+            },
+            {
+                "path": self.root / "remoteproc0",
+                "name": "modem",
+                "state": "offline",
+                "firmware": "modem.mdt",
+            },
+        ]
+        calls = []
+        try:
+            MODEM.find_mpss = lambda: rows.pop(0)
+            MODEM.runtime_facts = lambda entry: {
+                "state": entry["state"],
+                "rpmsg_has_ipcrtr": False,
+            }
+            MODEM.time.sleep = lambda _: calls.append("sleep")
+            result = MODEM.wait_control_plane(
+                {
+                    "path": self.root / "remoteproc0",
+                    "name": "modem",
+                    "state": "running",
+                    "firmware": "modem.mdt",
+                },
+                5,
+            )
+        finally:
+            MODEM.find_mpss = original_find
+            MODEM.runtime_facts = original_runtime
+            MODEM.time.sleep = original_sleep
+        self.assertEqual(result["state"], "offline")
+        self.assertEqual(calls, ["sleep"])
+
+    def test_running_control_plane_is_reused_without_a_remoteproc_cycle(self):
+        original_wait = MODEM.wait_control_plane
+        entry = {
+            "path": self.root / "remoteproc0",
+            "name": "modem",
+            "state": "running",
+            "firmware": "modem.mdt",
+        }
+        calls = []
+        try:
+            MODEM.wait_control_plane = lambda received, timeout: (
+                calls.append((received, timeout))
+                or {"rpmsg_has_ipcrtr": True, "state": "running"}
+            )
+            result = MODEM.reusable_running_control_plane(entry)
+        finally:
+            MODEM.wait_control_plane = original_wait
+        self.assertTrue(result["rpmsg_has_ipcrtr"])
+        self.assertEqual(calls, [(entry, 10)])
+
     def test_modem_service_is_bounded_and_retries_ipcrtr(self):
         service = (
             Path(__file__).resolve().parents[1]
