@@ -121,10 +121,7 @@ def probe_devices(qmicli, candidates, ready_seconds):
 
 def collect_session(qmicli, device, seconds):
     """Keep one LOC client/session across separate start, follow and stop actions."""
-    # Keep the QMI service client in qmi-proxy across the one-action qmicli
-    # processes. A direct QRTR client is released when qmicli exits even with
-    # --client-no-release-cid, which makes the next process reject the CID.
-    base = [qmicli, "--device-open-proxy", "-d", device]
+    base = [qmicli, "-d", device]
     setup = run(base + ["--loc-noop", "--client-no-release-cid"], 15)
     result = {
         "setup": setup,
@@ -193,6 +190,37 @@ def collect_session(qmicli, device, seconds):
     return result
 
 
+def collect_native_session(native, seconds):
+    """Run one native QRTR client for setup, start, follow and stop."""
+    process = run([native, "--seconds", str(seconds)], seconds + 50)
+    lines = process.get("stdout", "").splitlines()
+    nmea = [
+        line[5:].strip()
+        for line in lines
+        if line.startswith("NMEA ") and line[5:].strip()
+    ][-64:]
+    fixes = parse_fix(nmea)
+    started = any(
+        line.startswith("LOCATION_SESSION_STARTED") for line in lines
+    )
+    stopped = any(
+        line.startswith("LOCATION_SESSION_STOPPED") for line in lines
+    )
+    return {
+        "native": native,
+        "returncode": process.get("returncode"),
+        "timed_out": process.get("timed_out", False),
+        "started": started,
+        "stopped": stopped,
+        "stderr": process.get("stderr", "")[-8192:],
+        "nmea": nmea,
+        "fixes": fixes,
+        "fix_acquired": bool(fixes),
+        "engine_control_qualified": started and stopped,
+        "cleanup_complete": stopped and process.get("returncode") == 0,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", default=None)
@@ -211,6 +239,17 @@ def main():
     )
     if not qmicli:
         raise RuntimeError("qmicli is unavailable")
+    native = Path("/usr/libexec/oneplus13-location-session")
+    if native.is_file() and os.access(native, os.X_OK):
+        result = collect_native_session(native, args.seconds)
+        result["scope"] = "ONEPLUS13_RAM_QMI_GNSS"
+        result["pass"] = bool(
+            result["engine_control_qualified"]
+            and result["fix_acquired"]
+            and result["cleanup_complete"]
+        )
+        print("RAM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
+        raise SystemExit(0 if result["pass"] else 1)
     candidates = (
         [args.device]
         if args.device

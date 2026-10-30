@@ -85,10 +85,9 @@ class GnssNmeaTests(unittest.TestCase):
         self.assertIn("--client-cid=7", popen.call_args.args[0])
         self.assertIn("--client-cid=7", run.call_args_list[-1].args[0])
         self.assertIn("--loc-stop", run.call_args_list[-1].args[0])
-        self.assertTrue(
-            all("--device-open-proxy" in call.args[0] for call in run.call_args_list)
+        self.assertFalse(
+            any("--device-open-proxy" in call.args[0] for call in run.call_args_list)
         )
-        self.assertIn("--device-open-proxy", popen.call_args.args[0])
 
     def test_failed_start_cannot_qualify_engine_or_start_follower(self):
         responses = [
@@ -133,6 +132,26 @@ class GnssNmeaTests(unittest.TestCase):
             )
         self.assertEqual(selected, "qrtr://0")
         self.assertEqual(len(probes), 3)
+
+    def test_native_session_preserves_nmea_and_cleanup(self):
+        nmea = sentence(
+            "GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,"
+        )
+        response = {
+            "returncode": 0,
+            "stdout": (
+                "LOCATION_SESSION_STARTED seconds=30\n"
+                f"NMEA {nmea}\n"
+                "LOCATION_SESSION_STOPPED nmea=1\n"
+            ),
+            "stderr": "",
+        }
+        with patch.object(GNSS, "run", return_value=response):
+            result = GNSS.collect_native_session("/native/probe", 30)
+        self.assertTrue(result["engine_control_qualified"])
+        self.assertTrue(result["cleanup_complete"])
+        self.assertTrue(result["fix_acquired"])
+        self.assertEqual(result["nmea"], [nmea])
 
 
 if __name__ == "__main__":

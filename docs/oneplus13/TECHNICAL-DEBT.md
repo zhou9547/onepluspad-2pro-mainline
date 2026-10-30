@@ -1,3 +1,24 @@
+# r188 single-client GNSS and physical USB data path, 2026-10-31
+
+`qmicli` performs one LOC operation and exits. Direct QRTR sessions therefore
+reject a later `--client-cid`, while routing separate requests through
+`qmi-proxy` caused all subsequent LOC transactions to time out. The image now
+builds a small native libqmi helper that owns one QRTR client through NMEA
+configuration, event registration, start, bounded GGA/RMC collection, stop,
+and close. This changes the failure boundary from cross-process state ownership
+to the modem LOC engine itself.
+
+The attached USB-C dock did not enumerate any downstream device after DWC3
+switched to host mode. xHCI initialized, but the inventory remained empty for
+the full 120-second wait. The DWC3 role switch and device restoration still
+pass. VBUS, Type-C orientation/CC handling and dock compatibility remain open.
+
+NFC still produced no target event with a physical tag present. The camera
+received no CSID packet even with its Solid Color test pattern explicitly
+selected; TPG still produced a complete varied frame over the common downstream
+path. These require sensor/C-PHY and NFC RF/power analysis rather than another
+generic device probe.
+
 # r184 GNSS session setup and remaining hardware gaps, 2026-10-30
 
 The complete `c48a2648` image reached the QRTR LOC service and read

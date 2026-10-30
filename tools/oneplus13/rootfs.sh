@@ -188,6 +188,20 @@ test -L "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
 chroot "$root" apt-get clean
 rm -f "$root/etc/apt/apt.conf.d/80bootstrap-ca"
 rm -f "$root/usr/sbin/policy-rc.d"
+# qmicli performs one action per process and therefore closes the QRTR client
+# before a follow-up request can use it. Compile the bounded one-session helper
+# against the same runtime library ABI packaged in the rootfs.
+cc -O2 -Wall -Wextra -Werror \
+  tools/oneplus13/location-session.c \
+  -o "$root/usr/libexec/oneplus13-location-session" \
+  $(pkg-config --cflags --libs qmi-glib qrtr-glib gio-2.0)
+strip "$root/usr/libexec/oneplus13-location-session"
+test -x "$root/usr/libexec/oneplus13-location-session"
+if chroot "$root" /usr/bin/ldd /usr/libexec/oneplus13-location-session |
+    grep -q 'not found'; then
+  echo 'Location-session helper has an unresolved runtime library' >&2
+  exit 1
+fi
 cleanup
 trap - EXIT
 # Remove transient and machine-specific state only inside this fresh staging tree.

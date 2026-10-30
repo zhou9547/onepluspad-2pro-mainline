@@ -1,3 +1,31 @@
+# r188 single-client LOC helper and physical USB evidence, 2026-10-31
+
+The `4ad0ae4a` Actions image completed a combined RAM round and returned
+Android with all seven baseline properties unchanged and zero partition
+writes. Wi-Fi associated on channel 5240 MHz, the temporary Wi-Fi receipt
+channel was independently challenged and acknowledged, MPSS retained all 48
+reviewed files with IPCRTR, and the IR control path, one s2idle cycle, two RTC
+woken deep cycles, and DWC3 host-role readback/restore all passed.
+
+The physical USB-C dock and U disk were attached during the DWC3 host-role
+test. The controller and xHCI host initialized, but no downstream peripheral
+or storage/HID driver appeared during the complete 120-second bounded wait.
+The role cleanup and device-role restore still passed. This is a real USB host
+data-path failure, not a missing operator step.
+
+The NFC controller bound, powered up, and returned to the down state, but the
+presented tag produced no NCI target event. Camera capture forced the sensor's
+`Solid Color` test pattern and read back value 1 successfully, yet real CSID
+data still did not arrive; the same graph produced a complete varied TPG frame.
+The remaining camera fault is therefore at the sensor/C-PHY transmit boundary.
+
+QMI LOC operation mode was readable as `standalone`, but retaining a direct
+QRTR client across separate qmicli processes failed with an unknown client,
+and the qmi-proxy variant timed out on every subsequent request. Source now
+contains a native libqmi client that configures GGA/RMC, registers NMEA,
+starts, follows, stops, and tears down in one process. A real fix remains
+required before GNSS is accepted.
+
 # r184 LOC-session preparation and combined runtime evidence, 2026-10-30
 
 Actions run 41068800412 built commit `c48a2648` successfully in all five

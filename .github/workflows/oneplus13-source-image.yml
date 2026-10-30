@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: flock /tmp/oneplus13-apt-update.lock sudo apt-get update && flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y squashfs-tools zstd
+      - run: flock /tmp/oneplus13-apt-update.lock sudo apt-get update && flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y squashfs-tools zstd build-essential pkg-config libqmi-glib-dev libqrtr-glib-dev libmbim-glib-dev
       - uses: actions/cache/restore@v4
         id: deb-cache
         with:
