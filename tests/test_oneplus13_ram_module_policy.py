@@ -22,8 +22,15 @@ class ModulePolicy(unittest.TestCase):
     def test_camera_controller_and_sensor_remain_manual(self):
         paths=['lib/modules/r/kernel/drivers/i2c/busses/i2c-qcom-cci.ko',
                'lib/modules/r/kernel/drivers/media/i2c/s5kjn5.ko',
-               'lib/modules/r/kernel/drivers/i2c/busses/i2c-qcom-geni.ko']
-        self.assertEqual(policy.blocked_modules(paths,'r'),['i2c_qcom_cci','s5kjn5'])
+               'lib/modules/r/kernel/drivers/i2c/busses/i2c-qcom-geni.ko',
+               'lib/modules/r/kernel/drivers/clk/qcom/camcc-sm8750.ko',
+               'lib/modules/r/kernel/drivers/clk/qcom/cambistmclkcc-sm8750.ko',
+               'lib/modules/r/kernel/drivers/phy/qualcomm/phy-qcom-mipi-csi2.ko']
+        self.assertEqual(
+            policy.blocked_modules(paths,'r'),
+            ['cambistmclkcc_sm8750','camcc_sm8750',
+             'i2c_qcom_cci','phy_qcom_mipi_csi2','s5kjn5'],
+        )
 
     def test_no_path_traversal_or_other_release(self):
         for name in ['/lib/modules/r/kernel/sound/x.ko','./lib/modules/r/../x.ko','lib/modules/other/kernel/sound/x.ko']:

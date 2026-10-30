@@ -13,7 +13,10 @@ PREFIXES=('kernel/sound/', 'kernel/drivers/net/wireless/',
           'kernel/drivers/power/sequencing/', 'kernel/drivers/pci/pwrctrl/',
           'kernel/drivers/media/', 'kernel/drivers/nfc/', 'kernel/net/nfc/')
 EXACT={'kernel/drivers/misc/fastrpc.ko',
-       'kernel/drivers/i2c/busses/i2c-qcom-cci.ko'}
+       'kernel/drivers/i2c/busses/i2c-qcom-cci.ko',
+       'kernel/drivers/clk/qcom/camcc-sm8750.ko',
+       'kernel/drivers/clk/qcom/cambistmclkcc-sm8750.ko',
+       'kernel/drivers/phy/qualcomm/phy-qcom-mipi-csi2.ko'}
 
 def blocked_modules(paths, release):
     if not re.fullmatch(r'[A-Za-z0-9._+-]{1,128}',release):

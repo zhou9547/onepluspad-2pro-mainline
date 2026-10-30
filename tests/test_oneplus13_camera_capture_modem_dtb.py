@@ -59,10 +59,17 @@ class CameraCaptureModemTree(unittest.TestCase):
     def test_csiphy_graph_endpoints_have_ids(self):
         for phy in combined.capture.PHYS:
             for port in (0, 1):
-                endpoint = (
-                    phy["path"] + f"/ports/port@{port}/endpoint@0"
-                )
+                port_path = phy["path"] + f"/ports/port@{port}"
+                endpoint = port_path + "/endpoint@0"
                 self.assertIn(endpoint, self.tree.nodes)
+                self.assertEqual(
+                    self.tree.nodes[port_path]["#address-cells"],
+                    b"\0\0\0\1",
+                )
+                self.assertEqual(
+                    self.tree.nodes[port_path]["#size-cells"],
+                    b"\0\0\0\0",
+                )
                 self.assertEqual(
                     self.tree.nodes[endpoint]["reg"], b"\0\0\0\0"
                 )

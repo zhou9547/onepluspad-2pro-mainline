@@ -216,6 +216,8 @@ def derive(blob):
     sensor["vddd-supply"] = u32(sensor_core)
     sensor["vddm-supply"] = u32(sensor_core)
     sensor_endpoint = tree.nodes[probe.SENSOR + "/port/endpoint"]
+    tree.nodes[probe.SENSOR + "/port"]["#address-cells"] = u32(1)
+    tree.nodes[probe.SENSOR + "/port"]["#size-cells"] = u32(0)
     sensor_endpoint["data-lanes"] = u32(0, 1, 2)
     sensor_endpoint["bus-type"] = u32(V4L2_MBUS_CSI2_CPHY)
     sensor_endpoint["reg"] = u32(0)
@@ -273,6 +275,8 @@ def derive(blob):
         }
         tree.nodes[path + "/ports/port@0"] = {
             "reg": u32(0),
+            "#address-cells": u32(1),
+            "#size-cells": u32(0),
         }
         tree.nodes[path + "/ports/port@0/endpoint@0"] = {
             "reg": u32(0),
@@ -280,10 +284,22 @@ def derive(blob):
         }
         tree.nodes[path + "/ports/port@1"] = {
             "reg": u32(1),
+            "#address-cells": u32(1),
+            "#size-cells": u32(0),
         }
         tree.nodes[path + "/ports/port@1/endpoint@0"] = {
             "reg": u32(0),
         }
+
+    # FWNODE_GRAPH filters unconnected input endpoints. Keep unused PHY inputs
+    # internally connected to their own output endpoint, then replace the
+    # selected CSIPHY1 input with the real sensor link below.
+    for phy in PHYS:
+        tree.nodes[
+            phy["path"] + "/ports/port@0/endpoint@0"
+        ]["remote-endpoint"] = u32(
+            phandle(phy["path"] + "/ports/port@1/endpoint@0")
+        )
 
     sensor_phy_endpoint = (
         PHYS[1]["path"] + "/ports/port@0/endpoint@0"
