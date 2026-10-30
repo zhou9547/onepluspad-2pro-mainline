@@ -1,0 +1,77 @@
+{
+  "scope": "R191_COMBINED_RAM_HARDWARE_EVIDENCE",
+  "source_commit": "ab41d00560a205999fefaa0c3f0c4908b68a1481",
+  "actions_run": 41094911835,
+  "completed": true,
+  "joint_pass": false,
+  "ram_boots": 1,
+  "android_return_confirmed": true,
+  "android_baseline_properties_match": 7,
+  "partition_writes": 0,
+  "wifi_control_verified_before_unplug": true,
+  "wifi_frequency_mhz": 5240.0,
+  "modem_running": true,
+  "modem_firmware_files_verified": 48,
+  "rmtfs_uio_present": true,
+  "gnss": {
+    "started": false,
+    "stopped": false,
+    "fix_acquired": false,
+    "cleanup_complete": false,
+    "pass": false,
+    "failure": "QMI protocol error 94 NotSupported on Set NMEA Types before start"
+  },
+  "nfc": {
+    "controller_started": true,
+    "event_multicast_subscribed": true,
+    "target_event_observed": false,
+    "cleanup_complete": true,
+    "pass": false,
+    "target_count": 0
+  },
+  "camera": {
+    "real_frame_verified": false,
+    "cleanup_pass": true,
+    "tpg_frame_verified": true,
+    "tpg_frame_bytes": 15728640,
+    "cci_init_timeout_observed": true,
+    "v4l2_warning_observed": true
+  },
+  "infrared_transmit_syscall_pass": true,
+  "infrared_optical_output_qualified": false,
+  "suspend_cycles": [
+    {
+      "sleep_mode": "s2idle",
+      "pass": true,
+      "resume_verified": true,
+      "suspended_seconds": 12.322,
+      "watchdog_disarmed_after_resume": true
+    },
+    {
+      "sleep_mode": "deep",
+      "pass": true,
+      "resume_verified": true,
+      "suspended_seconds": 12.69,
+      "watchdog_disarmed_after_resume": true
+    },
+    {
+      "sleep_mode": "deep",
+      "pass": true,
+      "resume_verified": true,
+      "suspended_seconds": 12.617,
+      "watchdog_disarmed_after_resume": true
+    }
+  ],
+  "usb": {
+    "host_role_verified": true,
+    "role_restored": true,
+    "cleanup_complete": true,
+    "functional_pass": false,
+    "host_peripheral_receipt": false,
+    "host_peripheral_i_o_qualified": false,
+    "host_inventory_samples": 240,
+    "peripheral_count": 0
+  },
+  "physical_usb_attachment_owner_confirmed": true,
+  "policy_restored": true
+}

@@ -1,3 +1,26 @@
+# r191 remaining runtime boundaries, 2026-10-31
+
+The native LOC transport now answers; the immediate blocker is the modem's
+NotSupported response to optional Set NMEA Types. The candidate continues on
+that exact QMI domain/code only, preserving default NMEA selection. A successful
+configuration fallback does not qualify GNSS: a real fix and start/stop remain
+mandatory. The native policy self-test never opens QRTR and is required in the
+rootfs build; hardware acceptance awaits a new explicit phone-test approval.
+
+NFC multicast subscription is now established, but a presented physical tag
+still produced no target. USB again failed physical enumeration with confirmed
+dock/U disk attachment despite host-role readback and restoration. Investigate
+Type-C/CC/power dependencies (ADSP was offline) before more role-only tests.
+Camera has both missing real pixels and observed CCI init timeout -110; TPG
+still proves the downstream capture path. Sensor timing, power and CCI state
+must be reviewed before attributing the failure solely to the C-PHY boundary.
+
+One s2idle and two deep cycles, IR transmit syscall, MPSS/RMTFS and 5 GHz
+control passed. The single-use r191 ledger is consumed, Android returned with
+all seven baseline properties equal, and the owner has ended physical testing
+for archive/compile/shutdown. Historical ledgers and time windows must not be
+reused after the next chat starts.
+
 # NFC event subscription was not established, 2026-10-31
 
 The r188 NFC result did not subscribe to the kernel's event multicast group.

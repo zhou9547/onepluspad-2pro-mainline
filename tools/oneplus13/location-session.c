@@ -25,6 +25,37 @@ struct session {
 
 static int exit_status = 1;
 
+static gboolean
+nmea_types_error_is_optional (const GError *error)
+{
+	return g_error_matches (error, QMI_PROTOCOL_ERROR,
+				QMI_PROTOCOL_ERROR_NOT_SUPPORTED);
+}
+
+static int
+configuration_self_test (void)
+{
+	GError *unsupported;
+	GError *general;
+	GError *transport;
+
+	unsupported = g_error_new_literal (QMI_PROTOCOL_ERROR,
+		QMI_PROTOCOL_ERROR_NOT_SUPPORTED, "unsupported configuration");
+	general = g_error_new_literal (QMI_PROTOCOL_ERROR,
+		QMI_PROTOCOL_ERROR_GENERAL_ERROR, "modem failure");
+	transport = g_error_new_literal (G_IO_ERROR,
+		QMI_PROTOCOL_ERROR_NOT_SUPPORTED, "different error domain");
+	g_assert_true (nmea_types_error_is_optional (unsupported));
+	g_assert_false (nmea_types_error_is_optional (general));
+	g_assert_false (nmea_types_error_is_optional (transport));
+	g_assert_false (nmea_types_error_is_optional (NULL));
+	g_error_free (unsupported);
+	g_error_free (general);
+	g_error_free (transport);
+	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=4 no_qrtr=1\n");
+	return 0;
+}
+
 static void
 finish (struct session *session, int status)
 {
@@ -189,11 +220,18 @@ set_nmea_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 		return;
 	}
 	if (!qmi_message_loc_set_nmea_types_output_get_result (output, &error)) {
-		print_error ("set-nmea-result", error);
+		if (!nmea_types_error_is_optional (error)) {
+			print_error ("set-nmea-result", error);
+			g_clear_error (&error);
+			qmi_message_loc_set_nmea_types_output_unref (output);
+			finish (session, 1);
+			return;
+		}
+		/* Some LOC implementations reject this optional configuration.
+		 * Keep their default sentence selection, but still require real
+		 * NMEA fixes and a successful start/stop for acceptance. */
+		g_print ("LOCATION_SESSION_NMEA_DEFAULTS reason=not-supported\n");
 		g_clear_error (&error);
-		qmi_message_loc_set_nmea_types_output_unref (output);
-		finish (session, 1);
-		return;
 	}
 	qmi_message_loc_set_nmea_types_output_unref (output);
 
@@ -314,6 +352,8 @@ main (int argc, char **argv)
 	struct session session = { 0 };
 	unsigned int seconds = 45;
 
+	if (argc == 2 && g_str_equal (argv[1], "--self-test"))
+		return configuration_self_test ();
 	if (argc == 3 && g_str_equal (argv[1], "--seconds"))
 		seconds = (unsigned int) g_ascii_strtoull (argv[2], NULL, 10);
 	else if (argc != 1) {

@@ -1,3 +1,14 @@
+# Owner finishes this round for archive and shutdown, 2026-10-31
+
+The owner requests completing the current modifications, committing code,
+compiling, then updating C:\Users\LYC\Desktop\temp\op13-linux with the
+current and Linux-17 chat records and all needed local material. Move existing
+task material into that archive rather than creating another full copy.
+After all required work and verification, shut down this computer once without
+another confirmation. This one-time shutdown authorization is not reusable.
+The r191 phone round has ended and its ledger is consumed. Any later phone
+round needs fresh per-round approval; do not reuse old approvals or time windows.
+
 # Owner resumes compilation and joint testing, 2026-10-29
 
 The newest owner instruction resumes builds and testing and offers human assistance. This supersedes the source-only pause below. Preserve temporary RAM boot only, source-bound joint plans and the existing 19:00 Asia/Shanghai device deadline unless explicitly extended.

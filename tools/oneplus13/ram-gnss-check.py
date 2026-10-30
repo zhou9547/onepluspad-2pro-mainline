@@ -214,6 +214,9 @@ def collect_native_session(native, seconds):
         "timed_out": process.get("timed_out", False),
         "started": started,
         "stopped": stopped,
+        "nmea_defaults_used": any(
+            line.startswith("LOCATION_SESSION_NMEA_DEFAULTS ") for line in lines
+        ),
         "stderr": process.get("stderr", "")[-8192:],
         "nmea": nmea,
         "fixes": fixes,

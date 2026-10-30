@@ -187,6 +187,22 @@ class GnssNmeaTests(unittest.TestCase):
         self.assertTrue(result["fix_acquired"])
         self.assertEqual(result["nmea"], [nmea])
 
+    def test_native_default_nmea_selection_cannot_substitute_for_a_fix(self):
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 0,
+            "stdout": (
+                "LOCATION_SESSION_NMEA_DEFAULTS reason=not-supported\n"
+                "LOCATION_SESSION_STARTED seconds=30\n"
+                "LOCATION_SESSION_STOPPED nmea=0\n"
+            ),
+            "stderr": "",
+        }):
+            result = GNSS.collect_native_session(Path("/native/probe"), 30)
+        self.assertTrue(result["nmea_defaults_used"])
+        self.assertTrue(result["engine_control_qualified"])
+        self.assertTrue(result["cleanup_complete"])
+        self.assertFalse(result["fix_acquired"])
+
 
 if __name__ == "__main__":
     unittest.main()

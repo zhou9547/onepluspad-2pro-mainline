@@ -1,3 +1,40 @@
+# r191 hardware evidence and next GNSS candidate, 2026-10-31
+
+Actions run 41094911835 built `ab41d005` successfully in all five jobs.
+Independent readback verified three GitHub archive digests, 37 image files,
+44 kernel files, 55 runtime files, 120 qualified firmware files, and the
+native ARM64 LOC client's 18-library dependency closure. The owner approved
+one combined RAM round with a real NFC tag and confirmed physical USB dock
+attachment. It completed and returned Android with all seven baseline
+properties matching, one boot, and zero partition writes.
+
+The 5240 MHz Wi-Fi receipt/control channel, running MPSS and 48 firmware
+files, RMTFS UIO, IR transmit syscall, one s2idle cycle and two deep cycles
+passed. NFC event subscription is now true, confirming the userspace fix,
+but no physical target was found. USB role and xHCI startup/restoration passed,
+yet the attached dock/U disk produced no peripheral across 240 samples in
+120 seconds. ADSP was offline in the initial inventory; Type-C/CC/VBUS
+dependencies remain an investigation, not an established diagnosis.
+
+The native GNSS client reached LOC but Set NMEA Types returned QMI error 94
+NotSupported before start. The next source candidate tolerates only that
+specific protocol error for this optional configuration and continues with
+the modem's default sentences. Registration, start, real checked NMEA fix,
+and stop are still required. Other protocol and transport errors remain fatal.
+The same C source compiles with -Wall -Wextra -Werror on the Linux host;
+four no-QRTR capability-policy checks and eleven Python GNSS tests pass.
+
+Camera still received no real frame. The common TPG path produced a verified
+15,728,640-byte varied frame, but the real sensor path also logged CCI queue
+timeout, init-register error -110 and V4L2 stream warnings. The next camera
+analysis must include sensor/CCI initialization rather than assuming a pure
+C-PHY receive problem. Cleanup passed; no panic/IOMMU/CPU-stall health event
+was recorded. Allowlisted evidence: `evidence/r191-runtime-20261031.json`.
+
+The owner now requests finishing this source round, committing, compiling,
+updating the complete private local archive, and shutting down the computer
+once. No further phone test is requested before the next chat and approval.
+
 # NFC multicast subscription correction, 2026-10-31
 
 Resume review found an additional userspace fault behind r188's

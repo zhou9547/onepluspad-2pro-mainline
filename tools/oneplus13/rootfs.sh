@@ -197,6 +197,7 @@ cc -O2 -Wall -Wextra -Werror \
   $(pkg-config --cflags --libs qmi-glib qrtr-glib gio-2.0)
 strip "$root/usr/libexec/oneplus13-location-session"
 test -x "$root/usr/libexec/oneplus13-location-session"
+chroot "$root" /usr/libexec/oneplus13-location-session --self-test
 if chroot "$root" /usr/bin/ldd /usr/libexec/oneplus13-location-session |
     grep -q 'not found'; then
   echo 'Location-session helper has an unresolved runtime library' >&2
