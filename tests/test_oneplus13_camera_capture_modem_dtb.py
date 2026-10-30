@@ -20,7 +20,7 @@ class CameraCaptureModemTree(unittest.TestCase):
         cls.dtb, cls.report = combined.derive(blob)
         cls.tree = Fdt(cls.dtb)
 
-    def test_only_mpss_node_changes_after_camera_graph(self):
+    def test_only_mpss_and_rmtfs_nodes_change_after_camera_graph(self):
         capture, _ = combined.capture.derive(
             (
                 ROOT / "devices/oneplus13/qualified-data/calibrated.dtb"
@@ -37,6 +37,7 @@ class CameraCaptureModemTree(unittest.TestCase):
         for path, properties in before.nodes.items():
             if path != combined.modem.MPSS:
                 self.assertEqual(properties, after.nodes[path])
+        self.assertEqual(set(before.nodes) | {combined.modem.RMTFS}, set(after.nodes))
 
     def test_mpss_remains_manual(self):
         node = self.tree.nodes[combined.modem.MPSS]

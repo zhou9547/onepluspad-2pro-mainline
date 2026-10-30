@@ -1,3 +1,21 @@
+# r180 MPSS RMTFS shared-memory candidate, 2026-10-30
+
+The previous GNSS result was not an NMEA failure: the QRTR registry had no LOC
+service, so qmicli returned `Internal` before a session could start. The stock
+vendor_boot DTBs contain `qcom,rmtfs_sharedmem@0`, while the manual MPSS trees
+did not. The source now adds that exact node (`qcom,sharedmem-uio`, client 1,
+4 MiB), the public LineageOS/OnePlusOSS `msm_sharedmem` driver, and the udev
+link expected by `rmtfs` (`/dev/qcom_rmtfs_uio1`). No new reserved-memory region
+or `/dev/mem` fallback is added.
+
+The driver uses the current qcom_scm and UIO APIs, keeps the original CMA and
+VMID assignments, restores HLOS permissions before teardown, and frees dynamic
+CMA on remove and failed UIO registration. The ARM64 module compiles against
+the exact kernel build on the trusted server. DTB and source tests cover the
+new node, the public blob provenance and the device-link build inputs. This is
+still a build-qualified candidate: LOC service publication, an actual NMEA fix
+and complete MPSS/modem functionality require a later combined RAM test.
+
 # r178/r179 camera receive follow-up, 2026-10-30
 
 The stock normal-preview C-PHY table selects output selector `0x0b30 = 0x0102`;

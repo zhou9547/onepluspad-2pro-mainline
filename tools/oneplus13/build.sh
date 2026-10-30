@@ -162,6 +162,8 @@ grep -qx 'CONFIG_I2C_QCOM_CCI=m' "$kout/.config"
 grep -qx 'CONFIG_VIDEO_S5KJN5=m' "$kout/.config"
 grep -qx 'CONFIG_VIDEO_QCOM_CAMSS=m' "$kout/.config"
 grep -qx 'CONFIG_PHY_QCOM_MIPI_CSI2=m' "$kout/.config"
+grep -qx 'CONFIG_UIO=y' "$kout/.config"
+grep -qx 'CONFIG_UIO_MSM_SHAREDMEM=m' "$kout/.config"
 python3 tools/oneplus13/verify.py --config "$kout/.config"
 cp "$kout/.config" "$dest/kernel.config"
 config_id=$(sha256sum "$kout/.config" | cut -c1-12)

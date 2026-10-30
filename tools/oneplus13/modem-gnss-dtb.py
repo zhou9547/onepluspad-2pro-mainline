@@ -13,6 +13,7 @@ from stock import Fdt, cells, strings
 
 video = importlib.import_module("video-probe-dtb")
 MPSS = "/soc@0/remoteproc@4080000"
+RMTFS = "/soc@0/qcom,rmtfs_sharedmem@0"
 FIRMWARE = (
     "qcom/sm8750/oneplus/dodge/modem.mdt",
     "qcom/sm8750/oneplus/dodge/modem_dtb.mdt",
@@ -73,6 +74,17 @@ def validate_stock_mpss(tree):
     return regions
 
 
+def add_rmtfs_sharedmem(tree):
+    if RMTFS in tree.nodes:
+        raise ValueError("RMTFS shared-memory node already exists")
+    tree.nodes[RMTFS] = {
+        "compatible": video.text("qcom,sharedmem-uio"),
+        "reg": struct.pack(">II", 0, 0x400000),
+        "reg-names": video.text("rmtfs"),
+        "qcom,client-id": struct.pack(">I", 1),
+    }
+
+
 def derive(blob):
     video_blob, video_report = video.derive(blob)
     tree = Fdt(video_blob)
@@ -80,9 +92,18 @@ def derive(blob):
     regions = validate_stock_mpss(tree)
     tree.nodes[MPSS]["status"] = video.text("okay")
     tree.nodes[MPSS]["firmware-name"] = video.text(*FIRMWARE)
+    if RMTFS in tree.nodes:
+        raise ValueError("RMTFS shared-memory node already exists")
+    tree.nodes[RMTFS] = {
+        "compatible": video.text("qcom,sharedmem-uio"),
+        "reg": struct.pack(">II", 0, 0x400000),
+        "reg-names": video.text("rmtfs"),
+        "qcom,client-id": struct.pack(">I", 1),
+    }
     changed = {path for path in before if before[path] != tree.nodes[path]}
-    if changed != {MPSS} or set(before) != set(tree.nodes):
-        raise ValueError("Unexpected MPSS tree mutation")
+    if changed != {MPSS} or set(before) | {RMTFS} != set(tree.nodes):
+        raise ValueError("Unexpected MPSS/RMTFS tree mutation")
+    report_nodes = sorted({MPSS, RMTFS})
     final = tree.to_blob()
     check = Fdt(final)
     if check.nodes != tree.nodes or check.reservations != tree.reservations:
@@ -92,10 +113,11 @@ def derive(blob):
         "base_sha256": hashlib.sha256(blob).hexdigest(),
         "output_sha256": hashlib.sha256(final).hexdigest(),
         "video_derivation": video_report,
-        "changed_nodes": sorted(changed),
+        "changed_nodes": report_nodes,
         "mpss_node": MPSS,
         "firmware_names": list(FIRMWARE),
         "memory_regions": regions,
+        "rmtfs_sharedmem_node": RMTFS,
         "auto_boot_enabled": False,
         "manual_remoteproc_start_required": True,
         "firmware_authentication_qualified": False,

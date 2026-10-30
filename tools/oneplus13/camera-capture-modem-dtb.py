@@ -20,10 +20,11 @@ def derive(blob):
     regions = modem.validate_stock_mpss(tree)
     tree.nodes[modem.MPSS]["status"] = capture.text("okay")
     tree.nodes[modem.MPSS]["firmware-name"] = capture.text(*modem.FIRMWARE)
+    modem.add_rmtfs_sharedmem(tree)
     changed = {
         path for path in before if before[path] != tree.nodes[path]
     }
-    if changed != {modem.MPSS} or set(before) != set(tree.nodes):
+    if changed != {modem.MPSS} or set(before) | {modem.RMTFS} != set(tree.nodes):
         raise ValueError("Unexpected combined camera/MPSS graph mutation")
     final = tree.to_blob()
     check = Fdt(final)
@@ -38,6 +39,7 @@ def derive(blob):
             "node": modem.MPSS,
             "firmware_names": list(modem.FIRMWARE),
             "memory_regions": regions,
+            "rmtfs_sharedmem_node": modem.RMTFS,
             "auto_boot_enabled": False,
             "manual_start_required": True,
         },

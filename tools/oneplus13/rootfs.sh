@@ -152,7 +152,8 @@ ln -sfn /usr/lib/systemd/system/rmtfs.service \
   "$root/etc/systemd/system/multi-user.target.wants/rmtfs.service"
 ln -sfn /usr/lib/systemd/system/tqftpserv.service \
   "$root/etc/systemd/system/multi-user.target.wants/tqftpserv.service"
-# Host keys generated while building must never become shared image identity.
+
+install -Dm0644 devices/oneplus13/rmtfs-uio.rules "$root/etc/udev/rules.d/90-oneplus13-rmtfs-uio.rules"
 rm -f "$root"/etc/ssh/ssh_host_*
 desktop_args=("$root")
 if [[ -n ${ONEPLUS13_KERNEL_ARTIFACT:-} ]]; then

@@ -22,11 +22,12 @@ class ModemGnssTree(unittest.TestCase):
         self.before_tree = Fdt(self.before)
         self.tree = Fdt(self.result)
 
-    def test_only_mpss_node_changes(self):
-        self.assertEqual(self.report["changed_nodes"], [modem.MPSS])
+    def test_only_mpss_and_rmtfs_nodes_change(self):
+        self.assertEqual(self.report["changed_nodes"], sorted([modem.MPSS, modem.RMTFS]))
         for path, properties in self.before_tree.nodes.items():
             if path != modem.MPSS:
                 self.assertEqual(properties, self.tree.nodes[path], path)
+        self.assertEqual(set(self.before_tree.nodes) | {modem.RMTFS}, set(self.tree.nodes))
 
     def test_exact_mpss_firmware_and_resources(self):
         node = self.tree.nodes[modem.MPSS]
@@ -41,6 +42,14 @@ class ModemGnssTree(unittest.TestCase):
         )
         self.assertTrue(self.report["manual_remoteproc_start_required"])
         self.assertFalse(self.report["auto_boot_enabled"])
+
+    def test_exact_rmtfs_sharedmem_node(self):
+        node = self.tree.nodes[modem.RMTFS]
+        self.assertEqual(strings(node["compatible"]), ["qcom,sharedmem-uio"])
+        self.assertEqual(strings(node["reg-names"]), ["rmtfs"])
+        self.assertEqual(node["reg"], bytes([0, 0, 0, 0, 0, 0x40, 0, 0]))
+        self.assertEqual(node["qcom,client-id"], bytes([0, 0, 0, 1]))
+        self.assertEqual(self.report["rmtfs_sharedmem_node"], modem.RMTFS)
 
     def test_functional_acceptance_remains_false(self):
         self.assertFalse(self.report["firmware_authentication_qualified"])
