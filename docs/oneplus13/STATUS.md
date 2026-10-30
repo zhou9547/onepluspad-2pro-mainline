@@ -1,3 +1,18 @@
+# NFC multicast subscription correction, 2026-10-31
+
+Resume review found an additional userspace fault behind r188's
+`event_multicast_subscribed=false`: the generic-netlink controller serializes
+both multicast-group containers with `nla_nest_start_noflag()`, while the poll
+helper rejected containers without `NLA_F_NESTED`. It also referenced socket
+option constants absent from the available Ubuntu Python build. The parser
+now uses the known nlctrl schema for either flag encoding and supplies the
+Linux UAPI values for subscription. Regression tests reproduce both failures
+and pass after correction. A physical NFC target remains unqualified; the
+previous event absence cannot by itself isolate an RF or power fault.
+
+Primary source: Linux `net/netlink/genetlink.c`, `ctrl_fill_info()`:
+https://github.com/torvalds/linux/blob/master/net/netlink/genetlink.c
+
 # Native GNSS entry-point correction, 2026-10-31
 
 Actions run 41090987923 built the single-client LOC candidate at `0477f68f`

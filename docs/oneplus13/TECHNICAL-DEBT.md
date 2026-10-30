@@ -1,3 +1,13 @@
+# NFC event subscription was not established, 2026-10-31
+
+The r188 NFC result did not subscribe to the kernel's event multicast group.
+The helper incorrectly required NLA_F_NESTED on nlctrl's noflag containers;
+after group resolution it would also fail on missing Python socket constants.
+Both source faults are corrected with regression coverage. The next combined
+round must first prove `event_multicast_subscribed=true`, then obtain a real
+target inventory and complete cleanup. Earlier missing target events are not
+enough to conclude that NFC RF/power is at fault.
+
 # Native GNSS entry-point coverage, 2026-10-31
 
 The first single-client image compiled successfully but its Python dispatch

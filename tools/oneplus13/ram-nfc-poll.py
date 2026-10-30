@@ -12,6 +12,9 @@ import time
 
 
 NETLINK_GENERIC = 16
+# Linux UAPI constants are not exported by every Python socket build.
+SOL_NETLINK = getattr(socket, "SOL_NETLINK", 270)
+NETLINK_ADD_MEMBERSHIP = getattr(socket, "NETLINK_ADD_MEMBERSHIP", 1)
 GENL_ID_CTRL = 0x10
 NLMSG_ERROR = 2
 NLMSG_DONE = 3
@@ -149,7 +152,7 @@ class NfcNetlink:
         self.last_targets = []
         if self.events_group is not None:
             self.sock.setsockopt(
-                socket.SOL_NETLINK, socket.NETLINK_ADD_MEMBERSHIP, self.events_group
+                SOL_NETLINK, NETLINK_ADD_MEMBERSHIP, self.events_group
             )
 
     def _next(self):
@@ -250,12 +253,12 @@ class NfcNetlink:
             if family is None:
                 continue
             event_group = None
-            for kind, value, nested in attributes:
-                if kind != CTRL_ATTR_MCAST_GROUPS or not nested:
+            for kind, value, _ in attributes:
+                if kind != CTRL_ATTR_MCAST_GROUPS:
                     continue
-                for group_kind, group_value, group_nested in parse_attrs(value):
-                    if not group_nested:
-                        continue
+                # nlctrl uses nla_nest_start_noflag() for both containers.
+                # Their schema determines nesting even without NLA_F_NESTED.
+                for _, group_value, _ in parse_attrs(value):
                     group = parse_attrs(group_value)
                     name = next(
                         (

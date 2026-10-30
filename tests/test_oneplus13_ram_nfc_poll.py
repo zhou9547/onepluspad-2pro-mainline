@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import struct
 import unittest
+from unittest.mock import Mock, patch
 
 
 PATH = Path(__file__).resolve().parents[1] / "tools/oneplus13/ram-nfc-poll.py"
@@ -13,6 +14,33 @@ SPEC.loader.exec_module(POLL)
 
 
 class NfcNetlinkEncodingTests(unittest.TestCase):
+    def test_family_multicast_groups_accept_linux_noflag_nesting(self):
+        for flag in (0, 0x8000):
+            with self.subTest(nested_flag=flag):
+                group = POLL.attr_string(POLL.CTRL_ATTR_MCAST_GRP_NAME, "events")
+                group += POLL.attr_u32(POLL.CTRL_ATTR_MCAST_GRP_ID, 37)
+                attributes = POLL.attr(POLL.CTRL_ATTR_FAMILY_ID, struct.pack("<H", 42))
+                attributes += POLL.attr(
+                    POLL.CTRL_ATTR_MCAST_GROUPS | flag,
+                    POLL.attr(1 | flag, group),
+                )
+                payload = struct.pack("<BBH", 1, 1, 0) + attributes
+                netlink = POLL.NfcNetlink.__new__(POLL.NfcNetlink)
+                netlink.send = Mock(return_value=1)
+                netlink._receive_until = Mock(return_value=[(POLL.GENL_ID_CTRL, 0, payload)])
+                self.assertEqual(netlink._family(), (42, 37))
+
+    def test_constructor_subscribes_with_linux_netlink_socket_options(self):
+        sock = Mock()
+        with patch.object(POLL.Path, "is_file", return_value=True), patch.object(
+            POLL.socket, "AF_NETLINK", 16, create=True
+        ), patch.object(POLL.socket, "socket", return_value=sock), patch.object(
+            POLL.NfcNetlink, "_family", return_value=(42, 37)
+        ):
+            netlink = POLL.NfcNetlink(100)
+        sock.setsockopt.assert_called_once_with(270, 1, 37)
+        self.assertEqual(netlink.events_group, 37)
+
     def test_alignment_and_u32_attribute(self):
         row = POLL.attr_u32(POLL.NFC_ATTR_DEVICE_INDEX, 7)
         self.assertEqual(len(row), 8)
