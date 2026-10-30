@@ -28,9 +28,13 @@ and a fix have not passed.
 No media graph was created by CAMSS after all reviewed modules loaded, despite
 a clean unload and zero kernel-health counters. Diagnostics then showed all six
 CSI PHY probes rejecting the missing graph endpoint IDs. Source now supplies
-`endpoint@0` identifiers and reciprocal sensor links, pending build and live
+`endpoint@0` identifiers, reciprocal sensor links, the correct firmware
+C-PHY bus type and a boot-time provider deny policy, pending build and live
 frame validation. The infrared GPIO ownership bug is fixed in source but needs
 a new Actions image and an actual emission syscall plus optical observation.
+Qualcomm remote filesystem/TFTP userspace services are installed and enabled;
+whether this publication order is sufficient for the vendor `loc` service
+still requires hardware evidence.
 
 The capture helper's VFE entity names and packed RAW10 size have been corrected
 against the fixed upstream kernel source. Sensor initialization, real CAMSS

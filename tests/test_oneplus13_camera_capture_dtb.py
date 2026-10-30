@@ -34,7 +34,7 @@ class CameraCaptureTree(unittest.TestCase):
             capture.probe.SENSOR + "/port/endpoint"
         ]
         self.assertEqual(cells(endpoint["data-lanes"]), [0, 1, 2])
-        self.assertEqual(cells(endpoint["bus-type"]), [6])
+        self.assertEqual(cells(endpoint["bus-type"]), [1])
         self.assertEqual(
             cells(endpoint["link-frequencies"]),
             [0, 1_400_000_000],

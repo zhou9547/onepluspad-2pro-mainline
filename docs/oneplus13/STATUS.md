@@ -54,6 +54,11 @@ removed. GNSS reached QRTR node requests but the `loc` service returned
 publication before classifying the result. The camera follow-up showed all six
 CSI PHY drivers reporting `Missing port@0`; the graph endpoints now carry
 endpoint IDs and reciprocal sensor links instead of relying on parser defaults.
+A later exact-image run removed the PHY probe failures and exposed the remaining
+parser mismatch: the sensor endpoint used media-bus value6 instead of the
+firmware-property C-PHY value1. Source now uses value1, defers every camera
+provider until the reviewed RAM loader has set up CAMCC, and enables the
+Qualcomm `rmtfs` and `tqftpserv` userspace services for modem initialization.
 
 Additional camera review against the pinned kernel's `camss-vfe.c` found that
 the RDI subdevice is `msm_vfe1_rdi0` and its separate capture entity is

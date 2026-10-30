@@ -42,6 +42,12 @@ class LocalizationAndSsh(unittest.TestCase):
         self.assertIn('ssh.service',self.rootfs)
         self.assertIn('rm -f "$root"/etc/ssh/ssh_host_*',self.rootfs)
 
+    def test_qualcomm_remote_services_are_installed_and_enabled(self):
+        for package in ('rmtfs', 'tqftpserv'):
+            self.assertIn(package, self.image['packages'])
+        for unit in ('rmtfs.service', 'tqftpserv.service'):
+            self.assertIn(unit, self.rootfs)
+
 
 if __name__=='__main__':
     unittest.main()

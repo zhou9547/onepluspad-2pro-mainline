@@ -31,7 +31,7 @@ CSI_1P2 = SOC + "/rsc@16500000/regulators-3/ldo3"
 SENSOR_CORE = probe.CORE
 
 PHY_TYPE_CPHY = 11
-V4L2_MBUS_CSI2_CPHY = 6
+V4L2_FWNODE_BUS_TYPE_CSI2_CPHY = 1
 QCOM_ICC_TAG_ACTIVE_ONLY = 3
 QCOM_ICC_TAG_ALWAYS = 7
 
@@ -219,7 +219,7 @@ def derive(blob):
     tree.nodes[probe.SENSOR + "/port"]["#address-cells"] = u32(1)
     tree.nodes[probe.SENSOR + "/port"]["#size-cells"] = u32(0)
     sensor_endpoint["data-lanes"] = u32(0, 1, 2)
-    sensor_endpoint["bus-type"] = u32(V4L2_MBUS_CSI2_CPHY)
+    sensor_endpoint["bus-type"] = u32(V4L2_FWNODE_BUS_TYPE_CSI2_CPHY)
     sensor_endpoint["reg"] = u32(0)
     sensor_endpoint["link-frequencies"] = u32(
         (1400000000 >> 32) & 0xFFFFFFFF, 1400000000 & 0xFFFFFFFF

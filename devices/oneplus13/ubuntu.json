@@ -10,7 +10,7 @@
   "packages": [
     "systemd-sysv", "ubuntu-standard", "gnome-shell", "gnome-session", "ubuntu-session",
     "gdm3", "gnome-control-center", "gnome-terminal", "gnome-initial-setup",
-    "nautilus", "network-manager", "modemmanager", "libqmi-utils", "qrtr-tools", "wpasupplicant", "iw", "dbus-user-session", "bluez", "gnome-bluetooth-sendto", "bluez-obexd", "xwayland", "libgl1-mesa-dri",
+    "nautilus", "network-manager", "modemmanager", "libqmi-utils", "qrtr-tools", "rmtfs", "tqftpserv", "wpasupplicant", "iw", "dbus-user-session", "bluez", "gnome-bluetooth-sendto", "bluez-obexd", "xwayland", "libgl1-mesa-dri",
     "mesa-utils", "systemd-resolved", "sudo", "locales", "console-setup", "busybox-static", "curl",
     "ca-certificates", "openssh-client", "openssh-server", "kmod", "zstd",
     "language-pack-zh-hans", "language-pack-gnome-zh-hans", "fonts-noto-cjk",

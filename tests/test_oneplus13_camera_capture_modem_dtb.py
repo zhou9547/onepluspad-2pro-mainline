@@ -78,6 +78,14 @@ class CameraCaptureModemTree(unittest.TestCase):
             + "/ports/port@0/endpoint@0"
         )
         self.assertIn("remote-endpoint", self.tree.nodes[selected])
+        sensor_endpoint = (
+            combined.capture.probe.SENSOR + "/port/endpoint"
+        )
+        from stock import cells
+        self.assertEqual(
+            cells(self.tree.nodes[sensor_endpoint]["bus-type"]),
+            [combined.capture.V4L2_FWNODE_BUS_TYPE_CSI2_CPHY],
+        )
 
 
 if __name__ == "__main__":

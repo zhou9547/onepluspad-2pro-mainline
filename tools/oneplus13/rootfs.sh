@@ -148,6 +148,10 @@ ln -sfn /usr/lib/systemd/system/oneplus13-ssh-host-keys.service \
   "$root/etc/systemd/system/multi-user.target.wants/oneplus13-ssh-host-keys.service"
 ln -sfn /usr/lib/systemd/system/ssh.service \
   "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
+ln -sfn /usr/lib/systemd/system/rmtfs.service \
+  "$root/etc/systemd/system/multi-user.target.wants/rmtfs.service"
+ln -sfn /usr/lib/systemd/system/tqftpserv.service \
+  "$root/etc/systemd/system/multi-user.target.wants/tqftpserv.service"
 # Host keys generated while building must never become shared image identity.
 rm -f "$root"/etc/ssh/ssh_host_*
 desktop_args=("$root")
