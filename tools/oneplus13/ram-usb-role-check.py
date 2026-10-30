@@ -32,7 +32,7 @@ def mode_paths(root=None):
         root = DEBUGFS
     root = Path(root)
     rows = []
-    candidates = [root / "a600000.usb/mode"]
+    candidates = [root / "usb/a600000.usb/mode", root / "a600000.usb/mode"]
     candidates += [path / "mode" for path in sorted(root.glob("dwc3*"))]
     candidates += [path / "mode" for path in sorted(root.glob("*/dwc3*"))]
     for mode in candidates:

@@ -165,6 +165,19 @@ def wait_state(path, wanted, timeout):
     return (path / "state").read_text().strip()
 
 
+def wait_control_plane(entry, timeout):
+    end = time.monotonic() + timeout
+    facts = runtime_facts(entry)
+    while time.monotonic() < end:
+        facts = runtime_facts(entry)
+        if entry["state"] == "running" and facts["rpmsg_has_ipcrtr"]:
+            return facts
+        if entry["state"] in ("crashed", "offline"):
+            return facts
+        time.sleep(0.5)
+    return facts
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -227,12 +240,33 @@ def main():
         if any(item["returncode"] for item in control_modules.values()):
             raise RuntimeError("Required modem control-plane module failed to load")
         if entry["state"] != "offline":
-            raise RuntimeError("MPSS must be offline before start")
-        write_state(entry["path"], "start", 6)
-        state = wait_state(entry["path"], "running", 50)
+            if entry["state"] not in ("running", "crashed"):
+                raise RuntimeError("MPSS must be offline, running or crashed before start")
+            write_state(entry["path"], "stop", 6)
+            state = wait_state(entry["path"], "offline", 25)
+            if state != "offline":
+                raise RuntimeError("MPSS did not stop before restart")
+        attempts = []
+        for attempt in range(1, 3):
+            write_state(entry["path"], "start", 6)
+            state = wait_state(entry["path"], "running", 50)
+            facts = wait_control_plane(find_mpss(), 30)
+            attempts.append(
+                {"attempt": attempt, "started_state": state, "facts": facts}
+            )
+            if state == "running" and facts["rpmsg_has_ipcrtr"]:
+                break
+            if find_mpss()["state"] != "offline":
+                write_state(entry["path"], "stop", 6)
+                wait_state(entry["path"], "offline", 25)
+            if attempt == 2:
+                break
+            time.sleep(1)
+        result["attempts"] = attempts
+        state = find_mpss()["state"]
         result["facts"] = runtime_facts(find_mpss())
         result["started_state"] = state
-        result["pass"] = state == "running"
+        result["pass"] = state == "running" and result["facts"]["rpmsg_has_ipcrtr"]
         if not result["pass"]:
             try:
                 write_state(entry["path"], "stop", 4)

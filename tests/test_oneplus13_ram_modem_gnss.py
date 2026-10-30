@@ -139,6 +139,19 @@ class ModemFirmwareInstallTests(unittest.TestCase):
             MODEM.Path = original
         self.assertTrue(result["rpmsg_has_ipcrtr"])
 
+    def test_modem_service_is_bounded_and_retries_ipcrtr(self):
+        service = (
+            Path(__file__).resolve().parents[1]
+            / "devices/oneplus13/modem/oneplus13-modem.service"
+        ).read_text(encoding="utf-8")
+        self.assertIn("TimeoutStartSec=120s", service)
+        self.assertIn(
+            "ConditionPathExists=!/run/oneplus13/ram-session", service
+        )
+        self.assertIn("for attempt in 1 2", service)
+        self.assertIn("have_ipcrtr", service)
+        self.assertIn('echo stop > "$rp/state"', service)
+
 
 if __name__ == "__main__":
     unittest.main()
