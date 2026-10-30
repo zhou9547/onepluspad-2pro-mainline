@@ -1,5 +1,9 @@
 # r81 runtime acceptance remains pending, 2026-10-30
 
+The capture helper's VFE entity names and packed RAW10 size have been corrected
+against the fixed upstream kernel source. Sensor initialization, real CAMSS
+binding and a variable-pixel frame still need direct hardware evidence.
+
 GNSS now uses separate LOC actions and requires valid NMEA checksums, but a real
 fix and successful stop are still unobserved. The suspend repair prevents a
 post-resume sysfs fsync failure and requires measurable sleeping time; it does

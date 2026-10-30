@@ -80,8 +80,9 @@ def main():
     try:
         write(mode, "host")
         result["host_role_requested"] = True
-        result["role_after_host_request"] = read(mode)
         time.sleep(3)
+        result["role_after_host_request"] = read(mode)
+        result["host_role_verified"] = result["role_after_host_request"] == "host"
         result["host_inventory"] = inventory()
     finally:
         write(mode, "device")
@@ -95,7 +96,8 @@ def main():
         result["cleanup_inventory"] = inventory()
         result["cleanup_complete"] = bool(result["role_restored"])
         result["pass"] = bool(
-            result["host_role_requested"] and result["role_restored"]
+            result["host_role_requested"] and result.get("host_role_verified", False)
+            and result["role_restored"]
         )
         (STATE / "result.json").write_text(
             json.dumps(result, sort_keys=True) + "\n", encoding="utf-8"

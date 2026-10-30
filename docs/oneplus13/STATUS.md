@@ -1,5 +1,19 @@
 # r81 bounded GNSS sessions and shared-module preservation, 2026-10-30
 
+Additional camera review against the pinned kernel's `camss-vfe.c` found that
+the RDI subdevice is `msm_vfe1_rdi0` and its separate capture entity is
+`msm_vfe1_video0`. The former `msm_vfe1` topology fixture was incorrect.
+`vfe_formats_rdi_845` maps SGBRG10_1X10 to packed SGBRG10P (`pGAA`), requiring
+15,728,640 bytes for 4096x3072 rather than the unpacked two-byte layout. The
+helper now selects the actual entities, verifies the negotiated dimensions and
+FourCC, and retains topology output when graph discovery fails. This is source
+review and offline verification, not proof that the sensor produces a frame.
+
+USB role-switch acceptance now requires a readback of `host` after the transition,
+as well as restoring `device`. A write followed by device recovery alone cannot
+pass. The infrared pattern follows ir-ctl's supported pulse/space syntax and
+sets duty cycle only with the supported CLI option.
+
 The QMI LOC helper previously combined two mutually exclusive actions in one
 qmicli invocation. Upstream `src/qmicli/qmicli-loc.c` explicitly rejects that
 combination. The helper now starts, follows NMEA, and stops separately while

@@ -21,7 +21,11 @@ POLICY = Path(
 AUDIO_HELPER = Path("/usr/libexec/oneplus13-ram-audio-check.py")
 WIDTH = 4096
 HEIGHT = 3072
-MIN_BYTES = WIDTH * HEIGHT * 2
+# CAMSS vfe_formats_rdi_845 exports SGBRG10P for SGBRG10_1X10.
+# Four 10-bit pixels occupy five bytes; this is not unpacked GB10.
+MIN_BYTES = WIDTH * HEIGHT * 5 // 4
+VFE_ENTITY = "msm_vfe1_rdi0"
+VIDEO_ENTITY = "msm_vfe1_video0"
 
 
 def run(command, timeout=20, check=True):
@@ -90,17 +94,19 @@ def parse_media(output):
 
 def find_media():
     matches = []
+    observed = {}
     for path in sorted(Path("/dev").glob("media*")):
         result = run(["media-ctl", "--device", path, "--print-topology"])
         entities = parse_media(result.stdout)
-        required = {"msm_csiphy1", "msm_csid1", "msm_vfe1"}
+        observed[str(path)] = sorted(entities)
+        required = {"msm_csiphy1", "msm_csid1", VFE_ENTITY, VIDEO_ENTITY}
         sensor = [
             name for name in entities if name.startswith("s5kjn5 ")
         ]
         if required.issubset(entities) and len(sensor) == 1:
             matches.append((path, entities, sensor[0]))
     if len(matches) != 1:
-        raise ValueError(f"Expected one S5KJN5 media graph, found {len(matches)}")
+        raise ValueError(f"Expected one S5KJN5 media graph, found {len(matches)}; observed={observed}")
     return matches[0]
 
 
@@ -195,7 +201,7 @@ def main():
         "scope": "REAL_S5KJN5_CPHY_FRAME",
         "width": WIDTH,
         "height": HEIGHT,
-        "pixel_format": "V4L2_PIX_FMT_SGBRG10",
+        "pixel_format": "V4L2_PIX_FMT_SGBRG10P",
         "frame_verified": False,
         "cleanup_pass": False,
     }
@@ -240,6 +246,10 @@ def main():
                 device, entities, sensor = find_media()
                 break
             except (OSError, RuntimeError, ValueError):
+                report["media_inventory"] = {
+                    str(path): run(["media-ctl", "--device", path, "--print-topology"], check=False).stdout[-32768:]
+                    for path in Path("/dev").glob("media*")
+                }
                 time.sleep(0.25)
         if device is None:
             raise ValueError("Linux CAMSS media graph did not appear")
@@ -250,24 +260,29 @@ def main():
         )
         set_link(device, sensor, 0, "msm_csiphy1", 0)
         set_link(device, "msm_csiphy1", 1, "msm_csid1", 0)
-        set_link(device, "msm_csid1", 1, "msm_vfe1", 0)
+        set_link(device, "msm_csid1", 1, VFE_ENTITY, 0)
         for entity, pads in (
             (sensor, (0,)),
             ("msm_csiphy1", (0, 1)),
             ("msm_csid1", (0, 1)),
-            ("msm_vfe1", (0, 1)),
+            (VFE_ENTITY, (0, 1)),
         ):
             for pad in pads:
                 set_format(device, entity, pad)
-        video = entity_node(entities, "msm_vfe1")
+        video = entity_node(entities, VIDEO_ENTITY)
         run(
             [
                 "v4l2-ctl",
                 "--device",
                 video,
-                f"--set-fmt-video=width={WIDTH},height={HEIGHT},pixelformat=GB10",
+                f"--set-fmt-video=width={WIDTH},height={HEIGHT},pixelformat=pGAA",
             ]
         )
+        selected = run(["v4l2-ctl", "--device", video, "--get-fmt-video"]).stdout
+        report["negotiated_format"] = selected
+        if (not re.search(r"Width/Height\s*:\s*4096/3072", selected)
+                or not re.search(r"Pixel Format\s*:\s*'pGAA'", selected)):
+            raise ValueError("Capture format was coerced away from reviewed packed RAW10")
         result = run(
             [
                 "v4l2-ctl",

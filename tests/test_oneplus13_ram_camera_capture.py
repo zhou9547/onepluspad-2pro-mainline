@@ -24,11 +24,13 @@ TOPOLOGY = """
   device node name /dev/v4l-subdev2
   pad0: Sink
   pad1: Source
-- entity 4: msm_vfe1 (2 pads, 1 link)
+- entity 4: msm_vfe1_rdi0 (2 pads, 2 links)
   device node name /dev/v4l-subdev3
-  device node name /dev/video7
   pad0: Sink
   pad1: Source
+- entity 5: msm_vfe1_video0 (1 pad, 1 link)
+  device node name /dev/video7
+  pad0: Sink
 """
 
 
@@ -39,11 +41,20 @@ class CameraCaptureRuntime(unittest.TestCase):
             "s5kjn5 1-002d",
             "msm_csiphy1",
             "msm_csid1",
-            "msm_vfe1",
+            "msm_vfe1_rdi0",
+            "msm_vfe1_video0",
         })
-        self.assertEqual(capture.entity_node(entities, "msm_vfe1"),
+        self.assertEqual(capture.entity_node(entities, "msm_vfe1_video0"),
                          "/dev/video7")
         self.assertEqual(entities["msm_csiphy1"]["pads"], {0, 1})
+
+    def test_vfe_subdevice_is_not_the_capture_device(self):
+        entities = capture.parse_media(TOPOLOGY)
+        with self.assertRaises(ValueError):
+            capture.entity_node(entities, "msm_vfe1_rdi0")
+
+    def test_raw10_uses_packed_four_pixel_five_byte_layout(self):
+        self.assertEqual(capture.MIN_BYTES, 15728640)
 
     def test_frame_validation_rejects_uniform_data(self):
         with tempfile.TemporaryDirectory() as tmp:

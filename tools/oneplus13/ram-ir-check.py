@@ -152,11 +152,11 @@ def main():
             pattern.parent.mkdir(parents=True, exist_ok=True)
             pattern.write_text(
                 "carrier 38000\n"
-                "duty_cycle 33\n"
                 "pulse 560\n"
                 "space 560\n"
                 "pulse 560\n"
-                "space 1690\n",
+                "space 1690\n"
+                "pulse 560\n",
                 encoding="ascii",
             )
             transmit = run(
