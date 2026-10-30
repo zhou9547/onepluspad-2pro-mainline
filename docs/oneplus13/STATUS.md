@@ -40,8 +40,9 @@ the UDC. No physical USB-C peripheral was attached, so host I/O remains open.
 One RTC-woken s2idle cycle entered suspend and resumed after 14.817 seconds of
 actual suspend time (`BOOTTIME - MONOTONIC`), then disarmed the 32-second
 Gunyah watchdog and cleared its wake alarm. This is a real s2idle pass.
-Repeated deep suspend, deep idle, long-term power and charger policy remain
-open.
+That run also completed two repeated deep cycles of 12.721 and 12.700 seconds,
+both with successful RTC wake and watchdog cleanup. Deep idle, long-term power
+and charger policy remain open.
 
 The camera helper loaded its bounded module closure and cleaned it up without
 kernel-health faults, but CAMSS did not create a media device, so no sensor
@@ -50,7 +51,9 @@ frame was attempted. The IR driver and LIRC interface both appeared at
 both the SPI controller and child device. The child pinctrl duplication is now
 removed. GNSS reached QRTR node requests but the `loc` service returned
 `Internal` immediately after MPSS startup; the next helper waits for service
-publication before classifying the result.
+publication before classifying the result. The camera follow-up showed all six
+CSI PHY drivers reporting `Missing port@0`; the graph endpoints now carry
+endpoint IDs and reciprocal sensor links instead of relying on parser defaults.
 
 Additional camera review against the pinned kernel's `camss-vfe.c` found that
 the RDI subdevice is `msm_vfe1_rdi0` and its separate capture entity is

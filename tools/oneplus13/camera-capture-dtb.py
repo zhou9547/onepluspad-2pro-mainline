@@ -218,6 +218,7 @@ def derive(blob):
     sensor_endpoint = tree.nodes[probe.SENSOR + "/port/endpoint"]
     sensor_endpoint["data-lanes"] = u32(0, 1, 2)
     sensor_endpoint["bus-type"] = u32(V4L2_MBUS_CSI2_CPHY)
+    sensor_endpoint["reg"] = u32(0)
     sensor_endpoint["link-frequencies"] = u32(
         (1400000000 >> 32) & 0xFFFFFFFF, 1400000000 & 0xFFFFFFFF
     )
@@ -273,16 +274,25 @@ def derive(blob):
         tree.nodes[path + "/ports/port@0"] = {
             "reg": u32(0),
         }
-        tree.nodes[path + "/ports/port@0/endpoint"] = {
+        tree.nodes[path + "/ports/port@0/endpoint@0"] = {
+            "reg": u32(0),
             "data-lanes": u32(0, 1, 2),
         }
         tree.nodes[path + "/ports/port@1"] = {
             "reg": u32(1),
         }
-        tree.nodes[path + "/ports/port@1/endpoint"] = {}
+        tree.nodes[path + "/ports/port@1/endpoint@0"] = {
+            "reg": u32(0),
+        }
 
+    sensor_phy_endpoint = (
+        PHYS[1]["path"] + "/ports/port@0/endpoint@0"
+    )
     sensor_endpoint["remote-endpoint"] = u32(
-        phandle(PHYS[1]["path"] + "/ports/port@0/endpoint")
+        phandle(sensor_phy_endpoint)
+    )
+    tree.nodes[sensor_phy_endpoint]["remote-endpoint"] = u32(
+        phandle(probe.SENSOR + "/port/endpoint")
     )
 
     camss_regs = []
@@ -376,9 +386,12 @@ def derive(blob):
             "data-lanes": u32(*(range(3) if phy["id"] == 1 else range(4))),
         }
         tree.nodes[endpoint]["remote-endpoint"] = u32(
-            phandle(PHYS[phy["id"]]["path"] + "/ports/port@1/endpoint")
+            phandle(
+                PHYS[phy["id"]]["path"]
+                + "/ports/port@1/endpoint@0"
+            )
         )
-        tree.nodes[PHYS[phy["id"]]["path"] + "/ports/port@1/endpoint"][
+        tree.nodes[PHYS[phy["id"]]["path"] + "/ports/port@1/endpoint@0"][
             "remote-endpoint"
         ] = u32(phandle(endpoint))
 

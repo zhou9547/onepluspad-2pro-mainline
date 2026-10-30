@@ -56,6 +56,22 @@ class CameraCaptureModemTree(unittest.TestCase):
         self.assertEqual(self.report["camera"]["csid_index"], 1)
         self.assertEqual(self.report["camera"]["vfe_index"], 1)
 
+    def test_csiphy_graph_endpoints_have_ids(self):
+        for phy in combined.capture.PHYS:
+            for port in (0, 1):
+                endpoint = (
+                    phy["path"] + f"/ports/port@{port}/endpoint@0"
+                )
+                self.assertIn(endpoint, self.tree.nodes)
+                self.assertEqual(
+                    self.tree.nodes[endpoint]["reg"], b"\0\0\0\0"
+                )
+        selected = (
+            combined.capture.PHYS[1]["path"]
+            + "/ports/port@0/endpoint@0"
+        )
+        self.assertIn("remote-endpoint", self.tree.nodes[selected])
+
 
 if __name__ == "__main__":
     unittest.main()
