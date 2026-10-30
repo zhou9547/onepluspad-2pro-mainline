@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import subprocess
 import signal
+import time
 
 
 NMEA = re.compile(r"^\$(?:GP|GN|GL|GA|GB)(?:GGA|RMC),.*\*[0-9A-Fa-f]{2}$")
@@ -101,6 +102,23 @@ def parse_fix(lines):
     return fixes[-8:]
 
 
+def probe_devices(qmicli, candidates, ready_seconds):
+    """Wait briefly for modem QRTR services to publish before failing."""
+    probes = []
+    deadline = time.monotonic() + ready_seconds
+    while True:
+        for device in candidates:
+            if device is None:
+                continue
+            probe = run([qmicli, "-d", device, "--loc-get-operation-mode"], 12)
+            probes.append({"device": device, **probe})
+            if probe["returncode"] == 0:
+                return device, probes
+        if time.monotonic() >= deadline:
+            return None, probes
+        time.sleep(1)
+
+
 def collect_session(qmicli, device, seconds):
     """Keep one LOC client/session across separate start, follow and stop actions."""
     base = [qmicli, "-d", device]
@@ -149,9 +167,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", default=None)
     parser.add_argument("--seconds", type=int, default=45)
+    parser.add_argument("--ready-seconds", type=int, default=30)
     args = parser.parse_args()
     if not 5 <= args.seconds <= 240:
         raise ValueError("GNSS collection must stay between 5 and 240 seconds")
+    if not 0 <= args.ready_seconds <= 60:
+        raise ValueError("GNSS readiness wait must stay between 0 and 60 seconds")
     if not Path("/run/oneplus13/ram-session").is_file():
         raise RuntimeError("Protected phone RAM session required")
     qmicli = next(
@@ -161,16 +182,7 @@ def main():
     if not qmicli:
         raise RuntimeError("qmicli is unavailable")
     candidates = [args.device] if args.device else ["qrtr://", "qrtr://0", "qrtr://1"]
-    selected = None
-    probes = []
-    for device in candidates:
-        if device is None:
-            continue
-        probe = run([qmicli, "-d", device, "--loc-get-operation-mode"], 12)
-        probes.append({"device": device, **probe})
-        if probe["returncode"] == 0:
-            selected = device
-            break
+    selected, probes = probe_devices(qmicli, candidates, args.ready_seconds)
     result = {
         "scope": "ONEPLUS13_RAM_QMI_GNSS",
         "qmicli": qmicli,

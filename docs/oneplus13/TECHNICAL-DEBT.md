@@ -13,6 +13,24 @@ That test can qualify platform suspend, but the earlier deep attempt remains a
 failure. Camera capture still requires varied packed RAW10 pixels and a clean
 teardown; a kernel reset is not accepted as sensor output.
 
+# r83 remaining device boundaries, 2026-10-30
+
+s2idle is now hardware-qualified for one 14.817-second RTC wake cycle. This does
+not qualify repeated deep suspend, long-term standby current, charger policy or
+modem-assisted wake.
+
+The exact image proves USB host-role readback and restoration. A physical
+adapter, U disk or mouse must still be attached to prove downstream
+enumeration and I/O. NFC controller binding and power transitions pass; a
+physical tag must still produce a target event. GNSS RF service registration
+and a fix have not passed.
+
+No media graph was created by CAMSS after all reviewed modules loaded, despite
+a clean unload and zero kernel-health counters. The next camera run records
+module-driver bindings and matching dmesg before media discovery. The infrared
+GPIO ownership bug is fixed in source but needs a new Actions image and an
+actual emission syscall plus optical observation.
+
 The capture helper's VFE entity names and packed RAW10 size have been corrected
 against the fixed upstream kernel source. Sensor initialization, real CAMSS
 binding and a variable-pixel frame still need direct hardware evidence.

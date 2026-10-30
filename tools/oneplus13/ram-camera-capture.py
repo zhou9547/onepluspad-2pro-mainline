@@ -128,6 +128,29 @@ def entity_node(entities, name):
     return videos[0]
 
 
+def module_diagnostics(module_names):
+    rows = {}
+    for name in module_names:
+        root = Path("/sys/module") / name.replace("-", "_")
+        drivers = []
+        for path in sorted((root / "drivers").glob("*")):
+            drivers.append(path.name)
+        rows[name] = {
+            "loaded": root.is_dir(),
+            "drivers": drivers[:16],
+        }
+    buses = {}
+    for bus in ("i2c", "platform", "spi"):
+        base = Path("/sys/bus") / bus / "drivers"
+        buses[bus] = sorted(
+            path.name for path in base.glob("*")
+            if any(token in path.name.lower() for token in (
+                "camss", "csiphy", "mipi", "cci", "s5k", "ir-dodge"
+            ))
+        )[:32] if base.is_dir() else []
+    return {"modules": rows, "matching_drivers": buses}
+
+
 def set_link(device, source, source_pad, sink, sink_pad):
     run(
         [
@@ -250,6 +273,10 @@ def main():
                 continue
             run(["modprobe", "--ignore-install", module], timeout=20)
             loaded.append(module)
+        report["module_diagnostics"] = module_diagnostics(ordered)
+        report["module_dmesg"] = run(
+            ["dmesg"], timeout=8, check=False
+        ).stdout[-24000:]
         progress("media-discovery")
         device = None
         until = time.monotonic() + 12
@@ -264,6 +291,13 @@ def main():
                 }
                 time.sleep(0.25)
         if device is None:
+            report["failure_media_inventory"] = {
+                str(path): run(
+                    ["media-ctl", "--device", path, "--print-topology"],
+                    check=False,
+                ).stdout[-32768:]
+                for path in Path("/dev").glob("media*")
+            }
             raise ValueError("Linux CAMSS media graph did not appear")
         report.update(
             media_device=str(device),

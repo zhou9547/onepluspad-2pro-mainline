@@ -59,9 +59,6 @@ def derive(blob):
         "reg": u32(0),
         "spi-max-frequency": u32(5000000),
         "irda_regulator-supply": u32(l9_phandle),
-        "pinctrl-names": text("active", "sleep"),
-        "pinctrl-0": u32(active_phandle),
-        "pinctrl-1": u32(sleep_phandle),
         "status": text("okay"),
     }
 

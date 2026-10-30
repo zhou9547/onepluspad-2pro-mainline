@@ -83,6 +83,21 @@ class GnssNmeaTests(unittest.TestCase):
         self.assertFalse(result["fix_acquired"])
         popen.assert_not_called()
 
+    def test_loc_service_probe_retries_until_node_answers(self):
+        responses = [
+            {"returncode": 1, "stderr": "service not ready"},
+            {"returncode": 1, "stderr": "service not ready"},
+            {"returncode": 0, "stdout": "mode"},
+        ]
+        with patch.object(GNSS, "run", side_effect=responses), patch.object(
+            GNSS.time, "sleep"
+        ):
+            selected, probes = GNSS.probe_devices(
+                "qmicli", ["qrtr://0"], 5
+            )
+        self.assertEqual(selected, "qrtr://0")
+        self.assertEqual(len(probes), 3)
+
 
 if __name__ == "__main__":
     unittest.main()

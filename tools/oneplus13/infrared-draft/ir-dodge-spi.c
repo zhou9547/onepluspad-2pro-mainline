@@ -11,7 +11,6 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/of.h>
-#include <linux/pinctrl/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/spi/spi.h>
@@ -25,8 +24,6 @@
 struct dodge_ir {
 	struct spi_device *spi;
 	struct regulator *supply;
-	struct pinctrl *pinctrl;
-	struct pinctrl_state *active, *sleep;
 	struct mutex lock;
 	u32 carrier, duty;
 	bool supply_enabled;
@@ -135,9 +132,6 @@ static int dodge_ir_tx(struct rc_dev *rc, unsigned int *durations,
 		ret = ret < 0 ? ret : -ERANGE;
 		goto power_off;
 	}
-	ret = pinctrl_select_state(ir->pinctrl, ir->active);
-	if (ret)
-		goto power_off;
 	transfer.tx_buf = bytes;
 	transfer.len = length;
 	ret = spi_sync_transfer(ir->spi, &transfer, 1);
@@ -147,9 +141,6 @@ static int dodge_ir_tx(struct rc_dev *rc, unsigned int *durations,
 		ret = -ERANGE;
 
 power_off:
-	cleanup = pinctrl_select_state(ir->pinctrl, ir->sleep);
-	if (!ret && cleanup)
-		ret = cleanup;
 	cleanup = regulator_disable(ir->supply);
 	if (cleanup) {
 		if (!ret)
@@ -175,9 +166,6 @@ static void dodge_ir_release(void *data)
 	int ret;
 
 	/* rc-core is unregistered before this devres action, so no TX can race. */
-	ret = pinctrl_select_state(ir->pinctrl, ir->sleep);
-	if (ret)
-		dev_warn(&ir->spi->dev, "IR sleep state failed: %d\n", ret);
 	if (ir->supply_enabled) {
 		ret = regulator_disable(ir->supply);
 		if (ret) {
@@ -212,16 +200,6 @@ static int dodge_ir_probe(struct spi_device *spi)
 	ret = regulator_is_supported_voltage(ir->supply, DODGE_IR_UV, DODGE_IR_UV);
 	if (ret <= 0)
 		return dev_err_probe(dev, ret ?: -ERANGE, "3.056 V supply constraint unavailable\n");
-	ir->pinctrl = devm_pinctrl_get(dev);
-	if (IS_ERR(ir->pinctrl))
-		return PTR_ERR(ir->pinctrl);
-	ir->active = pinctrl_lookup_state(ir->pinctrl, "active");
-	ir->sleep = pinctrl_lookup_state(ir->pinctrl, "sleep");
-	if (IS_ERR(ir->active) || IS_ERR(ir->sleep))
-		return -EINVAL;
-	ret = pinctrl_select_state(ir->pinctrl, ir->sleep);
-	if (ret)
-		return ret;
 	ret = devm_add_action_or_reset(dev, dodge_ir_release, ir);
 	if (ret)
 		return ret;

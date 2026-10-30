@@ -51,6 +51,9 @@ class InfraredTree(unittest.TestCase):
         ])
         self.assertEqual(strings(self.tree.nodes[ir.SPI]["status"]), ["okay"])
         self.assertEqual(strings(self.tree.nodes[ir.I2C]["status"]), ["disabled"])
+        self.assertNotIn("pinctrl-names", node)
+        self.assertNotIn("pinctrl-0", node)
+        self.assertNotIn("pinctrl-1", node)
 
     def test_optical_acceptance_stays_false(self):
         self.assertFalse(self.report["optical_output_qualified"])

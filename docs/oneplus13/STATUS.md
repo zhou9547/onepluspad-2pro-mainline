@@ -24,6 +24,34 @@ write a post-resume receipt. This is a failed deep-suspend acceptance, not a
 source-test pass. A later round will select s2idle explicitly for a bounded
 suspend check and preserve deep-suspend recovery work as an open item.
 
+# r83 exact combined image runtime and suspend pass, 2026-10-30
+
+The exact `84a75f4edb6e` Actions image completed a bounded combined RAM boot
+and returned Android with all seven baseline properties matching and zero
+partition writes. The MPSS reached running with verified firmware, GLINK
+`IPCRTR` and the service-router endpoint, then stopped cleanly to offline.
+NFC bound `1-0028` to `nxp-nci_i2c`; `nfc0` powered up and down, but no physical
+tag event was available.
+
+USB role control found `/sys/kernel/debug/usb/a600000.usb/mode`, read back
+`host`, enumerated the host controller, restored `device`, and re-registered
+the UDC. No physical USB-C peripheral was attached, so host I/O remains open.
+
+One RTC-woken s2idle cycle entered suspend and resumed after 14.817 seconds of
+actual suspend time (`BOOTTIME - MONOTONIC`), then disarmed the 32-second
+Gunyah watchdog and cleared its wake alarm. This is a real s2idle pass.
+Repeated deep suspend, deep idle, long-term power and charger policy remain
+open.
+
+The camera helper loaded its bounded module closure and cleaned it up without
+kernel-health faults, but CAMSS did not create a media device, so no sensor
+frame was attempted. The IR driver and LIRC interface both appeared at
+`/dev/lirc0`, but transmission was rejected because GPIO53 was requested by
+both the SPI controller and child device. The child pinctrl duplication is now
+removed. GNSS reached QRTR node requests but the `loc` service returned
+`Internal` immediately after MPSS startup; the next helper waits for service
+publication before classifying the result.
+
 Additional camera review against the pinned kernel's `camss-vfe.c` found that
 the RDI subdevice is `msm_vfe1_rdi0` and its separate capture entity is
 `msm_vfe1_video0`. The former `msm_vfe1` topology fixture was incorrect.

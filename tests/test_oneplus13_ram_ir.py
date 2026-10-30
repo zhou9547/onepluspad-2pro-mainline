@@ -71,6 +71,14 @@ class IrPolicyTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "RAM session"):
             IR.allow_modules(["ir_dodge_spi"])
 
+    def test_driver_leaves_ctrl_pin_mux_to_spi_controller(self):
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "tools/oneplus13/infrared-draft/ir-dodge-spi.c"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("pinctrl_select_state", source)
+        self.assertNotIn("<linux/pinctrl/consumer.h>", source)
+
 
 if __name__ == "__main__":
     unittest.main()
