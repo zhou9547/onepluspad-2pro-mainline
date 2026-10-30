@@ -85,6 +85,10 @@ class GnssNmeaTests(unittest.TestCase):
         self.assertIn("--client-cid=7", popen.call_args.args[0])
         self.assertIn("--client-cid=7", run.call_args_list[-1].args[0])
         self.assertIn("--loc-stop", run.call_args_list[-1].args[0])
+        self.assertTrue(
+            all("--device-open-proxy" in call.args[0] for call in run.call_args_list)
+        )
+        self.assertIn("--device-open-proxy", popen.call_args.args[0])
 
     def test_failed_start_cannot_qualify_engine_or_start_follower(self):
         responses = [

@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: GPL-2.0-only
 """Switch the reviewed DWC3 controller to host briefly, then restore device."""
 
+import argparse
 import json
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import time
 
 
@@ -114,7 +116,114 @@ def inventory(root=None):
     }
 
 
+def wait_for_host_driver(seconds, sleep=time.sleep):
+    deadline = time.monotonic() + seconds
+    facts = inventory()
+    samples = 1
+    while time.monotonic() < deadline:
+        facts = inventory()
+        samples += 1
+        if facts["usb_storage_bound"] or facts["usb_hid_bound"]:
+            return facts, samples
+        sleep(0.5)
+    return facts, samples
+
+
+def storage_partitions(root=Path("/sys/class/block")):
+    """Return bounded block-partition names without assuming a device letter."""
+    rows = []
+    for path in sorted(Path(root).glob("sd*")):
+        name = path.name
+        if not re.fullmatch(r"sd[a-z][0-9]+", name):
+            continue
+        if not (path / "partition").is_file() or not (path / "dev").is_file():
+            continue
+        try:
+            size_sectors = int((path / "size").read_text().strip())
+        except (OSError, ValueError):
+            continue
+        if not 1 <= size_sectors:
+            continue
+        rows.append({
+            "device": "/dev/" + name,
+            "size_sectors": size_sectors,
+        })
+    return rows[:8]
+
+
+def storage_read_only_probe(
+    run=subprocess.run,
+    partitions=storage_partitions,
+    temporary_root=Path("/run/oneplus13"),
+):
+    """Mount the first usable partition read-only and hash a bounded file."""
+    rows = partitions()
+    attempts = []
+    for row in rows:
+        with tempfile.TemporaryDirectory(
+            dir=temporary_root, prefix="usb-mount-"
+        ) as mountpoint:
+            mounted = run(
+                ["mount", "-o", "ro,nosuid,nodev,noexec", row["device"], mountpoint],
+                capture_output=True,
+                text=True,
+                timeout=12,
+                check=False,
+            )
+            attempt = {
+                "device": row["device"],
+                "mount_returncode": mounted.returncode,
+                "read_pass": False,
+            }
+            if mounted.returncode == 0:
+                read_payload = None
+                try:
+                    import hashlib
+
+                    candidates = []
+                    for path in Path(mountpoint).rglob("*"):
+                        if len(candidates) >= 8:
+                            break
+                        try:
+                            if path.is_file() and not path.is_symlink():
+                                candidates.append(path)
+                        except OSError:
+                            continue
+                    if candidates:
+                        payload = candidates[0].read_bytes()[:4096]
+                        attempt.update(
+                            read_bytes=len(payload),
+                            read_sha256=hashlib.sha256(payload).hexdigest(),
+                        )
+                        read_payload = payload
+                finally:
+                    unmounted = run(
+                        ["umount", mountpoint],
+                        capture_output=True,
+                        text=True,
+                        timeout=12,
+                        check=False,
+                    )
+                    attempt["unmount_returncode"] = unmounted.returncode
+                attempt["read_pass"] = bool(
+                    read_payload is not None and unmounted.returncode == 0
+                )
+            attempts.append(attempt)
+            if attempt["read_pass"]:
+                break
+    return {
+        "partitions": rows,
+        "attempts": attempts,
+        "read_only_io_pass": any(row["read_pass"] for row in attempts),
+    }
+
+
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--wait-seconds", type=int, default=75)
+    args = parser.parse_args()
+    if not 3 <= args.wait_seconds <= 120:
+        parser.error("--wait-seconds must be between 3 and 120")
     if not RAM_MARKER.is_file():
         raise RuntimeError("Protected phone RAM session required")
     mode = mode_paths()
@@ -138,13 +247,21 @@ def main():
         time.sleep(3)
         result["role_after_host_request"] = read(mode)
         result["host_role_verified"] = result["role_after_host_request"] == "host"
-        result["host_inventory"] = inventory()
+        result["host_inventory"], result["host_inventory_samples"] = (
+            wait_for_host_driver(args.wait_seconds)
+        )
         result["host_peripheral_receipt"] = bool(
             result["host_inventory"]["usb_peripherals"]
         )
+        if result["host_inventory"]["usb_storage_bound"]:
+            result["storage_read_only"] = storage_read_only_probe()
+        result["hid_input_present"] = bool(
+            result["host_inventory"]["usb_hid_bound"]
+            and list(Path("/dev/input").glob("event*"))
+        )
         result["host_peripheral_i_o_qualified"] = bool(
-            result["host_inventory"]["usb_storage_bound"]
-            or result["host_inventory"]["usb_hid_bound"]
+            result.get("storage_read_only", {}).get("read_only_io_pass")
+            or result["hid_input_present"]
         )
     finally:
         write(mode, "device")

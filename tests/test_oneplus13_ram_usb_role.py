@@ -4,6 +4,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 
 PATH = (
@@ -77,6 +78,44 @@ class UsbRolePathTests(unittest.TestCase):
                 mode.write_text("device\n", encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "found 2"):
                 USB.mode_paths(root)
+
+    def test_host_driver_wait_uses_fresh_inventory(self):
+        sequence = [
+            {"usb_storage_bound": False, "usb_hid_bound": False},
+            {"usb_storage_bound": True, "usb_hid_bound": False},
+        ]
+        with unittest.mock.patch.object(
+            USB, "inventory", side_effect=sequence
+        ) as inventory:
+            facts, samples = USB.wait_for_host_driver(5, sleep=lambda _: None)
+        self.assertTrue(facts["usb_storage_bound"])
+        self.assertEqual(samples, 2)
+        self.assertEqual(inventory.call_count, 2)
+
+    def test_storage_probe_mounts_read_only_and_unmounts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "source"
+            source.write_bytes(b"usb-read-proof")
+            calls = []
+
+            def fake_run(args, **kwargs):
+                calls.append(args)
+                if args[0] == "mount":
+                    Path(args[-1], "proof.txt").write_bytes(source.read_bytes())
+                    return Mock(returncode=0, stdout="", stderr="")
+                return Mock(returncode=0, stdout="", stderr="")
+
+            result = USB.storage_read_only_probe(
+                run=fake_run,
+                partitions=lambda: [
+                    {"device": "/dev/sda1", "size_sectors": 2048}
+                ],
+                temporary_root=temporary,
+            )
+        self.assertTrue(result["read_only_io_pass"])
+        self.assertEqual(calls[0][0], "mount")
+        self.assertIn("ro,nosuid,nodev,noexec", calls[0])
+        self.assertEqual(calls[-1][0], "umount")
 
 
 if __name__ == "__main__":

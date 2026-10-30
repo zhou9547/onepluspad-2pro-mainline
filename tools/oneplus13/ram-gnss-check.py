@@ -121,7 +121,10 @@ def probe_devices(qmicli, candidates, ready_seconds):
 
 def collect_session(qmicli, device, seconds):
     """Keep one LOC client/session across separate start, follow and stop actions."""
-    base = [qmicli, "-d", device]
+    # Keep the QMI service client in qmi-proxy across the one-action qmicli
+    # processes. A direct QRTR client is released when qmicli exits even with
+    # --client-no-release-cid, which makes the next process reject the CID.
+    base = [qmicli, "--device-open-proxy", "-d", device]
     setup = run(base + ["--loc-noop", "--client-no-release-cid"], 15)
     result = {
         "setup": setup,
