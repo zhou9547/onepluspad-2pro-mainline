@@ -34,7 +34,16 @@ class IrPolicyTests(unittest.TestCase):
             "blacklist unrelated\n",
             encoding="utf-8",
         )
-        IR.allow_module()
+        removed = IR.allow_modules(["ir_dodge_spi", "rc_core"])
+        self.assertEqual(
+            removed,
+            [
+                "blacklist ir_dodge_spi",
+                "blacklist rc_core",
+                "install ir_dodge_spi /bin/false",
+                "install rc_core /bin/false",
+            ],
+        )
         self.assertEqual(
             IR.POLICY.read_text(encoding="utf-8"),
             "blacklist unrelated\n",
@@ -51,7 +60,7 @@ class IrPolicyTests(unittest.TestCase):
         ):
             IR.POLICY.write_text(value, encoding="utf-8")
             with self.subTest(value=value), self.assertRaises(ValueError):
-                IR.allow_module()
+                IR.allow_modules(["ir_dodge_spi"])
 
     def test_marker_is_required(self):
         IR.POLICY.write_text(
@@ -60,7 +69,7 @@ class IrPolicyTests(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(RuntimeError, "RAM session"):
-            IR.allow_module()
+            IR.allow_modules(["ir_dodge_spi"])
 
 
 if __name__ == "__main__":

@@ -18,6 +18,13 @@ returned Android with all seven baseline properties matching and zero
 partition writes. Do not treat partial module logs as camera, GNSS, tag,
 infrared, USB-host or suspend acceptance.
 
+## r80 IR closure still requires optical evidence, 2026-10-30
+
+The infrared helper now loads its dependency graph and restores policy after
+teardown. A zero `ir-ctl` return proves only that the request reached the
+driver. A real external receiver or an unobstructed observer must confirm the
+38 kHz waveform. The current unattended setup cannot provide that receipt.
+
 ## r79 combined target tree, 2026-10-30
 
 The camera/GNSS tree now has a derived alternative that also enables SPI5

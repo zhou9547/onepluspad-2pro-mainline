@@ -25,6 +25,22 @@ Android with matching baselines and zero partition writes. They do not qualify
 real frame pixels, a GNSS fix, tag I/O, infrared emission, USB-host I/O,
 repeated suspend or the remaining peripherals.
 
+## r80 infrared dependency closure and autonomous target execution, 2026-10-30
+
+The infrared helper now resolves `ir_dodge_spi` dependencies from
+`modules.dep`, removes only deny pairs in that bounded camera-style closure,
+loads providers and transmitter in dependency order, emits the reviewed38 kHz
+pattern through `/dev/lirc0`, unloads newly loaded modules in reverse order,
+and restores the original module-policy bytes. A failed load still enters the
+same cleanup path. The helper continues to report optical output separately,
+because a successful write syscall is not proof that the emitter produced IR.
+
+The RAM orchestration was also changed to a machine-local sequence so long
+camera, MPSS/GNSS, NFC and suspend probes no longer depend on a host control
+connection. Results are written in `/run`; Wi-Fi is brought up only after the
+physical probes complete. These are candidate-testing changes and do not
+upgrade any unobserved physical result.
+
 ## r79 combined IR and USB-role RAM candidate, 2026-10-30
 
 The complete image now builds a separate `camera + MPSS/GNSS + infrared +
