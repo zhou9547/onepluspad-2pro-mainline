@@ -13,6 +13,11 @@ fix, and the modem stops cleanly. Camera real-frame capture, physical NFC tag
 discovery, infrared optical receipt, USB host peripheral I/O, long-term power,
 charging policy, and complete modem services remain open.
 
+NFC now uses the stock IRQ pull-down and includes GPIO35 in both active and
+sleep pinctrl states. A previous controller read failed with `-121`; the next
+image must prove that this read succeeds and that a presented tag generates an
+NCI target event before physical NFC support is accepted.
+
 # r181 RMTFS UIO resource repair, 2026-10-30
 
 The first live r180 candidate loaded `msm_sharedmem` but failed probe with

@@ -47,6 +47,15 @@ class NfcDefaultTree(unittest.TestCase):
         self.assertNotIn("clocks", node)
         self.assertNotIn("clock-names", node)
         self.assertTrue(self.report["clock_request_is_firmware_managed"])
+        active = self.tree.nodes[
+            nfc.TLMM + "/nfc-enable-active-state/enable-pins"
+        ]
+        sleep = self.tree.nodes[nfc.TLMM + "/nfc-sleep-state/sleep-pins"]
+        irq = self.tree.nodes[nfc.TLMM + "/nfc-irq-active-state/irq-pins"]
+        self.assertEqual(strings(active["pins"]), ["gpio34", "gpio35"])
+        self.assertEqual(strings(sleep["pins"]), ["gpio34", "gpio35"])
+        self.assertIn("bias-pull-down", irq)
+        self.assertNotIn("bias-pull-up", irq)
         self.assertFalse(self.report["controller_bind_hardware_qualified"])
         self.assertFalse(self.report["tag_poll_hardware_qualified"])
 

@@ -56,19 +56,19 @@ def derive(blob):
         "pins": text("gpio75"),
         "function": text("gpio"),
         "drive-strength": u32(2),
-        "bias-pull-up": b"",
+        "bias-pull-down": b"",
     }
     tree.nodes[TLMM + "/nfc-enable-active-state/enable-pins"] = {
-        "pins": text("gpio34"),
+        "pins": text("gpio34", "gpio35"),
         "function": text("gpio"),
         "drive-strength": u32(2),
         "bias-disable": b"",
     }
     tree.nodes[TLMM + "/nfc-sleep-state/sleep-pins"] = {
-        "pins": text("gpio34", "gpio75"),
+        "pins": text("gpio34", "gpio35"),
         "function": text("gpio"),
         "drive-strength": u32(2),
-        "bias-pull-down": b"",
+        "bias-disable": b"",
     }
     tree.nodes[NFC_I2C]["status"] = text("okay")
     add(

@@ -91,11 +91,11 @@ def derive(blob):
     enable=add(TLMM+'/nfc-enable-active-state',{})
     sleep_nfc=add(TLMM+'/nfc-sleep-state',{})
     tree.nodes[TLMM+'/nfc-irq-active-state/irq-pins']={
-        'pins':text('gpio75'),'function':text('gpio'),'drive-strength':u32(2),'bias-pull-up':b''}
+        'pins':text('gpio75'),'function':text('gpio'),'drive-strength':u32(2),'bias-pull-down':b''}
     tree.nodes[TLMM+'/nfc-enable-active-state/enable-pins']={
-        'pins':text('gpio34'),'function':text('gpio'),'drive-strength':u32(2),'bias-disable':b''}
+        'pins':text('gpio34','gpio35'),'function':text('gpio'),'drive-strength':u32(2),'bias-disable':b''}
     tree.nodes[TLMM+'/nfc-sleep-state/sleep-pins']={
-        'pins':text('gpio34','gpio75'),'function':text('gpio'),'drive-strength':u32(2),'bias-pull-down':b''}
+        'pins':text('gpio34','gpio35'),'function':text('gpio'),'drive-strength':u32(2),'bias-disable':b''}
     tree.nodes[NFC_I2C]['status']=text('okay')
     add(NFC,{'compatible':text('nxp,nxp-nci-i2c'),'reg':u32(0x28),
         'interrupt-parent':u32(gpio),'interrupts':u32(75,0),'wakeup-source':b'',
