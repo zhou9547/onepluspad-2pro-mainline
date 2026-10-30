@@ -25,6 +25,20 @@ Android with matching baselines and zero partition writes. They do not qualify
 real frame pixels, a GNSS fix, tag I/O, infrared emission, USB-host I/O,
 repeated suspend or the remaining peripherals.
 
+## r79 combined IR and USB-role RAM candidate, 2026-10-30
+
+The complete image now builds a separate `camera + MPSS/GNSS + infrared +
+DWC3 role-switch` boot. Its DTB keeps the default USB role at `device` for
+recovery while exposing the reviewed debugfs role path, and adds the exact
+SPI5/GPIO53/L9B infrared node. The normal desktop tree is unchanged.
+
+The image also installs the manual IR, USB-role and RTC-suspend helpers. Static
+verification requires separate session identity and preserves explicit false
+qualification for optical IR output and USB-host peripheral enumeration.
+Offline tests pass519 cases with one environment skip. Hardware qualification
+is still pending because the candidate has not completed an exact Actions
+image on the phone.
+
 ## r77 phone C-PHY camera graph candidate, 2026-10-30
 
 Android stock logs now establish the exact ultrawide route for the installed

@@ -48,6 +48,7 @@ case "${1:-}" in
     sudo python3 tools/oneplus13/build-camera-capture-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
     sudo python3 tools/oneplus13/build-video-probe-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
     sudo python3 tools/oneplus13/build-camera-capture-modem-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
+    sudo python3 tools/oneplus13/build-targets-boot.py --kernel out/oneplus13 --image out/oneplus13-complete-image
     complete_args=(--static-only)
     if [[ $runtime_checks == qemu ]]; then complete_args=(); fi
     sudo python3 tools/oneplus13/verify-complete-image.py --kernel out/oneplus13 --image out/oneplus13-complete-image "${complete_args[@]}"
