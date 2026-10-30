@@ -66,21 +66,53 @@ class GnssNmeaTests(unittest.TestCase):
         child.poll.return_value = 0
         with patch.object(GNSS, "run", side_effect=[
             {"returncode": 0, "stdout": "CID: '7'"},
+            {"returncode": 0, "stdout": "nmea types"},
+            {"returncode": 0, "stdout": "engine lock"},
+            {"returncode": 0, "stdout": "started"},
             {"returncode": 0, "stdout": "stopped"},
         ]) as run, patch.object(GNSS.subprocess, "Popen", return_value=child) as popen:
             result = GNSS.collect_session("qmicli", "qrtr://0", 30)
         self.assertTrue(result["fix_acquired"])
         self.assertTrue(result["cleanup_complete"])
-        self.assertNotIn("--loc-get-position-report", run.call_args_list[0].args[0])
+        self.assertEqual(
+            [call.args[0][-2:] for call in run.call_args_list[:3]],
+            [
+                ["--loc-noop", "--client-no-release-cid"],
+                ["--loc-set-nmea-types=gga|rmc", "--client-no-release-cid"],
+                ["--loc-set-engine-lock=none", "--client-no-release-cid"],
+            ],
+        )
         self.assertIn("--client-cid=7", popen.call_args.args[0])
         self.assertIn("--client-cid=7", run.call_args_list[-1].args[0])
         self.assertIn("--loc-stop", run.call_args_list[-1].args[0])
 
     def test_failed_start_cannot_qualify_engine_or_start_follower(self):
-        with patch.object(GNSS, "run", return_value={"returncode": 1, "stdout": ""}), patch.object(GNSS.subprocess, "Popen") as popen:
+        responses = [
+            {"returncode": 0, "stdout": "CID: '7'"},
+            {"returncode": 0},
+            {"returncode": 0},
+            {"returncode": 1},
+            {"returncode": 1},
+            {"returncode": 1},
+            {"returncode": 0},
+        ]
+        with patch.object(GNSS, "run", side_effect=responses), patch.object(
+            GNSS.time, "sleep"
+        ), patch.object(GNSS.subprocess, "Popen") as popen:
             result = GNSS.collect_session("qmicli", "qrtr://0", 30)
         self.assertFalse(result["engine_control_qualified"])
         self.assertFalse(result["fix_acquired"])
+        self.assertEqual(len(result["start_attempts"]), 3)
+        self.assertTrue(result["cleanup_complete"])
+        popen.assert_not_called()
+
+    def test_failed_client_setup_skips_start_and_follower(self):
+        with patch.object(
+            GNSS, "run", return_value={"returncode": 1, "stdout": ""}
+        ), patch.object(GNSS.subprocess, "Popen") as popen:
+            result = GNSS.collect_session("qmicli", "qrtr://0", 30)
+        self.assertFalse(result["engine_control_qualified"])
+        self.assertEqual(result["start_attempts"], [])
         popen.assert_not_called()
 
     def test_loc_service_probe_retries_until_node_answers(self):

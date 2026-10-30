@@ -122,12 +122,39 @@ def probe_devices(qmicli, candidates, ready_seconds):
 def collect_session(qmicli, device, seconds):
     """Keep one LOC client/session across separate start, follow and stop actions."""
     base = [qmicli, "-d", device]
-    started = run(base + ["--loc-start", "--loc-session-id=1", "--client-no-release-cid"], 15)
-    result = {"start": started, "fixes": [], "fix_acquired": False,
-              "engine_control_qualified": False, "cleanup_complete": False}
-    match = re.search(r"CID:\s*'?(\d+)'?", started.get("stdout", ""))
-    cid = ["--client-cid=" + match[1]] if match else []
-    if started["returncode"] != 0:
+    setup = run(base + ["--loc-noop", "--client-no-release-cid"], 15)
+    result = {
+        "setup": setup,
+        "start_attempts": [],
+        "fixes": [],
+        "fix_acquired": False,
+        "engine_control_qualified": False,
+        "cleanup_complete": False,
+    }
+    match = re.search(r"CID:\s*'?(\d+)'?", setup.get("stdout", ""))
+    if setup["returncode"] != 0 or not match:
+        return result
+    base.append("--client-cid=" + match[1])
+    result["nmea_types"] = run(
+        base + ["--loc-set-nmea-types=gga|rmc", "--client-no-release-cid"], 15
+    )
+    result["engine_lock"] = run(
+        base + ["--loc-set-engine-lock=none", "--client-no-release-cid"], 15
+    )
+    started = None
+    for attempt in range(1, 4):
+        started = run(
+            base + ["--loc-start", "--loc-session-id=1", "--client-no-release-cid"], 15
+        )
+        result["start_attempts"].append({"attempt": attempt, **started})
+        if started["returncode"] == 0:
+            break
+        time.sleep(2)
+    result["start"] = started
+    if not started or started["returncode"] != 0:
+        failed_stop = run(base + ["--loc-stop", "--loc-session-id=1"], 15)
+        result["failed_start_stop"] = failed_stop
+        result["cleanup_complete"] = failed_stop["returncode"] == 0
         return result
     process = None
     try:
@@ -135,7 +162,7 @@ def collect_session(qmicli, device, seconds):
         # libqmi rejects --loc-start and --loc-get-position-report together.
         # A follow is bounded here, then interrupted gracefully before LOC stop.
         process = subprocess.Popen(
-            base + cid + ["--loc-follow-nmea", "--client-no-release-cid"],
+            base + ["--loc-follow-nmea", "--client-no-release-cid"],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         )
         try:
@@ -157,7 +184,7 @@ def collect_session(qmicli, device, seconds):
         if process is not None and process.poll() is None:
             process.kill()
             process.communicate(timeout=5)
-        stopped = run(base + cid + ["--loc-stop", "--loc-session-id=1"], 15)
+        stopped = run(base + ["--loc-stop", "--loc-session-id=1"], 15)
         result["stop"] = stopped
         result["cleanup_complete"] = stopped["returncode"] == 0
     return result

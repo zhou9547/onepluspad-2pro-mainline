@@ -1,3 +1,31 @@
+# r184 GNSS session setup and remaining hardware gaps, 2026-10-30
+
+The complete `c48a2648` image reached the QRTR LOC service and read
+`standalone` operation mode. LOC start returned QMI `GeneralError` (46) before
+NMEA configuration had been installed on that client. The helper now allocates
+one retained client, enables GGA and RMC traces, selects the unlocked engine,
+starts the same session with three bounded attempts, follows checked NMEA, and
+stops the same client. A real fix and successful stop remain required.
+
+The same combined round retained 5 GHz Wi-Fi, verified 48 MPSS firmware files,
+kept the running modem control plane without a risky restart, transmitted an IR
+LIRC request, completed s2idle plus two deep RTC wake cycles, and restored the
+USB device role. Android returned with all seven properties unchanged and zero
+partition writes.
+
+NFC and USB physical acceptance did not run: no tag was attached and no host
+peripheral replaced the computer cable. The next physical gates must use an
+in-session owner confirmation card before either action and before the USB host
+transition. Controller binding, power transitions and role readback alone are
+not physical acceptance.
+
+The reviewed three-register S5KJN5 output selector still produced no real
+CSID packets. TPG continued to produce a complete varied frame over the same
+CSID1/VFE1/RDI0 path, so negotiation, buffers and downstream capture work; the
+remaining boundary is sensor output to C-PHY receive. A sensor test-pattern
+capture should separate sensor output from receiver configuration before
+further board changes.
+
 # r182 UIO userspace binding and remaining hardware gaps, 2026-10-30
 
 The first corrected DTB successfully registered the UIO device, proving the

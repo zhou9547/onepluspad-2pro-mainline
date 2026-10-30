@@ -1,3 +1,36 @@
+# r184 LOC-session preparation and combined runtime evidence, 2026-10-30
+
+Actions run 41068800412 built commit `c48a2648` successfully in all five
+jobs. Independent download verification matched the three GitHub artifact
+digests, all 37 complete-image checksums, all 44 kernel checksums, the kernel
+module release, and the packaged GNSS helper provenance.
+
+The combined RAM round completed every scheduled stage and returned Android
+with all seven baseline properties matching and zero partition writes. Wi-Fi
+associated on 5 GHz at 5240 MHz and -19 dBm. MPSS remained running with all
+48 reviewed firmware files and the IPCRTR control plane, and the host helper
+reused that live session without a remoteproc cycle. The IR LIRC transmit call,
+one s2idle cycle, two RTC-woken deep cycles, and DWC3
+`device -> host -> device` role restoration all passed.
+
+The QRTR `loc` service answered and reported standalone operation mode, but
+the first LOC start returned QMI `GeneralError`. The helper now keeps one
+client across setup, NMEA configuration, engine-lock selection, start, follow
+and stop, with bounded start retries. A valid NMEA fix and clean stop remain
+required.
+
+NFC binding and `nfc0` power transitions passed, but the physical tag was not
+attached, so no target event occurred. The USB host controller role switched
+and restored, but the cable remained connected to the computer and no U disk
+or mouse was attached, so the empty inventory is not a USB-host failure. These
+two items require the owner confirmation card at the corresponding physical
+step.
+
+The camera graph again produced a complete varied TPG frame, proving CSID and
+VFE data capture, but the real S5KJN5 path produced no frame after the complete
+vendor output-selector sequence. CSID1 recorded an interrupt while the capture
+attempt timed out. Real varied RAW10 pixels and teardown remain open.
+
 # r182 RMTFS udev binding and combined runtime evidence, 2026-10-30
 
 Actions run 41050325340 built commit `6e9911d6` successfully in all five
