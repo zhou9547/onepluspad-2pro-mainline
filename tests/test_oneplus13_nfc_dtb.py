@@ -32,6 +32,7 @@ class NfcDefaultTree(unittest.TestCase):
             if path != nfc.NFC_I2C:
                 self.assertEqual(properties, self.tree.nodes[path], path)
         self.assertEqual(strings(self.tree.nodes[nfc.NFC_I2C]["status"]), ["okay"])
+        self.assertEqual(cells(self.tree.nodes[nfc.NFC_I2C]["clock-frequency"]), [400000])
 
     def test_exact_sn220_binding(self):
         node = self.tree.nodes[nfc.NFC]
@@ -54,6 +55,8 @@ class NfcDefaultTree(unittest.TestCase):
         irq = self.tree.nodes[nfc.TLMM + "/nfc-irq-active-state/irq-pins"]
         self.assertEqual(strings(active["pins"]), ["gpio34", "gpio35"])
         self.assertEqual(strings(sleep["pins"]), ["gpio34", "gpio35"])
+        self.assertIn("bias-disable", active)
+        self.assertIn("bias-disable", sleep)
         self.assertIn("bias-pull-down", irq)
         self.assertNotIn("bias-pull-up", irq)
         self.assertFalse(self.report["controller_bind_hardware_qualified"])

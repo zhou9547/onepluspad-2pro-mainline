@@ -97,6 +97,7 @@ def derive(blob):
     tree.nodes[TLMM+'/nfc-sleep-state/sleep-pins']={
         'pins':text('gpio34','gpio35'),'function':text('gpio'),'drive-strength':u32(2),'bias-disable':b''}
     tree.nodes[NFC_I2C]['status']=text('okay')
+    tree.nodes[NFC_I2C]['clock-frequency']=u32(400000)
     add(NFC,{'compatible':text('nxp,nxp-nci-i2c'),'reg':u32(0x28),
         'interrupt-parent':u32(gpio),'interrupts':u32(75,0),'wakeup-source':b'',
         'enable-gpios':u32(gpio,34,0),'pinctrl-0':u32(irq,enable),

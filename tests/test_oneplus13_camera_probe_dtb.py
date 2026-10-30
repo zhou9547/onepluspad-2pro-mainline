@@ -50,6 +50,7 @@ class CameraProbeTree(unittest.TestCase):
         self.assertEqual(cells(nfc['enable-gpios'])[1:],[34,0])
         self.assertEqual(cells(nfc['interrupts']),[75,0])
         self.assertEqual(strings(tree.nodes[probe.NFC_I2C]['status']),['okay'])
+        self.assertEqual(cells(tree.nodes[probe.NFC_I2C]['clock-frequency']),[400000])
 
     def test_mutated_or_foreign_tree_is_rejected_before_derivation(self):
         blob=(ROOT/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes()

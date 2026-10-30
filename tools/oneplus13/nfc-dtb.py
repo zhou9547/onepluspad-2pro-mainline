@@ -71,6 +71,7 @@ def derive(blob):
         "bias-disable": b"",
     }
     tree.nodes[NFC_I2C]["status"] = text("okay")
+    tree.nodes[NFC_I2C]["clock-frequency"] = u32(400000)
     add(
         NFC,
         {

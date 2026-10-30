@@ -31,9 +31,11 @@ packets and varied RAW10 pixels arrive.
 The live NFC poll reached the NCI start path but the controller's first read
 returned `-121`. A stock-board comparison found that the candidate also
 misconfigured the pinctrl state: the IRQ line was pulled up instead of down,
-and GPIO35 was absent from both active and sleep states. Source now matches
-the vendor GPIO34/GPIO35 and GPIO75 states exactly. Tag discovery remains
-unqualified until the next combined image receives an NCI target event.
+and GPIO35 was absent from both active and sleep states. The node also omitted
+`clock-frequency`, so the GENI driver selected its 100 kHz default instead of
+the vendor's 400 kHz bus rate. Source now matches the stock GPIO states and
+sets 400 kHz explicitly. Tag discovery remains unqualified until the next
+combined image receives an NCI target event.
 
 # r181 RMTFS cell-layout repair, 2026-10-30
 
