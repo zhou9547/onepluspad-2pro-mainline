@@ -33,6 +33,27 @@ def validate_source(kernel, root=None):
     return lock
 
 
+def validate_patch_roundtrip(kernel, lock, root=None):
+    root = Path(root) if root is not None else Path(__file__).resolve().parents[2]
+    patch = root / 'devices/oneplus13/kernel-patches' / lock['patch_file']
+    with tempfile.TemporaryDirectory(prefix='cci-patch-roundtrip-') as temporary:
+        scratch = Path(temporary)
+        for name in lock['generated_files']:
+            target = scratch / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes((kernel / name).read_bytes())
+        subprocess.run(['git', 'apply', '--reverse', str(patch)], cwd=scratch,
+                       check=True, capture_output=True, timeout=20)
+        for name, expected in lock['base_files'].items():
+            if hashlib.sha256((scratch / name).read_bytes()).hexdigest() != expected:
+                raise ValueError('CCI reconstructed pinned base differs: ' + name)
+        subprocess.run(['git', 'apply', str(patch)], cwd=scratch,
+                       check=True, capture_output=True, timeout=20)
+        for name, expected in lock['generated_files'].items():
+            if hashlib.sha256((scratch / name).read_bytes()).hexdigest() != expected:
+                raise ValueError('CCI patch roundtrip differs: ' + name)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--kernel-source', type=Path, required=True)
@@ -40,6 +61,7 @@ def main():
     parser.add_argument('--sanitize', action='store_true')
     args = parser.parse_args()
     lock = validate_source(args.kernel_source)
+    validate_patch_roundtrip(args.kernel_source, lock)
     source = (args.kernel_source / 'drivers/i2c/busses/i2c-qcom-cci.c').read_text()
     helper = importlib.util.spec_from_file_location('cci_extract', Path(__file__).with_name('check-display.py'))
     module = importlib.util.module_from_spec(helper)
@@ -148,6 +170,7 @@ int main(void)
     report = {'scope':'OFFLINE_ACTUAL_CCI_C_FUNCTIONS', 'hardware_tested':False,
         'pass':True, 'patch_sha256':lock['patch_sha256'],
         'kernel_commit':lock['kernel_pin'], 'sanitizers':args.sanitize,
+        'pinned_base_patch_roundtrip':True,
         'generated_files':lock['generated_files'], 'sm8750_required_rate_hz':37500000,
         'unknown_rates_rejected':True, 'legacy_19_2mhz_controls':True,
         'mixed_master_modes_checked':True, 'opp_failure_propagated':True,

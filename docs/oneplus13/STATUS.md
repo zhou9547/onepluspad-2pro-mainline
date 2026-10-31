@@ -1,3 +1,19 @@
+# CCI source-byte correction and camera deadline, 2026-10-31
+
+r201 Actions rejected generated CCI reference hashes because Windows Git wrote
+CRLF where Linux Git emits LF. Inventory now pins the actual Linux bytes and
+checks reverse-patch/base-hash/forward-patch/generated-hash roundtrips. No hash
+normalization or CCI logic change hides a mismatch.
+
+Independent combined-runner review also found incomplete camera time accounting.
+The installed helper now shares a 1500-second work deadline across discovery,
+configuration and all fallbacks, with a separate 1150-second cleanup deadline
+and 45-second output deadline. Media scans accept at most eight nodes; stream
+termination is bounded and trace ownership survives asynchronous interruption.
+The Linux full repository suite passes 775 tests with five skips. This is
+offline qualification only; final Actions/image and exact-plan review are pending.
+GNSS fix/start/stop, NFC tag, real frames and physical USB I/O remain open.
+
 # CCI upstream clock and stretching candidate, 2026-10-31
 
 The camera candidate backports seven upstream CCI clock/timing/stretching

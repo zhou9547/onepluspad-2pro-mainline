@@ -8,6 +8,7 @@ import importlib.util
 import json
 import os
 import re
+import signal
 import subprocess
 import time
 from pathlib import Path
@@ -31,6 +32,72 @@ PROGRESS = STATE / "progress.json"
 DEBUG_CPHY_MODULE = Path("/run/oneplus13/core/phy-qcom-mipi-csi2.ko")
 DEBUG_CAMSS_MODULE = Path("/run/oneplus13/core/qcom-camss.ko")
 DEBUG_SENSOR_MODULE = Path("/run/oneplus13/core/s5kjn5.ko")
+WORK_SECONDS = 1500
+CLEANUP_SECONDS = 1150
+OUTPUT_SECONDS = 45
+MEDIA_NODE_MAX = 8
+DEADLINE = None
+TRACE_OWNERS = []
+CLEANUP_STARTED = False
+
+
+class CaptureDeadline(BaseException):
+    """Unwind even optional fallback handlers and preserve teardown."""
+
+
+def deadline_expired(*_):
+    raise CaptureDeadline("Camera common deadline expired")
+
+
+def remaining(seconds):
+    if DEADLINE is None:
+        return seconds
+    value = min(seconds, DEADLINE - time.monotonic())
+    if value <= 0:
+        raise CaptureDeadline("Camera common deadline expired")
+    return value
+
+
+def arm_deadline(seconds):
+    global DEADLINE
+    DEADLINE = time.monotonic() + seconds
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+
+
+def bounded_main():
+    global DEADLINE, CLEANUP_STARTED
+    old = signal.signal(signal.SIGALRM, deadline_expired)
+    old_term = signal.signal(signal.SIGTERM, deadline_expired)
+    TRACE_OWNERS.clear()
+    CLEANUP_STARTED = False
+    arm_deadline(WORK_SECONDS)
+    try:
+        main()
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old)
+        signal.signal(signal.SIGTERM, old_term)
+        DEADLINE = None
+
+
+def begin_cleanup():
+    global CLEANUP_STARTED
+    if DEADLINE is not None and not CLEANUP_STARTED:
+        CLEANUP_STARTED = True
+        arm_deadline(CLEANUP_SECONDS)
+
+
+def media_nodes():
+    nodes = sorted(Path("/dev").glob("media*"))
+    if len(nodes) > MEDIA_NODE_MAX:
+        raise ValueError("Camera media node limit exceeded")
+    return nodes
+
+
+def reap_stream(process):
+    if process.poll() is None:
+        process.kill()
+    return process.communicate(timeout=remaining(5))
 
 
 def progress(stage, **facts):
@@ -43,6 +110,7 @@ def progress(stage, **facts):
 
 
 def run(command, timeout=20, check=True):
+    timeout = remaining(timeout)
     result = subprocess.run(
         [str(item) for item in command],
         capture_output=True,
@@ -126,7 +194,7 @@ def parse_media(output):
 def find_media():
     matches = []
     observed = {}
-    for path in sorted(Path("/dev").glob("media*")):
+    for path in media_nodes():
         result = run(["media-ctl", "--device", path, "--print-topology"])
         entities = parse_media(result.stdout)
         observed[str(path)] = sorted(entities)
@@ -207,12 +275,15 @@ def camss_probe_trace():
                 "error": "CAMSS trace probes already exist"}
     created = []
     report = {"available": True, "created": created}
+    owned = {"state": {"mode": "kprobe", "trace": trace,
+             "events": events, "created": created}, "report": report}
+    TRACE_OWNERS.append(owned)
     try:
         for name in names:
             event = "oneplus13_" + name
+            created.append(event)
             with events.open("a") as stream:
                 stream.write(f"r:{event} {name} ret=$retval\n")
-            created.append(event)
             (trace / "events/kprobes" / event / "enable").write_text("1\n")
         (trace / "trace").write_text("")
         (trace / "tracing_on").write_text("1\n")
@@ -235,6 +306,8 @@ def camss_probe_trace():
         report["cleanup_pass"] = not errors
         if errors:
             report["cleanup_errors"] = errors
+        else:
+            owned["stopped"] = True
     return report
 
 
@@ -282,6 +355,9 @@ def stream_trace_start():
                     "error": "Function tracer is already owned"}}
         state = {"mode": "function", "trace": trace, "tracer": tracer,
                  "selector": selector, "previous": previous}
+        owned = {"state": state, "report": {"available": True,
+                 "mode": "function", "functions": functions}}
+        TRACE_OWNERS.append(owned)
         try:
             selector.write_text("\n".join(functions) + "\n")
             (trace / "trace").write_text("")
@@ -289,6 +365,8 @@ def stream_trace_start():
             (trace / "tracing_on").write_text("1\n")
         except OSError as error:
             errors = restore_function_trace(state)
+            if not errors:
+                owned["state"] = None
             return {
                 "state": None,
                 "report": {
@@ -299,20 +377,13 @@ def stream_trace_start():
                     "cleanup_errors": errors,
                 },
             }
-        return {
-            "state": {
-                "mode": "function",
-                "trace": trace,
-                "tracer": tracer,
-                "selector": selector,
-                "previous": previous,
-            },
-            "report": {
-                "available": True,
-                "mode": "function",
-                "functions": functions,
-            },
-        }
+        except BaseException:
+            # Top-level finally retries from registered ownership if this
+            # immediate restoration is interrupted or unsuccessful.
+            if not restore_function_trace(state):
+                owned["state"] = None
+            raise
+        return owned
     original = events.read_text()
     entries = (
         ("stream_enter", "s5kjn5_enable_streams", "p"),
@@ -335,6 +406,11 @@ def stream_trace_start():
                        "error": "Camera trace probes already exist"},
         }
     created = []
+    owned = {"state": {"mode": "kprobe", "trace": trace,
+             "events": events, "created": created},
+             "report": {"available": True, "mode": "kprobe",
+                        "created": created}}
+    TRACE_OWNERS.append(owned)
     try:
         for suffix, symbol, kind in entries:
             name = "oneplus13_" + suffix
@@ -342,12 +418,14 @@ def stream_trace_start():
             if kind == "r":
                 line += " ret=$retval"
             line += "\n"
+            # Own a possibly completed kernel write before signals can
+            # interrupt its Python return or the following append.
+            created.append(name)
             try:
                 with events.open("a") as stream:
                     stream.write(line)
             except OSError:
                 continue
-            created.append(name)
             (trace / "events/kprobes" / name / "enable").write_text("1\n")
         if not created:
             raise OSError("No camera trace probe could be created")
@@ -355,6 +433,8 @@ def stream_trace_start():
         (trace / "tracing_on").write_text("1\n")
     except OSError as error:
         cleanup_errors = remove_stream_probes(trace, events, created)
+        if not cleanup_errors:
+            owned["state"] = None
         return {
             "state": None,
             "report": {
@@ -365,19 +445,11 @@ def stream_trace_start():
                 "cleanup_pass": not cleanup_errors,
             },
         }
-    return {
-        "state": {
-            "mode": "kprobe",
-            "trace": trace,
-            "events": events,
-            "created": created,
-        },
-        "report": {
-            "available": True,
-            "mode": "kprobe",
-            "created": created,
-        },
-    }
+    except BaseException:
+        if not remove_stream_probes(trace, events, created):
+            owned["state"] = None
+        raise
+    return owned
 
 
 def remove_stream_probes(trace, events, created):
@@ -403,6 +475,8 @@ def remove_stream_probes(trace, events, created):
 def stream_trace_stop(started):
     if not started:
         return {"available": False}
+    if started.get("stopped"):
+        return dict(started["report"])
     state = started["state"]
     report = dict(started["report"])
     if not state:
@@ -429,6 +503,9 @@ def stream_trace_stop(started):
             report["cleanup_pass"] = not errors
             if errors:
                 report["cleanup_errors"] = errors
+            else:
+                started["stopped"] = True
+                started["report"] = report
         return report
     try:
         (trace / "tracing_on").write_text("0\n")
@@ -450,6 +527,9 @@ def stream_trace_stop(started):
         report["cleanup_pass"] = not errors
         if errors:
             report["cleanup_errors"] = errors
+        else:
+            started["stopped"] = True
+            started["report"] = report
     return report
 
 
@@ -528,16 +608,18 @@ def accept_sensor_frame(report, path, primary_attempt):
 def cleanup_capture(loaded, original_policy):
     report = {}
     cleanup_errors = []
-    for module in reversed(loaded):
-        try:
-            unload(module)
-        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
-            cleanup_errors.append("module:" + module + ":" + type(error).__name__)
     try:
-        POLICY.write_bytes(original_policy)
-        os.chmod(POLICY, 0o644)
-    except OSError as error:
-        cleanup_errors.append("policy:" + type(error).__name__)
+        for module in reversed(loaded):
+            try:
+                unload(module)
+            except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+                cleanup_errors.append("module:" + module + ":" + type(error).__name__)
+    finally:
+        try:
+            POLICY.write_bytes(original_policy)
+            os.chmod(POLICY, 0o644)
+        except OSError as error:
+            cleanup_errors.append("policy:" + type(error).__name__)
     try:
         report["policy_sha256_after"] = hashlib.sha256(POLICY.read_bytes()).hexdigest()
         report["policy_restored"] = POLICY.read_bytes() == original_policy
@@ -552,9 +634,9 @@ def cleanup_capture(loaded, original_policy):
             "msm_vfe1" in run(
                 ["media-ctl", "--device", path, "--print-topology"],
                 check=False,
-            ).stdout for path in Path("/dev").glob("media*")
+            ).stdout for path in media_nodes()
         )
-    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+    except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
         report["media_graph_removed"] = False
         cleanup_errors.append("media:" + type(error).__name__)
     report["cleanup_errors"] = cleanup_errors
@@ -628,17 +710,15 @@ def main():
         (module_root / "modules.dep").read_text(), list(modules)
     )
     original_policy = POLICY.read_bytes()
-    POLICY.write_text(
-        policy_without_camera_denials(
-            original_policy.decode(), ordered
-        ),
-        encoding="utf-8",
-    )
     report["module_closure"] = ordered
     report["policy_sha256_before"] = hashlib.sha256(
         original_policy
     ).hexdigest()
     try:
+        POLICY.write_text(
+            policy_without_camera_denials(original_policy.decode(), ordered),
+            encoding="utf-8",
+        )
         for module in ordered:
             progress("module-load", module=module)
             load_capture_module(module, loaded)
@@ -656,7 +736,7 @@ def main():
             except (OSError, RuntimeError, ValueError):
                 report["media_inventory"] = {
                     str(path): run(["media-ctl", "--device", path, "--print-topology"], check=False).stdout[-32768:]
-                    for path in Path("/dev").glob("media*")
+                    for path in media_nodes()
                 }
                 time.sleep(0.25)
         if device is None:
@@ -669,7 +749,7 @@ def main():
                     ["media-ctl", "--device", path, "--print-topology"],
                     check=False,
                 ).stdout[-32768:]
-                for path in Path("/dev").glob("media*")
+                for path in media_nodes()
             }
             raise ValueError("Linux CAMSS media graph did not appear")
         report.update(
@@ -764,16 +844,22 @@ def main():
                     stderr=subprocess.PIPE,
                     text=True,
                 )
-                time.sleep(2)
-                during_irq = Path("/proc/interrupts").read_text()
                 try:
+                    time.sleep(remaining(2))
+                    during_irq = Path("/proc/interrupts").read_text()
                     stdout, stderr = process.communicate(
-                        timeout=args.frame_timeout
+                        timeout=remaining(args.frame_timeout)
                     )
                 except subprocess.TimeoutExpired:
-                    process.kill()
-                    stdout, stderr = process.communicate()
+                    stdout, stderr = reap_stream(process)
                     stderr += "\nv4l2-ctl process timeout\n"
+                except BaseException:
+                    # The work alarm must leave no live capture child. Give
+                    # termination its own small reserve before module teardown.
+                    begin_cleanup()
+                    process.kill()
+                    process.communicate(timeout=5)
+                    raise
                 attempts.append({
                     "attempt": attempt + 1,
                     "returncode": process.returncode,
@@ -984,11 +1070,28 @@ def main():
         progress("stream-finished", returncode=attempts[-1]["returncode"])
         accept_sensor_frame(report, FRAME, attempts[-1])
     finally:
-        progress("cleanup")
-        report.update(cleanup_capture(loaded, original_policy))
+        begin_cleanup()
+        try:
+            progress("cleanup")
+        except OSError as error:
+            report["cleanup_checkpoint_error"] = type(error).__name__
+        report["trace_owner_cleanup"] = []
+        try:
+            for item in TRACE_OWNERS:
+                try:
+                    report["trace_owner_cleanup"].append(stream_trace_stop(item))
+                except Exception as error:
+                    report["trace_owner_cleanup"].append({
+                        "cleanup_pass": False, "error": type(error).__name__})
+        finally:
+            report.update(cleanup_capture(loaded, original_policy))
+        if DEADLINE is not None:
+            arm_deadline(OUTPUT_SECONDS)
         report["cleanup_pass"] &= (
             report.get("stream_trace", {}).get("cleanup_pass", True)
             and report.get("camss_probe_trace", {}).get("cleanup_pass", True)
+            and all(item.get("cleanup_pass", False)
+                    for item in report["trace_owner_cleanup"])
         )
         (STATE / "result.json").write_text(
             json.dumps(report, indent=2, sort_keys=True) + "\n",
@@ -1031,4 +1134,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    bounded_main()

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import importlib
+import ast
 import os
 import sys
 import tempfile
@@ -36,6 +37,117 @@ TOPOLOGY = """
 
 
 class CameraCaptureRuntime(unittest.TestCase):
+    def test_cleanup_alarm_still_attempts_policy_restore(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = Path(tmp)/'policy'
+            policy.write_bytes(b'temporary')
+            with mock.patch.object(capture, 'POLICY', policy), \
+                 mock.patch.object(capture, 'unload', side_effect=capture.CaptureDeadline):
+                with self.assertRaises(capture.CaptureDeadline):
+                    capture.cleanup_capture(['owned'], b'original')
+            self.assertEqual(policy.read_bytes(), b'original')
+
+    def test_cleanup_deadline_cannot_be_renewed(self):
+        with mock.patch.object(capture, 'DEADLINE', 1), \
+             mock.patch.object(capture, 'CLEANUP_STARTED', False), \
+             mock.patch.object(capture, 'arm_deadline') as arm:
+            capture.begin_cleanup()
+            capture.begin_cleanup()
+            arm.assert_called_once_with(capture.CLEANUP_SECONDS)
+
+    def test_cleanup_checkpoint_failure_still_runs_hardware_teardown(self):
+        tree = ast.parse(Path(capture.__file__).read_text())
+        main = next(node for node in tree.body if isinstance(node, ast.FunctionDef) and node.name == 'main')
+        lifecycle = next(node for node in main.body if isinstance(node, ast.Try) and node.finalbody)
+        cleanup = mock.Mock(return_value={'cleanup_pass': True})
+        class StopOutput(Exception):
+            pass
+        env = dict(capture.__dict__, DEADLINE=None, TRACE_OWNERS=[], report={}, loaded=[],
+                   original_policy=b'original', cleanup_capture=cleanup,
+                   progress=mock.Mock(side_effect=OSError('checkpoint failed')),
+                   STATE=mock.Mock())
+        # Stop after teardown; no paths, processes or phone transports are used.
+        env['STATE'] = mock.MagicMock()
+        env['STATE'].__truediv__.side_effect = StopOutput
+        module = ast.Module(body=lifecycle.finalbody, type_ignores=[])
+        with self.assertRaises(StopOutput):
+            exec(compile(ast.fix_missing_locations(module), '<cleanup-only>', 'exec'), env)
+        cleanup.assert_called_once_with([], b'original')
+        self.assertEqual(env['report']['cleanup_checkpoint_error'], 'OSError')
+
+    def test_signal_during_trace_setup_restores_registered_owner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            for name, value in {'available_filter_functions': 'csid_isr\n',
+                'set_ftrace_filter': '', 'current_tracer': 'nop\n',
+                'tracing_on': '0\n', 'trace': ''}.items():
+                (trace/name).write_text(value)
+            original = Path.write_text
+            fired = []
+            def interrupted(path, value, *args, **kwargs):
+                result = original(path, value, *args, **kwargs)
+                if path == trace/'current_tracer' and value == 'function\n' and not fired:
+                    fired.append(True)
+                    raise capture.CaptureDeadline()
+                return result
+            with mock.patch.object(capture, 'TRACE_OWNERS', []), \
+                 mock.patch.object(capture, 'Path', return_value=trace), \
+                 mock.patch.object(Path, 'write_text', interrupted):
+                with self.assertRaises(capture.CaptureDeadline):
+                    capture.stream_trace_start()
+                self.assertEqual(len(capture.TRACE_OWNERS), 1)
+            self.assertEqual((trace/'current_tracer').read_text(), 'nop\n')
+            self.assertEqual((trace/'set_ftrace_filter').read_text(), '')
+            self.assertEqual((trace/'tracing_on').read_text(), '0\n')
+
+    def test_common_deadline_clips_all_subprocess_work(self):
+        with mock.patch.object(capture, "DEADLINE", 12), \
+             mock.patch.object(capture.time, "monotonic", return_value=10), \
+             mock.patch.object(capture.subprocess, "run") as run:
+            run.return_value.returncode = 0
+            capture.run(["fixture"], timeout=20)
+            self.assertEqual(run.call_args.kwargs["timeout"], 2)
+        with mock.patch.object(capture, "DEADLINE", 10), \
+             mock.patch.object(capture.time, "monotonic", return_value=10), \
+             mock.patch.object(capture.subprocess, "run") as run:
+            with self.assertRaises(capture.CaptureDeadline):
+                capture.run(["fixture"])
+            run.assert_not_called()
+
+    def test_fallback_exception_handlers_cannot_swallow_deadline(self):
+        self.assertFalse(issubclass(capture.CaptureDeadline, Exception))
+
+    def test_media_scan_rejects_excess_nodes_before_commands(self):
+        dev = mock.Mock()
+        dev.glob.return_value = [Path('/dev/media' + str(i)) for i in range(9)]
+        with mock.patch.object(capture, "Path", return_value=dev), \
+             mock.patch.object(capture, "run") as run:
+            with self.assertRaisesRegex(ValueError, "node limit"):
+                capture.find_media()
+            run.assert_not_called()
+
+    def test_stream_termination_is_bounded_and_failure_propagates(self):
+        process = mock.Mock()
+        process.poll.return_value = None
+        process.communicate.side_effect = capture.subprocess.TimeoutExpired('fixture', 5)
+        with mock.patch.object(capture, "DEADLINE", None):
+            with self.assertRaises(capture.subprocess.TimeoutExpired):
+                capture.reap_stream(process)
+        process.kill.assert_called_once()
+        process.communicate.assert_called_once_with(timeout=5)
+
+    def test_signal_wrapper_restores_handlers_after_failed_work(self):
+        with mock.patch.object(capture.signal, 'SIGALRM', 14, create=True), \
+             mock.patch.object(capture.signal, 'ITIMER_REAL', 0, create=True), \
+             mock.patch.object(capture.signal, 'signal', return_value=0) as handler, \
+             mock.patch.object(capture.signal, 'setitimer', create=True) as alarm, \
+             mock.patch.object(capture, 'main', side_effect=capture.CaptureDeadline):
+            with self.assertRaises(capture.CaptureDeadline):
+                capture.bounded_main()
+        self.assertIsNone(capture.DEADLINE)
+        self.assertEqual(alarm.call_args.args, (0, 0))
+        self.assertEqual(handler.call_count, 4)
+
     def test_module_timeout_keeps_attempt_owned_for_cleanup(self):
         attempted = []
         with mock.patch.object(capture, "module_loaded", return_value=False), \

@@ -3,6 +3,7 @@
 import hashlib
 import importlib
 import json
+import difflib
 from pathlib import Path
 import sys
 import tempfile
@@ -40,6 +41,24 @@ class CCIEvidenceTests(unittest.TestCase):
     def test_matching_source_inventory(self):
         self.assertEqual(cci.validate_source(self.root, self.root), self.lock)
 
+    def test_git_patch_roundtrip_rejects_wrong_base_hash(self):
+        patch_text = ''
+        self.lock['base_files'] = {}
+        for name in self.lock['generated_files']:
+            before = 'old line\n'
+            after = 'new line\n'
+            (self.root / name).write_bytes(after.encode())
+            self.lock['base_files'][name] = hashlib.sha256(before.encode()).hexdigest()
+            self.lock['generated_files'][name] = hashlib.sha256(after.encode()).hexdigest()
+            patch_text += ''.join(difflib.unified_diff(before.splitlines(True), after.splitlines(True),
+                                  fromfile='a/' + name, tofile='b/' + name))
+        patch_file = self.inventory / self.lock['patch_file']
+        patch_file.write_bytes(patch_text.encode())
+        cci.validate_patch_roundtrip(self.root, self.lock, self.root)
+        self.lock['base_files'][next(iter(self.lock['base_files']))] = '0' * 64
+        with self.assertRaisesRegex(ValueError, 'pinned base differs'):
+            cci.validate_patch_roundtrip(self.root, self.lock, self.root)
+
     def test_modified_patch_rejected(self):
         with (self.inventory / self.lock['patch_file']).open('ab') as stream:
             stream.write(b'corrupt')
@@ -76,7 +95,8 @@ class CCIEvidenceTests(unittest.TestCase):
     def test_artifact_controls_and_binding(self):
         manifest = {'cci_clock_version':1, 'kernel_commit':self.lock['kernel_pin']}
         report = {'scope':'OFFLINE_ACTUAL_CCI_C_FUNCTIONS', 'hardware_tested':False,
-                  'pass':True, 'sanitizers':True, 'kernel_commit':manifest['kernel_commit'],
+                  'pass':True, 'sanitizers':True, 'pinned_base_patch_roundtrip':True,
+                  'kernel_commit':manifest['kernel_commit'],
                   'patch_sha256':self.lock['patch_sha256'], 'generated_files':self.lock['generated_files'],
                   'sm8750_required_rate_hz':37500000, 'unknown_rates_rejected':True,
                   'legacy_19_2mhz_controls':True, 'mixed_master_modes_checked':True,

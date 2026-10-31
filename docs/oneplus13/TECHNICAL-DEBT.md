@@ -1,3 +1,13 @@
+# Exact source bytes and camera common deadline, 2026-10-31
+
+The r201 CI failure was a CRLF generated-source inventory mismatch; corrected
+Linux hashes are checked using an actual reverse/forward Git patch roundtrip.
+Camera timing now uses common work/cleanup/output deadlines rather than an
+incomplete sum of commands. Trace setup ownership is recorded before mutation
+and teardown is retried from the top-level cleanup path. These controls require
+a new exact Actions image and independent plan review before physical execution.
+Passing 775 Linux tests (five skips) does not establish electrical success.
+
 # CCI upstream candidate still needs real frames, 2026-10-31
 
 The r191 CCI init -110 remains an unqualified camera fault. The new upstream

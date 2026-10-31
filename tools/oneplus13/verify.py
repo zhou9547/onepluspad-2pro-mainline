@@ -66,7 +66,8 @@ def check_cci_report(out, manifest):
         raise ValueError('Packaged CCI provenance differs from source')
     report = json.loads((out / 'cci-clock-verification.json').read_text())
     expected = {'scope':'OFFLINE_ACTUAL_CCI_C_FUNCTIONS', 'hardware_tested':False,
-                'pass':True, 'sanitizers':True, 'kernel_commit':manifest['kernel_commit'],
+                'pass':True, 'sanitizers':True, 'pinned_base_patch_roundtrip':True,
+                'kernel_commit':manifest['kernel_commit'],
                 'patch_sha256':lock['patch_sha256'], 'generated_files':lock['generated_files'],
                 'sm8750_required_rate_hz':37500000, 'unknown_rates_rejected':True,
                 'legacy_19_2mhz_controls':True, 'mixed_master_modes_checked':True,

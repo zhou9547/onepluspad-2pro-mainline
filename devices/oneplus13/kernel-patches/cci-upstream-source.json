@@ -52,12 +52,13 @@
     "drivers/i2c/busses/Kconfig": "e4d30e59a8fe1ec4616182ad075f316824ff5edc9169e90505dfe42668252cdc"
   },
   "generated_files": {
-    "drivers/i2c/busses/i2c-qcom-cci.c": "3c1f1a547ecc2d828e805b2e61d9a7431052cfa938d872aa9187e224f64bce23",
-    "drivers/i2c/busses/Kconfig": "f3413ffc80de37827005701214cb0f9861970b867931526b4f1bcefb9c9b224f"
+    "drivers/i2c/busses/i2c-qcom-cci.c": "6869bcf5d23aaba061cad45ad779d5825f8b00259c6b4d5e205843603ba6e919",
+    "drivers/i2c/busses/Kconfig": "28dea180513bff2b6a2469eaef8908555fa429ea66ccf8c9d65bb885e8abb1ce"
   },
   "hardware_qualified": false,
   "phone_cci_clock_supported_rates_hz": [
     37500000
   ],
-  "original_pad_has_no_s5kjn5_integration": true
+  "original_pad_has_no_s5kjn5_integration": true,
+  "generated_source_newlines": "LF: reconstructed with Linux git apply and verified against exact pinned base hashes"
 }

@@ -32,6 +32,14 @@ Build failure is fatal. Packaging and verify.py bind the report to the kernel
 pin, exact generated sources and upstream patch inventory. Regression tests
 reject changed patch/source bytes and missing/stale artifact controls.
 
+r201 Actions rejected the inventory because Windows Git had written the local
+generated reference with CRLF while Linux Git emits LF. The corrected inventory
+uses exact Linux bytes, without normalizing away mismatches in validation.
+Every checker run now reverses the patch in a temporary copy, checks both
+pinned base hashes, reapplies it and checks both resulting hashes. The real C
+logic and upstream patch are unchanged. An actual Git roundtrip regression
+also rejects an incorrect base hash.
+
 Next hardware round must combine camera with GNSS start/fix/stop, NFC controller
 and USB observations plus preserved-feature regression. Human-dependent tag,
 USB cable changes and orientation steps are skipped unattended, never passed.
