@@ -74,7 +74,8 @@ def main():
         "oneplus13.session=" + nonce,
     )
     for flag in ("oneplus13.ir_probe=1", "oneplus13.usb_host_probe=1",
-                 "qcom_battmgr.oneplus13_otg_lease=1"):
+                 "qcom_battmgr.oneplus13_otg_lease=1",
+                 "qcom_battmgr.oneplus13_otg_supply_read=1"):
         if flag not in cmdline.split():
             cmdline += " " + flag
     tree.nodes["/chosen"]["bootargs"] = (cmdline + "\0").encode()
@@ -169,6 +170,9 @@ def main():
         "usb_host_probe_auto_started": False,
         "usb_firmware_lease_available": True,
         "usb_firmware_lease_auto_started": False,
+        "usb_supply_read_available": True,
+        "usb_supply_read_auto_started": False,
+        "usb_supply_setters_available": False,
         "optical_output_qualified": False,
         "usb_host_peripheral_receipt": False,
         "default_boot_image_sha256": original["default_boot_image_sha256"],

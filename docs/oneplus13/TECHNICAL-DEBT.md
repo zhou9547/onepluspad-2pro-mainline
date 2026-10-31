@@ -1,3 +1,24 @@
+# r220 result and original-project USB supply gap, 2026-10-31
+
+r220 Actions 41211458875 passes all five jobs. One RAM boot completed all
+12 joint phases in 259.04 seconds. Android returned with seven matching
+baselines and zero reported partition writes. AP17/SW18 ACTIVE, native
+host/source and xHCI/root hubs did not enumerate an external device in
+60.522 seconds. No storage block or read I/O. Cleanup is RESTORED plus
+independent AP/SW GET0. WiFi5GHz, modem and camera chip-ID checks pass;
+GNSS fix and real camera frames remain open. See the r220 result JSON.
+
+The reference d9383c7 adds a path absent from r220: notifications0x50/0x51
+drive current64 then VBUS24 after permissions17/18. Phone DT evidence
+supports PMIC0/current1250; electrical causality is not yet established.
+See USB-ORIGINAL-PROJECT-20261031.md for the pinned-source comparison.
+
+A separate default-off manual GET24/GET64 candidate adds no supply setters
+or automatic requests. Existing protocol/lease/kernel headers and USB
+helpers stay byte-identical. Offline/Actions and physical verification
+remain pending. No readable phone24/64 baseline is established; do not
+claim reversible boost or external USB I/O without exact new evidence.
+
 # r219 hardware result and powered native-host candidate, 2026-10-31
 
 r219 public commit 38d09457 passed all five Actions 41208286372 jobs,

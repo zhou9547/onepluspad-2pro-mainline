@@ -6,11 +6,12 @@ from pathlib import Path
 from common import sha256
 
 USB_LEASE_FLAG = 'qcom_battmgr.oneplus13_otg_lease=1'
+USB_SUPPLY_READ_FLAG = 'qcom_battmgr.oneplus13_otg_supply_read=1'
 
 
 def reject_parent_usb_lease(cmdline):
-    key = USB_LEASE_FLAG.split('=', 1)[0]
-    if any(token.split('=', 1)[0] == key for token in cmdline.split()):
+    keys = {flag.split('=', 1)[0] for flag in (USB_LEASE_FLAG, USB_SUPPLY_READ_FLAG)}
+    if any(token.split('=', 1)[0] in keys for token in cmdline.split()):
         raise ValueError('USB firmware lease leaked into default/parent boot')
 
 
@@ -20,10 +21,14 @@ def verify_targets_boot_arguments(camera_gnss, targets):
     expected = camera_gnss['cmdline'].replace(
         'oneplus13.session=' + camera_gnss['session_identity_nonce'],
         'oneplus13.session=' + targets['session_identity_nonce'])
-    expected += (' oneplus13.ir_probe=1 oneplus13.usb_host_probe=1 ' + USB_LEASE_FLAG)
+    expected += (' oneplus13.ir_probe=1 oneplus13.usb_host_probe=1 ' + USB_LEASE_FLAG
+                 + ' ' + USB_SUPPLY_READ_FLAG)
     if (targets['cmdline'] != expected
             or targets.get('usb_firmware_lease_available') is not True
-            or targets.get('usb_firmware_lease_auto_started') is not False):
+            or targets.get('usb_firmware_lease_auto_started') is not False
+            or targets.get('usb_supply_read_available') is not True
+            or targets.get('usb_supply_read_auto_started') is not False
+            or targets.get('usb_supply_setters_available') is not False):
         raise ValueError('Infrared/USB-role boot arguments or manual lease policy changed')
 
 
