@@ -8,10 +8,15 @@ from common import sha256
 USB_LEASE_FLAG = 'qcom_battmgr.oneplus13_otg_lease=1'
 
 
+def reject_parent_usb_lease(cmdline):
+    key = USB_LEASE_FLAG.split('=', 1)[0]
+    if any(token.split('=', 1)[0] == key for token in cmdline.split()):
+        raise ValueError('USB firmware lease leaked into default/parent boot')
+
+
 def verify_targets_boot_arguments(camera_gnss, targets):
     """Bind the manual lease capability; capability never means auto-start."""
-    if USB_LEASE_FLAG in camera_gnss['cmdline'].split():
-        raise ValueError('USB firmware lease leaked into camera/GNSS boot')
+    reject_parent_usb_lease(camera_gnss['cmdline'])
     expected = camera_gnss['cmdline'].replace(
         'oneplus13.session=' + camera_gnss['session_identity_nonce'],
         'oneplus13.session=' + targets['session_identity_nonce'])
@@ -28,8 +33,7 @@ def main():
     p.add_argument('--static-only',action='store_true',help='Verify packaging without repeating a runtime boot')
     a=p.parse_args();root=a.image.resolve();kernel=a.kernel.resolve()
     m=json.loads((root/'manifest.json').read_text())
-    if USB_LEASE_FLAG in m['cmdline'].split():
-        raise ValueError('USB firmware lease leaked into default boot')
+    reject_parent_usb_lease(m['cmdline'])
     for name,key in [('rootfs.squashfs','rootfs_sha256'),('boot-desktop-ram-experimental.img','boot_image_sha256')]:
         if sha256(root/name)!=m[key]:raise ValueError('Complete artifact changed')
     if sha256(kernel/'Image.gz')!=m['kernel_sha256']:raise ValueError('Wrong kernel')

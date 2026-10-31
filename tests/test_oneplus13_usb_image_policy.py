@@ -40,9 +40,24 @@ class UsbImagePolicyTests(unittest.TestCase):
                     verifier.verify_targets_boot_arguments(self.base,{**self.target,key:value})
 
     def test_lease_in_parent_boot_rejected(self):
-        with self.assertRaisesRegex(ValueError, 'leaked'):
-            verifier.verify_targets_boot_arguments(
-                {**self.base,'cmdline':self.base['cmdline']+' '+verifier.USB_LEASE_FLAG}, self.target)
+        key = verifier.USB_LEASE_FLAG.split('=', 1)[0]
+        for suffix in ('', '=1', '=y', '=Y', '=true', '=0', '=n', '=unexpected'):
+            token = key + suffix
+            with self.subTest(token=token):
+                with self.assertRaisesRegex(ValueError, 'leaked'):
+                    verifier.reject_parent_usb_lease(self.base['cmdline']+' '+token)
+                parent = {**self.base, 'cmdline':self.base['cmdline']+' '+token}
+                target = {**self.target, 'cmdline':self.target['cmdline']+' '+token}
+                with self.assertRaisesRegex(ValueError, 'leaked'):
+                    verifier.verify_targets_boot_arguments(parent, target)
+
+    def test_target_boolean_aliases_and_conflicting_duplicates_rejected(self):
+        for suffix in ('y', 'Y', 'true', '0', 'false'):
+            changed = self.target['cmdline'].replace(verifier.USB_LEASE_FLAG,
+                verifier.USB_LEASE_FLAG.split('=', 1)[0]+'='+suffix)
+            for cmdline in (changed, self.target['cmdline']+' '+changed.split()[-1]):
+                with self.subTest(cmdline=cmdline), self.assertRaises(ValueError):
+                    verifier.verify_targets_boot_arguments(self.base, {**self.target, 'cmdline':cmdline})
 
 
 if __name__ == '__main__': unittest.main()
