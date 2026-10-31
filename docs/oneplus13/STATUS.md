@@ -1,3 +1,15 @@
+# LOC registration client identity candidate, 2026-10-31
+
+The upstream libqmi client-identification addition matches the clean
+pre-start InvalidArgument failure. The Linux system provider now registers
+fixed AFW=1 and its own OP13 string through stable raw QmiMessage APIs,
+preserving the installed library ABI, same client/endpoint, bounded fallback
+and strict start/fix/stop acceptance. No privileged mode or identity scan is
+used. See GNSS-CLIENT-IDENTITY-20261031.md. Combine this candidate with the
+read-only USB gate observation after exact Actions/image qualification.
+r208 Mesa compiled but artifact upload hit ECONNRESET; it is not a qualified
+complete image and no phone boot uses it.
+
 # r207b physical evidence and USB firmware reads, 2026-10-31
 
 The r207b combined round completed in 288.55 seconds, returned to Android

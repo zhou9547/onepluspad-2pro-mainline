@@ -1,3 +1,13 @@
+# LOC identity correction remains hardware-unqualified, 2026-10-31
+
+Register Events now carries the upstream AFW identity plus OP13 string for
+this Linux system location provider. The previous masks, allocated client,
+one bounded fallback and cleanup remain. Actual message tests and native
+compilation do not establish firmware support or a satellite fix. GNSS and
+USB observation must share a new exact-image round. The r208 Mesa artifact
+upload failed with ECONNRESET after compilation; full Actions qualification
+remains required. See GNSS-CLIENT-IDENTITY-20261031.md.
+
 # USB Type-C detach and unqualified firmware gates, 2026-10-31
 
 r207b confirms initial xHCI/root hubs but detach returns UCSI to device/sink;

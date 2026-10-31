@@ -34,6 +34,69 @@ static int exit_status = 1;
 static gboolean terminate (gpointer user_data);
 static gboolean unix_terminate (gpointer user_data);
 
+/* libqmi 1.40 LOC client-identification TLVs, encoded with the stable raw
+ * message API so Ubuntu's older libqmi runtime ABI remains usable.
+ * Upstream schema: 532de37e84dac82936b056e28fb71ce4c7af60d6.
+ * This helper supplies the Linux system location provider, so it registers
+ * as the application framework (AFW=1), never privileged (3). OP13 is its
+ * own identifier; no Android HAL identity or client-type scan is used.
+ */
+static QmiMessage *
+registration_message (guint8 cid, guint16 transaction, gboolean position_only,
+		      GError **error)
+{
+	QmiMessage *message = qmi_message_new (QMI_SERVICE_LOC, cid, transaction, 0x0021);
+	guint64 mask = GUINT64_TO_LE (position_only ?
+		QMI_LOC_EVENT_REGISTRATION_FLAG_POSITION_REPORT :
+		QMI_LOC_EVENT_REGISTRATION_FLAG_NMEA);
+	guint32 client_type = GUINT32_TO_LE (1);
+	const guint8 client_id[] = { 'O', 'P', '1', '3' };
+
+	if (!qmi_message_add_raw_tlv (message, 0x01, (const guint8 *)&mask,
+				     sizeof(mask), error) ||
+	    !qmi_message_add_raw_tlv (message, 0x10, client_id, sizeof(client_id), error) ||
+	    !qmi_message_add_raw_tlv (message, 0x11, (const guint8 *)&client_type,
+				     sizeof(client_type), error)) {
+		qmi_message_unref (message);
+		return NULL;
+	}
+	return message;
+}
+
+static gboolean
+registration_result (QmiMessage *message, GError **error)
+{
+	guint16 length = 0;
+	const guint8 *raw;
+	guint16 result, code;
+
+	if (!qmi_message_is_response (message) ||
+	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
+	    qmi_message_get_message_id (message) != 0x0021) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+				     "unexpected LOC registration response");
+		return FALSE;
+	}
+	raw = qmi_message_get_raw_tlv (message, 0x02, &length);
+	if (!raw || length != 4) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+				     "invalid LOC registration result TLV");
+		return FALSE;
+	}
+	result = raw[0] | ((guint16)raw[1] << 8);
+	code = raw[2] | ((guint16)raw[3] << 8);
+	if (!result && !code)
+		return TRUE;
+	if (result != 1 || !code) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+				     "inconsistent LOC registration result");
+		return FALSE;
+	}
+	g_set_error (error, QMI_PROTOCOL_ERROR, code,
+		     "LOC registration protocol error %u", code);
+	return FALSE;
+}
+
 static gboolean
 claim_stop (struct session *session)
 {
@@ -266,39 +329,39 @@ start_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 }
 
 static void
-register_events_ready (QmiClientLoc *client, GAsyncResult *result,
+register_events_ready (QmiDevice *device, GAsyncResult *result,
 		       gpointer user_data)
 {
 	struct session *session = user_data;
-	QmiMessageLocRegisterEventsOutput *output;
+	QmiMessage *output;
 	QmiMessageLocStartInput *input;
 	GError *error = NULL;
 
-	output = qmi_client_loc_register_events_finish (client, result, &error);
+	output = qmi_device_command_full_finish (device, result, &error);
 	if (!output) {
 		print_error ("register-events", error);
 		g_clear_error (&error);
 		finish (session, 1);
 		return;
 	}
-	if (!qmi_message_loc_register_events_output_get_result (output, &error)) {
+	if (!registration_result (output, &error)) {
 		if (retry_position_events (error, session->position_events_only)) {
 			/* Some firmware rejects the optional NMEA event. Use the
 			 * standard LOC position report on this same client, once. */
 			session->position_events_only = TRUE;
 			g_print ("LOCATION_SESSION_POSITION_EVENTS reason=nmea-invalid-argument\n");
 			g_clear_error (&error);
-			qmi_message_loc_register_events_output_unref (output);
+			qmi_message_unref (output);
 			register_events (session);
 			return;
 		}
 		print_error ("register-events-result", error);
 		g_clear_error (&error);
-		qmi_message_loc_register_events_output_unref (output);
+		qmi_message_unref (output);
 		finish (session, 1);
 		return;
 	}
-	qmi_message_loc_register_events_output_unref (output);
+	qmi_message_unref (output);
 
 	input = qmi_message_loc_start_input_new ();
 	qmi_message_loc_start_input_set_session_id (input, 1, NULL);
@@ -310,7 +373,7 @@ register_events_ready (QmiClientLoc *client, GAsyncResult *result,
 		input, QMI_LOC_FIX_RECURRENCE_TYPE_REQUEST_PERIODIC_FIXES, NULL);
 	session->start_requested = TRUE;
 	session->start_pending = TRUE;
-	qmi_client_loc_start (client, input, 20, session->cancellable,
+	qmi_client_loc_start (session->client, input, 20, session->cancellable,
 			      (GAsyncReadyCallback) start_ready, session);
 	qmi_message_loc_start_input_unref (input);
 }
@@ -318,16 +381,24 @@ register_events_ready (QmiClientLoc *client, GAsyncResult *result,
 static void
 register_events (struct session *session)
 {
-	QmiMessageLocRegisterEventsInput *input;
-	input = qmi_message_loc_register_events_input_new ();
-	qmi_message_loc_register_events_input_set_event_registration_mask (
-		input, session->position_events_only ?
-		QMI_LOC_EVENT_REGISTRATION_FLAG_POSITION_REPORT :
-		QMI_LOC_EVENT_REGISTRATION_FLAG_NMEA, NULL);
-	qmi_client_loc_register_events (
-		session->client, input, 20, session->cancellable,
+	QmiMessage *input;
+	GError *error = NULL;
+	QmiClient *client = QMI_CLIENT (session->client);
+
+	input = registration_message (qmi_client_get_cid (client),
+		qmi_client_get_next_transaction_id (client),
+		session->position_events_only, &error);
+	if (!input) {
+		print_error ("build-register-events", error);
+		g_clear_error (&error);
+		finish (session, 1);
+		return;
+	}
+	g_print ("LOCATION_SESSION_CLIENT_ID type=afw string=OP13\n");
+	qmi_device_command_full (
+		session->device, input, NULL, 20, session->cancellable,
 		(GAsyncReadyCallback) register_events_ready, session);
-	qmi_message_loc_register_events_input_unref (input);
+	qmi_message_unref (input);
 }
 
 static void
