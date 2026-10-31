@@ -1,3 +1,11 @@
+# OTG build qualification correction, 2026-10-31
+
+r209 failed the real kernel build: the OF helper declaration was absent and
+the plural managed-group API is unavailable in the pinned kernel. The patch
+uses linux/of.h and the existing single-group API; protocol-only host tests
+did not cover these kernel integration errors. A successful full Actions
+kernel/image build remains mandatory before the next combined RAM boot.
+
 # LOC identity correction remains hardware-unqualified, 2026-10-31
 
 Register Events now carries the upstream AFW identity plus OP13 string for

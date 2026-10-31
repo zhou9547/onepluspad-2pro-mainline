@@ -8,16 +8,17 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 
 --- a/drivers/power/supply/qcom_battmgr.c
 +++ b/drivers/power/supply/qcom_battmgr.c
-@@ -15,6 +15,8 @@
+@@ -15,6 +15,9 @@
  #include <linux/soc/qcom/pmic_glink.h>
  #include <linux/math.h>
  #include <linux/units.h>
++#include <linux/of.h>
 +#include <linux/spinlock.h>
 +#include "oneplus13-otg-protocol.h"
  
  #define BATTMGR_CHEMISTRY_LEN	4
  #define BATTMGR_STRING_LEN	128
-@@ -333,6 +335,15 @@
+@@ -333,6 +336,15 @@
  
  	bool service_up;
  
@@ -33,7 +34,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  	struct qcom_battmgr_info info;
  	struct qcom_battmgr_status status;
  	struct qcom_battmgr_ac ac;
-@@ -1590,7 +1601,45 @@
+@@ -1590,7 +1602,45 @@
  {
  	const struct pmic_glink_hdr *hdr = data;
  	struct qcom_battmgr *battmgr = priv;
@@ -80,7 +81,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  
  	if (opcode == BATTMGR_NOTIFICATION)
  		qcom_battmgr_notification(battmgr, data, len);
-@@ -1601,6 +1650,94 @@
+@@ -1601,6 +1651,93 @@
  		qcom_battmgr_sm8350_callback(battmgr, data, len);
  }
  
@@ -170,7 +171,6 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +	.attrs = op13_otg_attrs,
 +	.is_visible = op13_otg_visible,
 +};
-+__ATTRIBUTE_GROUPS(op13_otg);
 +
  static void qcom_battmgr_enable_worker(struct work_struct *work)
  {
@@ -225,7 +225,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  
 -	return 0;
 +	dev_set_drvdata(dev, battmgr);
-+	return devm_device_add_groups(dev, op13_otg_groups);
++	return devm_device_add_group(dev, &op13_otg_group);
  }
  
  static const struct auxiliary_device_id qcom_battmgr_id_table[] = {

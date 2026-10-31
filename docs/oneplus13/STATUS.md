@@ -1,3 +1,12 @@
+# OTG kernel API build correction, 2026-10-31
+
+The r209 hosted kernel build exposed a missing linux/of.h include and use of
+an unavailable plural devm_device_add_groups API. The read-only patch now
+includes the OF declaration and registers its single attribute group with
+devm_device_add_group. No firmware protocol, role policy or write capability
+changes. r209 did not produce a qualified image or a new phone boot; the
+corrected candidate must complete Actions and exact image readback first.
+
 # LOC registration client identity candidate, 2026-10-31
 
 The upstream libqmi client-identification addition matches the clean
