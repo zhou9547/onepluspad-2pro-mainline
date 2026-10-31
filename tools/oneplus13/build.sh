@@ -86,6 +86,7 @@ cp tools/oneplus13/usb-draft/otg-protocol.h "$src/drivers/power/supply/oneplus13
 cp tools/oneplus13/usb-draft/otg-lease.h "$src/drivers/power/supply/oneplus13-otg-lease.h"
 cp tools/oneplus13/usb-draft/otg-kernel.h "$src/drivers/power/supply/oneplus13-otg-kernel.h"
 cp tools/oneplus13/usb-draft/otg-supply-read.h "$src/drivers/power/supply/oneplus13-otg-supply-read.h"
+cp tools/oneplus13/usb-draft/otg-supply-lease.h "$src/drivers/power/supply/oneplus13-otg-supply-lease.h"
 if ! grep -q '^config IR_DODGE_SPI$' "$src/drivers/media/rc/Kconfig"; then
   cat >> "$src/drivers/media/rc/Kconfig" <<'KCONFIG'
 

@@ -1,3 +1,20 @@
+# r222 USB VBUS candidate, 2026-11-01
+
+Adds a default-off, phone-only one-shot supply path after r221 established
+GET24=0 and GET64=0. A root sysfs `start` validates the unused lease,
+re-reads and saves both baselines, sets current64 to1250mA, requires GET64
+readback, then enables VBUS24 and requires GET24=1. `restore` reverses the
+order and verifies the saved values. A120-second delayed work performs the
+same best-effort restore. Timeout, send error or service loss poisons the
+transport; no later SET is sent and the result remains UNKNOWN.
+
+The path remains manual and does not alter UCSI data-role ownership. The
+wire has no transaction ID, so readback cannot prove response freshness.
+Android return is never treated as firmware rollback proof. The target boot
+adds only `qcom_battmgr.oneplus13_otg_supply_lease=1`; parent/default images
+reject it. Offline tests pass, while Actions and physical USB/GNSS/camera
+acceptance remain pending.
+
 # r221 hardware: supply properties readable, 2026-11-01
 
 Actions41216347609 passes all five jobs at9e1a11a1b1ee308ee60db915ecf8837d04b48a89.

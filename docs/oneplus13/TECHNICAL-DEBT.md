@@ -1,3 +1,23 @@
+# r222 USB supply risks, 2026-11-01
+
+The legacy PMIC GLINK property wire has no transaction identifier. An exact
+successful response with the requested opcode/property cannot prove it was
+generated after the current request, so r222 readback is bounded evidence
+and not proof of remote freshness. The driver saves the observed baseline
+rather than substituting the reference1250mA value during restore.
+
+SET errors and service loss are terminal for optional traffic. The bounded
+restore is therefore best effort: a send error, timeout, service loss or
+mismatched readback produces UNKNOWN and prohibits later SET requests.
+Returning to Android does not establish that firmware VBUS/current state was
+restored.
+
+The manual path sets current64 before VBUS24 and retains UCSI ownership of
+the data role. It does not connect the reference project's automatic
+0x50/0x51 notification policy or guarantee host enumeration. The exact
+Actions image must be built and reviewed before one combined USB, GNSS and
+camera RAM test. External read-only U-disk I/O is still unqualified.
+
 # r221 hardware: supply properties readable, 2026-11-01
 
 Actions41216347609 passes all five jobs at9e1a11a1b1ee308ee60db915ecf8837d04b48a89.
