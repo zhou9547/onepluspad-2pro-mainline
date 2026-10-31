@@ -199,6 +199,8 @@ class UsbRolePathTests(unittest.TestCase):
                 if args[0] == "mount":
                     Path(args[-1], "proof.txt").write_bytes(source.read_bytes())
                     return Mock(returncode=0, stdout="", stderr="")
+                if args[0] == USB.sys.executable:
+                    return USB.subprocess.run(args, **kwargs)
                 return Mock(returncode=0, stdout="", stderr="")
 
             result = USB.storage_read_only_probe(
@@ -212,6 +214,70 @@ class UsbRolePathTests(unittest.TestCase):
         self.assertEqual(calls[0][0], "mount")
         self.assertIn("ro,nosuid,nodev,noexec", calls[0])
         self.assertEqual(calls[-1][0], "umount")
+        self.assertTrue(result["cleanup_complete"])
+        self.assertEqual(result["candidate_limit"], 1)
+
+    def test_storage_probe_only_attempts_one_of_eight_partitions(self):
+        calls = []
+        def fake_run(args, **kwargs):
+            calls.append((args, kwargs["timeout"]))
+            return Mock(returncode=1 if args[0] == "mount" else 0,
+                        stdout="", stderr="")
+        with tempfile.TemporaryDirectory() as temporary:
+            result = USB.storage_read_only_probe(
+                run=fake_run, temporary_root=temporary,
+                partitions=lambda: [{"device": f"/dev/sda{i}", "size_sectors": 8}
+                                    for i in range(1, 9)],
+            )
+        self.assertEqual([call[0][0] for call in calls], ["mount", "umount"])
+        self.assertEqual(len(result["attempts"]), 1)
+        self.assertFalse(result["read_only_io_pass"])
+        self.assertTrue(result["cleanup_complete"])
+        self.assertLessEqual(sum(call[1] for call in calls), 32)
+
+    def test_storage_mount_timeout_still_attempts_unmount(self):
+        calls = []
+        def fake_run(args, **kwargs):
+            calls.append(args[0])
+            if args[0] == "mount":
+                raise USB.subprocess.TimeoutExpired(args, kwargs["timeout"])
+            return Mock(returncode=0, stdout="", stderr="")
+        with tempfile.TemporaryDirectory() as temporary:
+            result = USB.storage_read_only_probe(
+                run=fake_run, temporary_root=temporary,
+                partitions=lambda: [{"device": "/dev/sda1", "size_sectors": 8}],
+            )
+        self.assertEqual(calls, ["mount", "umount"])
+        self.assertTrue(result["attempts"][0]["operation_timed_out"])
+        self.assertTrue(result["cleanup_complete"])
+
+    def test_storage_read_timeout_keeps_parent_unmount_budget(self):
+        calls = []
+        def fake_run(args, **kwargs):
+            calls.append((args[0], kwargs["timeout"]))
+            if args[0] == USB.sys.executable:
+                raise USB.subprocess.TimeoutExpired(args, kwargs["timeout"])
+            return Mock(returncode=0, stdout="", stderr="")
+        with tempfile.TemporaryDirectory() as temporary:
+            result = USB.storage_read_only_probe(
+                run=fake_run, temporary_root=temporary,
+                partitions=lambda: [{"device": "/dev/sda1", "size_sectors": 8}],
+            )
+        self.assertEqual(calls, [("mount", 12), (USB.sys.executable, 8), ("umount", 12)])
+        self.assertFalse(result["read_only_io_pass"])
+        self.assertTrue(result["cleanup_complete"])
+
+    def test_storage_unmount_failure_retains_directory_and_fails_cleanup(self):
+        def fake_run(args, **kwargs):
+            return Mock(returncode=1, stdout="", stderr="")
+        with tempfile.TemporaryDirectory() as temporary:
+            result = USB.storage_read_only_probe(
+                run=fake_run, temporary_root=temporary,
+                partitions=lambda: [{"device": "/dev/sda1", "size_sectors": 8}],
+            )
+            self.assertEqual(len(list(Path(temporary).glob("usb-mount-*"))), 1)
+        self.assertFalse(result["cleanup_complete"])
+        self.assertFalse(result["read_only_io_pass"])
 
     def test_large_usb_file_read_is_limited_before_allocation(self):
         with tempfile.TemporaryDirectory() as temporary:

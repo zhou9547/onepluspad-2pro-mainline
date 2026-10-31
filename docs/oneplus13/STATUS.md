@@ -2557,3 +2557,11 @@ no peripheral enumeration. NFC is explicitly skipped because no physical tag
 is available. Full/incremental target acceptance remains false. New diagnostic
 source distinguishes GCTL host from bound xHCI/root hubs and records LOC
 endpoint selection snapshots. See INCREMENTAL-HARDWARE-20261031.md.
+# USB probe cleanup and bounded candidate follow-up, 2026-10-31
+
+The follow-up limits read-only USB storage proof to one verified partition,
+times directory/file I/O in a separate child and reserves parent-owned unmount.
+Unmount failure explicitly fails overall cleanup and cannot become an I/O pass.
+GNSS18 + USB23 focused tests pass; independent source review agrees. No new
+phone boot accompanies this follow-up. r205 remains the latest physical result;
+GNSS fix, USB peripheral I/O, NFC tag detection and real camera frames are open.

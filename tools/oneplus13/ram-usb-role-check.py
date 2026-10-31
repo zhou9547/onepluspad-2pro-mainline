@@ -10,6 +10,7 @@ import re
 import stat
 import select
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -346,13 +347,20 @@ def storage_read_only_probe(
     partitions=storage_partitions,
     temporary_root=Path("/run/oneplus13"),
 ):
-    """Mount the first usable partition read-only and hash a bounded file."""
+    """Try one verified partition, with a separate deadline for filesystem I/O.
+
+    A directory entry limit and O_NONBLOCK do not bound filesystem latency.
+    Keep scanning/reading in a timed child; always unmount in the parent,
+    including after mount timeout. Never recursively delete a mountpoint.
+    """
     rows = partitions()
     attempts = []
-    for row in rows:
-        with tempfile.TemporaryDirectory(
-            dir=temporary_root, prefix="usb-mount-"
-        ) as mountpoint:
+    for row in rows[:1]:
+        mountpoint = tempfile.mkdtemp(dir=temporary_root, prefix="usb-mount-")
+        attempt = {"device": row["device"], "read_pass": False}
+        mount_attempted = False
+        try:
+            mount_attempted = True
             mounted = run(
                 ["mount", "-o", "ro,nosuid,nodev,noexec", row["device"], mountpoint],
                 capture_output=True,
@@ -360,42 +368,58 @@ def storage_read_only_probe(
                 timeout=12,
                 check=False,
             )
-            attempt = {
-                "device": row["device"],
-                "mount_returncode": mounted.returncode,
-                "read_pass": False,
-            }
+            attempt["mount_returncode"] = mounted.returncode
             if mounted.returncode == 0:
-                read_payload = None
+                proof = run(
+                    [sys.executable, "-c", (
+                        "import runpy,sys,json,hashlib; "
+                        "m=runpy.run_path(sys.argv[1]); "
+                        "p=m['bounded_regular_files'](sys.argv[2]); "
+                        "b=m['read_regular_prefix'](p[0]) if p else None; "
+                        "print(json.dumps({'read_bytes':len(b),"
+                        "'read_sha256':hashlib.sha256(b).hexdigest()}) "
+                        "if b is not None else '{}')"
+                    ), str(Path(__file__).resolve()), mountpoint],
+                    capture_output=True, text=True, timeout=8, check=False,
+                )
+                if proof.returncode == 0 and len(proof.stdout) <= 256:
+                    detail = json.loads(proof.stdout)
+                    if (type(detail.get("read_bytes")) is int
+                            and 0 <= detail["read_bytes"] <= 4096
+                            and re.fullmatch(r"[0-9a-f]{64}", detail.get("read_sha256", ""))):
+                        attempt.update(detail)
+        except subprocess.TimeoutExpired:
+            attempt["operation_timed_out"] = True
+        except (OSError, ValueError, TypeError):
+            attempt["operation_failed"] = True
+        finally:
+            if mount_attempted:
                 try:
-                    import hashlib
-
-                    candidates = bounded_regular_files(Path(mountpoint))
-                    if candidates:
-                        payload = read_regular_prefix(candidates[0])
-                        attempt.update(
-                            read_bytes=len(payload),
-                            read_sha256=hashlib.sha256(payload).hexdigest(),
-                        )
-                        read_payload = payload
-                finally:
                     unmounted = run(
-                        ["umount", mountpoint],
-                        capture_output=True,
-                        text=True,
-                        timeout=12,
-                        check=False,
+                        ["umount", mountpoint], capture_output=True,
+                        text=True, timeout=12, check=False,
                     )
                     attempt["unmount_returncode"] = unmounted.returncode
-                attempt["read_pass"] = bool(
-                    read_payload is not None and unmounted.returncode == 0
-                )
-            attempts.append(attempt)
-            if attempt["read_pass"]:
-                break
+                    attempt["cleanup_complete"] = unmounted.returncode == 0
+                except (subprocess.TimeoutExpired, OSError):
+                    attempt["cleanup_complete"] = False
+            else:
+                attempt["cleanup_complete"] = True
+            if attempt["cleanup_complete"]:
+                try:
+                    os.rmdir(mountpoint)
+                except OSError:
+                    attempt["mountpoint_retained"] = True
+        attempt["read_pass"] = bool(
+            "read_sha256" in attempt and attempt["cleanup_complete"]
+        )
+        attempts.append(attempt)
     return {
         "partitions": rows,
+        "candidate_limit": 1,
+        "operation_timeout_seconds": 32,
         "attempts": attempts,
+        "cleanup_complete": all(row["cleanup_complete"] for row in attempts),
         "read_only_io_pass": any(row["read_pass"] for row in attempts),
     }
 
@@ -468,10 +492,13 @@ def main():
         result["cleanup_inventory"] = inventory()
         result["kernel_after_restore"] = kernel_diagnostics()
         result["typec_after_restore"] = typec_inventory()
-        result["cleanup_complete"] = bool(result["role_restored"])
+        result["cleanup_complete"] = bool(
+            result["role_restored"]
+            and result.get("storage_read_only", {}).get("cleanup_complete", True)
+        )
         result["pass"] = bool(
             result["host_role_requested"] and result.get("host_role_verified", False)
-            and result["role_restored"]
+            and result["cleanup_complete"]
         )
         result["functional_pass"] = bool(
             result["pass"] and result["host_peripheral_i_o_qualified"]

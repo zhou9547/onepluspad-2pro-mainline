@@ -90,3 +90,20 @@ not substitute another board's firmware, calibration or sensor registers.
 Offline checks: native cc -O2 -Wall -Wextra -Werror, 19 native configuration
 assertions without QRTR, 16 GNSS Python tests, 14 USB Python tests. New hardware
 success and new Actions completion must be recorded separately when observed.
+# USB storage probe budget correction after r205
+
+The USB probe now tries only the first verified USB-descended, block-read-only
+partition. Directory scanning and the 4096-byte file read run in a child with
+an eight-second timeout; entry and allocation limits alone do not bound slow
+filesystem I/O. Mount and parent-owned unmount each retain twelve seconds.
+These are configured subprocess timeouts (32 seconds in total), not a hard
+real-time guarantee for kernel I/O or process reap. A timed-out mount still
+attempts unmount. Failed or timed-out unmount leaves its directory untouched,
+sets cleanup false and prevents an I/O pass or continuation as a clean
+functional failure. Recursive temporary-directory cleanup is no longer used
+against a possibly mounted filesystem.
+
+GNSS 18 and USB 23 focused tests pass, including mount/read timeout and failed
+unmount paths. Independent review confirms the previous eight-partition budget
+overrun is removed. This source change is pending its exact Actions image;
+it has not been run on the phone and does not qualify USB peripheral I/O.

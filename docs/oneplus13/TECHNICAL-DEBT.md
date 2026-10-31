@@ -1893,3 +1893,10 @@ controller initialization. Preserve exact-image regressions and inspect LOC
 service/version/instance snapshots, actual xHCI binding/root-hub ancestry and
 private bounded USB kernel history before a new functional workaround.
 NFC tag acceptance is owner-skipped; real camera frames remain open.
+# USB storage operation budget, 2026-10-31
+
+The storage proof no longer accumulates up to eight mount/unmount attempts.
+One candidate uses configured timeouts of 12s mount, 8s filesystem child and
+12s parent unmount; syscall scheduling and kernel I/O are not hard real time.
+Unknown unmount completion is a cleanup failure requiring whole-round recovery,
+not a skippable peripheral failure. Exact-image physical validation remains open.
