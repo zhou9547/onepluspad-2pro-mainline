@@ -1,3 +1,18 @@
+# r210 hardware and rejected-start cleanup correction, 2026-10-31
+
+r210 Actions 41190113030 passed all five hosted jobs and exact archive/image
+readback. Its combined RAM test returned to Android after 92.22 seconds with
+seven baseline properties unchanged, one boot and zero partition writes.
+Camera chip-ID, 5 GHz control and MPSS checks passed. AFW registration now
+passes; LOC START returns GeneralError (46), followed by an acknowledged STOP.
+No satellite fix or GNSS engine acceptance is claimed. The collector incorrectly
+treated the native functional-failure exit code as failed cleanup and halted
+before USB observation. The next candidate recognizes only this exact rejected
+START plus one valid STOP acknowledgement as clean while preserving GNSS failure;
+timeout, crash, conflicting markers and STOP errors remain unsafe. See
+GNSS-START-STOP-RESULT-20261031.md. NFC is owner-skipped; real frames and USB
+physical I/O remain open. The r210 ledger is consumed and must not be reused.
+
 # OTG kernel API build correction, 2026-10-31
 
 The r209 hosted kernel build exposed a missing linux/of.h include and use of

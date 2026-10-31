@@ -1,3 +1,15 @@
+# GNSS start-result and collector semantics, 2026-10-31
+
+r210 hardware advances past Register Events with AFW identity but START fails
+with GeneralError (46); same-client STOP succeeds. This is not a working GNSS
+session or fix. The collector formerly conflated native exit 1 (functional
+failure) with failed STOP, suppressing the following independent USB phase.
+The narrow correction requires exact error/STOP evidence and retains every
+functional gate. Root-cause diagnosis of firmware START remains open. No USB
+gate values were collected in r210. Fourteen executed commands have local
+evidence, while the old aggregate evidence flag also required unexecuted phases;
+keep observed command integrity separate from complete-round acceptance.
+
 # OTG build qualification correction, 2026-10-31
 
 r209 failed the real kernel build: the OF helper declaration was absent and

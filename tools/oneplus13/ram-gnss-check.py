@@ -249,9 +249,21 @@ def collect_native_session(native, seconds):
     started = any(
         line.startswith("LOCATION_SESSION_STARTED") for line in lines
     )
-    stopped = any(
-        line.startswith("LOCATION_SESSION_STOPPED") for line in lines
+    stop_markers = [line for line in lines
+                    if re.fullmatch(r"LOCATION_SESSION_STOPPED nmea=[0-9]+", line)]
+    stopped = bool(stop_markers)
+    # The native client deliberately exits 1 after a rejected/lost START even
+    # when the same client's STOP succeeded. Keep functional failure separate
+    # from that explicit cleanup acknowledgement; timeout/crash stays unsafe.
+    start_errors = process.get("stderr", "").splitlines()
+    rejected_start_cleaned = (
+        process.get("returncode") == 1 and not started and len(stop_markers) == 1
+        and not any(line.startswith("LOCATION_SESSION_NO_SESSION") for line in lines)
+        and start_errors == ["LOCATION_SESSION_ERROR operation=start-result "
+                            "error=QMI protocol error (46): 'GeneralError'"]
     )
+    clean_stop = (stopped and process.get("timed_out", False) is False
+                  and (process.get("returncode") == 0 or rejected_start_cleaned))
     no_session = ("LOCATION_SESSION_NO_SESSION start_requested=0" in lines
                   and not started and not stopped and process.get("returncode") == 1
                   and process.get("timed_out", False) is False)
@@ -274,8 +286,8 @@ def collect_native_session(native, seconds):
         "nmea": nmea,
         "fixes": fixes,
         "fix_acquired": bool(fixes),
-        "engine_control_qualified": started and stopped,
-        "cleanup_complete": (stopped and process.get("returncode") == 0) or no_session,
+        "engine_control_qualified": started and clean_stop,
+        "cleanup_complete": clean_stop or no_session,
     }
 
 

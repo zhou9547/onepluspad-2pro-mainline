@@ -22,6 +22,56 @@ def sentence(payload):
 
 
 class GnssNmeaTests(unittest.TestCase):
+    def test_failed_start_with_acknowledged_stop_is_clean_not_qualified(self):
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 1, "stdout": "LOCATION_SESSION_STOPPED nmea=0\n",
+            "stderr": "LOCATION_SESSION_ERROR operation=start-result error=QMI protocol error (46): 'GeneralError'\n",
+        }):
+            result = GNSS.collect_native_session("/native", 25)
+        self.assertTrue(result["cleanup_complete"])
+        self.assertTrue(result["stopped"])
+        self.assertFalse(result["started"])
+        self.assertFalse(result["no_session_started"])
+        self.assertFalse(result["engine_control_qualified"])
+        self.assertFalse(result["fix_acquired"])
+
+    def test_stop_marker_cannot_hide_timeout_crash_or_inconsistent_exit(self):
+        cases = [
+            (1, True, ""), (-9, False, ""), (124, False, ""),
+            (1, False, "LOCATION_SESSION_STARTED seconds=25\n"),
+        ]
+        for code, timed_out, extra in cases:
+            with self.subTest(code=code, timed_out=timed_out, extra=extra), patch.object(
+                GNSS, "run", return_value={"returncode": code, "timed_out": timed_out,
+                    "stdout": extra + "LOCATION_SESSION_STOPPED nmea=0\n"}
+            ):
+                result = GNSS.collect_native_session("/native", 25)
+                self.assertFalse(result["cleanup_complete"])
+                self.assertFalse(result["engine_control_qualified"])
+
+    def test_failed_or_malformed_stop_is_not_cleanup_acknowledgement(self):
+        for output in ("", "LOCATION_SESSION_STOPPED_ERROR\n",
+                       "LOCATION_SESSION_STOPPED nmea=garbage\n"):
+            with self.subTest(output=output), patch.object(GNSS, "run", return_value={
+                "returncode": 1, "stdout": output,
+                "stderr": "LOCATION_SESSION_ERROR operation=stop-result error=GeneralError\n",
+            }):
+                self.assertFalse(GNSS.collect_native_session("/native", 25)["cleanup_complete"])
+
+    def test_failed_start_stop_requires_unambiguous_native_protocol_result(self):
+        error = "LOCATION_SESSION_ERROR operation=start-result error=QMI protocol error (46): 'GeneralError'\n"
+        marker = "LOCATION_SESSION_STOPPED nmea=0\n"
+        for stdout, stderr in ((marker, ""), (marker, "unknown failure\n"),
+                (marker, error.replace("(46): 'GeneralError'", "(71): 'Timeout'")),
+                (marker, error.replace("(46): 'GeneralError'", "(4): 'Aborted'")),
+                (marker, error + "LOCATION_SESSION_ERROR operation=stop-result error=bad\n"),
+                (marker + marker, error),
+                (marker + "LOCATION_SESSION_NO_SESSION start_requested=0\n", error)):
+            with self.subTest(stdout=stdout, stderr=stderr), patch.object(GNSS, "run", return_value={
+                "returncode": 1, "stdout": stdout, "stderr": stderr,
+            }):
+                self.assertFalse(GNSS.collect_native_session("/native", 25)["cleanup_complete"])
+
     def test_selected_endpoint_snapshot_is_prioritized_with_bounded_inventory(self):
         lines = [f"LOCATION_SESSION_LOC_SERVICE node={i} port=42 version=2 instance=0 selected_snapshot=0"
                  for i in range(20)]
