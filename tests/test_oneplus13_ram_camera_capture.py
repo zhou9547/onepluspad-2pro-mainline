@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +36,109 @@ TOPOLOGY = """
 
 
 class CameraCaptureRuntime(unittest.TestCase):
+    def test_kprobe_trace_start_stop_keeps_mode_and_returns_counts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            (trace / "kprobe_events").write_text("")
+            (trace / "tracing_on").write_text("0\n")
+            (trace / "trace").write_text("")
+            for suffix in ("stream_enter", "stream_exit", "csid_irq",
+                           "vfe_irq", "vfe_buf_done", "cphy_irq"):
+                event = trace / "events/kprobes" / ("oneplus13_" + suffix)
+                event.mkdir(parents=True)
+                (event / "enable").write_text("0\n")
+            with mock.patch.object(capture, "Path", return_value=trace):
+                started = capture.stream_trace_start()
+            for name in started["state"]["created"]:
+                self.assertEqual(
+                    (trace / "events/kprobes" / name / "enable").read_text(), "1\n"
+                )
+            (trace / "trace").write_text(
+                "worker-1 [000] 1.0: oneplus13_stream_enter: (sensor)\n"
+                "worker-1 [000] 1.1: oneplus13_stream_exit: (sensor) ret=-110\n"
+            )
+            report = capture.stream_trace_stop(started)
+            self.assertEqual(report["mode"], "kprobe")
+            self.assertEqual(report["counts"], {"stream_enter": 1, "stream_exit": 1})
+            self.assertEqual((trace / "tracing_on").read_text(), "0\n")
+            self.assertTrue(report["cleanup_pass"])
+            for name in started["state"]["created"]:
+                self.assertEqual(
+                    (trace / "events/kprobes" / name / "enable").read_text(), "0\n"
+                )
+                self.assertIn("-:kprobes/" + name + "\n",
+                              (trace / "kprobe_events").read_text())
+
+    def test_existing_camera_probe_is_not_taken_over(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            original = "p:kprobes/oneplus13_stream_enter sensor\n"
+            (trace / "kprobe_events").write_text(original)
+            with mock.patch.object(capture, "Path", return_value=trace):
+                started = capture.stream_trace_start()
+            self.assertIsNone(started["state"])
+            self.assertIn("already exist", started["report"]["error"])
+            self.assertEqual((trace / "kprobe_events").read_text(), original)
+
+    def test_probe_creation_appends_and_partial_enable_failure_is_cleaned(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            original = "p:other_group/unrelated another_symbol\n"
+            (trace / "kprobe_events").write_text(original)
+            (trace / "tracing_on").write_text("0\n")
+            with mock.patch.object(capture, "Path", return_value=trace):
+                started = capture.stream_trace_start()
+            self.assertIsNone(started["state"])
+            report = capture.stream_trace_stop(started)
+            self.assertIn("FileNotFoundError", report["error"])
+            self.assertEqual(report["created"], ["oneplus13_stream_enter"])
+            self.assertTrue((trace / "kprobe_events").read_text().startswith(original))
+            self.assertIn("-:kprobes/oneplus13_stream_enter\n",
+                          (trace / "kprobe_events").read_text())
+            self.assertNotIn("-:other_group/unrelated",
+                             (trace / "kprobe_events").read_text())
+
+    def test_probe_cleanup_keeps_trying_after_disable_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            events = trace / "kprobe_events"
+            events.write_text("")
+            errors = capture.remove_stream_probes(trace, events, ["oneplus13_stream_enter"])
+            self.assertTrue(errors)
+            self.assertEqual(events.read_text(), "-:kprobes/oneplus13_stream_enter\n")
+
+    def test_trace_read_error_still_disables_and_deletes_probes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            event = trace / "events/kprobes/oneplus13_stream_enter/enable"
+            event.parent.mkdir(parents=True)
+            event.write_text("1\n")
+            events = trace / "kprobe_events"
+            events.write_text("")
+            state = {"mode": "kprobe", "trace": trace, "events": events,
+                     "created": ["oneplus13_stream_enter"]}
+            report = capture.stream_trace_stop(
+                {"state": state, "report": {"mode": "kprobe"}}
+            )
+            self.assertIn("FileNotFoundError", report["error"])
+            self.assertTrue(report["cleanup_pass"])
+            self.assertEqual(event.read_text(), "0\n")
+
+    def test_function_trace_fallback_still_collects_and_restores(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            for name, text in {"available_filter_functions": "csid_isr\nother\n",
+                               "set_ftrace_filter": "", "current_tracer": "nop\n",
+                               "trace": "", "tracing_on": "0\n"}.items():
+                (trace / name).write_text(text)
+            with mock.patch.object(capture, "Path", return_value=trace):
+                started = capture.stream_trace_start()
+            (trace / "trace").write_text("worker-1 [000] 1.0: csid_isr\n")
+            report = capture.stream_trace_stop(started)
+            self.assertEqual(report["counts"], {"csid_isr": 1})
+            self.assertEqual((trace / "current_tracer").read_text(), "nop\n")
+            self.assertEqual((trace / "tracing_on").read_text(), "0\n")
+
     def test_media_parser_selects_video_node(self):
         entities = capture.parse_media(TOPOLOGY)
         self.assertEqual(set(entities), {

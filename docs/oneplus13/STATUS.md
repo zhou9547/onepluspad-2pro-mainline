@@ -1,3 +1,21 @@
+# Camera trace correction and completed NFC build, 2026-10-31
+
+Actions 41158155405 completed all five jobs successfully for r194 public
+commit ecb66a3655ed0d823cee09ce06d730992d2b45e2. NFC helper fixes are
+offline-qualified only; no new physical round or RF acceptance occurred.
+
+The camera trace start/stop test reproduces KeyError('mode') in the kprobe
+branch, before the helper can save stream-attempt diagnostics or try RDI/TPG
+fallback. The state now records its mode. Linux kprobe events are disabled
+on creation, so the helper explicitly enables them, disables and selectively
+deletes its own events, and reports cleanup failures. Existing reserved
+camera probes are not taken over; unrelated probes are not rewritten.
+Six new regression cases cover lifecycle, ownership, partial failure and
+the function-tracer fallback. All 584 offline tests pass (one skip).
+This fixes a diagnostic/control-flow defect, not the observed CCI -110.
+See CAMERA-TRACE-CONTINUATION-20261031.md. Dual-band WiFi remains accepted
+historically and is included only in preservation/regression.
+
 # Accepted WiFi baseline and remaining joint targets, 2026-10-31
 
 The owner clarifies that 5 GHz is already working: r191's 5240 MHz control

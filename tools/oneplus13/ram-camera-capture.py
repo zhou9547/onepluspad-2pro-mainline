@@ -278,46 +278,82 @@ def stream_trace_start():
         ("vfe_buf_done", "vfe_buf_done", "p"),
         ("cphy_irq", "dodge_cphy_irq", "p"),
     )
+    # kprobe_events creates disabled events. Enable each event explicitly;
+    # tracing_on alone does not produce a single probe sample.
+    reserved = {"oneplus13_" + suffix for suffix, _, _ in entries}
+    if any(
+        line.split()[0].split(":", 1)[-1].split("/")[-1] in reserved
+        for line in original.splitlines() if line.split()
+    ):
+        return {
+            "state": None,
+            "report": {"available": True, "mode": "kprobe",
+                       "error": "Camera trace probes already exist"},
+        }
     created = []
     try:
-        events.write_text(original)
         for suffix, symbol, kind in entries:
-            line = f"{kind}:oneplus13_{suffix} {symbol}"
+            name = "oneplus13_" + suffix
+            line = f"{kind}:{name} {symbol}"
             if kind == "r":
                 line += " ret=$retval"
             line += "\n"
             try:
-                events.write_text(original + "".join(created) + line)
+                with events.open("a") as stream:
+                    stream.write(line)
             except OSError:
                 continue
-            created.append(line)
+            created.append(name)
+            (trace / "events/kprobes" / name / "enable").write_text("1\n")
+        if not created:
+            raise OSError("No camera trace probe could be created")
         (trace / "trace").write_text("")
         (trace / "tracing_on").write_text("1\n")
     except OSError as error:
-        try:
-            events.write_text(original)
-        except OSError:
-            pass
+        cleanup_errors = remove_stream_probes(trace, events, created)
         return {
             "state": None,
             "report": {
                 "available": True,
                 "error": type(error).__name__ + ": " + str(error),
-                "created": [line.split()[0] for line in created],
+                "created": created,
+                "cleanup_errors": cleanup_errors,
+                "cleanup_pass": not cleanup_errors,
             },
         }
     return {
         "state": {
+            "mode": "kprobe",
             "trace": trace,
             "events": events,
-            "original": original,
+            "created": created,
         },
         "report": {
             "available": True,
             "mode": "kprobe",
-            "created": [line.split()[0] for line in created],
+            "created": created,
         },
     }
+
+
+def remove_stream_probes(trace, events, created):
+    """Remove only this capture's events, retaining unrelated kprobes."""
+    errors = []
+    try:
+        (trace / "tracing_on").write_text("0\n")
+    except OSError as error:
+        errors.append(str(error))
+    for name in reversed(created):
+        try:
+            (trace / "events/kprobes" / name / "enable").write_text("0\n")
+        except OSError as error:
+            errors.append(str(error))
+        try:
+            with events.open("a") as stream:
+                stream.write("-:kprobes/" + name + "\n")
+        except OSError as error:
+            errors.append(str(error))
+    return errors
 
 
 def stream_trace_stop(started):
@@ -368,11 +404,10 @@ def stream_trace_stop(started):
     except OSError as error:
         report["error"] = type(error).__name__ + ": " + str(error)
     finally:
-        try:
-            state["events"].write_text(state["original"])
-            (trace / "tracing_on").write_text("0\n")
-        except OSError:
-            pass
+        errors = remove_stream_probes(trace, state["events"], state["created"])
+        report["cleanup_pass"] = not errors
+        if errors:
+            report["cleanup_errors"] = errors
     return report
 
 
@@ -918,6 +953,7 @@ def main():
             report["policy_restored"]
             and report["modules_unloaded"]
             and report["media_graph_removed"]
+            and report.get("stream_trace", {}).get("cleanup_pass", True)
         )
         (STATE / "result.json").write_text(
             json.dumps(report, indent=2, sort_keys=True) + "\n",

@@ -1,3 +1,16 @@
+# Camera trace lifecycle, 2026-10-31
+
+The kprobe trace state omitted mode and raised KeyError during stream cleanup.
+Newly created events were also left disabled. Offline reproduction now covers
+both lifecycle boundaries, selective teardown, partial setup failures and
+the function-tracer fallback; the source correction passes 584 tests (one skip).
+These changes do not fix or qualify the real sensor's CCI init timeout.
+No new phone commands were issued. Private debug module auto-selection and
+fresh source/image-bound full-regression runner preparation remain review
+requirements before a new combined round. Never reuse the r191 runner as
+complete preserved-feature acceptance: it did not execute the full desktop/
+audio regressions, and its WiFi path predates the installed health guard.
+
 # NFC event delivery and cleanup candidate, 2026-10-31
 
 5 GHz is an already qualified feature, not remaining RF work. The owner
