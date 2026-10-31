@@ -2546,3 +2546,14 @@ after UCSI independently reports an attached host/source port; no power role
 is forced. Native Werror compilation/self-test and 30 focused Python tests pass.
 These new changes are candidates pending Actions and new combined hardware tests.
 See INCREMENTAL-HARDWARE-20261031.md; no claim of complete adaptation is made.
+# r205 combined run completed safely, 2026-10-31
+
+Actions 41182218697 passes all five jobs at f67c02498fd6083f61821ed78818ad41ee71cf92.
+The exact image completed every incremental phase in one RAM boot, delivered
+all private evidence and returned to Android with seven baseline properties
+matching and zero partition writes. Camera chip ID, 5 GHz preservation and
+MPSS verification pass. GNSS rejects both event masks before start; USB has
+no peripheral enumeration. NFC is explicitly skipped because no physical tag
+is available. Full/incremental target acceptance remains false. New diagnostic
+source distinguishes GCTL host from bound xHCI/root hubs and records LOC
+endpoint selection snapshots. See INCREMENTAL-HARDWARE-20261031.md.

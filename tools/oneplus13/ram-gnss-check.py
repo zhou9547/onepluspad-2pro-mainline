@@ -27,7 +27,16 @@ def bounded_stdout(output):
                        if line.startswith(prefix) and len(line) <= 512), None)
         if marker is not None and marker not in tail.splitlines():
             markers.append(marker)
+    services = loc_service_lines(output.splitlines())
+    markers += [line for line in services if line not in tail.splitlines()]
     return "\n".join(markers + [tail])
+
+
+def loc_service_lines(lines):
+    matches = [line for line in lines if re.fullmatch(
+        r"LOCATION_SESSION_LOC_SERVICE node=[0-9]+ port=[0-9]+ version=[0-9]+ instance=[0-9]+ selected_snapshot=[01]", line)]
+    selected = [line for line in matches if line.endswith("selected_snapshot=1")]
+    return list(dict.fromkeys(selected + matches))[:16]
 
 
 def run(args, timeout):
@@ -214,6 +223,7 @@ def collect_native_session(native, seconds):
     # 20 seconds each. Keep ten more for GLib timer granularity/process exit.
     process = run([native, "--seconds", str(seconds)], seconds + 95)
     lines = process.get("stdout", "").splitlines()
+    loc_services = loc_service_lines(lines)
     nmea = [
         line[5:].strip()
         for line in lines
@@ -247,6 +257,7 @@ def collect_native_session(native, seconds):
                   and process.get("timed_out", False) is False)
     return {
         "native": native,
+        "loc_services": loc_services,
         "returncode": process.get("returncode"),
         "timed_out": process.get("timed_out", False),
         "started": started,

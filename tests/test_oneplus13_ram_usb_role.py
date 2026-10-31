@@ -17,6 +17,71 @@ SPEC.loader.exec_module(USB)
 
 
 class UsbRolePathTests(unittest.TestCase):
+    def test_dmesg_pipe_capture_rejects_more_than_four_mib_and_reaps_child(self):
+        import sys
+        popen = USB.subprocess.Popen
+        children = []
+        def child(*args, **kwargs):
+            process = popen([sys.executable, "-c",
+                             "import sys,time; sys.stdout.buffer.write(b'x'*5000000); sys.stdout.flush(); time.sleep(10)"], **kwargs)
+            children.append(process)
+            return process
+        with unittest.mock.patch.object(USB.subprocess, "Popen", side_effect=child):
+            with self.assertRaisesRegex(ValueError, "exceeds bound"):
+                USB.bounded_kernel_history()
+        self.assertIsNotNone(children[0].poll())
+        self.assertTrue(children[0].stdout.closed)
+
+    def test_dmesg_pipe_capture_returns_normal_bounded_output(self):
+        import sys
+        popen = USB.subprocess.Popen
+        with unittest.mock.patch.object(USB.subprocess, "Popen", side_effect=lambda *args, **kwargs:
+             popen([sys.executable, "-c", "print('[1.0] dwc3 diagnostic')"], **kwargs)):
+            self.assertEqual(USB.bounded_kernel_history(), b"[1.0] dwc3 diagnostic\n")
+
+    def test_register_host_without_real_xhci_and_root_hub_is_not_ready(self):
+        facts = {"xhci_platform_devices": ["bind", "module", "uevent", "unbind"],
+                 "usb_devices": [], "udc": ["a600000.usb"]}
+        self.assertFalse(USB.host_controller_ready(facts))
+        facts["xhci_platform_devices"].append("xhci-hcd.2.auto")
+        self.assertFalse(USB.host_controller_ready(facts))
+        facts["usb_devices"] = ["usb1", "1-0:1.0"]
+        self.assertFalse(USB.host_controller_ready(facts))
+        facts["host_controllers"] = [{"controller": "a600000.usb",
+                                      "driver": "xhci-hcd", "root_hubs": ["usb1"]}]
+        self.assertTrue(USB.host_controller_ready(facts))
+
+    def test_root_hub_must_belong_to_bound_phone_xhci(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            driver = root / "bus/platform/drivers/xhci-hcd"
+            driver.mkdir(parents=True)
+            device = root / "devices/platform/a600000.usb/xhci-hcd.2.auto"
+            device.mkdir(parents=True)
+            (device / "driver").symlink_to(driver, target_is_directory=True)
+            (driver / device.name).symlink_to(device, target_is_directory=True)
+            usb = root / "bus/usb/devices"
+            usb.mkdir(parents=True)
+            unrelated = root / "devices/platform/unrelated/usb1"
+            unrelated.mkdir(parents=True)
+            (usb / "usb1").symlink_to(unrelated, target_is_directory=True)
+            self.assertFalse(USB.host_controller_ready(USB.inventory(root)))
+            hub = device / "usb2"
+            hub.mkdir()
+            (usb / "usb2").symlink_to(hub, target_is_directory=True)
+            facts = USB.inventory(root)
+            self.assertTrue(USB.host_controller_ready(facts))
+            self.assertEqual(facts["host_controllers"][0]["root_hubs"], ["usb2"])
+
+    def test_usb_kernel_diagnostics_are_bounded_private_and_filtered(self):
+        payload = ("unrelated private line\n" + "[1.0] dwc3 failed to initialize host\n" * 100).encode()
+        with unittest.mock.patch.object(USB, "bounded_kernel_history", return_value=payload):
+            report = USB.kernel_diagnostics()
+        self.assertTrue(report["available"])
+        self.assertTrue(report["private_only"])
+        self.assertEqual(len(report["lines"]), 64)
+        self.assertNotIn("unrelated private line", str(report))
+
     def test_host_reassertion_requires_attached_typec_host_and_source(self):
         import copy
         facts = {"ports": [{"partner_present": True, "data_role": "[host] device",
@@ -63,6 +128,7 @@ class UsbRolePathTests(unittest.TestCase):
                     "usb_peripherals",
                     "usb_storage_bound",
                     "usb_hid_bound",
+                    "host_controllers",
                 },
             )
 

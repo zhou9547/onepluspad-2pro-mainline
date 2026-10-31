@@ -1,5 +1,44 @@
 # Incremental combined RAM tests, 2026-10-31
 
+## r205 complete combined round
+
+The exact source f67c02498fd6083f61821ed78818ad41ee71cf92 passed all five jobs
+in Actions 41182218697. Three downloaded archives matched GitHub digests;
+independent image readback verified 37 image files, 46 kernel files, 66 runtime
+files, 120 qualified firmware files and 18 native ELF dependencies.
+Targets boot SHA256: 8600fe252845ef624693c60ebb21a3e08837e5029f03246888eb90fb7a8ade87.
+Rootfs SHA256: b1886d4c8e81c2b8c3cc62b27ff4c3cfdcbcffbde85bfce2944930937be81d37.
+
+One fresh temporary RAM boot completed every planned phase, delivered its
+private command evidence, cleaned up and returned to Android with all seven
+baseline properties matching. No partition writes occurred. The final guest
+receipt arrived at about 290 seconds uptime. Camera chip ID, existing 5 GHz
+WiFi and MPSS verification passed. These are preservation and sensor-access
+boundaries, not real camera-frame acceptance.
+
+Both NMEA and POSITION_REPORT LOC registration returned InvalidArgument;
+the explicit NO_SESSION marker confirms no start request was submitted.
+GNSS failed cleanly and the following USB stage still ran. NFC was explicitly
+skipped at the owner's request because no physical tag was available; the
+previous test item was another Android phone emulating a transit card.
+This is not evidence of a failed NFC controller.
+
+USB had a host-mode register readback, but its end-of-wait inventory had no
+xHCI instance or root hub. After cable removal, Type-C reported no partner
+and remained device/sink. Device-role restoration passed. External USB I/O
+and GNSS remain unqualified; full and incremental target acceptance are false.
+
+The next diagnostic candidate records xHCI driver binding and root-hub
+ancestry under this phone's a600000.usb controller, initial/transition/final
+inventories and bounded private USB kernel diagnostics. GCTL host readback
+alone cannot permit cable removal. LOC records all discovered service
+node/port/version/instance and the selection snapshot, while preserving the
+existing selection and strict fix/start/stop acceptance. Snapshot selection is
+not a claim about the later actual socket destination. This candidate needs
+its own image build and fresh review before any new hardware round.
+
+## Earlier r203/r204 observations
+
 Image source: 95b931d72f2cc2026c844080896b10cb7c8e8df7.
 Successful Actions run: 41178635052 (kernel, rootfs, Mesa, SSC, assembly).
 Targets boot SHA256: ae247850900bc9dfd0bab2fba4a21d4634540dd0303bb717f709fee95a1cc5d4.

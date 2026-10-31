@@ -1885,3 +1885,11 @@ Independent functional failures must not block unrelated following stages after
 proven cleanup. Kernel faults, ambiguous cleanup and control loss still recover.
 The 30-second operator return-card limit caused an avoidable r204 final-stage
 failure and must be increased before the next attended round.
+# r205 direct boundaries and next diagnosis, 2026-10-31
+
+Safety/evidence/recovery passed; GNSS and USB functional gates did not.
+Do not retry event masks indefinitely or equate a debugfs host register with
+controller initialization. Preserve exact-image regressions and inspect LOC
+service/version/instance snapshots, actual xHCI binding/root-hub ancestry and
+private bounded USB kernel history before a new functional workaround.
+NFC tag acceptance is owner-skipped; real camera frames remain open.

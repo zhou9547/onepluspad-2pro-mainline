@@ -434,6 +434,7 @@ bus_ready (GObject *source, GAsyncResult *result, gpointer user_data)
 	struct session *session = user_data;
 	QrtrBus *bus;
 	QrtrNode *node;
+	GList *nodes, *services;
 	GError *error = NULL;
 
 	(void)source;
@@ -444,6 +445,26 @@ bus_ready (GObject *source, GAsyncResult *result, gpointer user_data)
 		finish (session, 1);
 		return;
 	}
+	/* Enumerate the actual LOC endpoints before selecting the existing node.
+	 * libqmi's QRTR backend selects the highest-version service port. Keep
+	 * this evidence so a rejected mask is not diagnosed by guessing a node. */
+	for (nodes = qrtr_bus_peek_nodes (bus); nodes; nodes = nodes->next) {
+		QrtrNode *candidate = QRTR_NODE (nodes->data);
+		for (services = qrtr_node_peek_service_info_list (candidate);
+		     services; services = services->next) {
+			QrtrNodeServiceInfo *info = services->data;
+			if (qrtr_node_service_info_get_service (info) == QMI_SERVICE_LOC)
+				g_print ("LOCATION_SESSION_LOC_SERVICE node=%u port=%u version=%u instance=%u selected_snapshot=%u\n",
+					 qrtr_node_get_id (candidate),
+					 qrtr_node_service_info_get_port (info),
+					 qrtr_node_service_info_get_version (info),
+					 qrtr_node_service_info_get_instance (info),
+					 qrtr_node_get_id (candidate) == 0 &&
+					 qrtr_node_lookup_port (candidate, QMI_SERVICE_LOC) ==
+					 (gint32) qrtr_node_service_info_get_port (info));
+		}
+	}
+	fflush (stdout);
 	node = qrtr_bus_peek_node (bus, 0);
 	if (!node) {
 		g_printerr ("LOCATION_SESSION_ERROR operation=find-node\n");

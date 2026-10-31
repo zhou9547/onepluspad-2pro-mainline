@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import select
 import subprocess
 import tempfile
 import time
@@ -95,6 +96,27 @@ def usb_peripherals(root):
     return rows[:32]
 
 
+def host_controllers(root):
+    """Associate bound xHCI and root hubs with this exact DWC3 controller."""
+    root = Path(root)
+    rows = []
+    for link in sorted((root / "bus/platform/drivers/xhci-hcd").glob("xhci-hcd.*.auto"))[:8]:
+        if not re.fullmatch(r"xhci-hcd[.][0-9]+[.]auto", link.name):
+            continue
+        device = link.resolve()
+        driver = device / "driver"
+        if device.parent.name != "a600000.usb" or not driver.is_symlink():
+            continue
+        if driver.resolve().name != "xhci-hcd":
+            continue
+        hubs = [hub.name for hub in sorted((root / "bus/usb/devices").glob("usb*"))
+                if re.fullmatch(r"usb[0-9]+", hub.name)
+                and hub.resolve().parent == device][:8]
+        rows.append({"device": link.name, "controller": "a600000.usb",
+                     "driver": "xhci-hcd", "root_hubs": hubs})
+    return rows
+
+
 def inventory(root=None):
     root = Path("/sys") if root is None else Path(root)
     peripherals = usb_peripherals(root)
@@ -115,6 +137,7 @@ def inventory(root=None):
         "usb_peripherals": peripherals,
         "usb_storage_bound": "usb-storage" in drivers,
         "usb_hid_bound": "usbhid" in drivers,
+        "host_controllers": host_controllers(root),
     }
 
 
@@ -133,6 +156,59 @@ def wait_for_host_driver(seconds, sleep=time.sleep, reconcile=None):
     return facts, samples
 
 
+def host_controller_ready(facts):
+    """GCTL host readback alone does not establish a running xHCI controller."""
+    return any(row.get("controller") == "a600000.usb"
+               and row.get("driver") == "xhci-hcd"
+               and any(re.fullmatch(r"usb[0-9]+", name)
+                       for name in row.get("root_hubs", []))
+               for row in facts.get("host_controllers", []))
+
+
+def kernel_diagnostics():
+    """Keep bounded USB-only diagnostics in this private RAM test result."""
+    try:
+        payload = bounded_kernel_history()
+        lines = [line[:512] for line in payload.decode(errors="replace").splitlines()
+                 if re.search(r"dwc3|xhci|ucsi|typec|pmic.gl[i]*nk|usb.*(?:fail|error|timeout)",
+                              line, re.I)][-64:]
+        return {"available": True, "lines": lines, "private_only": True}
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return {"available": False}
+
+
+def bounded_kernel_history():
+    """Never accumulate more than 4 MiB or leave a diagnostic child running."""
+    process = subprocess.Popen(["dmesg"], stdout=subprocess.PIPE,
+                               stderr=subprocess.DEVNULL)
+    deadline = time.monotonic() + 4
+    chunks = []
+    size = 0
+    try:
+        os.set_blocking(process.stdout.fileno(), False)
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ValueError("Kernel diagnostic deadline")
+            if not select.select([process.stdout], [], [], remaining)[0]:
+                raise ValueError("Kernel diagnostic deadline")
+            chunk = os.read(process.stdout.fileno(), min(65536, 4 * 1024 * 1024 - size + 1))
+            size += len(chunk)
+            if size > 4 * 1024 * 1024:
+                raise ValueError("Kernel diagnostic exceeds bound")
+            if not chunk:
+                break
+            chunks.append(chunk)
+        if process.wait(timeout=max(.01, deadline - time.monotonic())):
+            raise ValueError("Kernel history unavailable")
+        return b"".join(chunks)
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=2)
+        process.stdout.close()
+
+
 def typec_host_source(facts):
     """Only follow a real attached UFP; never force the Type-C power role."""
     ports = facts.get("ports", [])
@@ -145,9 +221,15 @@ def reconcile_host(mode, observations):
     """UCSI disconnect may replace an earlier debugfs host request with device."""
     facts = typec_inventory()
     current = read(mode)
-    key = (current, json.dumps(facts, sort_keys=True))
+    controller = inventory()
+    ready = host_controller_ready(controller)
+    key = (current, json.dumps(facts, sort_keys=True),
+           json.dumps(controller, sort_keys=True))
     if not observations or observations[-1]["key"] != key:
-        observations.append({"key": key, "mode": current, "typec": facts})
+        observations.append({"key": key, "mode": current, "typec": facts,
+                             "host_controller_ready": ready,
+                             "controller_inventory": controller,
+                             "monotonic_seconds": round(time.monotonic(), 3)})
         del observations[:-24]
     if current != "host" and typec_host_source(facts):
         write(mode, "host")
@@ -342,6 +424,7 @@ def main():
         "host_peripheral_receipt": False,
         "host_peripheral_i_o_qualified": False,
         "typec_before": typec_inventory(),
+        "inventory_before": inventory(),
     }
     try:
         write(mode, "host")
@@ -350,6 +433,10 @@ def main():
         result["role_after_host_request"] = read(mode)
         result["host_role_verified"] = result["role_after_host_request"] == "host"
         result["typec_after_host_request"] = typec_inventory()
+        result["initial_host_inventory"] = inventory()
+        result["initial_host_controller_ready"] = host_controller_ready(
+            result["initial_host_inventory"])
+        result["kernel_after_host_request"] = kernel_diagnostics()
         result["role_observations"] = []
         result["host_inventory"], result["host_inventory_samples"] = (
             wait_for_host_driver(args.wait_seconds, reconcile=lambda: reconcile_host(
@@ -357,6 +444,7 @@ def main():
         )
         result["typec_after_peripheral_wait"] = typec_inventory()
         result["role_after_peripheral_wait"] = read(mode)
+        result["kernel_after_peripheral_wait"] = kernel_diagnostics()
         result["host_peripheral_receipt"] = bool(
             result["host_inventory"]["usb_peripherals"]
         )
@@ -378,6 +466,7 @@ def main():
                 break
             time.sleep(0.25)
         result["cleanup_inventory"] = inventory()
+        result["kernel_after_restore"] = kernel_diagnostics()
         result["typec_after_restore"] = typec_inventory()
         result["cleanup_complete"] = bool(result["role_restored"])
         result["pass"] = bool(

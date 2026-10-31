@@ -22,6 +22,26 @@ def sentence(payload):
 
 
 class GnssNmeaTests(unittest.TestCase):
+    def test_selected_endpoint_snapshot_is_prioritized_with_bounded_inventory(self):
+        lines = [f"LOCATION_SESSION_LOC_SERVICE node={i} port=42 version=2 instance=0 selected_snapshot=0"
+                 for i in range(20)]
+        selected = "LOCATION_SESSION_LOC_SERVICE node=0 port=90 version=3 instance=0 selected_snapshot=1"
+        result = GNSS.loc_service_lines(lines + [selected])
+        self.assertEqual(len(result), 16)
+        self.assertEqual(result[0], selected)
+
+    def test_loc_endpoint_selection_evidence_survives_long_output(self):
+        marker = "LOCATION_SESSION_LOC_SERVICE node=0 port=42 version=2 instance=0 selected_snapshot=1"
+        bounded = GNSS.bounded_stdout(marker + "\n" + "x" * 10000)
+        self.assertIn(marker, bounded)
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 1, "stdout": bounded + "\nLOCATION_SESSION_NO_SESSION start_requested=0\n",
+        }):
+            report = GNSS.collect_native_session("/native", 25)
+        self.assertEqual(report["loc_services"], [marker])
+        self.assertFalse(report["fix_acquired"])
+        self.assertTrue(report["cleanup_complete"])
+
     def test_explicit_prestart_failure_is_clean_but_not_qualified(self):
         with patch.object(GNSS, "run", return_value={
             "returncode": 1, "stdout": "LOCATION_SESSION_NO_SESSION start_requested=0\n",
