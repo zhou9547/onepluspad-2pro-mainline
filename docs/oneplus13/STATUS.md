@@ -1,3 +1,14 @@
+# USB image qualification correction, 2026-10-31
+
+The r215 kernel, rootfs, Mesa and SSC Actions jobs passed, but final image
+verification correctly stopped on the old targets boot-argument expectation.
+r216 updates that verifier to require the exact opt-in lease flag and strict
+manual-only manifest booleans, and rejects leakage into default/parent boots.
+Production-policy tests cover missing/extra/duplicate/reordered flags and
+truthy policy values. Kernel and helper behavior remain the r215 reviewed bytes.
+No additional phone operation occurred; USB physical I/O is still unqualified.
+The r214 one-boot ledger is consumed. New joint testing needs a fresh bound plan.
+
 # USB-first bounded gate candidate, 2026-10-31
 
 The owner prioritizes USB before other remaining adaptation work. r214's

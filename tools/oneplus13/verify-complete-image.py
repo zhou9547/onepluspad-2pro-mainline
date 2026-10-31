@@ -5,12 +5,31 @@ import argparse,json,subprocess,time
 from pathlib import Path
 from common import sha256
 
+USB_LEASE_FLAG = 'qcom_battmgr.oneplus13_otg_lease=1'
+
+
+def verify_targets_boot_arguments(camera_gnss, targets):
+    """Bind the manual lease capability; capability never means auto-start."""
+    if USB_LEASE_FLAG in camera_gnss['cmdline'].split():
+        raise ValueError('USB firmware lease leaked into camera/GNSS boot')
+    expected = camera_gnss['cmdline'].replace(
+        'oneplus13.session=' + camera_gnss['session_identity_nonce'],
+        'oneplus13.session=' + targets['session_identity_nonce'])
+    expected += (' oneplus13.ir_probe=1 oneplus13.usb_host_probe=1 ' + USB_LEASE_FLAG)
+    if (targets['cmdline'] != expected
+            or targets.get('usb_firmware_lease_available') is not True
+            or targets.get('usb_firmware_lease_auto_started') is not False):
+        raise ValueError('Infrared/USB-role boot arguments or manual lease policy changed')
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--kernel',type=Path,required=True);p.add_argument('--image',type=Path,required=True)
     p.add_argument('--static-only',action='store_true',help='Verify packaging without repeating a runtime boot')
     a=p.parse_args();root=a.image.resolve();kernel=a.kernel.resolve()
     m=json.loads((root/'manifest.json').read_text())
+    if USB_LEASE_FLAG in m['cmdline'].split():
+        raise ValueError('USB firmware lease leaked into default boot')
     for name,key in [('rootfs.squashfs','rootfs_sha256'),('boot-desktop-ram-experimental.img','boot_image_sha256')]:
         if sha256(root/name)!=m[key]:raise ValueError('Complete artifact changed')
     if sha256(kernel/'Image.gz')!=m['kernel_sha256']:raise ValueError('Wrong kernel')
@@ -372,11 +391,7 @@ def main():
     if (not re.fullmatch('[a-f0-9]{24}',targets_nonce) or
             targets_nonce in (nonce,m['session_identity_nonce'],cam_nonce,capture_nonce,modem_nonce,camera_gnss_nonce)):
         raise ValueError('Infrared/USB-role needs a separate session identity')
-    expected_targets_cmdline=camera_gnss['cmdline'].replace(
-        'oneplus13.session='+camera_gnss_nonce,
-        'oneplus13.session='+targets_nonce)+' oneplus13.ir_probe=1 oneplus13.usb_host_probe=1'
-    if targets_manifest['cmdline']!=expected_targets_cmdline:
-        raise ValueError('Infrared/USB-role boot arguments changed')
+    verify_targets_boot_arguments(camera_gnss, targets_manifest)
     if (sha256(root/'boot-targets-ir-usb-ram-experimental.img')!=targets_manifest['boot_image_sha256'] or
             sha256(root/'sm8750-oneplus13-targets-ir-usb.dtb')!=targets_manifest['dtb_sha256']):
         raise ValueError('Infrared/USB-role manifest hashes disagree')
