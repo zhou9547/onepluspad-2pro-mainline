@@ -1,0 +1,81 @@
+{
+  "schema": "r221-supply-read-hardware-result-v1",
+  "source_commit": "9e1a11a1b1ee308ee60db915ecf8837d04b48a89",
+  "source_tree": "6a7ec5a99be8d2db099049587d1ae0e5ef548512",
+  "workflow_run": 41216347609,
+  "plan_sha256": "cf4fb16641a6ed191f42893107e630292dd94766f74cabff920172962c306815",
+  "image_sha256": "c4d436323dd6733facc73ab867c0e985c321c73c4ddea90f61952a4b517c54c0",
+  "evidence_integrity_pass": true,
+  "completed": true,
+  "cleanup_pass": true,
+  "halted": false,
+  "firmware_residual_unknown": false,
+  "ram_boots": 1,
+  "partition_writes_reported": 0,
+  "android_return_confirmed": true,
+  "android_baseline_keys_exact_match": 7,
+  "all12_planned_phases_completed": true,
+  "command_evidence_files": 19,
+  "receipt_count": 15,
+  "last_receipt_sequence": 50,
+  "guest_phase_span_seconds": 32.37,
+  "summed_phase_elapsed_seconds": 32.216,
+  "usb_phase_elapsed_seconds": 0.164,
+  "wifi_5ghz_preservation_pass": true,
+  "camera_chip_id_pass": true,
+  "existing_modem_verify_pass": true,
+  "usb": {
+    "get24_readable": true,
+    "get24_value": 0,
+    "get64_readable": true,
+    "get64_value": 0,
+    "baseline_read_complete": true,
+    "lease_before": {
+      "state": 0,
+      "used": 0,
+      "dirty_ap": 0,
+      "dirty_switch": 0
+    },
+    "lease_after": {
+      "state": 0,
+      "used": 0,
+      "dirty_ap": 0,
+      "dirty_switch": 0
+    },
+    "firmware_or_role_write_requested": false,
+    "old_lease_start_requested": false,
+    "lease_may_have_started": false,
+    "read_only_storage_io_tested": false,
+    "external_io_tested": false,
+    "physical_usb_change_requested": false,
+    "diagnostic_cleanup_verified": true,
+    "functional_pass": false,
+    "supply_reversibility_under_mutation_verified": false,
+    "default_current_1250_assumed_as_baseline": false,
+    "runtime_transaction_trace_recorded": false
+  },
+  "gnss": {
+    "fix_pass": false,
+    "native_cleanup_complete": true,
+    "start_error": "QMI GeneralError46"
+  },
+  "camera": {
+    "real_frame_pass": false,
+    "teardown_complete": true
+  },
+  "nfc": "owner explicitly skipped; no physical tag",
+  "bounded_kernel_health_pass": true,
+  "full_regression_retested": false,
+  "joint_hardware_acceptance_pass": false,
+  "incremental_targets_pass": false,
+  "limitations": [
+    "GET24=0 and GET64=0 establish successful readability in this RAM round, not electrical VBUS, applied current or external USB enumeration/storage I/O.",
+    "GET64 returned exactly0;1250 is a stock configuration reference and must not replace this observed value or be assumed as saved restoration baseline.",
+    "No supply or old-lease setter was reachable on the bound runner path. No runtime PMIC GLINK transaction trace was captured.",
+    "No transaction ID exists; a delayed successful duplicate during a later same-property GET remains indistinguishable. This does not establish remote freshness or reversibility under future mutation.",
+    "No mutation was performed, so restoration of a changed24/64 state was not tested. Future mutation needs a fresh reviewed plan and new exact readable saved baseline.",
+    "Receipt-origin timestamps retain latest reception after retries; first-arrival timing cannot be reconstructed from final origin files alone.",
+    "Guest duration uses recorded monotonic uptime/phase data. Host115.359s is only file-timestamp proxy from BOOT-ATTEMPTED file to Android-return file, not exact fastboot-to-Android duration.",
+    "GNSS fix and real camera frame remain unqualified; cleanup passes and full historical-function regression was not repeated."
+  ]
+}

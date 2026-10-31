@@ -83,3 +83,14 @@ requirements differ from the reference's persistent operating policy.
 The reference source alone does not authorize or qualify phone supply
 mutation. Bind the exact new image and combined USB/GNSS/camera plan before
 testing; retain the owner's explicit NFC skip. No partition/media writes.
+
+## r221 phone diagnostic result, 2026-11-01
+
+One reviewed combined RAM round now establishes manual GET24=0 and GET64=0.
+Both succeeded, with the old lease IDLE/unused/clean before and after.
+No USB setter/cable change was requested; GNSS/camera continued after the
+clean diagnostic and Android returned with seven matching baseline keys.
+This addresses the earlier unknown readability, but proves neither mutation
+rollback nor electrical supply or external-device I/O. Save actual current0,
+never substitute1250 as the restoration baseline. The wire freshness limitation
+still applies. See R221-HARDWARE-RESULT-20261101.json.

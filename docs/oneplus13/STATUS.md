@@ -1,3 +1,27 @@
+# r221 hardware: supply properties readable, 2026-11-01
+
+Actions41216347609 passes all five jobs at9e1a11a1b1ee308ee60db915ecf8837d04b48a89.
+Three artifact digests and actual driver/four headers, seven parent boot variants,
+68 runtime files and 1101 modules were verified before one fresh RAM boot.
+All12 combined phases completed with cleanup and Android's seven baselines exact.
+
+Manual GET24=0 and GET64=0 succeeded. The USB lease remained IDLE/unused/clean,
+and no USB setter or cable change was requested. The full USB functional gate
+remains false: no external-device enumeration or storage I/O was tested here.
+The observed current baseline is0, not1250. Readability does not demonstrate
+restoration after mutation, electrical VBUS delivery or remote reply freshness.
+See R221-HARDWARE-RESULT-20261101.json for exact evidence and limitations.
+
+The12 guest phases span32.370s; USB took0.164s. WiFi5GHz, modem verification
+and camera chip-ID checks pass. GNSS has no fix and camera no real frame; both
+teardowns pass. NFC stays owner-skipped. The ledger is consumed.
+
+The next supply candidate must keep the original project's64-before24 order,
+bind exact0x50/0x51 notification and current service epoch, stop on detach/expiry,
+save an actual readable64 baseline and restore it exactly. A failed current
+write must prevent VBUS enable. Preserve UCSI data-role ownership and all
+working paths. Future supply writes need a new reviewed image/plan and scope.
+
 # r220 result and original-project USB supply gap, 2026-10-31
 
 r220 Actions 41211458875 passes all five jobs. One RAM boot completed all
