@@ -115,6 +115,8 @@ def main():
         'The build recipe is tools/oneplus13/build.sh in the integration commit\n'
         'recorded in manifest.json. The phone board carries BSD-3-Clause attribution.\n')
     shutil.copy2(REPO / 'devices/oneplus13/source.json', out / 'source.json')
+    shutil.copy2(REPO / 'devices/oneplus13/kernel-patches/cci-upstream-source.json',
+                 out / 'cci-upstream-source.json')
     shutil.copy2(REPO / 'docs/oneplus13/README.md', out / 'README.md')
     shutil.copy2(REPO / 'COPYING' if (REPO / 'COPYING').exists() else REPO / 'LICENSE',
                  out / 'LICENSE')
@@ -146,6 +148,7 @@ def main():
         'native_display_candidate_version': 1,
         'wlan_wiring_version': 1,
         'gpu_graph_version': 1,
+        'cci_clock_version': 1,
         'tools_sha256': {'busybox': bb['sha256'], 'mkbootimg.py': mk['sha256']},
         'phone_inputs_sha256': {
             p.name: sha256(p) for p in sorted((REPO / 'devices/oneplus13').iterdir()) if p.is_file()},

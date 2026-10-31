@@ -58,6 +58,24 @@ def check_module_indexes(archive, release):
         raise ValueError('Module dependency index does not cover every delivered module')
 
 
+def check_cci_report(out, manifest):
+    if manifest.get('cci_clock_version') != 1:
+        raise ValueError('Unknown CCI verification version')
+    lock = importlib.import_module('check-cci').load_inventory()
+    if json.loads((out / 'cci-upstream-source.json').read_text()) != lock:
+        raise ValueError('Packaged CCI provenance differs from source')
+    report = json.loads((out / 'cci-clock-verification.json').read_text())
+    expected = {'scope':'OFFLINE_ACTUAL_CCI_C_FUNCTIONS', 'hardware_tested':False,
+                'pass':True, 'sanitizers':True, 'kernel_commit':manifest['kernel_commit'],
+                'patch_sha256':lock['patch_sha256'], 'generated_files':lock['generated_files'],
+                'sm8750_required_rate_hz':37500000, 'unknown_rates_rejected':True,
+                'legacy_19_2mhz_controls':True, 'mixed_master_modes_checked':True,
+                'opp_failure_propagated':True, 'clock_stretch_bit_checked':True}
+    if manifest['kernel_commit'] != lock['kernel_pin'] or any(
+            report.get(k) != v for k, v in expected.items()):
+        raise ValueError('Missing or failed actual CCI C verification')
+
+
 def verify_artifacts(out):
     manifest = json.loads((out / 'manifest.json').read_text())
     if manifest['device'] != 'oneplus,dodge' or manifest['hardware_tested'] is not False:
@@ -283,6 +301,8 @@ def verify_artifacts(out):
                     'negative_controls_rejected': 5, 'render_driver_modular': True}
         if manifest['gpu_graph_version'] != 1 or any(gpu.get(k) != v for k, v in expected.items()):
             raise ValueError('Missing or failed isolated GPU graph verification')
+    if 'cci_clock_version' in manifest:
+        check_cci_report(out, manifest)
     check_config(out / 'kernel.config')
     image = (out / 'Image').read_bytes()
     if len(image) < 64 or image[56:60] != b'ARM\x64':

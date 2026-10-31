@@ -1,3 +1,14 @@
+# CCI upstream clock and stretching candidate, 2026-10-31
+
+The camera candidate backports seven upstream CCI clock/timing/stretching
+changes, including exact-rate selection for SM8750's 37.5 MHz clock.
+Actual patched C functions pass GCC ASan/UBSan offline controls, and image
+verification binds their report to the patch, generated sources and kernel pin.
+No real sensor-frame acceptance is claimed. See CCI-CLOCK-CONTINUATION-20261031.md.
+GNSS/NFC/camera/USB remain joint targets; dual-band WiFi is a preserved baseline.
+Current bounded Android preflight succeeds with seven baseline keys matched;
+this is a read-only observation, not a new RAM test or hardware acceptance.
+
 # Camera insertion cleanup ownership, 2026-10-31
 
 A module insertion timeout or error may leave a registered camera module.

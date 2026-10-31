@@ -1,3 +1,14 @@
+# CCI upstream candidate still needs real frames, 2026-10-31
+
+The r191 CCI init -110 remains an unqualified camera fault. The new upstream
+clock/stretching backport has actual-C offline coverage and source-bound image
+checks; it needs full kernel/Actions qualification and then combined hardware
+evidence. Neither upstream testing on another board nor mocked clock/OPP/MMIO
+establishes electrical success on this phone. No sensor/power/C-PHY workaround
+is introduced. See CCI-CLOCK-CONTINUATION-20261031.md.
+Android is reachable in the current read-only preflight; a fresh image-bound
+plan and independent runner review remain prerequisites for a new RAM round.
+
 # Camera insertion cleanup ownership, 2026-10-31
 
 Timeouts/errors during module insertion no longer omit that attempt from

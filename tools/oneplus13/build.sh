@@ -51,6 +51,7 @@ done
 python3 tools/oneplus13/camera-draft/integrate-camera.py --kernel "$src" \
   --report "$dest/camera-source-integration.json" \
   --catalog-output "$dest/camera-cphy-catalog"
+python3 tools/oneplus13/check-cci.py --kernel-source "$src" --output "$dest/cci-clock-verification.json" --sanitize
 python3 tools/oneplus13/check-wcn7860-scan.py --kernel-source "$src" \
   --output "$dest/wcn7860-scan-verification.json"
 python3 tools/oneplus13/check-wcn7860-priority.py --kernel-source "$src" \
