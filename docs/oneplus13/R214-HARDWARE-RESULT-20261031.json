@@ -1,0 +1,98 @@
+{
+  "scope": "R214_COMBINED_RAM_HARDWARE_EVIDENCE",
+  "source_commit": "742f2d89c2da60d2a486e411f9eab3f081c4b1ce",
+  "source_tree": "ae46e5d53ca8bef4a91c87efcb347a8ae57e579e",
+  "actions_run": 41195729868,
+  "completed": true,
+  "halted": false,
+  "cleanup_pass": true,
+  "gates": {
+    "camera": false,
+    "camera-chip-id": true,
+    "gnss": false,
+    "modem-verify": true,
+    "nfc": false,
+    "usb": false,
+    "wifi-a": true
+  },
+  "uptime_seconds": 94.7,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "baseline_key_count": 7,
+  "boot_attempts": 1,
+  "partition_writes": 0,
+  "private_command_evidence_verified": true,
+  "host_errors": [],
+  "gnss": {
+    "pass": false,
+    "started": false,
+    "stopped": true,
+    "timed_out": false,
+    "fix_acquired": false,
+    "engine_control_qualified": false,
+    "cleanup_complete": true,
+    "returncode": 1
+  },
+  "gnss_start_protocol_error": 46,
+  "gnss_fix_count": 0,
+  "gnss_nmea_count": 0,
+  "gnss_read_only_lock": {
+    "read_only": true,
+    "default_data_subscription": true,
+    "status": 0,
+    "lock_type": 4,
+    "subscription": null,
+    "lock_client": null,
+    "clients_config": "0xffffffffffffffff",
+    "engine_lock_state": 1
+  },
+  "usb_firmware": {
+    "complete": true,
+    "interface": {
+      "device_present": true,
+      "driver_bound": true
+    },
+    "read_only": true,
+    "status": {
+      "oneplus13_otg_ap_enable": "ok",
+      "oneplus13_otg_switch": "ok"
+    },
+    "unavailable": [],
+    "values": {
+      "oneplus13_otg_ap_enable": 0,
+      "oneplus13_otg_switch": 0
+    }
+  },
+  "usb_read_only": true,
+  "usb_role_changed": false,
+  "usb_cable_swap_requested": false,
+  "usb_physical_io_qualified": false,
+  "camera": {
+    "profile": "single-primary",
+    "real_frame_verified": false,
+    "stream_attempt_count": 1,
+    "attempts": [
+      {
+        "attempt": 1,
+        "returncode": 0,
+        "timed_out": false,
+        "frame_bytes": 0,
+        "stderr": "select timeout\n"
+      }
+    ],
+    "negotiated_width": 4096,
+    "negotiated_height": 3072,
+    "negotiated_pixel_format": "pGAA",
+    "sensor_entity": "s5kjn5",
+    "video_entity": "msm_vfe1_video0",
+    "actual_video_node": "/dev/video3",
+    "stream_trace_available": false,
+    "cleanup_pass": true,
+    "modules_unloaded": true,
+    "policy_restored": true,
+    "media_graph_removed": true
+  },
+  "nfc_skipped_owner_no_physical_tag": true,
+  "full_regression_retested": false,
+  "full_adaptation_complete": false
+}

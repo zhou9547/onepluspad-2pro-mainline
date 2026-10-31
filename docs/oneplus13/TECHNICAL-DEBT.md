@@ -1,3 +1,31 @@
+# r214 combined hardware evidence, 2026-10-31
+
+r214 public image 742f2d89c2da60d2a486e411f9eab3f081c4b1ce passed
+all five Actions 41195729868 jobs and exact archive/image readback. One
+combined RAM round completed in 94.70 seconds, returned to Android with
+seven baselines identical, and made zero partition writes. Nineteen private
+command records and this sanitized report were independently verified.
+5 GHz control, existing MPSS and S5KJN5 chip-ID pass; NFC is owner-skipped.
+
+USB firmware GET now succeeds: AP_ENABLE=0 and OTG_SWITCH=0, both status=ok.
+This read-only observation performed no SET, role change or cable swap;
+physical USB enumeration/I/O remains unqualified. GNSS START still returns
+GeneralError 46, with acknowledged STOP and successful cleanup. Read-only
+lock_type=4, engine_lock_state=1 and all-client mask are observations only;
+no subscription unlock is authorized or implemented.
+
+The single-primary camera attempted one real stream on the correctly resolved
+msm_vfe1_video0 entity (/dev/video3 this round), 4096x3072 pGAA. Inner v4l2
+exit 0 accompanied select timeout and zero bytes; outer helper correctly
+failed. All camera cleanup passed and independent stages continued. CPHY1
+IRQ rose 0 to 97, CSID1 0 to 1 and VFE1 remained 0 in the during snapshot.
+These interrupts do not prove valid frames; CSID may only be reset-complete.
+FTRACE/KPROBES are disabled in the actual kernel. Next camera work must
+diagnose existing status/event paths without changing MMIO reads, ACK/masks
+or timing. GNSS fix, real frames and USB I/O remain open; the full regression
+was not rerun. See R214-HARDWARE-RESULT-20261031.json. The one-boot ledger is
+consumed; this evidence publication authorizes no additional phone operation.
+
 # Fixed single-primary camera profile, 2026-10-31
 
 r213 Actions 41193964798 passed all five jobs. Three archive digests, 66
