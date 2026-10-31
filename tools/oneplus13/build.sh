@@ -155,7 +155,8 @@ git -C "$src" add --intent-to-add sound/soc/codecs/aw88461.c sound/soc/codecs/aw
 git -C "$src" add --intent-to-add drivers/media/rc/ir-dodge-spi.c
 git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-protocol.h
 git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-supply-read.h
-git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-lease.h drivers/power/supply/oneplus13-otg-kernel.h
+git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-lease.h \
+  drivers/power/supply/oneplus13-otg-kernel.h drivers/power/supply/oneplus13-otg-supply-lease.h
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1

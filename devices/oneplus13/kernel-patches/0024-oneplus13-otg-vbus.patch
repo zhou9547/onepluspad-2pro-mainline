@@ -10,7 +10,7 @@ restoration.
 ---
 
 diff --git a/drivers/power/supply/qcom_battmgr.c b/drivers/power/supply/qcom_battmgr.c
-index bf1cead..b8f0d34 100644
+index bf1cead..555f4ad 100644
 --- a/drivers/power/supply/qcom_battmgr.c
 +++ b/drivers/power/supply/qcom_battmgr.c
 @@ -22,12 +22,19 @@
@@ -65,7 +65,7 @@ index bf1cead..b8f0d34 100644
  	      (op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_VBUS_ENABLE ||
  	       op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_BOOST_CURRENT))))
  		return;
-@@ -1755,12 +1765,173 @@ static struct device_attribute dev_attr_oneplus13_otg_vbus_enable =
+@@ -1755,12 +1765,174 @@ static struct device_attribute dev_attr_oneplus13_otg_vbus_enable =
  static struct device_attribute dev_attr_oneplus13_otg_boost_current =
  	__ATTR(oneplus13_otg_boost_current, 0400, oneplus13_otg_boost_current_show, NULL);
  
@@ -204,7 +204,8 @@ index bf1cead..b8f0d34 100644
 +		}
 +		battmgr->op13_otg_supply_deadline = ktime_get_boottime_ns() +
 +			(u64)OP13_OTG_SUPPLY_WATCHDOG_SECONDS * NSEC_PER_SEC;
-+		mod_delayed_work(system_wq, &battmgr->op13_otg_supply_restore_work,
++		mod_delayed_work(system_freezable_wq,
++				 &battmgr->op13_otg_supply_restore_work,
 +				 OP13_OTG_SUPPLY_WATCHDOG_SECONDS * HZ);
 +		ret = op13_otg_supply_start(&battmgr->op13_otg_supply_lease, &io);
 +	} else {
@@ -239,7 +240,7 @@ index bf1cead..b8f0d34 100644
  	NULL,
  };
  
-@@ -1775,6 +1946,9 @@ static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, in
+@@ -1775,6 +1947,9 @@ static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, in
  	if (attr == &dev_attr_oneplus13_otg_lease.attr &&
  	    !oneplus13_otg_lease_enabled)
  		return 0;
@@ -249,7 +250,7 @@ index bf1cead..b8f0d34 100644
  	return attr->mode;
  }
  
-@@ -1925,6 +2099,8 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
+@@ -1925,6 +2100,8 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
  	init_completion(&battmgr->op13_otg_ack);
  	spin_lock_init(&battmgr->op13_otg_lock);
  	INIT_DELAYED_WORK(&battmgr->op13_otg_restore_work, op13_otg_restore_worker);
@@ -258,7 +259,7 @@ index bf1cead..b8f0d34 100644
  
  	match = of_match_device(qcom_battmgr_of_variants, dev->parent);
  	if (match)
-@@ -2008,12 +2184,16 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
+@@ -2008,12 +2185,16 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
  	if (IS_ERR(battmgr->client))
  		return PTR_ERR(battmgr->client);
  

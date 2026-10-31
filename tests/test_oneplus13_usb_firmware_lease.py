@@ -189,7 +189,7 @@ class FirmwareLeaseHelperTests(unittest.TestCase):
 
     def test_lease_headers_bundled_and_targets_boot_opt_in(self):
         build = (ROOT/'tools/oneplus13/build.sh').read_text()
-        for name in ('otg-lease.h', 'otg-kernel.h'):
+        for name in ('otg-lease.h', 'otg-kernel.h', 'otg-supply-lease.h'):
             self.assertIn('usb-draft/' + name, build)
             self.assertIn('drivers/power/supply/oneplus13-' + name, build)
         targets = (ROOT/'tools/oneplus13/build-targets-boot.py').read_text()
