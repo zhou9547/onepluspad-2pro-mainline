@@ -1,3 +1,18 @@
+# WiFi-first joint continuation, 2026-10-31
+
+The current owner request resumes adaptation/builds with 5 GHz priority and
+combined hardware rounds. Historical 5240 MHz acceptance and the successful
+Actions41100212379 baseline are retained. The new candidate removes the
+accelerometer-service dependency from `qualified-bringup --wifi` while
+preserving ADSP startup and keeping all sensor steps in `--all`. The installed
+WiFi CLI now owns its kernel-history guard, and final SquashFS verification
+binds all ten runtime files to current source. USB reads now exclude phone
+UFS, bound entry count and bytes, reject links/FIFOs, and cannot mistake the
+builtin touchscreen for tested USB HID I/O. Type-C/ADSP observations and the
+GNSS duration correction are included in the same source milestone.
+See WIFI-JOINT-CONTINUATION-20261031.md. No new phone round has started;
+GNSS, physical NFC, real camera frames and USB peripheral I/O remain open.
+
 # r191 hardware evidence and next GNSS candidate, 2026-10-31
 
 Actions run 41094911835 built `ab41d005` successfully in all five jobs.

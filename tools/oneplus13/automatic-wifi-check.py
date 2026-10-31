@@ -5,6 +5,7 @@ No raw iw scan, driver reset, module reload, persistent install or reconnect.
 This file is safe to publish; the separate credentials JSON is private.
 """
 import argparse
+import importlib.util
 import json
 import math
 import os
@@ -60,6 +61,24 @@ def run(argv, seconds=6):
         return 127, 'executable missing'
     except OSError:
         return 126, 'executable unavailable'
+
+
+def guarded_run(argv, seconds=6):
+    """Use the packaged full-history gate before each live WiFi command."""
+    path = Path(__file__).with_name('oneplus13-ram-kernel-health.py')
+    if not path.is_file():
+        path = Path(__file__).with_name('ram-kernel-health.py')
+    spec = importlib.util.spec_from_file_location('wifi_kernel_health', path)
+    health = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(health)
+    history = subprocess.run(['dmesg'], capture_output=True, timeout=4)
+    if history.returncode or len(history.stdout) > 4 * 1024 * 1024:
+        raise ValueError('Kernel history unavailable; stop WiFi commands')
+    facts = health.classify(history.stdout.decode(errors='replace'))
+    if not facts['pass']:
+        print('RAM_KERNEL_HEALTH_RESULT ' + json.dumps(facts, sort_keys=True), flush=True)
+        raise ValueError('Kernel history fault; stop WiFi commands')
+    return run(argv, seconds)
 
 
 def set_stock_country(iface, country, command):
@@ -344,7 +363,7 @@ def main():
         if probe.parent.is_dir():
             probe.write_text(json.dumps({'url':credentials.get('http_probe_url','http://example.com/')}),encoding='utf-8')
             if os.name=='posix':probe.chmod(0o600)
-        result = check(credentials, interfaces[0], host_epoch=args.host_epoch)
+        result = check(credentials, interfaces[0], execute=guarded_run, host_epoch=args.host_epoch)
     if 'automatic_acceptance_pass' not in result:
         result['automatic_acceptance_pass'] = False
     print('AUTO_WIFI_RESULT ' + json.dumps(result, sort_keys=True), flush=True)

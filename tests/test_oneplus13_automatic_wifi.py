@@ -61,6 +61,30 @@ class Fake:
 
 
 class Checks(unittest.TestCase):
+    def test_installed_guard_checks_history_before_each_command(self):
+        from types import SimpleNamespace
+        good=SimpleNamespace(returncode=0,stdout=b'ath12k initialized\n')
+        bad=SimpleNamespace(returncode=0,stdout=b'ath12k Hardware restart was requested\n')
+        with patch.object(wifi.subprocess,'run',side_effect=[good,bad]) as history, \
+                patch.object(wifi,'run',return_value=(0,'')) as command, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(wifi.guarded_run(['nmcli','device'],4),(0,''))
+            with self.assertRaisesRegex(ValueError,'history fault'):
+                wifi.guarded_run(['nmcli','device'],4)
+        self.assertEqual(history.call_count,2)
+        command.assert_called_once_with(['nmcli','device'],4)
+
+    def test_installed_guard_refuses_unavailable_or_oversized_history(self):
+        from types import SimpleNamespace
+        for result in [SimpleNamespace(returncode=1,stdout=b''),
+                       SimpleNamespace(returncode=0,stdout=b'x'*(4*1024*1024+1))]:
+            with self.subTest(returncode=result.returncode), \
+                    patch.object(wifi.subprocess,'run',return_value=result), \
+                    patch.object(wifi,'run') as command:
+                with self.assertRaisesRegex(ValueError,'unavailable'):
+                    wifi.guarded_run(['nmcli','device'],4)
+                command.assert_not_called()
+
     def test_country_transition_is_held_before_any_command(self):
         fake=Fake()
         with self.assertRaisesRegex(ValueError,'held'):

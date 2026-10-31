@@ -1,3 +1,20 @@
+# WiFi delivery and USB observation boundary, 2026-10-31
+
+WiFi-only bringup no longer depends on accelerometer service availability;
+ADSP startup is retained and the sensor sequence remains in full desktop
+bringup. Kernel-history protection is packaged with the actual WiFi CLI and
+ten runtime files are source/hash-bound in complete-image verification. The
+new image still needs its own combined hardware regression. Historical
+dual-band successes do not establish this candidate's acceptance.
+
+USB storage selection previously considered every sd* partition, including
+phone UFS, and read_bytes() allocated an entire file before truncating to
+4096 bytes. Both are corrected, as is builtin-input/HID misclassification.
+HID nodes alone do not qualify actual event receipt. Type-C partner/role and
+ADSP snapshots support the next joint diagnosis; they do not fix or prove
+physical VBUS, orientation, CC or downstream enumeration. No new phone test
+has occurred. See WIFI-JOINT-CONTINUATION-20261031.md.
+
 # r191 remaining runtime boundaries, 2026-10-31
 
 The native LOC transport now answers; the immediate blocker is the modem's

@@ -67,11 +67,13 @@ def main():
     (stage/'usr/lib/oneplus13-desktop/runtime-bindings.private.json').write_text(json.dumps(bindings,indent=2)+'\n')
     dest=stage/'usr/libexec/oneplus13-qualified-bringup'
     shutil.copyfile(REPO/'devices/oneplus13/desktop/qualified-bringup',dest);dest.chmod(0o755)
+    wifi_runtime_hashes={str(dest.relative_to(stage)):sha256(dest)}
     # These scripts are repository source, installed in the image rather than
     # supplied by old host overlays during the hardware test.
     for name in ['automatic-wifi-check.py','wifi-radio-report.py','wifi-band-cache.py','ram-wifi-quiescent.py','ram-kernel-health.py','ram-clock-bridge.py','ram-desktop-check.py','ram-platform-prerequisites.sh','ram-display-prerequisites.py']:
         dest=stage/'usr/libexec'/('oneplus13-'+name)
         shutil.copyfile(REPO/'tools/oneplus13'/name,dest);dest.chmod(0o755)
+        wifi_runtime_hashes[str(dest.relative_to(stage))]=sha256(dest)
     # A source-bound probe is available for an explicitly reviewed metadata
     # test. It is never auto-started and contains no registry or measurement API.
     ssc=REPO/'out/phone-ssc'
@@ -336,6 +338,10 @@ def main():
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
     result.update(camera_probe_runtime_files=camera_hashes,camera_probe_auto_started=False,camera_capture_qualified=False)
+    result.update(wifi_runtime_files=wifi_runtime_hashes,
+                  wifi_runtime_requires_host_overlay=False,
+                  wifi_runtime_kernel_health_guard=True,
+                  wifi_hardware_qualified=False)
     result.update(camera_capture_runtime_files=camera_capture_hashes,
                   camera_capture_auto_started=False,camera_capture_hardware_qualified=False)
     result.update(peripheral_probe_runtime_files=peripheral_probe_hashes,

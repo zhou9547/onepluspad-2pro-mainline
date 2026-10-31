@@ -17,6 +17,20 @@ def main():
     # Inspect the actual delivered SquashFS, rather than just staging inputs.
     release=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'usr/lib/oneplus13-desktop/kernel-release'],text=True).strip()
     if release!=m['kernel_release']:raise ValueError('Delivered kernel/module release mismatch')
+    wifi_files=m.get('wifi_runtime_files',{})
+    wifi_sources={'usr/libexec/oneplus13-qualified-bringup':'devices/oneplus13/desktop/qualified-bringup'}
+    for name in ['automatic-wifi-check.py','wifi-radio-report.py','wifi-band-cache.py','ram-wifi-quiescent.py','ram-kernel-health.py','ram-clock-bridge.py','ram-desktop-check.py','ram-platform-prerequisites.sh','ram-display-prerequisites.py']:
+        wifi_sources['usr/libexec/oneplus13-'+name]='tools/oneplus13/'+name
+    if (set(wifi_files)!=set(wifi_sources) or
+            m.get('wifi_runtime_requires_host_overlay') is not False or
+            m.get('wifi_runtime_kernel_health_guard') is not True):
+        raise ValueError('Missing source-bound WiFi runtime')
+    repo=Path(__file__).resolve().parents[2]
+    import hashlib
+    for name,source in wifi_sources.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=wifi_files[name] or sha256(repo/source)!=wifi_files[name]:
+            raise ValueError('Delivered WiFi runtime differs from current source')
     data=json.loads(subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'usr/lib/oneplus13-desktop/private-firmware.json']))
     import hashlib
     for name,digest in data.items():
@@ -464,6 +478,7 @@ def main():
         if {key:bytes.fromhex(value) for key,value in properties.items()}!=video_tree.nodes[path]:
             raise ValueError('Video live resource binding changed')
     static={'scope':'COMPLETE_IMAGE_STATIC_PACKAGE_VERIFICATION' ,'pass':True,'source_commit':m['source_commit'],
+            'wifi_runtime_files_verified':len(wifi_files),'wifi_runtime_requires_host_overlay':False,
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
             'container_files_verified':len(container_files),'container_daemon_auto_started':False,

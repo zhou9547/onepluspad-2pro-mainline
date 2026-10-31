@@ -40,6 +40,9 @@ case "$(cat "$ADSP/state")" in
     *) echo UNEXPECTED_ADSP_STATE; exit 3;;
 esac
 test "$(cat "$ADSP/state")" = running
+# WiFi needs ADSP/platform initialization, but must not depend on successful
+# accelerometer discovery. Keep the sensor attach path for --all below.
+prepare_desktop_sensors() {
 # Mobile sensor data is available only after the protected ADSP attach path is
 # present. This bypasses the global peripheral denial for one reviewed
 # module load; the udev rule then restricts the resulting node to the sensor
@@ -71,6 +74,8 @@ for attempt in $(seq 1 10); do
 done
 test "$(busctl --system get-property net.hadess.SensorProxy \
     /net/hadess/SensorProxy net.hadess.SensorProxy HasAccelerometer)" = 'b true'
+}
+
 timeout -k 1 6 systemctl start wpa_supplicant.service
 timeout -k 1 3 systemctl is-active --quiet wpa_supplicant.service
 timeout -k 1 4 busctl --system get-property fi.w1.wpa_supplicant1 /fi/w1/wpa_supplicant1 fi.w1.wpa_supplicant1 Interfaces
@@ -82,6 +87,7 @@ done
 test -n "$(/usr/sbin/iw dev | awk '$1=="Interface"{print $2;exit}')"
 echo QUALIFIED_WIFI_DRIVER_READY
 if [ "$mode" = --all ]; then
+    prepare_desktop_sensors
     timeout -k 1 15 modprobe dodge-s3910
     timeout -k 1 6 systemctl start bluetooth
     timeout -k 1 6 /usr/sbin/erhai-bt-address --generate

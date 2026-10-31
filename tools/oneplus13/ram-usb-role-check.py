@@ -4,8 +4,10 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import subprocess
 import tempfile
 import time
@@ -138,6 +140,16 @@ def storage_partitions(root=Path("/sys/class/block")):
             continue
         if not (path / "partition").is_file() or not (path / "dev").is_file():
             continue
+        # Phone UFS devices also use sd* names. Accept only descendants of
+        # an enumerated USB device, and require the block layer read-only bit.
+        if not any(
+            USB_DEVICE.fullmatch(parent.name)
+            and (parent / "subsystem").resolve().name == "usb"
+            for parent in path.resolve().parents
+        ):
+            continue
+        if not (path / "ro").is_file() or read(path / "ro") != "1":
+            continue
         try:
             size_sectors = int((path / "size").read_text().strip())
         except (OSError, ValueError):
@@ -149,6 +161,79 @@ def storage_partitions(root=Path("/sys/class/block")):
             "size_sectors": size_sectors,
         })
     return rows[:8]
+
+
+def typec_inventory(root=Path("/sys")):
+    """Read fixed Type-C and ADSP fields without changing port policy."""
+    root = Path(root)
+    ports = []
+    for path in sorted((root / "class/typec").glob("port*"))[:8]:
+        if not re.fullmatch(r"port[0-9]+", path.name):
+            continue
+        row = {"port": path.name}
+        for field in ("data_role", "power_role", "port_type", "power_operation_mode", "orientation"):
+            try:
+                value = read(path / field)
+            except OSError:
+                continue
+            if len(value) <= 80 and re.fullmatch(r"[A-Za-z0-9 ._\[\]-]+", value):
+                row[field] = value
+        row["partner_present"] = (path.parent / (path.name + "-partner")).exists()
+        ports.append(row)
+    adsp = []
+    for path in sorted((root / "class/remoteproc").glob("remoteproc*"))[:16]:
+        try:
+            name = read(path / "name")
+            state = read(path / "state")
+        except OSError:
+            continue
+        if "adsp" in name.lower() and state in {"offline", "running", "crashed", "suspended", "attached", "detached"}:
+            adsp.append({"remoteproc": path.name, "state": state})
+    return {"ports": ports, "adsp": adsp, "read_only": True}
+
+
+def usb_hid_input_present(facts, root=Path("/sys")):
+    """Require an input node below the actual enumerated USB device."""
+    devices = Path(root) / "bus/usb/devices"
+    for row in facts["usb_peripherals"]:
+        if "usbhid" not in row["drivers"]:
+            continue
+        parent = (devices / row["path"]).resolve()
+        for event in (Path(root) / "class/input").glob("event*"):
+            if event.resolve().is_relative_to(parent):
+                return True
+    return False
+
+
+def bounded_regular_files(root, maximum_entries=128):
+    """Inspect a fixed number of entries without traversing symlinks."""
+    candidates = []
+    inspected = 0
+    pending = [Path(root)]
+    while pending and inspected < maximum_entries:
+        directory = pending.pop()
+        with os.scandir(directory) as entries:
+            for entry in entries:
+                inspected += 1
+                if entry.is_file(follow_symlinks=False):
+                    candidates.append(Path(entry.path))
+                    if len(candidates) == 8:
+                        return candidates
+                elif entry.is_dir(follow_symlinks=False):
+                    pending.append(Path(entry.path))
+                if inspected >= maximum_entries:
+                    break
+    return candidates
+
+
+def read_regular_prefix(path):
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise ValueError("USB proof must be a regular file")
+        return os.read(descriptor, 4096)
+    finally:
+        os.close(descriptor)
 
 
 def storage_read_only_probe(
@@ -180,17 +265,9 @@ def storage_read_only_probe(
                 try:
                     import hashlib
 
-                    candidates = []
-                    for path in Path(mountpoint).rglob("*"):
-                        if len(candidates) >= 8:
-                            break
-                        try:
-                            if path.is_file() and not path.is_symlink():
-                                candidates.append(path)
-                        except OSError:
-                            continue
+                    candidates = bounded_regular_files(Path(mountpoint))
                     if candidates:
-                        payload = candidates[0].read_bytes()[:4096]
+                        payload = read_regular_prefix(candidates[0])
                         attempt.update(
                             read_bytes=len(payload),
                             read_sha256=hashlib.sha256(payload).hexdigest(),
@@ -240,6 +317,8 @@ def main():
         "role_restored": False,
         "cleanup_complete": False,
         "host_peripheral_receipt": False,
+        "host_peripheral_i_o_qualified": False,
+        "typec_before": typec_inventory(),
     }
     try:
         write(mode, "host")
@@ -247,6 +326,7 @@ def main():
         time.sleep(3)
         result["role_after_host_request"] = read(mode)
         result["host_role_verified"] = result["role_after_host_request"] == "host"
+        result["typec_after_host_request"] = typec_inventory()
         result["host_inventory"], result["host_inventory_samples"] = (
             wait_for_host_driver(args.wait_seconds)
         )
@@ -255,13 +335,11 @@ def main():
         )
         if result["host_inventory"]["usb_storage_bound"]:
             result["storage_read_only"] = storage_read_only_probe()
-        result["hid_input_present"] = bool(
-            result["host_inventory"]["usb_hid_bound"]
-            and list(Path("/dev/input").glob("event*"))
-        )
+        result["hid_input_present"] = usb_hid_input_present(result["host_inventory"])
+        # Enumerating an HID and finding an input node does not prove events
+        # were received. Keep actual I/O qualification on the bounded read.
         result["host_peripheral_i_o_qualified"] = bool(
             result.get("storage_read_only", {}).get("read_only_io_pass")
-            or result["hid_input_present"]
         )
     finally:
         write(mode, "device")
@@ -273,6 +351,7 @@ def main():
                 break
             time.sleep(0.25)
         result["cleanup_inventory"] = inventory()
+        result["typec_after_restore"] = typec_inventory()
         result["cleanup_complete"] = bool(result["role_restored"])
         result["pass"] = bool(
             result["host_role_requested"] and result.get("host_role_verified", False)

@@ -187,6 +187,13 @@ class GnssNmeaTests(unittest.TestCase):
         self.assertTrue(result["fix_acquired"])
         self.assertEqual(result["nmea"], [nmea])
 
+    def test_native_duration_matches_c_client_before_execution(self):
+        for seconds in (4,181,240):
+            with self.subTest(seconds=seconds), patch.object(GNSS,'run') as run:
+                with self.assertRaisesRegex(ValueError,'180 seconds'):
+                    GNSS.collect_native_session('/native/probe',seconds)
+                run.assert_not_called()
+
     def test_native_default_nmea_selection_cannot_substitute_for_a_fix(self):
         with patch.object(GNSS, "run", return_value={
             "returncode": 0,

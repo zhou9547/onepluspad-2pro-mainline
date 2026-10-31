@@ -1,3 +1,14 @@
+# Owner resumes adaptation, 2026-10-31
+
+The current chat requests continued adaptation with 5 GHz WiFi first, then
+the original project's integration order. Preserve working features, combine
+several reviewed targets in one physical round, publish meaningful progress,
+and confirm a successful Actions image at completed milestones rather than
+on every small edit. Builds and offline tests are resumed. This does not
+renew a historical phone-test ledger, deadline or shutdown authorization.
+A physical round still needs its fresh source/image-bound plan and current
+chat start confirmation. No flashing or persistent installation is permitted.
+
 # Owner finishes this round for archive and shutdown, 2026-10-31
 
 The owner requests completing the current modifications, committing code,

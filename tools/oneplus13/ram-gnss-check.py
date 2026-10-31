@@ -193,6 +193,8 @@ def collect_session(qmicli, device, seconds):
 
 def collect_native_session(native, seconds):
     """Run one native QRTR client for setup, start, follow and stop."""
+    if not 5 <= seconds <= 180:
+        raise ValueError('Native GNSS collection must stay between 5 and 180 seconds')
     native = str(native)
     process = run([native, "--seconds", str(seconds)], seconds + 50)
     lines = process.get("stdout", "").splitlines()
@@ -232,8 +234,8 @@ def main():
     parser.add_argument("--seconds", type=int, default=45)
     parser.add_argument("--ready-seconds", type=int, default=60)
     args = parser.parse_args()
-    if not 5 <= args.seconds <= 240:
-        raise ValueError("GNSS collection must stay between 5 and 240 seconds")
+    if not 5 <= args.seconds <= 180:
+        raise ValueError("GNSS collection must stay between 5 and 180 seconds")
     if not 0 <= args.ready_seconds <= 90:
         raise ValueError("GNSS readiness wait must stay between 0 and 90 seconds")
     if not Path("/run/oneplus13/ram-session").is_file():
