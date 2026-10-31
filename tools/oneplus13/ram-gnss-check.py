@@ -16,6 +16,19 @@ import time
 NMEA = re.compile(r"^\$(?:GP|GN|GL|GA|GB)(?:GGA|RMC),.*\*[0-9A-Fa-f]{2}$")
 
 
+def bounded_stdout(output):
+    """Retain lifecycle evidence when a long NMEA stream fills the tail."""
+    tail = output[-8192:]
+    markers = []
+    for prefix in ("LOCATION_SESSION_NMEA_DEFAULTS ",
+                   "LOCATION_SESSION_STARTED ", "LOCATION_SESSION_STOPPED "):
+        marker = next((line for line in output.splitlines()
+                       if line.startswith(prefix) and len(line) <= 512), None)
+        if marker is not None and marker not in tail.splitlines():
+            markers.append(marker)
+    return "\n".join(markers + [tail])
+
+
 def run(args, timeout):
     try:
         result = subprocess.run(
@@ -27,7 +40,7 @@ def run(args, timeout):
         )
         return {
             "returncode": result.returncode,
-            "stdout": result.stdout[-8192:],
+            "stdout": bounded_stdout(result.stdout),
             "stderr": result.stderr[-8192:],
         }
     except subprocess.TimeoutExpired as error:
@@ -196,7 +209,9 @@ def collect_native_session(native, seconds):
     if not 5 <= seconds <= 180:
         raise ValueError('Native GNSS collection must stay between 5 and 180 seconds')
     native = str(native)
-    process = run([native, "--seconds", str(seconds)], seconds + 50)
+    # Native soft deadline is seconds+45; pending start and stop take up to
+    # 20 seconds each. Keep ten more for GLib timer granularity/process exit.
+    process = run([native, "--seconds", str(seconds)], seconds + 95)
     lines = process.get("stdout", "").splitlines()
     nmea = [
         line[5:].strip()

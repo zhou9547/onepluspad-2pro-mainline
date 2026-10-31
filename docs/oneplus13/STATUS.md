@@ -1,3 +1,12 @@
+# GNSS bounded stop lifecycle, 2026-10-31
+
+The native LOC client now owns one stop request, removes its collection timer,
+waits for a pending start response before cleanup, and attempts stop after lost
+or failed start replies. Python reserves the full bounded cleanup time and
+retains lifecycle markers across long NMEA streams. See GNSS-STOP-LIFECYCLE-20261031.md.
+No new phone operation or hardware acceptance occurred; GNSS/NFC/camera/USB
+remain open and dual-band WiFi remains a preservation baseline.
+
 # Camera cleanup and sensor fallback correctness, 2026-10-31
 
 The combined unattended audit reproduces unsafe global kprobe-table rewrites,

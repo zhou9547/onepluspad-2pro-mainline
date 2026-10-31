@@ -17,13 +17,40 @@ struct session {
 	QmiDevice *device;
 	QmiClientLoc *client;
 	guint timeout_id;
+	guint deadline_id;
 	guint nmea_count;
 	guint requested_seconds;
 	gboolean started;
+	gboolean start_requested;
+	gboolean start_pending;
+	gboolean terminate_requested;
 	gboolean stopped;
+	gboolean stop_requested;
 };
 
 static int exit_status = 1;
+static gboolean terminate (gpointer user_data);
+static gboolean unix_terminate (gpointer user_data);
+
+static gboolean
+claim_stop (struct session *session)
+{
+	if (session->stop_requested)
+		return FALSE;
+	session->stop_requested = TRUE;
+	if (session->timeout_id) {
+		g_source_remove (session->timeout_id);
+		session->timeout_id = 0;
+	}
+	return TRUE;
+}
+
+static gboolean
+self_test_timer (gpointer user_data)
+{
+	(void)user_data;
+	return G_SOURCE_CONTINUE;
+}
 
 static gboolean
 nmea_types_error_is_optional (const GError *error)
@@ -38,6 +65,9 @@ configuration_self_test (void)
 	GError *unsupported;
 	GError *general;
 	GError *transport;
+	struct session session = { 0 };
+	struct session pending = { .start_pending = TRUE };
+	guint timer_id;
 
 	unsupported = g_error_new_literal (QMI_PROTOCOL_ERROR,
 		QMI_PROTOCOL_ERROR_NOT_SUPPORTED, "unsupported configuration");
@@ -52,7 +82,19 @@ configuration_self_test (void)
 	g_error_free (unsupported);
 	g_error_free (general);
 	g_error_free (transport);
-	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=4 no_qrtr=1\n");
+	timer_id = g_timeout_add_seconds (3600, self_test_timer, NULL);
+	session.timeout_id = timer_id;
+	g_assert_true (claim_stop (&session));
+	g_assert_cmpuint (session.timeout_id, ==, 0);
+	g_assert_null (g_main_context_find_source_by_id (NULL, timer_id));
+	g_assert_false (claim_stop (&session));
+	g_assert_false (terminate (&session));
+	g_assert_false (terminate (&pending));
+	g_assert_true (pending.terminate_requested);
+	g_assert_false (pending.stop_requested);
+	g_assert_true (unix_terminate (&session));
+	g_assert_true (unix_terminate (&pending));
+	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=14 no_qrtr=1\n");
 	return 0;
 }
 
@@ -60,8 +102,14 @@ static void
 finish (struct session *session, int status)
 {
 	exit_status = status;
-	if (session->timeout_id)
+	if (session->timeout_id) {
 		g_source_remove (session->timeout_id);
+		session->timeout_id = 0;
+	}
+	if (session->deadline_id) {
+		g_source_remove (session->deadline_id);
+		session->deadline_id = 0;
+	}
 	if (session->loop && g_main_loop_is_running (session->loop))
 		g_main_loop_quit (session->loop);
 }
@@ -126,7 +174,8 @@ request_stop (gpointer user_data)
 	struct session *session = user_data;
 	QmiMessageLocStopInput *input;
 
-	session->timeout_id = 0;
+	if (!claim_stop (session))
+		return G_SOURCE_REMOVE;
 	input = qmi_message_loc_stop_input_new ();
 	qmi_message_loc_stop_input_set_session_id (input, 1, NULL);
 	qmi_client_loc_stop (session->client, input, 20,
@@ -144,26 +193,31 @@ start_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 	GError *error = NULL;
 
 	output = qmi_client_loc_start_finish (client, result, &error);
+	session->start_pending = FALSE;
 	if (!output) {
 		print_error ("start", error);
 		g_clear_error (&error);
-		finish (session, 1);
+		/* A lost reply does not prove that the modem rejected start. */
+		request_stop (session);
 		return;
 	}
 	if (!qmi_message_loc_start_output_get_result (output, &error)) {
 		print_error ("start-result", error);
 		g_clear_error (&error);
 		qmi_message_loc_start_output_unref (output);
-		finish (session, 1);
+		request_stop (session);
 		return;
 	}
 	qmi_message_loc_start_output_unref (output);
 	session->started = TRUE;
 	g_print ("LOCATION_SESSION_STARTED seconds=%u\n", session->requested_seconds);
 	fflush (stdout);
-	session->timeout_id =
-		g_timeout_add_seconds (session->requested_seconds, request_stop,
-				       session);
+	if (session->terminate_requested)
+		request_stop (session);
+	else if (!session->stop_requested)
+		session->timeout_id =
+			g_timeout_add_seconds (session->requested_seconds, request_stop,
+					       session);
 }
 
 static void
@@ -199,6 +253,8 @@ register_events_ready (QmiClientLoc *client, GAsyncResult *result,
 		input, 1000, NULL);
 	qmi_message_loc_start_input_set_fix_recurrence_type (
 		input, QMI_LOC_FIX_RECURRENCE_TYPE_REQUEST_PERIODIC_FIXES, NULL);
+	session->start_requested = TRUE;
+	session->start_pending = TRUE;
 	qmi_client_loc_start (client, input, 20, session->cancellable,
 			      (GAsyncReadyCallback) start_ready, session);
 	qmi_message_loc_start_input_unref (input);
@@ -339,11 +395,35 @@ static gboolean
 terminate (gpointer user_data)
 {
 	struct session *session = user_data;
-	if (session->client && session->started && !session->stopped)
+	session->terminate_requested = TRUE;
+	if (session->stop_requested)
+		return G_SOURCE_REMOVE;
+	/* Let the bounded start callback settle before sending stop. This avoids
+	 * accepting stop while a later start acknowledgement is still pending. */
+	if (session->start_pending)
+		return G_SOURCE_REMOVE;
+	if (session->client && session->start_requested && !session->stopped)
 		request_stop (session);
 	else
 		finish (session, 1);
 	return G_SOURCE_REMOVE;
+}
+
+static gboolean
+unix_terminate (gpointer user_data)
+{
+	terminate (user_data);
+	/* Keep the handler installed so a repeated SIGTERM cannot interrupt
+	 * an in-flight LOC stop by reverting to the default signal action. */
+	return G_SOURCE_CONTINUE;
+}
+
+static gboolean
+deadline_expired (gpointer user_data)
+{
+	struct session *session = user_data;
+	session->deadline_id = 0;
+	return terminate (session);
 }
 
 int
@@ -366,9 +446,12 @@ main (int argc, char **argv)
 	session.requested_seconds = seconds;
 	session.loop = g_main_loop_new (NULL, FALSE);
 	session.cancellable = g_cancellable_new ();
-	g_unix_signal_add (SIGINT, terminate, &session);
-	g_unix_signal_add (SIGTERM, terminate, &session);
-	g_timeout_add_seconds (seconds + 45, terminate, &session);
+	g_unix_signal_add (SIGINT, unix_terminate, &session);
+	g_unix_signal_add (SIGTERM, unix_terminate, &session);
+	/* Allow pending start (20s) and stop (20s) after this soft deadline.
+	 * The Python wrapper reserves 95 seconds beyond collection time. */
+	session.deadline_id =
+		g_timeout_add_seconds (seconds + 45, deadline_expired, &session);
 	qrtr_bus_new (5000, session.cancellable,
 		      (GAsyncReadyCallback) bus_ready, &session);
 	g_main_loop_run (session.loop);

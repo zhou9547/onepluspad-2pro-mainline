@@ -22,6 +22,23 @@ def sentence(payload):
 
 
 class GnssNmeaTests(unittest.TestCase):
+    def test_long_native_nmea_output_keeps_start_and_default_markers(self):
+        fix = sentence("GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,")
+        raw = ("LOCATION_SESSION_NMEA_DEFAULTS reason=not-supported\n"
+               "LOCATION_SESSION_STARTED seconds=180\n" +
+               ("NMEA " + fix + "\n") * 360 +
+               "LOCATION_SESSION_STOPPED nmea=360\n")
+        child = Mock(returncode=0, stdout=raw, stderr="")
+        with patch.object(GNSS.subprocess, "run", return_value=child) as run:
+            result = GNSS.collect_native_session("/native/probe", 180)
+        self.assertTrue(result["started"])
+        self.assertTrue(result["stopped"])
+        self.assertTrue(result["nmea_defaults_used"])
+        self.assertTrue(result["fix_acquired"])
+        self.assertTrue(result["cleanup_complete"])
+        self.assertEqual(run.call_args.kwargs["timeout"], 275)
+        self.assertLessEqual(len(GNSS.bounded_stdout(raw)), 8192 + 3 * 513)
+
     def test_main_selects_executable_native_client(self):
         # Exercise the real entry point: collector-only tests cannot catch a
         # missing module import in the native-helper selection branch.
@@ -47,7 +64,7 @@ class GnssNmeaTests(unittest.TestCase):
                 GNSS.main()
         self.assertEqual(stopped.exception.code, 0)
         run.assert_called_once_with(
-            [str(Path("/usr/libexec/oneplus13-location-session")), "--seconds", "30"], 80
+            [str(Path("/usr/libexec/oneplus13-location-session")), "--seconds", "30"], 125
         )
         legacy.assert_not_called()
         result = json.loads(output.getvalue().removeprefix("RAM_GNSS_RESULT "))
