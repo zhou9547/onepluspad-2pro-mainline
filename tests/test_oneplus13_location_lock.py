@@ -80,11 +80,16 @@ int main(int argc,char **argv)
 '''
 
 
-@unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'), 'Requires Linux GCC')
+@unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc')
+                     and shutil.which('pkg-config'), 'Requires Linux GCC and pkg-config')
 class LocationLockTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        flags = subprocess.check_output(['pkg-config','--cflags','--libs','qmi-glib','qrtr-glib','gio-2.0'],text=True)
+        packages = subprocess.run(['pkg-config','--cflags','--libs','qmi-glib','qrtr-glib','gio-2.0'],
+                                  capture_output=True,text=True,check=False,timeout=10)
+        if packages.returncode:
+            raise unittest.SkipTest('libqmi/QRTR development packages unavailable')
+        flags = packages.stdout
         cls.temp = tempfile.TemporaryDirectory(prefix='op13-lock-')
         cls.addClassCleanup(cls.temp.cleanup)
         source = Path(cls.temp.name)/'lock.c';source.write_text(HARNESS)
