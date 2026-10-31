@@ -1,15 +1,16 @@
 From: Codex <codex@openai.com>
 Subject: [PATCH] power: qcom-battmgr: add manual bounded phone VBUS lease
 
-Reproduce the reference 64-then-24 path only after an explicit sysfs request.
-Save and read back the observed baseline, keep UCSI data-role ownership and
-stop writes after transport ambiguity. Restore is best effort and can remain
-UNKNOWN; Android return does not prove firmware restoration.
+Reproduce the reference arm17/18 then current64 and VBUS24 path only after
+explicit sysfs requests. Save and read back the observed baselines, keep UCSI
+data-role ownership and stop writes after transport ambiguity. Restore is
+best effort and can remain UNKNOWN; Android return does not prove firmware
+restoration.
 
 ---
 
 diff --git a/drivers/power/supply/qcom_battmgr.c b/drivers/power/supply/qcom_battmgr.c
-index bf1cead..3955525 100644
+index bf1cead..b8f0d34 100644
 --- a/drivers/power/supply/qcom_battmgr.c
 +++ b/drivers/power/supply/qcom_battmgr.c
 @@ -22,12 +22,19 @@
@@ -64,7 +65,7 @@ index bf1cead..3955525 100644
  	      (op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_VBUS_ENABLE ||
  	       op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_BOOST_CURRENT))))
  		return;
-@@ -1755,12 +1765,153 @@ static struct device_attribute dev_attr_oneplus13_otg_vbus_enable =
+@@ -1755,12 +1765,173 @@ static struct device_attribute dev_attr_oneplus13_otg_vbus_enable =
  static struct device_attribute dev_attr_oneplus13_otg_boost_current =
  	__ATTR(oneplus13_otg_boost_current, 0400, oneplus13_otg_boost_current_show, NULL);
  
@@ -118,7 +119,8 @@ index bf1cead..3955525 100644
 +	struct op13_otg_supply_io io = op13_otg_supply_io(battmgr);
 +
 +	mutex_lock(&battmgr->lock);
-+	if (battmgr->op13_otg_supply_lease.state == OP13_OTG_SUPPLY_ACTIVE)
++	if (battmgr->op13_otg_supply_lease.state == OP13_OTG_SUPPLY_ACTIVE ||
++	    battmgr->op13_otg_supply_lease.state == OP13_OTG_SUPPLY_ARMED)
 +		op13_otg_supply_restore(&battmgr->op13_otg_supply_lease, &io);
 +	mutex_unlock(&battmgr->lock);
 +	if (battmgr->op13_otg_wakeup && battmgr->op13_otg_awake) {
@@ -134,7 +136,8 @@ index bf1cead..3955525 100644
 +
 +	cancel_delayed_work_sync(&battmgr->op13_otg_supply_restore_work);
 +	mutex_lock(&battmgr->lock);
-+	if (battmgr->op13_otg_supply_lease.state == OP13_OTG_SUPPLY_ACTIVE)
++	if (battmgr->op13_otg_supply_lease.state == OP13_OTG_SUPPLY_ACTIVE ||
++	    battmgr->op13_otg_supply_lease.state == OP13_OTG_SUPPLY_ARMED)
 +		op13_otg_supply_restore(&battmgr->op13_otg_supply_lease, &io);
 +	mutex_unlock(&battmgr->lock);
 +}
@@ -149,9 +152,10 @@ index bf1cead..3955525 100644
 +	lease = battmgr->op13_otg_supply_lease;
 +	mutex_unlock(&battmgr->lock);
 +	return sysfs_emit(buf,
-+		"state=%u used=%u saved_vbus=%u saved_current=%u dirty_vbus=%u dirty_current=%u\n",
-+		lease.state, lease.used, lease.saved_vbus, lease.saved_current,
-+		lease.dirty_vbus, lease.dirty_current);
++		"state=%u used=%u saved_ap=%u saved_switch=%u saved_vbus=%u saved_current=%u dirty_ap=%u dirty_switch=%u dirty_vbus=%u dirty_current=%u\n",
++		lease.state, lease.used, lease.saved_ap, lease.saved_switch,
++		lease.saved_vbus, lease.saved_current, lease.dirty_ap,
++		lease.dirty_switch, lease.dirty_vbus, lease.dirty_current);
 +}
 +
 +static ssize_t oneplus13_otg_supply_lease_store(struct device *dev,
@@ -166,9 +170,10 @@ index bf1cead..3955525 100644
 +#endif
 +	if (!oneplus13_otg_supply_lease || !op13_otg_machine())
 +		return -EOPNOTSUPP;
-+	if (!sysfs_streq(buf, "start") && !sysfs_streq(buf, "restore"))
++	if (!sysfs_streq(buf, "arm") && !sysfs_streq(buf, "start") &&
++	    !sysfs_streq(buf, "restore"))
 +		return -EINVAL;
-+	if (sysfs_streq(buf, "start")) {
++	if (sysfs_streq(buf, "arm")) {
 +		if (atomic_cmpxchg(&op13_otg_boot_used, 0, 1))
 +			return -EBUSY;
 +		mutex_lock(&battmgr->lock);
@@ -183,7 +188,7 @@ index bf1cead..3955525 100644
 +			__pm_stay_awake(battmgr->op13_otg_wakeup);
 +			battmgr->op13_otg_awake = true;
 +		}
-+		ret = op13_otg_supply_start(&battmgr->op13_otg_supply_lease, &io);
++		ret = op13_otg_supply_arm(&battmgr->op13_otg_supply_lease, &io);
 +		if (ret) {
 +			cancel_delayed_work(&battmgr->op13_otg_supply_restore_work);
 +			if (battmgr->op13_otg_wakeup && battmgr->op13_otg_awake) {
@@ -191,10 +196,26 @@ index bf1cead..3955525 100644
 +				battmgr->op13_otg_awake = false;
 +			}
 +		}
++	} else if (sysfs_streq(buf, "start")) {
++		mutex_lock(&battmgr->lock);
++		if (battmgr->op13_otg_supply_lease.state != OP13_OTG_SUPPLY_ARMED) {
++			ret = -EINVAL;
++			goto out;
++		}
++		battmgr->op13_otg_supply_deadline = ktime_get_boottime_ns() +
++			(u64)OP13_OTG_SUPPLY_WATCHDOG_SECONDS * NSEC_PER_SEC;
++		mod_delayed_work(system_wq, &battmgr->op13_otg_supply_restore_work,
++				 OP13_OTG_SUPPLY_WATCHDOG_SECONDS * HZ);
++		ret = op13_otg_supply_start(&battmgr->op13_otg_supply_lease, &io);
 +	} else {
 +		mutex_lock(&battmgr->lock);
 +		ret = op13_otg_supply_restore(&battmgr->op13_otg_supply_lease, &io);
 +		mutex_unlock(&battmgr->lock);
++		cancel_delayed_work(&battmgr->op13_otg_supply_restore_work);
++		if (battmgr->op13_otg_wakeup && battmgr->op13_otg_awake) {
++			__pm_relax(battmgr->op13_otg_wakeup);
++			battmgr->op13_otg_awake = false;
++		}
 +		if (ret)
 +			return ret;
 +		return count;
@@ -218,7 +239,7 @@ index bf1cead..3955525 100644
  	NULL,
  };
  
-@@ -1775,6 +1926,9 @@ static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, in
+@@ -1775,6 +1946,9 @@ static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, in
  	if (attr == &dev_attr_oneplus13_otg_lease.attr &&
  	    !oneplus13_otg_lease_enabled)
  		return 0;
@@ -228,7 +249,7 @@ index bf1cead..3955525 100644
  	return attr->mode;
  }
  
-@@ -1925,6 +2079,8 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
+@@ -1925,6 +2099,8 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
  	init_completion(&battmgr->op13_otg_ack);
  	spin_lock_init(&battmgr->op13_otg_lock);
  	INIT_DELAYED_WORK(&battmgr->op13_otg_restore_work, op13_otg_restore_worker);
@@ -237,7 +258,7 @@ index bf1cead..3955525 100644
  
  	match = of_match_device(qcom_battmgr_of_variants, dev->parent);
  	if (match)
-@@ -2008,12 +2164,16 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
+@@ -2008,12 +2184,16 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
  	if (IS_ERR(battmgr->client))
  		return PTR_ERR(battmgr->client);
  

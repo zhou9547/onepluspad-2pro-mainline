@@ -15,7 +15,7 @@ HARNESS = r'''
 #include <string.h>
 #include "otg-supply-lease.h"
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "line %d: %s\n", __LINE__, #x); return 1; } } while (0)
-struct fake { unsigned int vbus, current; int poison, expired, fail_set_prop, fail_get_prop; char trace[256]; };
+struct fake { unsigned int ap, sw, vbus, current; int poison, expired, fail_set_prop, fail_get_prop; char trace[512]; };
 static void record(struct fake *f, char op, unsigned int p, unsigned int v) {
   char item[32]; snprintf(item, sizeof(item), "%c%u=%u;", op, p, v);
   strcat(f->trace, item);
@@ -23,7 +23,8 @@ static void record(struct fake *f, char op, unsigned int p, unsigned int v) {
 static int healthy(void *p) { return !((struct fake *)p)->poison; }
 static int expired(void *p) { return ((struct fake *)p)->expired; }
 static int getv(void *p, unsigned int prop, unsigned int *out) {
-  struct fake *f = p; unsigned int v = prop == 24 ? f->vbus : f->current;
+  struct fake *f = p; unsigned int v = prop == 17 ? f->ap :
+    (prop == 18 ? f->sw : (prop == 24 ? f->vbus : f->current));
   record(f, 'G', prop, v);
   if (f->fail_get_prop == (int)prop) return -1;
   *out = v; return 0;
@@ -31,7 +32,10 @@ static int getv(void *p, unsigned int prop, unsigned int *out) {
 static int setv(void *p, unsigned int prop, unsigned int v) {
   struct fake *f = p; record(f, 'S', prop, v);
   if (f->fail_set_prop == (int)prop) { f->poison = 1; return -1; }
-  if (prop == 24) f->vbus = v; else f->current = v;
+  if (prop == 17) f->ap = v;
+  else if (prop == 18) f->sw = v;
+  else if (prop == 24) f->vbus = v;
+  else f->current = v;
   return 0;
 }
 static struct op13_otg_supply_io io(struct fake *f) {
@@ -57,33 +61,39 @@ int main(void) {
   CHECK(op13_otg_supply_decode(p, 24, 0x32, 64, &value) == 1 && value == 1250);
   packet(p, 0x33, 64, 0, 0);
   CHECK(op13_otg_supply_decode(p, 24, 0x33, 64, &value) == 1 && value == 0);
+  CHECK(op13_otg_supply_arm(&l, &x) == 0);
+  CHECK(l.state == OP13_OTG_SUPPLY_ARMED && f.vbus == 0);
+  CHECK(!strcmp(f.trace, "G17=0;G18=0;S17=1;G17=1;S18=1;G18=1;"));
+  f.trace[0] = 0;
   CHECK(op13_otg_supply_start(&l, &x) == 0);
   CHECK(l.state == OP13_OTG_SUPPLY_ACTIVE && f.current == 1250 && f.vbus == 1);
   CHECK(!strcmp(f.trace, "G24=0;G64=0;S64=1250;G64=1250;S24=1;G24=1;"));
   f.trace[0] = 0;
   CHECK(op13_otg_supply_restore(&l, &x) == 0);
   CHECK(l.state == OP13_OTG_SUPPLY_RESTORED && f.current == 0 && f.vbus == 0);
-  CHECK(!strcmp(f.trace, "S24=0;G24=0;S64=0;G64=0;"));
+  CHECK(!strcmp(f.trace, "S24=0;G24=0;S64=0;G64=0;S18=0;G18=0;S17=0;G17=0;"));
 
   memset(&f, 0, sizeof(f)); f.vbus = 0; f.current = 0; f.fail_set_prop = 24;
   l = (struct op13_otg_supply_lease){0}; x = io(&f);
+  CHECK(op13_otg_supply_arm(&l, &x) == 0); f.trace[0] = 0;
   CHECK(op13_otg_supply_start(&l, &x) != 0);
   CHECK(l.state == OP13_OTG_SUPPLY_UNKNOWN && f.current == 1250 && f.vbus == 0);
   CHECK(strstr(f.trace, "S24=1;") != NULL && strstr(f.trace, "S64=0;") == NULL);
 
   memset(&f, 0, sizeof(f)); f.current = 1;
   l = (struct op13_otg_supply_lease){0}; x = io(&f);
+  CHECK(op13_otg_supply_arm(&l, &x) == 0);
   CHECK(op13_otg_supply_start(&l, &x) != 0);
-  CHECK(l.state == OP13_OTG_SUPPLY_REFUSED && strstr(f.trace, "S") == NULL);
+  CHECK(l.state == OP13_OTG_SUPPLY_ARMED && strstr(f.trace, "S24") == NULL);
 
   memset(&f, 0, sizeof(f)); f.expired = 1;
   l = (struct op13_otg_supply_lease){0}; x = io(&f);
-  CHECK(op13_otg_supply_start(&l, &x) != 0);
+  CHECK(op13_otg_supply_arm(&l, &x) != 0);
   CHECK(l.state == OP13_OTG_SUPPLY_REFUSED && strstr(f.trace, "S") == NULL);
 
   memset(&f, 0, sizeof(f)); f.poison = 1;
   l = (struct op13_otg_supply_lease){0}; l.state = OP13_OTG_SUPPLY_ACTIVE;
-  l.dirty_vbus = l.dirty_current = 1; x = io(&f);
+  l.dirty_vbus = l.dirty_current = l.dirty_switch = l.dirty_ap = 1; x = io(&f);
   CHECK(op13_otg_supply_restore(&l, &x) != 0);
   CHECK(l.state == OP13_OTG_SUPPLY_UNKNOWN && f.trace[0] == 0);
   puts("supply lease policy checks=9"); return 0;

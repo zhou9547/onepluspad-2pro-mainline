@@ -10,6 +10,7 @@
 #define OP13_OTG_SUPPLY_RESTORED 2U
 #define OP13_OTG_SUPPLY_UNKNOWN 3U
 #define OP13_OTG_SUPPLY_REFUSED 4U
+#define OP13_OTG_SUPPLY_ARMED 5U
 
 static inline unsigned int op13_otg_supply_le32(const unsigned char *p)
 {
@@ -40,8 +41,12 @@ static inline int op13_otg_supply_decode(const unsigned char *data,
 struct op13_otg_supply_lease {
 	unsigned int state;
 	unsigned int used;
+	unsigned int saved_ap;
+	unsigned int saved_switch;
 	unsigned int saved_vbus;
 	unsigned int saved_current;
+	unsigned int dirty_ap;
+	unsigned int dirty_switch;
 	unsigned int dirty_vbus;
 	unsigned int dirty_current;
 };
@@ -61,7 +66,8 @@ static inline int op13_otg_supply_restore(struct op13_otg_supply_lease *lease,
 
 	if (lease->state == OP13_OTG_SUPPLY_UNKNOWN)
 		return -1;
-	if (!lease->dirty_vbus && !lease->dirty_current)
+	if (!lease->dirty_vbus && !lease->dirty_current &&
+	    !lease->dirty_switch && !lease->dirty_ap)
 		return 0;
 	if (!io->transport_healthy(io->context))
 		goto unknown;
@@ -80,6 +86,22 @@ static inline int op13_otg_supply_restore(struct op13_otg_supply_lease *lease,
 			goto unknown;
 		lease->dirty_current = 0;
 	}
+	if (lease->dirty_switch) {
+		if (!io->transport_healthy(io->context) ||
+		    io->set(io->context, 18U, lease->saved_switch) ||
+		    !io->transport_healthy(io->context) ||
+		    io->get(io->context, 18U, &value) || value != lease->saved_switch)
+			goto unknown;
+		lease->dirty_switch = 0;
+	}
+	if (lease->dirty_ap) {
+		if (!io->transport_healthy(io->context) ||
+		    io->set(io->context, 17U, lease->saved_ap) ||
+		    !io->transport_healthy(io->context) ||
+		    io->get(io->context, 17U, &value) || value != lease->saved_ap)
+			goto unknown;
+		lease->dirty_ap = 0;
+	}
 	lease->state = OP13_OTG_SUPPLY_RESTORED;
 	return 0;
 
@@ -88,28 +110,64 @@ unknown:
 	return -1;
 }
 
-/* Start only from observed 0/0 and never enable VBUS before current readback. */
-static inline int op13_otg_supply_start(struct op13_otg_supply_lease *lease,
-					const struct op13_otg_supply_io *io)
+/* Enable source detection before attachment; this never enables VBUS. */
+static inline int op13_otg_supply_arm(struct op13_otg_supply_lease *lease,
+				      const struct op13_otg_supply_io *io)
 {
-	unsigned int vbus, current;
+	unsigned int ap, sw;
 
 	if (lease->used)
 		return -1;
 	lease->used = 1;
 	lease->state = OP13_OTG_SUPPLY_REFUSED;
 	if (!io->transport_healthy(io->context) ||
+	    io->get(io->context, 17U, &ap) ||
+	    io->get(io->context, 18U, &sw) || ap != 0U || sw != 0U ||
+	    io->expired(io->context))
+		return -1;
+	lease->saved_ap = ap;
+	lease->saved_switch = sw;
+	lease->dirty_ap = 1U;
+	if (io->set(io->context, 17U, 1U) ||
+	    !io->transport_healthy(io->context) ||
+	    io->get(io->context, 17U, &ap) || ap != 1U ||
+	    io->expired(io->context))
+		goto rollback;
+	lease->dirty_switch = 1U;
+	if (io->set(io->context, 18U, 1U) ||
+	    !io->transport_healthy(io->context) ||
+	    io->get(io->context, 18U, &sw) || sw != 1U ||
+	    io->expired(io->context))
+		goto rollback;
+	lease->state = OP13_OTG_SUPPLY_ARMED;
+	return 0;
+
+rollback:
+	op13_otg_supply_restore(lease, io);
+	return -1;
+}
+
+/* Start only after arm and observed 0/0; never enable VBUS before current readback. */
+static inline int op13_otg_supply_start(struct op13_otg_supply_lease *lease,
+					const struct op13_otg_supply_io *io)
+{
+	unsigned int vbus, current_ma;
+
+	if (lease->state != OP13_OTG_SUPPLY_ARMED ||
+	    !io->transport_healthy(io->context) ||
 	    io->get(io->context, 24U, &vbus) ||
-	    io->get(io->context, 64U, &current) || vbus != 0U || current != 0U ||
+	    io->get(io->context, 64U, &current_ma) ||
+	    vbus != 0U || current_ma != 0U ||
 	    io->expired(io->context))
 		return -1;
 	lease->saved_vbus = vbus;
-	lease->saved_current = current;
+	lease->saved_current = current_ma;
 	lease->dirty_current = 1U;
 	if (io->set(io->context, 64U, OP13_OTG_SUPPLY_CURRENT_TARGET) ||
 	    !io->transport_healthy(io->context) ||
-	    io->get(io->context, 64U, &current) ||
-	    current != OP13_OTG_SUPPLY_CURRENT_TARGET || io->expired(io->context))
+	    io->get(io->context, 64U, &current_ma) ||
+	    current_ma != OP13_OTG_SUPPLY_CURRENT_TARGET ||
+	    io->expired(io->context))
 		goto rollback;
 	lease->dirty_vbus = 1U;
 	if (io->set(io->context, 24U, 1U) ||
