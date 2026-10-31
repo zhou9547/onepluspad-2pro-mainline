@@ -1,3 +1,37 @@
+# r218 native Type-C observation and r219 read-only candidate, 2026-10-31
+
+r218 Actions 41204037065 passed all five jobs and exact image readback.
+Its first combined RAM round completed with clean reverse gate restoration,
+but no external USB enumeration/I/O. The full 60.149s wait retained host/xHCI;
+owner connection confirmation arrived after cleanup. Actual insertion time
+was not established. GNSS fix and camera frames remain unqualified.
+
+A fresh preconnected round used the same image. After the owner connected
+OTG, native Type-C selected host/source with partner present while AP_ENABLE
+and OTG_SWITCH remained zero and the optional lease remained unused. The
+reviewed runner correctly refused its device-only lease path and performed
+no optional role/firmware setters. It collected no xHCI/peripheral inventory
+on this branch, so this is not enumeration or storage I/O qualification.
+All planned phases finished with cleanup and Android's seven baselines
+identical; GNSS and real camera frames still fail. Independent review checked
+26 command records and 20 receipts. NFC remains owner-skipped.
+
+r219 adds a separate, manual native-host reader. It requires the existing
+RAM protection, exact unused-zero firmware state, host/source attachment,
+and bound a600000.usb xHCI/root hubs. It never calls the old helper main or
+role reconciliation, and requests no role/firmware setter or filesystem
+mount. Only an exact USB-descendant read-only block partition may be opened
+O_RDONLY/NOFOLLOW; its dev_t, sysfs ancestry/inode and identity are checked
+before/open/after, and a child must read exactly 4096 bytes within 8 seconds.
+No media bytes, digest, serial or filename are reported. Existing RAM guard
+and lease behavior stay unchanged. Native cleanup uses its own unused-zero
+predicate; it must not be described as RESTORED or a role restoration.
+
+This is a source candidate, pending full Actions/readback and fresh combined
+hardware evidence. host/source alone is never USB functional acceptance.
+See R218-HARDWARE-RESULT-20261031.json and
+R218-PRECONNECTED-HARDWARE-RESULT-20261031.json.
+
 # r217 hardware evidence and r218 USB timing correction, 2026-10-31
 
 r217 public image 1c3b87de92d9cb88ff51c7bff54da929a0d78262 passed all five

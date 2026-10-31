@@ -1,0 +1,108 @@
+{
+  "scope": "R218_USB_FIRST_COMBINED_RAM_HARDWARE_EVIDENCE",
+  "source_commit": "fefc6953a7727b013443890dff39d39960ce11a4",
+  "source_tree": "80a1595886dd4e82fdc9b1d8a2dc859aa177c29d",
+  "actions_run": 41204037065,
+  "completed": true,
+  "halted": false,
+  "cleanup_pass": true,
+  "gates": {
+    "camera": false,
+    "camera-chip-id": true,
+    "gnss": false,
+    "modem-verify": true,
+    "nfc": false,
+    "usb": false,
+    "wifi-a": true
+  },
+  "uptime_seconds": 312.92,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "baseline_key_count": 7,
+  "boot_attempts": 1,
+  "partition_writes": 0,
+  "private_command_evidence_verified": true,
+  "command_evidence_count": 23,
+  "receipt_count": 38,
+  "independent_assertions_passed": 102,
+  "host_errors": [],
+  "firmware_residual_unknown": false,
+  "usb": {
+    "firmware_baseline": {
+      "oneplus13_otg_ap_enable": 0,
+      "oneplus13_otg_switch": 0
+    },
+    "firmware_active": {
+      "dirty_ap": 1,
+      "dirty_switch": 1,
+      "state": 1,
+      "used": 1
+    },
+    "firmware_restore": {
+      "cleanup_complete": true,
+      "status": {
+        "dirty_ap": 0,
+        "dirty_switch": 0,
+        "state": 2,
+        "used": 1
+      }
+    },
+    "initial_host_controller_ready": true,
+    "host_role_verified": true,
+    "role_after_peripheral_wait": "host",
+    "peripheral_enumerated": false,
+    "physical_io_qualified": false,
+    "role_restored": true,
+    "cleanup_complete": true,
+    "selected_local_typec_role": "device/sink",
+    "partner_after_wait": true,
+    "host_controller_retained_during_wait": true,
+    "role_observation_count": 1,
+    "timing": {
+      "firmware_lease_start_uptime": 120.107,
+      "peripheral_wait_requested_seconds": 60,
+      "peripheral_wait_budget_seconds": 60,
+      "peripheral_wait_begin_uptime": 123.177,
+      "peripheral_wait_end_uptime": 183.326,
+      "firmware_restore_begin_uptime": 183.629,
+      "firmware_restore_end_uptime": 183.653
+    },
+    "actual_wait_seconds": 60.149,
+    "wait_outcome": "no_peripheral_observed_within_budget",
+    "owner_return_card_unconfirmed_at_deadline": true,
+    "connection_confirmation_after_cleanup_seconds": 25.497,
+    "real_physical_plug_time_known": false,
+    "no_runtime_firmware_transaction_trace": true,
+    "causality": "No peripheral observed in full bounded wait; host controller retained; physical insertion time and CC/VBUS cause unproven"
+  },
+  "gnss": {
+    "pass": false,
+    "started": false,
+    "stopped": true,
+    "timed_out": false,
+    "fix_acquired": false,
+    "cleanup_complete": true,
+    "returncode": 1
+  },
+  "camera": {
+    "real_frame_verified": false,
+    "attempts": [
+      {
+        "attempt": 1,
+        "returncode": 0,
+        "timed_out": false,
+        "frame_bytes": 0,
+        "error_class": "select_timeout"
+      }
+    ],
+    "cleanup_pass": true,
+    "modules_unloaded": true,
+    "policy_restored": true,
+    "media_graph_removed": true
+  },
+  "independent_functional_failures_continue_after_cleanup": true,
+  "nfc_skipped_owner_no_physical_tag": true,
+  "full_regression_retested": false,
+  "full_adaptation_complete": false,
+  "joint_acceptance_pass": false
+}

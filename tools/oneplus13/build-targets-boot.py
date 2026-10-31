@@ -48,6 +48,7 @@ def main():
     expected_runtime = {
         "usr/libexec/oneplus13-ram-ir-check.py",
         "usr/libexec/oneplus13-ram-usb-role-check.py",
+        "usr/libexec/oneplus13-ram-usb-native-host-check.py",
         "usr/libexec/oneplus13-ram-suspend-check.py",
     }
     if set(runtime) != expected_runtime:
