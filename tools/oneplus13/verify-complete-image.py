@@ -364,6 +364,7 @@ def main():
         'usr/libexec/oneplus13-ram-ir-check.py',
         'usr/libexec/oneplus13-ram-usb-role-check.py',
         'usr/libexec/oneplus13-ram-usb-native-host-check.py',
+        'usr/libexec/oneplus13-ram-usb-powered-native-check.py',
         'usr/libexec/oneplus13-ram-suspend-check.py'}
     if (set(peripheral_runtime)!=required_peripheral_runtime or
             m.get('peripheral_probe_auto_started') is not False):

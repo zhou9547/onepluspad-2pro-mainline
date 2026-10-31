@@ -139,6 +139,7 @@ def main():
         ('ram-ir-check.py','usr/libexec/oneplus13-ram-ir-check.py'),
         ('ram-usb-role-check.py','usr/libexec/oneplus13-ram-usb-role-check.py'),
         ('ram-usb-native-host-check.py','usr/libexec/oneplus13-ram-usb-native-host-check.py'),
+        ('ram-usb-powered-native-check.py','usr/libexec/oneplus13-ram-usb-powered-native-check.py'),
         ('ram-suspend-check.py','usr/libexec/oneplus13-ram-suspend-check.py'),
     ]:
         dest=stage/name

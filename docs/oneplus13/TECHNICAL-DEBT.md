@@ -1,3 +1,35 @@
+# r219 hardware result and powered native-host candidate, 2026-10-31
+
+r219 public commit 38d09457 passed all five Actions 41208286372 jobs,
+exact image readback and a fresh combined RAM hardware round. In 234.38s
+all 12 planned phases completed, cleanup passed, Android returned with
+seven identical baselines, one RAM boot and zero reported partition writes.
+WiFi 5GHz, existing modem verification and camera chip ID remain qualified
+for the exercised checks. GNSS has no fix and the camera produced no frame.
+
+After a timely owner OTG confirmation, native host/source with partner and
+the exact a600000.usb xHCI/root hubs remained observable for 60.427 seconds.
+No external peripheral or USB storage block enumerated; no media was read.
+AP_ENABLE and OTG_SWITCH remained zero and the optional lease was unused.
+Independent evidence review passed 89 checks, 27 commands and 22 receipts.
+See R219-HARDWARE-RESULT-20261031.json for evidence limitations.
+
+The next manual candidate combines the already attached native host with
+the existing fixed AP17/SW18 one-shot firmware lease. This tests a missing
+combination; VBUS/CC/PHY causality is not established. It adds no new firmware
+command, Type-C policy or DWC3 role write. The old native reader, old role
+helper, kernel transport and unchanged 120-second watchdog are retained.
+An exact unused-zero native host is required before one acquisition.
+ACTIVE and host/source are rechecked, wait and 8-second raw read share the
+80-second work budget, and finally the existing reverse restore must prove
+a terminal used clean status plus independent zero pair GET. UNKNOWN halts
+other functions; Android return alone cannot prove firmware restoration.
+No filesystem mount or media content/hash output is requested.
+
+This new powered-native source is pending independent review, complete
+Actions/image verification and a fresh combined hardware plan. It does not
+qualify external USB I/O or complete the remaining hardware adaptation.
+
 # r218 native Type-C observation and r219 read-only candidate, 2026-10-31
 
 r218 Actions 41204037065 passed all five jobs and exact image readback.
