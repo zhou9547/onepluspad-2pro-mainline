@@ -36,6 +36,25 @@ TOPOLOGY = """
 
 
 class CameraCaptureRuntime(unittest.TestCase):
+    def test_full_size_frame_from_failed_stream_cannot_qualify(self):
+        frame = mock.Mock()
+        frame.is_file.return_value = True
+        frame.stat.return_value.st_size = capture.MIN_BYTES
+        self.assertTrue(capture.stream_frame_ready(frame, {"returncode": 0, "stderr": ""}))
+        for result in ({"returncode": 1},
+                       {"returncode": 0, "timed_out": True},
+                       {"returncode": 0, "stderr": "VIDIOC_STREAMON returned -1"}):
+            with self.subTest(result=result):
+                self.assertFalse(capture.stream_frame_ready(frame, result))
+
+    def test_short_or_absent_frame_cannot_qualify_successful_exit(self):
+        frame = mock.Mock()
+        frame.is_file.return_value = False
+        self.assertFalse(capture.stream_frame_ready(frame, {"returncode": 0}))
+        frame.is_file.return_value = True
+        frame.stat.return_value.st_size = capture.MIN_BYTES - 1
+        self.assertFalse(capture.stream_frame_ready(frame, {"returncode": 0}))
+
     def test_unload_timeout_still_restores_policy_and_unloads_the_rest(self):
         with tempfile.TemporaryDirectory() as tmp:
             policy = Path(tmp) / "policy"

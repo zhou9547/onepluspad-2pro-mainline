@@ -18,9 +18,11 @@ helper. The existing Linux kprobe reference in CAMERA-TRACE-CONTINUATION-2026103
 documents per-event enable and selective deletion. No power, CCI timing, C-PHY,
 firmware, device tree, or sensor register change is made on speculative evidence.
 
-Offline Linux camera suite: 21 tests pass, including eight additional cases for
+Offline Linux camera suite: 23 tests pass, including ten additional cases for
 probe retry ownership, failed function setup/restore, actual RDI acceptance,
 TPG rejection, continued unload after timeout and media-inspection timeout.
+Failed exits and short/absent frames cannot qualify. Each attempt removes its
+old output first; residual data from a failed attempt never qualifies.
 This is diagnostic and acceptance correctness, not real-frame hardware success.
 The latest physical evidence remains r191: CCI initialization timeout -110.
 

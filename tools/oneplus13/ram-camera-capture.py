@@ -489,6 +489,13 @@ def validate_frame(path):
     }
 
 
+def stream_frame_ready(path, result):
+    return (result["returncode"] == 0
+            and not result.get("timed_out", False)
+            and "VIDIOC_STREAMON returned" not in result.get("stderr", "")
+            and path.is_file() and path.stat().st_size >= MIN_BYTES)
+
+
 def accept_sensor_frame(report, path, primary_attempt):
     """A validated RDI sensor frame can qualify after the primary RDI fails."""
     fallback = any(item.get("frame_verified") is True
@@ -754,6 +761,7 @@ def main():
                     f"--stream-to={FRAME}",
                     "--stream-poll",
                 ]
+                FRAME.unlink(missing_ok=True)
                 before_irq = Path("/proc/interrupts").read_text()
                 process = subprocess.Popen(
                     command,
@@ -802,12 +810,7 @@ def main():
                     ],
                     "interrupts_all_during": during_irq[-16000:],
                 })
-                if (
-                    process.returncode == 0
-                    and "VIDIOC_STREAMON returned" not in stderr
-                    and FRAME.is_file()
-                    and FRAME.stat().st_size >= MIN_BYTES
-                ):
+                if stream_frame_ready(FRAME, attempts[-1]):
                     break
         finally:
             report["stream_trace"] = stream_trace_stop(stream_trace)
@@ -818,9 +821,7 @@ def main():
         report["post_stream_dmesg"] = run(
             ["dmesg"], timeout=8, check=False
         ).stdout[-16000:]
-        sensor_frame_ready = (
-            FRAME.is_file() and FRAME.stat().st_size >= MIN_BYTES
-        )
+        sensor_frame_ready = stream_frame_ready(FRAME, attempts[-1])
         if not sensor_frame_ready:
             variants = []
             report["rdi_fallbacks"] = variants
@@ -868,6 +869,7 @@ def main():
                     for attempt in range(2):
                         if attempt:
                             time.sleep(0.75)
+                        variant_frame.unlink(missing_ok=True)
                         variant_result = run(
                             [
                                 "v4l2-ctl",
@@ -889,18 +891,9 @@ def main():
                             "frame_bytes": variant_frame.stat().st_size
                             if variant_frame.exists() else 0,
                         })
-                        if (
-                            variant_result.returncode == 0
-                            and "VIDIOC_STREAMON returned"
-                            not in variant_result.stderr
-                            and variant_frame.is_file()
-                            and variant_frame.stat().st_size >= MIN_BYTES
-                        ):
+                        if stream_frame_ready(variant_frame, variant["attempts"][-1]):
                             break
-                    if (
-                        variant_frame.is_file()
-                        and variant_frame.stat().st_size >= MIN_BYTES
-                    ):
+                    if stream_frame_ready(variant_frame, variant["attempts"][-1]):
                         variant["pixels"] = validate_frame(variant_frame)
                         variant["frame_verified"] = True
                         FRAME.write_bytes(variant_frame.read_bytes())
@@ -964,6 +957,7 @@ def main():
                 for attempt in range(2):
                     if attempt:
                         time.sleep(0.75)
+                    TPG_FRAME.unlink(missing_ok=True)
                     tpg_result = run(
                         [
                             "v4l2-ctl",
@@ -985,17 +979,9 @@ def main():
                         "frame_bytes": TPG_FRAME.stat().st_size
                         if TPG_FRAME.exists() else 0,
                     })
-                    if (
-                        tpg_result.returncode == 0
-                        and "VIDIOC_STREAMON returned" not in tpg_result.stderr
-                        and TPG_FRAME.is_file()
-                        and TPG_FRAME.stat().st_size >= MIN_BYTES
-                    ):
+                    if stream_frame_ready(TPG_FRAME, tpg_report["attempts"][-1]):
                         break
-                if (
-                    TPG_FRAME.is_file()
-                    and TPG_FRAME.stat().st_size >= MIN_BYTES
-                ):
+                if stream_frame_ready(TPG_FRAME, tpg_report["attempts"][-1]):
                     tpg_report["pixels"] = validate_frame(TPG_FRAME)
                     tpg_report["frame_verified"] = True
             except Exception as error:
