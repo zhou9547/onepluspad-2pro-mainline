@@ -36,6 +36,118 @@ TOPOLOGY = """
 
 
 class CameraCaptureRuntime(unittest.TestCase):
+    def test_unload_timeout_still_restores_policy_and_unloads_the_rest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            policy = Path(tmp) / "policy"
+            policy.write_bytes(b"temporary policy")
+            with mock.patch.object(capture, "POLICY", policy), \
+                 mock.patch.object(capture, "unload", side_effect=[
+                     capture.subprocess.TimeoutExpired("modprobe", 15), None]) as unload, \
+                 mock.patch.object(capture, "module_loaded", return_value=False):
+                report = capture.cleanup_capture(["first", "second"], b"original policy")
+            self.assertEqual(unload.call_args_list, [mock.call("second"), mock.call("first")])
+            self.assertEqual(policy.read_bytes(), b"original policy")
+            self.assertTrue(report["policy_restored"])
+            self.assertFalse(report["cleanup_pass"])
+
+    def test_media_cleanup_timeout_emits_failed_cleanup_receipt(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            policy = root / "policy"
+            policy.write_bytes(b"original")
+            dev = mock.Mock()
+            dev.glob.return_value = ["/dev/media0"]
+            with mock.patch.object(capture, "POLICY", policy), \
+                 mock.patch.object(capture, "Path", return_value=dev), \
+                 mock.patch.object(capture, "run", side_effect=capture.subprocess.TimeoutExpired("media-ctl", 20)):
+                report = capture.cleanup_capture([], b"original")
+            self.assertFalse(report["media_graph_removed"])
+            self.assertFalse(report["cleanup_pass"])
+            self.assertIn("media:TimeoutExpired", report["cleanup_errors"])
+
+    def test_camss_retry_enables_and_selectively_removes_its_probes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            trace = root / "tracing"
+            trace.mkdir()
+            original = "p:other/unrelated other_symbol\n"
+            (trace / "kprobe_events").write_text(original)
+            (trace / "tracing_on").write_text("0\n")
+            (trace / "trace").write_text("")
+            driver = root / "driver"
+            driver.mkdir()
+            (driver / "bind").write_text("")
+            device = root / "device"
+            device.mkdir()
+            names = ("camss_probe", "camss_icc_get", "camss_configure_pd",
+                     "camss_init_subdevices", "dma_set_mask_and_coherent",
+                     "camss_parse_ports", "camss_register_entities", "camss_link_entities")
+            for name in names:
+                event = trace / "events/kprobes" / ("oneplus13_" + name)
+                event.mkdir(parents=True)
+                (event / "enable").write_text("0\n")
+            def path(value):
+                if value == "/sys/kernel/debug/tracing": return trace
+                if value == "/sys/bus/platform/drivers/qcom-camss": return driver
+                return device / "driver" if str(value).endswith("/driver") else device
+            def sleeping(_):
+                self.assertTrue(all((trace / "events/kprobes" /
+                    ("oneplus13_" + name) / "enable").read_text() == "1\n" for name in names))
+            with mock.patch.object(capture, "Path", side_effect=path), \
+                 mock.patch.object(capture.time, "sleep", side_effect=sleeping):
+                report = capture.camss_probe_trace()
+            self.assertTrue(report["cleanup_pass"])
+            self.assertTrue((trace / "kprobe_events").read_text().startswith(original))
+            self.assertNotIn("-:other/unrelated", (trace / "kprobe_events").read_text())
+            for name in names:
+                self.assertIn("-:kprobes/oneplus13_" + name, (trace / "kprobe_events").read_text())
+
+    def test_function_cleanup_attempts_all_restorations_after_failure(self):
+        trace, tracer, selector = mock.MagicMock(), mock.Mock(), mock.Mock()
+        tracer.write_text.side_effect = OSError("restore denied")
+        errors = capture.restore_function_trace(dict(trace=trace, tracer=tracer,
+            selector=selector, previous="nop"))
+        self.assertEqual(errors, ["restore denied"])
+        selector.write_text.assert_called_once_with("")
+        (trace / "tracing_on").write_text.assert_called_once_with("0\n")
+
+    def test_function_setup_failure_rolls_back_and_reports_cleanup(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            for name, value in {"available_filter_functions": "csid_isr\n",
+                "set_ftrace_filter": "", "current_tracer": "nop\n"}.items():
+                (trace / name).write_text(value)
+            (trace / "trace").mkdir()
+            with mock.patch.object(capture, "Path", return_value=trace):
+                report = capture.stream_trace_stop(capture.stream_trace_start())
+            self.assertTrue(report["cleanup_pass"])
+            self.assertEqual((trace / "set_ftrace_filter").read_text(), "")
+            self.assertEqual((trace / "tracing_on").read_text(), "0\n")
+
+    def test_owned_function_tracer_is_refused_without_mutation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            trace = Path(tmp)
+            for name, value in {"available_filter_functions": "csid_isr\n",
+                "set_ftrace_filter": "somebody_else\n", "current_tracer": "nop\n"}.items():
+                (trace / name).write_text(value)
+            with mock.patch.object(capture, "Path", return_value=trace):
+                report = capture.stream_trace_stop(capture.stream_trace_start())
+            self.assertFalse(report["cleanup_pass"])
+            self.assertEqual((trace / "set_ftrace_filter").read_text(), "somebody_else\n")
+
+    def test_rdi_sensor_frame_qualifies_after_primary_failure(self):
+        report = {"rdi_fallbacks": [{"frame_verified": True}]}
+        with mock.patch.object(capture, "validate_frame", return_value={"bytes": capture.MIN_BYTES}):
+            capture.accept_sensor_frame(report, Path("sensor.raw"), {"returncode": 1, "stderr": ""})
+        self.assertTrue(report["frame_verified"])
+
+    def test_tpg_frame_never_qualifies_failed_sensor_stream(self):
+        report = {"tpg_fallback": {"frame_verified": True}}
+        with mock.patch.object(capture, "validate_frame") as validate:
+            with self.assertRaisesRegex(ValueError, "V4L2 capture failed"):
+                capture.accept_sensor_frame(report, Path("sensor.raw"), {"returncode": 1, "stderr": ""})
+        validate.assert_not_called()
+
     def test_kprobe_trace_start_stop_keeps_mode_and_returns_counts(self):
         with tempfile.TemporaryDirectory() as tmp:
             trace = Path(tmp)

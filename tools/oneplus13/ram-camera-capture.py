@@ -175,21 +175,28 @@ def camss_probe_trace():
     device = Path("/sys/bus/platform/devices/ad27000.isp")
     if not events.is_file() or not (driver / "bind").is_file() or not device.is_dir():
         return {"available": False}
-    original = events.read_text()
     names = (
         "camss_probe", "camss_icc_get", "camss_configure_pd",
         "camss_init_subdevices", "dma_set_mask_and_coherent",
         "camss_parse_ports", "camss_register_entities",
         "camss_link_entities",
     )
+    reserved = {"oneplus13_" + name for name in names}
+    if any(
+        line.split()[0].split(":", 1)[-1].split("/")[-1] in reserved
+        for line in events.read_text().splitlines() if line.split()
+    ):
+        return {"available": True, "cleanup_pass": False,
+                "error": "CAMSS trace probes already exist"}
     created = []
+    report = {"available": True, "created": created}
     try:
-        events.write_text(original)
         for name in names:
             event = "oneplus13_" + name
             with events.open("a") as stream:
                 stream.write(f"r:{event} {name} ret=$retval\n")
             created.append(event)
+            (trace / "events/kprobes" / event / "enable").write_text("1\n")
         (trace / "trace").write_text("")
         (trace / "tracing_on").write_text("1\n")
         if not Path("/sys/bus/platform/devices/ad27000.isp/driver").exists():
@@ -197,27 +204,36 @@ def camss_probe_trace():
         time.sleep(2)
         (trace / "tracing_on").write_text("0\n")
         output = (trace / "trace").read_text()
-        return {
-            "available": True,
-            "created": created,
+        report.update({
             "driver_bound": Path(
                 "/sys/bus/platform/devices/ad27000.isp/driver"
             ).exists(),
             "trace": [line for line in output.splitlines()
                       if "oneplus13_" in line][-128:],
-        }
+        })
     except Exception as error:
-        return {
-            "available": True,
-            "created": created,
-            "error": type(error).__name__ + ": " + str(error),
-        }
+        report["error"] = type(error).__name__ + ": " + str(error)
     finally:
+        errors = remove_stream_probes(trace, events, created)
+        report["cleanup_pass"] = not errors
+        if errors:
+            report["cleanup_errors"] = errors
+    return report
+
+
+def restore_function_trace(state):
+    """Attempt every restoration even when an earlier write fails."""
+    errors = []
+    for path, value in (
+        (state["trace"] / "tracing_on", "0\n"),
+        (state["tracer"], state["previous"] + "\n"),
+        (state["selector"], ""),
+    ):
         try:
-            events.write_text(original)
-            (trace / "tracing_on").write_text("0\n")
-        except OSError:
-            pass
+            path.write_text(value)
+        except OSError as error:
+            errors.append(str(error))
+    return errors
 
 
 def stream_trace_start():
@@ -241,18 +257,29 @@ def stream_trace_start():
         if not functions:
             return None
         previous = tracer.read_text().strip()
+        selected = [line for line in selector.read_text().splitlines()
+                    if line.strip() and not line.startswith("#")]
+        if previous != "nop" or selected:
+            return {"state": None, "report": {"available": True,
+                    "mode": "function", "cleanup_pass": False,
+                    "error": "Function tracer is already owned"}}
+        state = {"mode": "function", "trace": trace, "tracer": tracer,
+                 "selector": selector, "previous": previous}
         try:
             selector.write_text("\n".join(functions) + "\n")
             (trace / "trace").write_text("")
             tracer.write_text("function\n")
             (trace / "tracing_on").write_text("1\n")
         except OSError as error:
+            errors = restore_function_trace(state)
             return {
                 "state": None,
                 "report": {
                     "available": True,
                     "mode": "function",
                     "error": type(error).__name__ + ": " + str(error),
+                    "cleanup_pass": not errors,
+                    "cleanup_errors": errors,
                 },
             }
         return {
@@ -381,12 +408,10 @@ def stream_trace_stop(started):
         except OSError as error:
             report["error"] = type(error).__name__ + ": " + str(error)
         finally:
-            try:
-                state["tracer"].write_text(state["previous"] + "\n")
-                state["selector"].write_text("")
-                (trace / "tracing_on").write_text("0\n")
-            except OSError:
-                pass
+            errors = restore_function_trace(state)
+            report["cleanup_pass"] = not errors
+            if errors:
+                report["cleanup_errors"] = errors
         return report
     try:
         (trace / "tracing_on").write_text("0\n")
@@ -462,6 +487,60 @@ def validate_frame(path):
         "sampled_max": high,
         "sha256": hashlib.sha256(data).hexdigest(),
     }
+
+
+def accept_sensor_frame(report, path, primary_attempt):
+    """A validated RDI sensor frame can qualify after the primary RDI fails."""
+    fallback = any(item.get("frame_verified") is True
+                   for item in report.get("rdi_fallbacks", []))
+    if not fallback and (primary_attempt["returncode"]
+                         or "VIDIOC_STREAMON returned" in primary_attempt["stderr"]):
+        raise ValueError("V4L2 capture failed")
+    # TPG output is kept in a separate file and never qualifies this path.
+    report["pixels"] = validate_frame(path)
+    report["frame_verified"] = True
+
+
+def cleanup_capture(loaded, original_policy):
+    report = {}
+    cleanup_errors = []
+    for module in reversed(loaded):
+        try:
+            unload(module)
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            cleanup_errors.append("module:" + module + ":" + type(error).__name__)
+    try:
+        POLICY.write_bytes(original_policy)
+        os.chmod(POLICY, 0o644)
+    except OSError as error:
+        cleanup_errors.append("policy:" + type(error).__name__)
+    try:
+        report["policy_sha256_after"] = hashlib.sha256(POLICY.read_bytes()).hexdigest()
+        report["policy_restored"] = POLICY.read_bytes() == original_policy
+    except OSError as error:
+        report["policy_restored"] = False
+        cleanup_errors.append("policy-readback:" + type(error).__name__)
+    report["modules_unloaded"] = not any(
+        module_loaded(module) for module in loaded
+    )
+    try:
+        report["media_graph_removed"] = not any(
+            "msm_vfe1" in run(
+                ["media-ctl", "--device", path, "--print-topology"],
+                check=False,
+            ).stdout for path in Path("/dev").glob("media*")
+        )
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        report["media_graph_removed"] = False
+        cleanup_errors.append("media:" + type(error).__name__)
+    report["cleanup_errors"] = cleanup_errors
+    report["cleanup_pass"] = (
+        not cleanup_errors
+        and report["policy_restored"]
+        and report["modules_unloaded"]
+        and report["media_graph_removed"]
+    )
+    return report
 
 
 def main():
@@ -657,6 +736,9 @@ def main():
                 or not re.search(r"Pixel Format\s*:\s*'pGAA'", selected)):
             raise ValueError("Capture format was coerced away from reviewed packed RAW10")
         stream_trace = stream_trace_start()
+        if stream_trace and stream_trace["report"].get("cleanup_pass") is False:
+            report["stream_trace"] = stream_trace_stop(stream_trace)
+            raise RuntimeError("Camera trace ownership or setup cleanup is unproven")
         progress("stream-start", video=video)
         try:
             attempts = []
@@ -919,41 +1001,13 @@ def main():
             except Exception as error:
                 tpg_report["error"] = type(error).__name__ + ": " + str(error)
         progress("stream-finished", returncode=attempts[-1]["returncode"])
-        if (
-            attempts[-1]["returncode"]
-            or "VIDIOC_STREAMON returned" in attempts[-1]["stderr"]
-        ):
-            raise ValueError("V4L2 capture failed")
-        report["pixels"] = validate_frame(FRAME)
-        report["frame_verified"] = True
+        accept_sensor_frame(report, FRAME, attempts[-1])
     finally:
         progress("cleanup")
-        for module in reversed(loaded):
-            unload(module)
-        POLICY.write_bytes(original_policy)
-        os.chmod(POLICY, 0o644)
-        report["policy_sha256_after"] = hashlib.sha256(
-            POLICY.read_bytes()
-        ).hexdigest()
-        report["policy_restored"] = (
-            report["policy_sha256_after"] == report["policy_sha256_before"]
-        )
-        report["modules_unloaded"] = not any(
-            module_loaded(module) for module in loaded
-        )
-        report["media_graph_removed"] = not any(
-            "msm_vfe1"
-            in run(
-                ["media-ctl", "--device", path, "--print-topology"],
-                check=False,
-            ).stdout
-            for path in Path("/dev").glob("media*")
-        )
-        report["cleanup_pass"] = (
-            report["policy_restored"]
-            and report["modules_unloaded"]
-            and report["media_graph_removed"]
-            and report.get("stream_trace", {}).get("cleanup_pass", True)
+        report.update(cleanup_capture(loaded, original_policy))
+        report["cleanup_pass"] &= (
+            report.get("stream_trace", {}).get("cleanup_pass", True)
+            and report.get("camss_probe_trace", {}).get("cleanup_pass", True)
         )
         (STATE / "result.json").write_text(
             json.dumps(report, indent=2, sort_keys=True) + "\n",

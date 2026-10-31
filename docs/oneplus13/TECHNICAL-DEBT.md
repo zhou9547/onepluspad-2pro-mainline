@@ -1,3 +1,14 @@
+# Camera cleanup and sensor fallback correctness, 2026-10-31
+
+The combined unattended audit reproduces unsafe global kprobe-table rewrites,
+silent function-tracer restoration failures and rejection of validated RDI
+sensor fallback frames. These paths now preserve probe ownership, report
+cleanup failures, continue teardown after a module timeout, and accept a
+validated real sensor fallback without ever counting TPG pixels as real.
+The 21 camera tests pass on Linux. This does not resolve the r191 CCI -110
+or establish hardware success. See CAMERA-CLEANUP-FALLBACK-20261031.md.
+Dual-band WiFi remains a preservation baseline. No phone boot has started.
+
 # Installed desktop regression delivery, 2026-10-31
 
 The image uses prefixed runtime filenames. The desktop WiFi stability check
