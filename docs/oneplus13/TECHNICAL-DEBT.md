@@ -1,3 +1,25 @@
+# USB-first bounded gate candidate, 2026-10-31
+
+The owner prioritizes USB before other remaining adaptation work. r214's
+verified AP17=0/SWITCH18=0 GETs now support a narrow, default-disabled
+120s best-effort firmware-gate candidate: exact phone identity, explicit
+targets boot flag plus manual RAM-helper opt-in, one acquisition per boot,
+AP/SW SET with independent GET verification, reverse final-pair restore,
+and terminal UNKNOWN after ambiguous transport failure. No VBUS/GPIO/
+Type-C-mode override or OEM fallback. The regular boot never enables it.
+Firmware SET success alone is not physical USB enumeration or storage I/O.
+
+The fixed helper reserves restoration time, always attempts owned firmware
+cleanup after role errors and refuses idle/rebind receipts as clean.
+713 phone tests (one skip),871 full repository tests (five skips), actual
+kernel scaffold controls and independent71 fault runs pass. Source-bound
+independent review permits offline build/publication only; full Actions and
+image readback remain pending. No additional phone boot occurred; r214's
+single-round ledger remains consumed and r214 remains last hardware-tested.
+Watchdog recovery is best effort; GLINK/kernel loss can leave UNKNOWN,
+and reboot is not proof of firmware rollback. See USB-FIRMWARE-LEASE-20261031.md.
+Dual-band WiFi and previous working features remain preservation baselines.
+
 # r214 combined hardware evidence, 2026-10-31
 
 r214 public image 742f2d89c2da60d2a486e411f9eab3f081c4b1ce passed

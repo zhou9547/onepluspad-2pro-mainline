@@ -31,9 +31,13 @@ static inline int op13_otg_decode(const unsigned char *data, unsigned int len,
 	    op13_otg_le32(data + 8) != expected_opcode ||
 	    op13_otg_le32(data + 12) != expected_property)
 		return 0;
-	if (op13_otg_le32(data + 20) || op13_otg_le32(data + 16) > 1)
+	if (op13_otg_le32(data + 20) ||
+	    (expected_opcode == OP13_OTG_GET && op13_otg_le32(data + 16) > 1))
 		return -1;
-	*value = op13_otg_le32(data + 16);
+	/* Vendor SET validation does not promise an echoed value. A subsequent
+	 * serialized GET is mandatory before calling a mutation verified.
+	 */
+	*value = expected_opcode == OP13_OTG_GET ? op13_otg_le32(data + 16) : 0;
 	return 1;
 }
 

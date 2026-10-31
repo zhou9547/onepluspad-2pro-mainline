@@ -1,0 +1,119 @@
+{
+  "schema": "oneplus13-independent-usb-lease-final-source-review-v1",
+  "reviewer": "joint_runner_review",
+  "date_local": "2026-10-31",
+  "scope": "USB bounded best-effort AP17/SWITCH18 source candidate, transport, fixed policy, kernel scaffold, manual helper, experimental image integration",
+  "source_review_pass": true,
+  "source_only": true,
+  "hardware_acceptance": false,
+  "execution_authorized": false,
+  "phone_operations_performed": false,
+  "shared_source_modified_by_reviewer": false,
+  "source_sha256": {
+    "devices/oneplus13/kernel-patches/0022-oneplus13-otg-readonly.patch": "c6fe10be66e33123f467c158f1d11f8179250700dc7da4e68af7471362dde394",
+    "devices/oneplus13/oneplus13.config": "77574630942976add569c2c05a78b3d84683d361a1f7d66fa2cb08b669e52bc5",
+    "tools/oneplus13/usb-draft/otg-kernel.h": "7b52d62454675342c2e14ec95a6e234c2ab7dde973cae36f52b17b166ac893cb",
+    "tools/oneplus13/usb-draft/otg-lease.h": "392d7fa04b71ebcec59b3af1fabba45eb47378b0dead147651ca652aedfcb03a",
+    "tools/oneplus13/usb-draft/otg-protocol.h": "f6ae44c759d63a93bf68790bb5796b39f9319f323d35dae5842bed771f1c225a",
+    "tools/oneplus13/ram-usb-role-check.py": "fcb67e204774798661902464bcc3f0d6b7da910facfc9b2dbe4664da244d4860",
+    "tools/oneplus13/build-targets-boot.py": "a9c21e8dc9b040d8e23c6d8edb910b3111612ed6a29322708d542424812703f9",
+    "tools/oneplus13/build.sh": "b0759b9f1657347cd3d1b41668bca71753bc54f3448b758a6148e0c6e209c5c5",
+    "tests/test_oneplus13_otg_lease.py": "4a9bf0c8981d9c884389bc69feeeb165ec80f02d5fc34f6418f12f45e6659d21",
+    "tests/test_oneplus13_otg_protocol.py": "a319ebb4ac7ee086ba3271de86ae571f76913f25652a65bb34faea6eff5931e5",
+    "tests/test_oneplus13_otg_machine.py": "77c7727d82051f4f01e8ba09005d4cb97127e79e2308b0b4e485bc2d0882bb2b",
+    "tests/test_oneplus13_usb_firmware_lease.py": "a852f2559ea828b986d3805a5eb9e3fcbab2704ef47cfd822ca5edb717977c97",
+    "tests/test_oneplus13_ram_usb_role.py": "ab28fd35a55f1f129d1a91887f9498cc83d4cf9f657f9f97771bd66910c8ac4e"
+  },
+  "vendor_semantics_review": {
+    "artifact": "independent-usb-lease-source-review.json",
+    "sha256": "8c5b06cbf84b79efcb5174e335b7f039ca542b0e438ccce48b9b82332e672c24"
+  },
+  "verified_properties": [
+    "Exact dodge identity; default-disabled0400 bool opt-in and root0600 fixed start/restore commands only; no arbitrary property/value API.",
+    "Normal boot and default helper never automatically mutate firmware; opt-in flag is added only to targets experimental image builder, manifest auto-start=false.",
+    "Legacy owner/type/opcode/property/length/return matching; SET value is not treated as echo; exact GET readback required.",
+    "Only first matched callback owns completion; late optional GET and SET responses quarantined; notifications remain responsive.",
+    "Send error, timeout and service loss poison optional transport without retry; unknown cleanup stays terminal.",
+    "Exact0/0 baseline before mutation;120s delayed restore armed with awake hold before first dirty-before-SET; boottime deadline blocks late enabling.",
+    "Built-in config plus MODULE store rejection and boot atomic latch prevent rebind reacquisition.",
+    "AP1 then SW1, each GET checked plus final pair; rollback owned SW0 then AP0, each GET checked plus final0/0 pair; dirty cleared only after final pair success.",
+    "Watchdog and remove do not retry UNKNOWN or change REFUSED to RESTORED; idle cleanup sends nothing.",
+    "Remove sets stopping, drains delayed and enable work without holding worker mutex, restores before devm GLINK release; PDR/enable guards stop requeue.",
+    "Helper requires protected RAM marker, root and exact flags; lease wait default/max45, work80 reserve, storage only with32s remaining; start20s restore15s status3s subprocess budgets.",
+    "Helper records attempted before start command and nested finally restores firmware even when host/device role operations fail; cleanup requires used terminal clean receipt, idle rebind and UNKNOWN rejected.",
+    "No VBUS-regulator, TypeC policy, GPIO, voltage/current or OEM protocol fallback writes added."
+  ],
+  "review_findings_resolved": [
+    "SET response echo/boolean assumption split from GET semantics.",
+    "First-response callback ownership prevents duplicate result overwrite.",
+    "UNKNOWN retry and REFUSED-state corruption stopped at policy level.",
+    "Boottime+awake protection and built-in boot latch added.",
+    "Lifecycle drain ordering and enable/PDR stopping checks added.",
+    "Accidental bare return additions to int property getters removed; original getters preserved.",
+    "Final pair readback catches firmware coupling after last mutation.",
+    "Signed sysfs return restored to explicit error path.",
+    "Python command budgets aligned with multiple1s transactions; wait/work/storage budgets reserve rollback time.",
+    "Idle/rebind receipt no longer accepted as verified cleanup after attempt."
+  ],
+  "independent_test_reports": [
+    {
+      "artifact": "independent-kernel-transport-test-results.json",
+      "sha256": "73dac6f9f957025a4dba32c7a516fab4e9f6ec73b094c30f711cf922f2657bb9",
+      "runs": 22,
+      "pass": true
+    },
+    {
+      "artifact": "independent-kernel-scaffold-test-results.json",
+      "sha256": "77676dbe110ca2410352152be721b3d332044e7764d3bac4b545b14f042eadb8",
+      "runs": 22,
+      "pass": true
+    },
+    {
+      "artifact": "independent-lease-policy-test-results.json",
+      "sha256": "b623059d619b7134e019c0a8811204658e8eaa9ce6d9e7d80ee84e5046aa8ab5",
+      "runs": 20,
+      "pass": true
+    },
+    {
+      "artifact": "independent-helper-lifecycle-test-results.json",
+      "sha256": "379cc73604c0e101a6cdd85fc7ab13c60775ef43edf345aa3c8e8cd80583ae99",
+      "runs": 7,
+      "pass": true
+    }
+  ],
+  "independent_runs": 71,
+  "project_tests_independently_run": [
+    {
+      "pattern": "test_oneplus13_otg_*.py",
+      "tests": 36,
+      "pass": true
+    },
+    {
+      "pattern": "test_oneplus13_ram_usb_role.py",
+      "tests": 23,
+      "pass": true
+    },
+    {
+      "pattern": "test_oneplus13_usb_firmware_lease.py",
+      "tests": 13,
+      "pass": true
+    }
+  ],
+  "mock_test_limits": [
+    "Mock locks validate local call ordering, not real-kernel race freedom, scheduler latency, transport availability or actual firmware responses.",
+    "No transaction ID exists; arbitrarily delayed duplicated same-tuple successful replies remain a protocol assumption. GET validation reduces ACK ambiguity but is not cryptographic freshness.",
+    "No full image/kernel build was performed by reviewer; parent must complete Actions compile, exact image readback and source binding.",
+    "Independent extracted-vendor SET validator demonstrated source behavior only; it did not discover actual phone SET reply contents."
+  ],
+  "runtime_and_admission_limits": [
+    "120s delayed worker is best effort, not a hard wall-clock restoration guarantee; mutex/send/kernel hang or GLINK loss may prevent restore.",
+    "SET can apply before ACK loss; poison then deliberately prevents ambiguous retry. UNKNOWN is not proof of restored firmware.",
+    "RAM boot does not establish firmware property nonpersistence; no vendor lease TTL, reset-on-reboot or saved-gate restore guarantee found.",
+    "Active reboot bypasses devres removal. Future joint runner must require verified restore before ordinary Android return and define explicit UNKNOWN recovery admission.",
+    "Monotonic work budget reserves time conservatively; synchronous sysfs/kernel operations and inventory are not guaranteed hard host-timeout bounds.",
+    "Policy gates do not establish electrical supply, TypeC partner, USB enumeration or real storage I/O. No physical USB success is claimed.",
+    "Source publication/build only. A fresh exact source/image/runner-bound independent review and active owner window are required for any phone execution; existing consumed ledgers remain consumed."
+  ],
+  "open_source_blockers": [],
+  "recommendation": "Accept frozen sources for offline build and publication as explicitly experimental best-effort lease. Do not infer phone execution authorization or hardware acceptance."
+}

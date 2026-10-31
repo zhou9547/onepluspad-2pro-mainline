@@ -77,7 +77,8 @@ int main(int argc, char **argv)
             for (prop = 0; prop < 2; prop++)
                 for (val = 0; val < 2; val++) {
                     packet(p, operations[op], properties[prop], val, 0U);
-                    CHECK(!expect(p, 24, operations[op], properties[prop], 1, val));
+                    CHECK(!expect(p, 24, operations[op], properties[prop], 1,
+                                  operations[op] == OP13_OTG_GET ? val : 0));
                 }
     } else if (!strcmp(argv[1], "lengths")) {
         for (i = 0; i < 24; i++) {
@@ -122,7 +123,8 @@ int main(int argc, char **argv)
                 }
                 for (bit = 1; bit < 32; bit++) {
                     packet(p, operations[op], properties[prop], 1U << bit, 0);
-                    CHECK(!expect(p, 24, operations[op], properties[prop], -1, 0));
+                    CHECK(!expect(p, 24, operations[op], properties[prop],
+                                  operations[op] == OP13_OTG_GET ? -1 : 1, 0));
                 }
                 packet(p, operations[op], properties[prop], UINT_MAX, UINT_MAX);
                 CHECK(!expect(p, 24, operations[op], properties[prop], -1, 0));

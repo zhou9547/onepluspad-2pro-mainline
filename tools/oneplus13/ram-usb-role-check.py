@@ -19,6 +19,10 @@ RAM_MARKER = Path("/run/oneplus13/ram-session")
 STATE = Path("/run/oneplus13/usb-role")
 DEBUGFS = Path("/sys/kernel/debug")
 USB_DEVICE = re.compile(r"\d+-\d+(?:\.\d+)*")
+FIRMWARE_LEASE = Path('/sys/bus/auxiliary/devices/pmic_glink.power-supply.0/oneplus13_otg_lease')
+# Reserve 40 of the fixed kernel 120 seconds for role/firmware restoration.
+# These are process budgets, not hard real-time scheduler guarantees.
+FIRMWARE_WORK_SECONDS = 80
 
 
 def ensure_debugfs():
@@ -351,6 +355,45 @@ def firmware_otg_inventory(root=Path("/sys"), run=subprocess.run):
     return facts
 
 
+def firmware_lease_status(run=subprocess.run):
+    """Fixed, bounded read; numeric kernel receipt, never raw firmware text."""
+    result = run(['cat', str(FIRMWARE_LEASE)], capture_output=True, text=True,
+                 timeout=3, check=False)
+    match = re.fullmatch(r'state=([0-4]) used=([01]) dirty_ap=([01]) dirty_switch=([01])\n?',
+                         result.stdout)
+    if result.returncode or match is None:
+        raise RuntimeError('USB firmware lease receipt unavailable')
+    return dict(zip(('state', 'used', 'dirty_ap', 'dirty_switch'), map(int, match.groups())))
+
+
+def firmware_lease_command(command, run=subprocess.run):
+    if command not in {'start', 'restore'}:
+        raise ValueError('Invalid fixed USB lease command')
+    result = run([sys.executable, '-c',
+                  'import pathlib,sys; pathlib.Path(sys.argv[1]).write_text(sys.argv[2]+chr(10))',
+                  str(FIRMWARE_LEASE), command], capture_output=True, text=True,
+                 timeout=20 if command == 'start' else 15, check=False)
+    if result.returncode:
+        raise RuntimeError('USB firmware lease command failed')
+
+
+def firmware_lease_restore(run=subprocess.run):
+    """A clean receipt requires final pair GET validation in the kernel.
+
+    State UNKNOWN is terminal and forbids retry. Reboot/device role alone
+    cannot prove a firmware rollback. Keep errors generic and private.
+    """
+    status = firmware_lease_status(run)
+    if status['state'] == 1:
+        firmware_lease_command('restore', run)
+        status = firmware_lease_status(run)
+    # An idle receipt after an attempted start may be a driver rebind.
+    # Only this driver's used, terminal receipt proves our cleanup.
+    clean = (status['state'] in {2, 4} and status['used'] == 1
+             and not status['dirty_ap'] and not status['dirty_switch'])
+    return {'status': status, 'cleanup_complete': clean}
+
+
 def usb_hid_input_present(facts, root=Path("/sys")):
     """Require an input node below the actual enumerated USB device."""
     devices = Path(root) / "bus/usb/devices"
@@ -479,12 +522,21 @@ def storage_read_only_probe(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--wait-seconds", type=int, default=75)
+    parser.add_argument("--wait-seconds", type=int)
+    parser.add_argument('--firmware-lease', action='store_true',
+                        help='Explicit fixed AP17/SWITCH18 lease, experimental RAM boot only')
     args = parser.parse_args()
+    if args.wait_seconds is None:
+        args.wait_seconds = 45 if args.firmware_lease else 75
     if not 3 <= args.wait_seconds <= 120:
         parser.error("--wait-seconds must be between 3 and 120")
     if not RAM_MARKER.is_file():
         raise RuntimeError("Protected phone RAM session required")
+    if args.firmware_lease:
+        flags = set(Path('/proc/cmdline').read_text().split())
+        required = {'oneplus13.usb_host_probe=1', 'qcom_battmgr.oneplus13_otg_lease=1'}
+        if os.geteuid() != 0 or not required <= flags or args.wait_seconds > 45:
+            raise RuntimeError('USB firmware lease requires opt-in boot, root and at most 45s wait')
     mode = mode_paths()
     before = read(mode)
     if before != "device":
@@ -505,6 +557,16 @@ def main():
         "firmware_otg_before": firmware_otg_inventory(),
     }
     try:
+        if args.firmware_lease:
+            status = firmware_lease_status()
+            if status != {'state': 0, 'used': 0, 'dirty_ap': 0, 'dirty_switch': 0}:
+                raise RuntimeError('USB firmware lease is not unused')
+            result['firmware_lease_attempted'] = True
+            lease_work_deadline = time.monotonic() + FIRMWARE_WORK_SECONDS
+            firmware_lease_command('start')
+            result['firmware_lease_active'] = firmware_lease_status()
+            if result['firmware_lease_active'] != {'state': 1, 'used': 1, 'dirty_ap': 1, 'dirty_switch': 1}:
+                raise RuntimeError('USB firmware lease did not verify both gates')
         write(mode, "host")
         result["host_role_requested"] = True
         time.sleep(3)
@@ -516,8 +578,12 @@ def main():
             result["initial_host_inventory"])
         result["kernel_after_host_request"] = kernel_diagnostics()
         result["role_observations"] = []
+        wait_seconds = args.wait_seconds
+        if args.firmware_lease:
+            # Leave room for the following bounded kernel diagnostic.
+            wait_seconds = min(wait_seconds, max(0, lease_work_deadline - time.monotonic() - 8))
         result["host_inventory"], result["host_inventory_samples"] = (
-            wait_for_host_driver(args.wait_seconds, reconcile=lambda: reconcile_host(
+            wait_for_host_driver(wait_seconds, reconcile=lambda: reconcile_host(
                 mode, result["role_observations"]))
         )
         result["typec_after_peripheral_wait"] = typec_inventory()
@@ -527,7 +593,10 @@ def main():
             result["host_inventory"]["usb_peripherals"]
         )
         if result["host_inventory"]["usb_storage_bound"]:
-            result["storage_read_only"] = storage_read_only_probe()
+            if not args.firmware_lease or lease_work_deadline - time.monotonic() >= 32:
+                result["storage_read_only"] = storage_read_only_probe()
+            else:
+                result['storage_skipped_lease_budget'] = True
         result["hid_input_present"] = usb_hid_input_present(result["host_inventory"])
         # Enumerating an HID and finding an input node does not prove events
         # were received. Keep actual I/O qualification on the bounded read.
@@ -535,20 +604,30 @@ def main():
             result.get("storage_read_only", {}).get("read_only_io_pass")
         )
     finally:
-        write(mode, "device")
-        deadline = time.monotonic() + 8
-        while time.monotonic() < deadline:
-            result["role_after_restore"] = read(mode)
-            if result["role_after_restore"] == "device" and inventory()["udc"]:
-                result["role_restored"] = True
-                break
-            time.sleep(0.25)
+        try:
+            write(mode, "device")
+            deadline = time.monotonic() + 8
+            while time.monotonic() < deadline:
+                result["role_after_restore"] = read(mode)
+                if result["role_after_restore"] == "device" and inventory()["udc"]:
+                    result["role_restored"] = True
+                    break
+                time.sleep(0.25)
+        except (OSError, RuntimeError):
+            result['device_role_restore_error'] = True
+        finally:
+            if result.get('firmware_lease_attempted'):
+                try:
+                    result['firmware_lease_restore'] = firmware_lease_restore()
+                except (OSError, RuntimeError, subprocess.TimeoutExpired):
+                    result['firmware_lease_restore'] = {'cleanup_complete': False}
         result["cleanup_inventory"] = inventory()
         result["kernel_after_restore"] = kernel_diagnostics()
         result["typec_after_restore"] = typec_inventory()
         result["cleanup_complete"] = bool(
             result["role_restored"]
             and result.get("storage_read_only", {}).get("cleanup_complete", True)
+            and result.get('firmware_lease_restore', {}).get('cleanup_complete', True)
         )
         result["pass"] = bool(
             result["host_role_requested"] and result.get("host_role_verified", False)

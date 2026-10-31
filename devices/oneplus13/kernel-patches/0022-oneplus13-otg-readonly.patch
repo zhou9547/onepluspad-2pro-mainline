@@ -1,14 +1,16 @@
 From: Codex <codex@openai.com>
-Subject: [PATCH] power: qcom-battmgr: optional read-only OnePlus 13 OTG gates
+Subject: [PATCH] power: qcom-battmgr: phone-only OTG reads and opt-in bounded lease
 
-Use the same PMIC client and lock for the vendor legacy AP17/SWITCH18
-read-only probe. No automatic requests, setters, firmware/power writes or
-other-board changes. Exact response decoder lives in usb-draft/otg-protocol.h.
+Exact dodge identity, shared serialized legacy AP17/SWITCH18 transport.
+Default read-only behavior remains; explicit boot opt-in exposes one fixed
+120-second lease with GET verification and best-effort reverse rollback.
+No automatic write, VBUS/GPIO/TypeC override, OEM fallback or retry after
+ambiguous transport failure. UNKNOWN is not successful cleanup.
 Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 
 --- a/drivers/power/supply/qcom_battmgr.c
 +++ b/drivers/power/supply/qcom_battmgr.c
-@@ -15,6 +15,10 @@
+@@ -15,6 +15,11 @@
  #include <linux/soc/qcom/pmic_glink.h>
  #include <linux/math.h>
  #include <linux/units.h>
@@ -16,26 +18,34 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +#include <linux/spinlock.h>
 +#include <linux/string.h>
 +#include "oneplus13-otg-protocol.h"
++#include "oneplus13-otg-lease.h"
  
  #define BATTMGR_CHEMISTRY_LEN	4
  #define BATTMGR_STRING_LEN	128
-@@ -333,6 +337,15 @@
+@@ -333,6 +338,22 @@
  
  	bool service_up;
  
-+	/* Optional phone-only read probe; timeout forbids reuse in this boot. */
++	/* Optional phone-only requests; ambiguity forbids reuse in this boot. */
 +	spinlock_t op13_otg_lock;
 +	struct completion op13_otg_ack;
 +	int op13_otg_error;
 +	bool op13_otg_pending;
 +	bool op13_otg_poisoned;
++	unsigned int op13_otg_opcode;
 +	unsigned int op13_otg_property;
 +	unsigned int op13_otg_value;
++	struct op13_otg_lease op13_otg_lease;
++	struct delayed_work op13_otg_restore_work;
++	u64 op13_otg_deadline;
++	bool op13_otg_stopping;
++	bool op13_otg_awake;
++	struct wakeup_source *op13_otg_wakeup;
 +
  	struct qcom_battmgr_info info;
  	struct qcom_battmgr_status status;
  	struct qcom_battmgr_ac ac;
-@@ -1586,11 +1599,75 @@
+@@ -1586,11 +1607,77 @@
  	complete(&battmgr->ack);
  }
  
@@ -91,9 +101,11 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +			return;
 +		}
 +		matched = len == 24 ?
-+			op13_otg_decode(data, 24, OP13_OTG_GET,
++			op13_otg_decode(data, 24, battmgr->op13_otg_opcode,
 +					 battmgr->op13_otg_property, &value) : 0;
 +		if (matched) {
++			/* Only the first exact reply owns this completion. */
++			battmgr->op13_otg_pending = false;
 +			battmgr->op13_otg_error = matched < 0 ? -EREMOTEIO : 0;
 +			if (matched > 0)
 +				battmgr->op13_otg_value = value;
@@ -105,70 +117,31 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +	spin_unlock_irqrestore(&battmgr->op13_otg_lock, flags);
 +	/* A late optional response must not complete an ordinary battery read. */
 +	if (op13_otg_machine() &&
-+	    len >= 16 && opcode == OP13_OTG_GET &&
++	    len >= 16 && (opcode == OP13_OTG_GET || opcode == OP13_OTG_SET) &&
 +	    (op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_AP_ENABLE ||
 +	     op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_SWITCH))
 +		return;
  
  	if (opcode == BATTMGR_NOTIFICATION)
  		qcom_battmgr_notification(battmgr, data, len);
-@@ -1601,6 +1678,93 @@
+@@ -1601,6 +1688,60 @@
  		qcom_battmgr_sm8350_callback(battmgr, data, len);
  }
  
-+/* No write attribute: firmware gates remain unchanged until a separate
-+ * reviewed lease/rollback implementation exists and live reads prove support.
-+ */
++#include "oneplus13-otg-kernel.h"
++
 +static ssize_t op13_otg_show(struct device *dev, unsigned int property, char *buf)
 +{
 +	struct qcom_battmgr *battmgr = dev_get_drvdata(dev);
-+	struct qcom_battmgr_property_request request = {
-+		.hdr.owner = cpu_to_le32(PMIC_GLINK_OWNER_BATTMGR),
-+		.hdr.type = cpu_to_le32(PMIC_GLINK_REQ_RESP),
-+		.hdr.opcode = cpu_to_le32(OP13_OTG_GET),
-+		.battery = cpu_to_le32(0),
-+		.property = cpu_to_le32(property),
-+		.value = cpu_to_le32(0),
-+	};
-+	unsigned int value;
-+	unsigned long flags;
++	unsigned int value = 0;
 +	int ret;
 +
 +	if (!op13_otg_machine())
 +		return -EOPNOTSUPP;
 +	mutex_lock(&battmgr->lock);
-+	spin_lock_irqsave(&battmgr->op13_otg_lock, flags);
-+	if (!READ_ONCE(battmgr->service_up) || READ_ONCE(battmgr->op13_otg_poisoned)) {
-+		ret = -EHOSTDOWN;
-+		spin_unlock_irqrestore(&battmgr->op13_otg_lock, flags);
-+		goto out;
-+	}
-+	reinit_completion(&battmgr->op13_otg_ack);
-+	battmgr->op13_otg_error = 0;
-+	WRITE_ONCE(battmgr->op13_otg_property, property);
-+	WRITE_ONCE(battmgr->op13_otg_pending, true);
-+	spin_unlock_irqrestore(&battmgr->op13_otg_lock, flags);
-+	ret = pmic_glink_send(battmgr->client, &request, sizeof(request));
-+	if (!ret) {
-+		if (!wait_for_completion_timeout(&battmgr->op13_otg_ack, HZ))
-+			ret = -ETIMEDOUT;
-+	}
-+	spin_lock_irqsave(&battmgr->op13_otg_lock, flags);
-+	WRITE_ONCE(battmgr->op13_otg_pending, false);
-+	if (!ret)
-+		ret = battmgr->op13_otg_error;
-+	if (ret == -ETIMEDOUT)
-+		WRITE_ONCE(battmgr->op13_otg_poisoned, true);
-+	if (READ_ONCE(battmgr->op13_otg_poisoned) ||
-+	    !READ_ONCE(battmgr->service_up))
-+		ret = -EHOSTDOWN;
-+	value = battmgr->op13_otg_value;
-+	spin_unlock_irqrestore(&battmgr->op13_otg_lock, flags);
-+out:
++	ret = op13_otg_transfer(battmgr, OP13_OTG_GET, property, &value);
 +	mutex_unlock(&battmgr->lock);
-+	if (ret)
-+		return ret;
-+	return sysfs_emit(buf, "%u\n", value);
++	return ret ? ret : sysfs_emit(buf, "%u\n", value);
 +}
 +
 +static ssize_t oneplus13_otg_ap_enable_show(struct device *dev,
@@ -190,12 +163,18 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +static struct attribute *op13_otg_attrs[] = {
 +	&dev_attr_oneplus13_otg_ap_enable.attr,
 +	&dev_attr_oneplus13_otg_switch.attr,
++	&dev_attr_oneplus13_otg_lease.attr,
 +	NULL,
 +};
 +
 +static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, int n)
 +{
-+	return op13_otg_machine() ? attr->mode : 0;
++	if (!op13_otg_machine())
++		return 0;
++	if (attr == &dev_attr_oneplus13_otg_lease.attr &&
++	    !oneplus13_otg_lease_enabled)
++		return 0;
++	return attr->mode;
 +}
 +
 +static const struct attribute_group op13_otg_group = {
@@ -206,26 +185,31 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  static void qcom_battmgr_enable_worker(struct work_struct *work)
  {
  	struct qcom_battmgr *battmgr = container_of(work, struct qcom_battmgr, enable_work);
-@@ -1611,7 +1775,9 @@
+@@ -1611,7 +1752,13 @@
  	};
  	int ret;
  
 +	mutex_lock(&battmgr->lock);
++	if (READ_ONCE(battmgr->op13_otg_stopping)) {
++		mutex_unlock(&battmgr->lock);
++		return;
++	}
  	ret = qcom_battmgr_request(battmgr, &req, sizeof(req));
 +	mutex_unlock(&battmgr->lock);
  	if (ret)
  		dev_err(battmgr->dev, "failed to request power notifications\n");
  }
-@@ -1619,13 +1785,20 @@
+@@ -1619,13 +1766,20 @@
  static void qcom_battmgr_pdr_notify(void *priv, int state)
  {
  	struct qcom_battmgr *battmgr = priv;
 -
+-	if (state == SERVREG_SERVICE_STATE_UP) {
+-		battmgr->service_up = true;
 +	unsigned long flags;
 +
 +	spin_lock_irqsave(&battmgr->op13_otg_lock, flags);
- 	if (state == SERVREG_SERVICE_STATE_UP) {
--		battmgr->service_up = true;
++	if (state == SERVREG_SERVICE_STATE_UP && !battmgr->op13_otg_stopping) {
 +		WRITE_ONCE(battmgr->service_up, true);
  		schedule_work(&battmgr->enable_work);
  	} else {
@@ -241,17 +225,28 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  }
  
  static const struct of_device_id qcom_battmgr_of_variants[] = {
-@@ -1727,6 +1900,8 @@
+@@ -1727,6 +1881,9 @@
  	INIT_WORK(&battmgr->enable_work, qcom_battmgr_enable_worker);
  	mutex_init(&battmgr->lock);
  	init_completion(&battmgr->ack);
 +	init_completion(&battmgr->op13_otg_ack);
 +	spin_lock_init(&battmgr->op13_otg_lock);
++	INIT_DELAYED_WORK(&battmgr->op13_otg_restore_work, op13_otg_restore_worker);
  
  	match = of_match_device(qcom_battmgr_of_variants, dev->parent);
  	if (match)
-@@ -1812,7 +1987,8 @@
+@@ -1810,9 +1967,18 @@
+ 	if (IS_ERR(battmgr->client))
+ 		return PTR_ERR(battmgr->client);
  
++	if (oneplus13_otg_lease_enabled && op13_otg_machine()) {
++		battmgr->op13_otg_wakeup = wakeup_source_register(dev, "oneplus13-otg-lease");
++		if (!battmgr->op13_otg_wakeup)
++			return -ENOMEM;
++	}
++	ret = devm_add_action_or_reset(dev, op13_otg_lease_remove, battmgr);
++	if (ret)
++		return ret;
  	pmic_glink_client_register(battmgr->client);
  
 -	return 0;

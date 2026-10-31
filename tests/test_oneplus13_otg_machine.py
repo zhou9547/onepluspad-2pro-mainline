@@ -73,7 +73,7 @@ class OtgMachineIntegrationTests(unittest.TestCase):
         patch = PATCH.read_text()
         additions = '\n'.join(line[1:] for line in patch.splitlines()
                               if line.startswith('+') and not line.startswith('+++'))
-        self.assertEqual(additions.count('op13_otg_machine()'), 3)
+        self.assertEqual(additions.count('op13_otg_machine()'), 4)
         self.assertNotIn('of_machine_is_compatible', additions)
         self.assertIn('__ATTR(oneplus13_otg_ap_enable, 0400,', additions)
         self.assertIn('__ATTR(oneplus13_otg_switch, 0400,', additions)
