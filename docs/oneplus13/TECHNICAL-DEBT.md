@@ -1,3 +1,20 @@
+# r223 USB physical-role boundary, 2026-11-01
+
+The r223 kernel accepted the staged AP17/18 arm and verified both values while
+keeping VBUS24 and current64 at0. Across the 300-second host window, however,
+the phone remained Type-C device/sink, so the guarded host phase correctly
+refused to write current64 or VBUS24. No xHCI enumeration followed.
+
+All-phase restore then wrote the reverse order24->64->18->17 and read every
+saved value back as0. Role returned to device and Android's seven baseline
+properties matched. These results prove the preparation and cleanup paths,
+but do not prove the external supply path or U-disk I/O.
+
+The adapter/U-disk must make the phone report host/source before the next test
+can exercise64/24. A repeated device/sink result is a physical topology
+condition, not evidence that the supply writes are broken. GNSS START remains
+GeneralError46 and camera capture still has no real frame.
+
 # r222 USB supply risks, 2026-11-01
 
 The legacy PMIC GLINK property wire has no transaction identifier. An exact

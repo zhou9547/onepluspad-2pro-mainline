@@ -1,3 +1,21 @@
+# r223 USB arm/restore hardware result, 2026-11-01
+
+Actions41221497802 passed all five jobs at4e5bf2d. A reviewed combined RAM
+round completed all12 phases, returned Android with seven exact baselines,
+reported one RAM boot and zero partition writes. WiFi5GHz, modem verification
+and camera chip-ID passed.
+
+USB AP17/18 armed to1 and were verified while VBUS24 and current64 remained0.
+The phone stayed Type-C device/sink through the host wait, so current64, VBUS24,
+xHCI enumeration and U-disk I/O were not attempted. Restore completed in
+24->64->18->17 order with all four values0 and role restored. There was no
+firmware residual UNKNOWN. Android afterward still reported `mtp,adb` and no
+external storage.
+
+GNSS START still returned GeneralError46 after clean registration and STOP.
+Camera chip-ID passed but no real frame was produced; teardown passed. See
+R223-HARDWARE-RESULT-20261101.json. This round does not qualify USB I/O.
+
 # r222 USB VBUS candidate, 2026-11-01
 
 Adds a default-off, phone-only staged supply path after r221 established

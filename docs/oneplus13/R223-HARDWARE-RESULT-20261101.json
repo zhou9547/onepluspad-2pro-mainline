@@ -1,0 +1,72 @@
+{
+  "schema": "r223-usb-vbus-hardware-result-v1",
+  "source_commit": "4e5bf2d5e97ff0024faf8c39da6f3895c8895b28",
+  "source_tree": "93ace9d13729b56effe1c69e26361be681772c79",
+  "workflow_run": 41221497802,
+  "plan_sha256": "e0a1fcfe43995d9ac89cf97923451a8ec983e02642faa9e7e50b4e1d5f84e8cc",
+  "image_sha256": "2d1669d8bbbec07c8470302424dda5df139a08051eb61ac67779d1f4c394eaa5",
+  "evidence_integrity_pass": true,
+  "completed": true,
+  "cleanup_pass": true,
+  "halted": false,
+  "firmware_residual_unknown": false,
+  "ram_boots": 1,
+  "partition_writes_reported": 0,
+  "android_return_confirmed": true,
+  "android_baseline_keys_exact_match": 7,
+  "all12_planned_phases_completed": true,
+  "wifi_5ghz_preservation_pass": true,
+  "camera_chip_id_pass": true,
+  "existing_modem_verify_pass": true,
+  "usb": {
+    "arm17_18_pass": true,
+    "arm_values": {
+      "oneplus13_otg_ap_enable": 1,
+      "oneplus13_otg_switch": 1,
+      "oneplus13_otg_vbus_enable": 0,
+      "oneplus13_otg_boost_current": 0
+    },
+    "vbus_enabled_before_attachment": false,
+    "host_source_role_timeout_seconds": 300,
+    "host_source_role_observed": false,
+    "external_enumeration_tested": false,
+    "read_only_storage_io_tested": false,
+    "functional_pass": false,
+    "cleanup_complete": true,
+    "role_restored": true,
+    "restore_order": [
+      "vbus24",
+      "current64",
+      "switch18",
+      "ap17"
+    ],
+    "restore_values": {
+      "oneplus13_otg_ap_enable": 0,
+      "oneplus13_otg_switch": 0,
+      "oneplus13_otg_vbus_enable": 0,
+      "oneplus13_otg_boost_current": 0
+    },
+    "android_after_run": {
+      "sys_usb_state": "mtp,adb",
+      "external_storage_present": false
+    }
+  },
+  "gnss": {
+    "fix_pass": false,
+    "cleanup_complete": true,
+    "start_error": "QMI GeneralError46",
+    "engine_lock_state": 1
+  },
+  "camera": {
+    "chip_id_pass": true,
+    "real_frame_pass": false,
+    "teardown_complete": true
+  },
+  "nfc": "owner explicitly skipped; no physical tag",
+  "limitations": [
+    "The phone reported data_role device and power_role sink throughout the USB host wait, so host/source, current64, VBUS24 and storage I/O were not exercised in this round.",
+    "The absence of an external volume in Android after return corroborates that the OTG/U-disk did not enumerate on the phone, but does not identify every possible cable-adapter fault.",
+    "AP17/18 arm and clean restore succeeded; this is not USB functional acceptance.",
+    "GNSS START still returns GeneralError46 despite clean STOP, and camera capture still produces no real frame."
+  ]
+}
