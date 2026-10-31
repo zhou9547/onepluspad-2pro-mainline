@@ -118,17 +118,40 @@ def inventory(root=None):
     }
 
 
-def wait_for_host_driver(seconds, sleep=time.sleep):
+def wait_for_host_driver(seconds, sleep=time.sleep, reconcile=None):
     deadline = time.monotonic() + seconds
     facts = inventory()
     samples = 1
     while time.monotonic() < deadline:
+        if reconcile is not None:
+            reconcile()
         facts = inventory()
         samples += 1
         if facts["usb_storage_bound"] or facts["usb_hid_bound"]:
             return facts, samples
         sleep(0.5)
     return facts, samples
+
+
+def typec_host_source(facts):
+    """Only follow a real attached UFP; never force the Type-C power role."""
+    ports = facts.get("ports", [])
+    return bool(len(ports) == 1 and ports[0].get("partner_present") is True
+                and "[host]" in ports[0].get("data_role", "").split()
+                and "[source]" in ports[0].get("power_role", "").split())
+
+
+def reconcile_host(mode, observations):
+    """UCSI disconnect may replace an earlier debugfs host request with device."""
+    facts = typec_inventory()
+    current = read(mode)
+    key = (current, json.dumps(facts, sort_keys=True))
+    if not observations or observations[-1]["key"] != key:
+        observations.append({"key": key, "mode": current, "typec": facts})
+        del observations[:-24]
+    if current != "host" and typec_host_source(facts):
+        write(mode, "host")
+        observations[-1]["host_reasserted_for_attached_ufp"] = True
 
 
 def storage_partitions(root=Path("/sys/class/block")):
@@ -327,9 +350,13 @@ def main():
         result["role_after_host_request"] = read(mode)
         result["host_role_verified"] = result["role_after_host_request"] == "host"
         result["typec_after_host_request"] = typec_inventory()
+        result["role_observations"] = []
         result["host_inventory"], result["host_inventory_samples"] = (
-            wait_for_host_driver(args.wait_seconds)
+            wait_for_host_driver(args.wait_seconds, reconcile=lambda: reconcile_host(
+                mode, result["role_observations"]))
         )
+        result["typec_after_peripheral_wait"] = typec_inventory()
+        result["role_after_peripheral_wait"] = read(mode)
         result["host_peripheral_receipt"] = bool(
             result["host_inventory"]["usb_peripherals"]
         )

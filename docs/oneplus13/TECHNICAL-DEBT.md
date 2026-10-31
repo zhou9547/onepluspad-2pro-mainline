@@ -1870,3 +1870,18 @@ See PHONE-PCB-MAPPING-20261026.md; source unit tests do not qualify phone stream
 
 
 2026-10-26 run80 safely returned to Android after the metadata-only SSC probe stopped before a qualified result. The reverse service had one attach, module policy and private inputs were unchanged, and there were no samples or streams. Exit255 did not establish a discovery timeout. The diagnostic version retains the original 8-second deadline, validates exact public failure categories, records systemd execution status before cleanup, and bounds private raw failure output to RAM-only root-readable files. Fresh native and full-system QEMU verification is required before any new source-bound hardware review. This is not sensor-stream or camera/audio acceptance.
+# Observed incremental boundaries, 2026-10-31
+
+r203/r204 prove CCI-backed S5KJN5 chip identification and clean teardown with
+the r202 Actions image. This supersedes the historical claim that all sensor
+register access is still blocked at CCI -110; streaming remains unqualified.
+GNSS event registration returns QMI InvalidArgument before LOC start. The next
+candidate has a single standard position-report fallback and explicit no-start
+cleanup evidence; neither path counts a no-fix session as successful GNSS.
+NFC starts and stops cleanly but no physical tag is detected. USB host mode is
+overwritten around UCSI unplug events; no external device enumerated. Conditional
+host reconciliation waits for Type-C host/source rather than forcing VBUS.
+Independent functional failures must not block unrelated following stages after
+proven cleanup. Kernel faults, ambiguous cleanup and control loss still recover.
+The 30-second operator return-card limit caused an avoidable r204 final-stage
+failure and must be increased before the next attended round.

@@ -21,6 +21,7 @@ def bounded_stdout(output):
     tail = output[-8192:]
     markers = []
     for prefix in ("LOCATION_SESSION_NMEA_DEFAULTS ",
+                   "LOCATION_SESSION_POSITION_EVENTS ", "LOCATION_SESSION_NO_SESSION ",
                    "LOCATION_SESSION_STARTED ", "LOCATION_SESSION_STOPPED "):
         marker = next((line for line in output.splitlines()
                        if line.startswith(prefix) and len(line) <= 512), None)
@@ -219,18 +220,42 @@ def collect_native_session(native, seconds):
         if line.startswith("NMEA ") and line[5:].strip()
     ][-64:]
     fixes = parse_fix(nmea)
+    positions = []
+    for line in lines:
+        if not line.startswith("LOCATION_SESSION_POSITION "):
+            continue
+        try:
+            value = json.loads(line.split(" ", 1)[1])
+            latitude, longitude = value["latitude"], value["longitude"]
+            if (value.get("status") == "success" and value.get("satellite") is True
+                    and type(latitude) in (int, float) and type(longitude) in (int, float)
+                    and math.isfinite(latitude) and math.isfinite(longitude)
+                    and -90 <= latitude <= 90 and -180 <= longitude <= 180):
+                positions.append({"type": "QMI_LOC_SATELLITE", "latitude": latitude,
+                                  "longitude": longitude})
+        except (ValueError, KeyError, TypeError):
+            continue
+    fixes = (fixes + positions)[-8:]
     started = any(
         line.startswith("LOCATION_SESSION_STARTED") for line in lines
     )
     stopped = any(
         line.startswith("LOCATION_SESSION_STOPPED") for line in lines
     )
+    no_session = ("LOCATION_SESSION_NO_SESSION start_requested=0" in lines
+                  and not started and not stopped and process.get("returncode") == 1
+                  and process.get("timed_out", False) is False)
     return {
         "native": native,
         "returncode": process.get("returncode"),
         "timed_out": process.get("timed_out", False),
         "started": started,
         "stopped": stopped,
+        "no_session_started": no_session,
+        "cleanup_not_needed": no_session,
+        "position_events_fallback": any(
+            line.startswith("LOCATION_SESSION_POSITION_EVENTS ") for line in lines
+        ),
         "nmea_defaults_used": any(
             line.startswith("LOCATION_SESSION_NMEA_DEFAULTS ") for line in lines
         ),
@@ -239,7 +264,7 @@ def collect_native_session(native, seconds):
         "fixes": fixes,
         "fix_acquired": bool(fixes),
         "engine_control_qualified": started and stopped,
-        "cleanup_complete": stopped and process.get("returncode") == 0,
+        "cleanup_complete": (stopped and process.get("returncode") == 0) or no_session,
     }
 
 

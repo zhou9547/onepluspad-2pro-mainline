@@ -22,6 +22,43 @@ def sentence(payload):
 
 
 class GnssNmeaTests(unittest.TestCase):
+    def test_explicit_prestart_failure_is_clean_but_not_qualified(self):
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 1, "stdout": "LOCATION_SESSION_NO_SESSION start_requested=0\n",
+            "stderr": "register-events failed",
+        }):
+            result = GNSS.collect_native_session("/native", 25)
+        self.assertTrue(result["cleanup_complete"])
+        self.assertTrue(result["no_session_started"])
+        self.assertFalse(result["engine_control_qualified"])
+        self.assertFalse(result["fix_acquired"])
+
+    def test_prestart_marker_cannot_hide_started_session_or_timeout(self):
+        for extra in ("LOCATION_SESSION_STARTED seconds=25\n", ""):
+            with self.subTest(extra=extra), patch.object(GNSS, "run", return_value={
+                "returncode": 1, "timed_out": not extra,
+                "stdout": "LOCATION_SESSION_NO_SESSION start_requested=0\n" + extra,
+            }):
+                self.assertFalse(GNSS.collect_native_session("/native", 25)["cleanup_complete"])
+
+    def test_satellite_position_requires_success_coordinates_and_start_stop(self):
+        cases = [
+            ({"status": "success", "satellite": True, "latitude": 12.3, "longitude": 45.6}, True),
+            ({"status": "in-progress", "satellite": True, "latitude": 12.3, "longitude": 45.6}, False),
+            ({"status": "success", "satellite": False, "latitude": 12.3, "longitude": 45.6}, False),
+            ({"status": "success", "satellite": True, "latitude": 91, "longitude": 45.6}, False),
+            ({"status": "success", "satellite": True, "latitude": float("nan"), "longitude": 45.6}, False),
+            ({"status": "success", "satellite": True, "latitude": True, "longitude": 45.6}, False),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value), patch.object(GNSS, "run", return_value={
+                "returncode": 0, "stdout": "LOCATION_SESSION_STARTED seconds=25\n"
+                "LOCATION_SESSION_POSITION " + json.dumps(value) + "\nLOCATION_SESSION_STOPPED nmea=0\n",
+            }):
+                result = GNSS.collect_native_session("/native", 25)
+                self.assertEqual(result["fix_acquired"], expected)
+                self.assertTrue(result["engine_control_qualified"])
+
     def test_long_native_nmea_output_keeps_start_and_default_markers(self):
         fix = sentence("GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,")
         raw = ("LOCATION_SESSION_NMEA_DEFAULTS reason=not-supported\n"

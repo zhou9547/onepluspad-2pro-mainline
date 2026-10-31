@@ -8,6 +8,7 @@
 #include <gio/gio.h>
 #include <glib-unix.h>
 #include <libqmi-glib.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -26,6 +27,7 @@ struct session {
 	gboolean terminate_requested;
 	gboolean stopped;
 	gboolean stop_requested;
+	gboolean position_events_only;
 };
 
 static int exit_status = 1;
@@ -59,12 +61,20 @@ nmea_types_error_is_optional (const GError *error)
 				QMI_PROTOCOL_ERROR_NOT_SUPPORTED);
 }
 
+static gboolean
+retry_position_events (const GError *error, gboolean already_retried)
+{
+	return !already_retried && g_error_matches (error, QMI_PROTOCOL_ERROR,
+						 QMI_PROTOCOL_ERROR_INVALID_ARGUMENT);
+}
+
 static int
 configuration_self_test (void)
 {
 	GError *unsupported;
 	GError *general;
 	GError *transport;
+	GError *invalid;
 	struct session session = { 0 };
 	struct session pending = { .start_pending = TRUE };
 	guint timer_id;
@@ -75,10 +85,18 @@ configuration_self_test (void)
 		QMI_PROTOCOL_ERROR_GENERAL_ERROR, "modem failure");
 	transport = g_error_new_literal (G_IO_ERROR,
 		QMI_PROTOCOL_ERROR_NOT_SUPPORTED, "different error domain");
+	invalid = g_error_new_literal (QMI_PROTOCOL_ERROR,
+		QMI_PROTOCOL_ERROR_INVALID_ARGUMENT, "unsupported NMEA event");
 	g_assert_true (nmea_types_error_is_optional (unsupported));
 	g_assert_false (nmea_types_error_is_optional (general));
 	g_assert_false (nmea_types_error_is_optional (transport));
 	g_assert_false (nmea_types_error_is_optional (NULL));
+	g_assert_true (retry_position_events (invalid, FALSE));
+	g_assert_false (retry_position_events (invalid, TRUE));
+	g_assert_false (retry_position_events (general, FALSE));
+	g_assert_false (retry_position_events (transport, FALSE));
+	g_assert_false (retry_position_events (NULL, FALSE));
+	g_error_free (invalid);
 	g_error_free (unsupported);
 	g_error_free (general);
 	g_error_free (transport);
@@ -94,7 +112,7 @@ configuration_self_test (void)
 	g_assert_false (pending.stop_requested);
 	g_assert_true (unix_terminate (&session));
 	g_assert_true (unix_terminate (&pending));
-	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=14 no_qrtr=1\n");
+	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=19 no_qrtr=1\n");
 	return 0;
 }
 
@@ -140,6 +158,33 @@ nmea_received (QmiClientLoc *client,
 
 static gboolean
 request_stop (gpointer user_data);
+
+static void
+position_received (QmiClientLoc *client,
+		   QmiIndicationLocPositionReportOutput *output, gpointer user_data)
+{
+	QmiLocSessionStatus status;
+	QmiLocTechnologyUsed technology;
+	gdouble latitude, longitude;
+
+	(void)client;
+	(void)user_data;
+	/* A fused/network estimate or an intermediate report cannot qualify GNSS. */
+	if (!qmi_indication_loc_position_report_output_get_session_status (output, &status, NULL) ||
+	    status != QMI_LOC_SESSION_STATUS_SUCCESS ||
+	    !qmi_indication_loc_position_report_output_get_technology_used (output, &technology, NULL) ||
+	    !(technology & QMI_LOC_TECHNOLOGY_USED_SATELLITE) ||
+	    !qmi_indication_loc_position_report_output_get_latitude (output, &latitude, NULL) ||
+	    !qmi_indication_loc_position_report_output_get_longitude (output, &longitude, NULL) ||
+	    !isfinite (latitude) || !isfinite (longitude) ||
+	    latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180)
+		return;
+	g_print ("LOCATION_SESSION_POSITION {\"status\":\"success\",\"satellite\":true,"
+		 "\"latitude\":%.9f,\"longitude\":%.9f}\n", latitude, longitude);
+	fflush (stdout);
+}
+
+static void register_events (struct session *session);
 
 static void
 stop_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
@@ -237,6 +282,16 @@ register_events_ready (QmiClientLoc *client, GAsyncResult *result,
 		return;
 	}
 	if (!qmi_message_loc_register_events_output_get_result (output, &error)) {
+		if (retry_position_events (error, session->position_events_only)) {
+			/* Some firmware rejects the optional NMEA event. Use the
+			 * standard LOC position report on this same client, once. */
+			session->position_events_only = TRUE;
+			g_print ("LOCATION_SESSION_POSITION_EVENTS reason=nmea-invalid-argument\n");
+			g_clear_error (&error);
+			qmi_message_loc_register_events_output_unref (output);
+			register_events (session);
+			return;
+		}
 		print_error ("register-events-result", error);
 		g_clear_error (&error);
 		qmi_message_loc_register_events_output_unref (output);
@@ -261,11 +316,25 @@ register_events_ready (QmiClientLoc *client, GAsyncResult *result,
 }
 
 static void
+register_events (struct session *session)
+{
+	QmiMessageLocRegisterEventsInput *input;
+	input = qmi_message_loc_register_events_input_new ();
+	qmi_message_loc_register_events_input_set_event_registration_mask (
+		input, session->position_events_only ?
+		QMI_LOC_EVENT_REGISTRATION_FLAG_POSITION_REPORT :
+		QMI_LOC_EVENT_REGISTRATION_FLAG_NMEA, NULL);
+	qmi_client_loc_register_events (
+		session->client, input, 20, session->cancellable,
+		(GAsyncReadyCallback) register_events_ready, session);
+	qmi_message_loc_register_events_input_unref (input);
+}
+
+static void
 set_nmea_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 {
 	struct session *session = user_data;
 	QmiMessageLocSetNmeaTypesOutput *output;
-	QmiMessageLocRegisterEventsInput *input;
 	GError *error = NULL;
 
 	output = qmi_client_loc_set_nmea_types_finish (client, result, &error);
@@ -291,13 +360,7 @@ set_nmea_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 	}
 	qmi_message_loc_set_nmea_types_output_unref (output);
 
-	input = qmi_message_loc_register_events_input_new ();
-	qmi_message_loc_register_events_input_set_event_registration_mask (
-		input, QMI_LOC_EVENT_REGISTRATION_FLAG_NMEA, NULL);
-	qmi_client_loc_register_events (
-		client, input, 20, session->cancellable,
-		(GAsyncReadyCallback) register_events_ready, session);
-	qmi_message_loc_register_events_input_unref (input);
+	register_events (session);
 }
 
 static void
@@ -317,6 +380,8 @@ client_ready (QmiDevice *device, GAsyncResult *result, gpointer user_data)
 	}
 	g_signal_connect (session->client, "nmea",
 			  G_CALLBACK (nmea_received), session);
+	g_signal_connect (session->client, "position-report",
+			  G_CALLBACK (position_received), session);
 	input = qmi_message_loc_set_nmea_types_input_new ();
 	qmi_message_loc_set_nmea_types_input_set_nmea_types (
 		input, QMI_LOC_NMEA_TYPE_GGA | QMI_LOC_NMEA_TYPE_RMC, NULL);
@@ -455,6 +520,8 @@ main (int argc, char **argv)
 	qrtr_bus_new (5000, session.cancellable,
 		      (GAsyncReadyCallback) bus_ready, &session);
 	g_main_loop_run (session.loop);
+	if (!session.start_requested)
+		g_print ("LOCATION_SESSION_NO_SESSION start_requested=0\n");
 
 	if (session.device)
 		qmi_device_close_async (session.device, 5, session.cancellable,

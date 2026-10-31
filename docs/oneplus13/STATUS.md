@@ -2518,3 +2518,31 @@ PHONE-RPC-VFS-LIFETIME-20261026.md. Earlier snapshots below remain historical.
 
 
 2026-10-26 run80 safely returned to Android after the metadata-only SSC probe stopped before a qualified result. The reverse service had one attach, module policy and private inputs were unchanged, and there were no samples or streams. Exit255 did not establish a discovery timeout. The diagnostic version retains the original 8-second deadline, validates exact public failure categories, records systemd execution status before cleanup, and bounds private raw failure output to RAM-only root-readable files. Fresh native and full-system QEMU verification is required before any new source-bound hardware review. This is not sensor-stream or camera/audio acceptance.
+# Incremental hardware evidence and independent stages, 2026-10-31
+
+r202 public source 95b931d72f2cc2026c844080896b10cb7c8e8df7 completed all five
+Actions jobs in run 41178635052. Three downloaded archives and installed inputs
+were independently verified. Incremental r203/r204 RAM boots now bind S5KJN5,
+verify its expected chip ID (0x38e5), runtime-suspend it, remove the temporary
+I2C target and unload owned camera modules. This establishes sensor access,
+not real-frame capture. The 5 GHz preservation check and running MPSS/IPCRTR
+verification pass. No partition writes occurred; Android's seven baseline
+properties match after return.
+
+r204 continues past a clean GNSS pre-start registration failure and an NFC
+no-tag result. NFC binds and powers up/polls, then confirms poll-stop and
+power-down; it has not detected the owner's tag. USB briefly reports host,
+but UCSI disconnect changes the role during physical cable replacement;
+no peripheral or read I/O is qualified. A 30-second return confirmation
+expired, so the full planned-round acceptance remains false even though
+USB device-role cleanup and Android return are confirmed.
+
+The next candidate makes GNSS no-session cleanup explicit and retries the
+standard satellite position-report subscription once only after NMEA event
+registration returns InvalidArgument. A fix still requires successful start,
+stop and either checksum-valid NMEA or a successful satellite position report
+with finite in-range coordinates. USB only reconciles a replaced host request
+after UCSI independently reports an attached host/source port; no power role
+is forced. Native Werror compilation/self-test and 30 focused Python tests pass.
+These new changes are candidates pending Actions and new combined hardware tests.
+See INCREMENTAL-HARDWARE-20261031.md; no claim of complete adaptation is made.

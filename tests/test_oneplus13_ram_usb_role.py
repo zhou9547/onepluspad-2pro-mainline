@@ -17,6 +17,36 @@ SPEC.loader.exec_module(USB)
 
 
 class UsbRolePathTests(unittest.TestCase):
+    def test_host_reassertion_requires_attached_typec_host_and_source(self):
+        import copy
+        facts = {"ports": [{"partner_present": True, "data_role": "[host] device",
+                            "power_role": "[source] sink"}]}
+        self.assertTrue(USB.typec_host_source(facts))
+        for field, value in (("partner_present", False), ("data_role", "host [device]"),
+                             ("power_role", "source [sink]")):
+            changed = copy.deepcopy(facts)
+            changed["ports"][0][field] = value
+            self.assertFalse(USB.typec_host_source(changed))
+
+    def test_ucsi_disconnect_cannot_force_host_while_still_a_sink(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            mode = Path(temporary) / "mode"
+            mode.write_text("device")
+            observations = []
+            with unittest.mock.patch.object(USB, "typec_inventory", return_value={
+                "ports": [{"partner_present": True, "data_role": "host [device]",
+                           "power_role": "source [sink]"}]
+            }):
+                USB.reconcile_host(mode, observations)
+            self.assertEqual(USB.read(mode), "device")
+            with unittest.mock.patch.object(USB, "typec_inventory", return_value={
+                "ports": [{"partner_present": True, "data_role": "[host] device",
+                           "power_role": "[source] sink"}]
+            }):
+                USB.reconcile_host(mode, observations)
+            self.assertEqual(USB.read(mode), "host")
+            self.assertTrue(observations[-1]["host_reasserted_for_attached_ufp"])
+
     def test_read_write_and_inventory_shape(self):
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / "mode"
