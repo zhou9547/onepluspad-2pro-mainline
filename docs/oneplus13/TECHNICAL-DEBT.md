@@ -12,11 +12,12 @@ mismatched readback produces UNKNOWN and prohibits later SET requests.
 Returning to Android does not establish that firmware VBUS/current state was
 restored.
 
-The manual path sets current64 before VBUS24 and retains UCSI ownership of
-the data role. It does not connect the reference project's automatic
-0x50/0x51 notification policy or guarantee host enumeration. The exact
-Actions image must be built and reviewed before one combined USB, GNSS and
-camera RAM test. External read-only U-disk I/O is still unqualified.
+The manual path arms17/18 before attachment, requires a real attached
+host/source and xHCI, then sets current64 before VBUS24 and retains UCSI
+ownership of the data role. It does not connect the reference project's
+automatic0x50/0x51 notification policy or guarantee host enumeration. The
+exact Actions image must be built and reviewed before one combined USB,
+GNSS and camera RAM test. External read-only U-disk I/O is still unqualified.
 
 # r221 hardware: supply properties readable, 2026-11-01
 

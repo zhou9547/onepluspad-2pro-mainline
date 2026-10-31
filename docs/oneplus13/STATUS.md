@@ -1,12 +1,14 @@
 # r222 USB VBUS candidate, 2026-11-01
 
-Adds a default-off, phone-only one-shot supply path after r221 established
-GET24=0 and GET64=0. A root sysfs `start` validates the unused lease,
-re-reads and saves both baselines, sets current64 to1250mA, requires GET64
-readback, then enables VBUS24 and requires GET24=1. `restore` reverses the
-order and verifies the saved values. A120-second delayed work performs the
-same best-effort restore. Timeout, send error or service loss poisons the
-transport; no later SET is sent and the result remains UNKNOWN.
+Adds a default-off, phone-only staged supply path after r221 established
+GET24=0 and GET64=0. Root sysfs `arm` validates unused zero17/18, sets both
+and verifies them without enabling VBUS. After the attached OTG reaches real
+host/source and xHCI, `start` re-reads and saves24/64, sets current64 to
+1250mA, requires GET64 readback, then enables VBUS24 and requires
+GET24=1. `restore` uses24->64->18->17 and verifies every saved value. A
+120-second freezable delayed work performs the same best-effort restore.
+Timeout, send error or service loss poisons the transport; no later SET is
+sent and the result remains UNKNOWN.
 
 The path remains manual and does not alter UCSI data-role ownership. The
 wire has no transaction ID, so readback cannot prove response freshness.
