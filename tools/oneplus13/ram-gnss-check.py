@@ -9,8 +9,6 @@ import os
 from pathlib import Path
 import re
 import subprocess
-import signal
-import time
 
 
 NMEA = re.compile(r"^\$(?:GP|GN|GL|GA|GB)(?:GGA|RMC),.*\*[0-9A-Fa-f]{2}$")
@@ -126,94 +124,6 @@ def parse_fix(lines):
     return fixes[-8:]
 
 
-def probe_devices(qmicli, candidates, ready_seconds):
-    """Wait briefly for modem QRTR services to publish before failing."""
-    probes = []
-    deadline = time.monotonic() + ready_seconds
-    while True:
-        for device in candidates:
-            if device is None:
-                continue
-            probe = run([qmicli, "-d", device, "--loc-get-operation-mode"], 12)
-            probes.append({"device": device, **probe})
-            if probe["returncode"] == 0:
-                return device, probes
-        if time.monotonic() >= deadline:
-            return None, probes
-        time.sleep(1)
-
-
-def collect_session(qmicli, device, seconds):
-    """Keep one LOC client/session across separate start, follow and stop actions."""
-    base = [qmicli, "-d", device]
-    setup = run(base + ["--loc-noop", "--client-no-release-cid"], 15)
-    result = {
-        "setup": setup,
-        "start_attempts": [],
-        "fixes": [],
-        "fix_acquired": False,
-        "engine_control_qualified": False,
-        "cleanup_complete": False,
-    }
-    match = re.search(r"CID:\s*'?(\d+)'?", setup.get("stdout", ""))
-    if setup["returncode"] != 0 or not match:
-        return result
-    base.append("--client-cid=" + match[1])
-    result["nmea_types"] = run(
-        base + ["--loc-set-nmea-types=gga|rmc", "--client-no-release-cid"], 15
-    )
-    result["engine_lock"] = run(
-        base + ["--loc-set-engine-lock=none", "--client-no-release-cid"], 15
-    )
-    started = None
-    for attempt in range(1, 4):
-        started = run(
-            base + ["--loc-start", "--loc-session-id=1", "--client-no-release-cid"], 15
-        )
-        result["start_attempts"].append({"attempt": attempt, **started})
-        if started["returncode"] == 0:
-            break
-        time.sleep(2)
-    result["start"] = started
-    if not started or started["returncode"] != 0:
-        failed_stop = run(base + ["--loc-stop", "--loc-session-id=1"], 15)
-        result["failed_start_stop"] = failed_stop
-        result["cleanup_complete"] = failed_stop["returncode"] == 0
-        return result
-    process = None
-    try:
-        result["engine_control_qualified"] = True
-        # libqmi rejects --loc-start and --loc-get-position-report together.
-        # A follow is bounded here, then interrupted gracefully before LOC stop.
-        process = subprocess.Popen(
-            base + ["--loc-follow-nmea", "--client-no-release-cid"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-        )
-        try:
-            stdout, stderr = process.communicate(timeout=seconds)
-        except subprocess.TimeoutExpired:
-            process.send_signal(signal.SIGINT)
-            try:
-                stdout, stderr = process.communicate(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                stdout, stderr = process.communicate(timeout=5)
-        result["follow_returncode"] = process.returncode
-        result["follow_stderr"] = stderr[-4096:]
-        result["nmea"] = [line.strip() for line in stdout.splitlines()
-                          if NMEA.fullmatch(line.strip())][-64:]
-        result["fixes"] = parse_fix(result["nmea"])
-        result["fix_acquired"] = bool(result["fixes"])
-    finally:
-        if process is not None and process.poll() is None:
-            process.kill()
-            process.communicate(timeout=5)
-        stopped = run(base + ["--loc-stop", "--loc-session-id=1"], 15)
-        result["stop"] = stopped
-        result["cleanup_complete"] = stopped["returncode"] == 0
-    return result
-
-
 def collect_native_session(native, seconds):
     """Run one native QRTR client for setup, start, follow and stop."""
     if not 5 <= seconds <= 180:
@@ -303,12 +213,6 @@ def main():
         raise ValueError("GNSS readiness wait must stay between 0 and 90 seconds")
     if not Path("/run/oneplus13/ram-session").is_file():
         raise RuntimeError("Protected phone RAM session required")
-    qmicli = next(
-        (path for path in ("/usr/bin/qmicli", "/usr/local/bin/qmicli") if Path(path).is_file()),
-        None,
-    )
-    if not qmicli:
-        raise RuntimeError("qmicli is unavailable")
     native = Path("/usr/libexec/oneplus13-location-session")
     if native.is_file() and os.access(native, os.X_OK):
         result = collect_native_session(native, args.seconds)
@@ -320,30 +224,7 @@ def main():
         )
         print("RAM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
         raise SystemExit(0 if result["pass"] else 1)
-    candidates = (
-        [args.device]
-        if args.device
-        else ["qrtr://0", "qrtr://1"]
-    )
-    selected, probes = probe_devices(qmicli, candidates, args.ready_seconds)
-    result = {
-        "scope": "ONEPLUS13_RAM_QMI_GNSS",
-        "qmicli": qmicli,
-        "device_probes": probes,
-        "selected_device": selected,
-        "nmea": [],
-        "fixes": [],
-        "fix_acquired": False,
-    }
-    if selected is None:
-        print("RAM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
-        raise SystemExit(1)
-    result.update(collect_session(qmicli, selected, args.seconds))
-    result["pass"] = (result["engine_control_qualified"] and result["fix_acquired"]
-                      and result["cleanup_complete"])
-    print("RAM_GNSS_RESULT " + json.dumps(result, sort_keys=True))
-    raise SystemExit(0 if result["pass"] else 1)
-
+    raise RuntimeError("Native same-client GNSS helper is required; unsafe legacy fallback disabled")
 
 if __name__ == "__main__":
     main()

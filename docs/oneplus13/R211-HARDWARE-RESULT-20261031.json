@@ -1,0 +1,60 @@
+{
+  "scope": "R211_COMBINED_RAM_HARDWARE_EVIDENCE",
+  "source_commit": "2303630da73d0ec38308799b62ad6b891df79f52",
+  "source_tree": "911a7e58b6afc0eab85b76d2b1176d104d68d340",
+  "actions_run": 41191715898,
+  "completed": true,
+  "halted": false,
+  "cleanup_pass": true,
+  "gates": {
+    "camera-chip-id": true,
+    "gnss": false,
+    "modem-verify": true,
+    "nfc": false,
+    "usb": false,
+    "wifi-a": true
+  },
+  "uptime_seconds": 93.22,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "baseline_key_count": 7,
+  "boot_attempts": 1,
+  "partition_writes": 0,
+  "private_command_evidence_verified": true,
+  "gnss": {
+    "pass": false,
+    "started": false,
+    "stopped": true,
+    "no_session_started": false,
+    "timed_out": false,
+    "fix_acquired": false,
+    "engine_control_qualified": false,
+    "cleanup_complete": true,
+    "returncode": 1,
+    "position_events_fallback": false,
+    "nmea_defaults_used": true
+  },
+  "gnss_fix_count": 0,
+  "gnss_nmea_count": 0,
+  "gnss_read_only_diagnostics": [
+    "Successfully retrieved engine lock: all",
+    "Successfully retrieved operation mode: standalone"
+  ],
+  "usb_firmware": {
+    "complete": false,
+    "read_only": true,
+    "unavailable": [
+      "oneplus13_otg_ap_enable",
+      "oneplus13_otg_switch"
+    ],
+    "values": {}
+  },
+  "usb_read_only": true,
+  "usb_role_changed": false,
+  "usb_cable_swap_requested": false,
+  "usb_physical_io_qualified": false,
+  "nfc_skipped_owner_no_physical_tag": true,
+  "camera_real_frames_qualified": false,
+  "full_regression_retested": false,
+  "full_adaptation_complete": false
+}

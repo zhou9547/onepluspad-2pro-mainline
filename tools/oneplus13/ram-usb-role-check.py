@@ -306,10 +306,28 @@ def firmware_otg_inventory(root=Path("/sys"), run=subprocess.run):
     No raw property IDs, setter or automatic power policy is exposed here.
     """
     base = Path(root) / "bus/auxiliary/devices/pmic_glink.power-supply.0"
-    facts = {"read_only": True, "values": {}, "unavailable": []}
+    facts = {"read_only": True, "values": {}, "unavailable": [], "status": {},
+             "interface": {}}
+    for field, path, probe in (("device_present", base, Path.is_dir),
+                               ("driver_bound", base / "driver", Path.is_symlink)):
+        try:
+            facts["interface"][field] = probe(path)
+        except OSError:
+            facts["interface"][field] = None
     for name in ("oneplus13_otg_ap_enable", "oneplus13_otg_switch"):
         path = base / name
-        if not path.is_file():
+        try:
+            regular = stat.S_ISREG(path.stat().st_mode)
+        except FileNotFoundError:
+            facts["status"][name] = "missing"
+            facts["unavailable"].append(name)
+            continue
+        except OSError:
+            facts["status"][name] = "stat_error"
+            facts["unavailable"].append(name)
+            continue
+        if not regular:
+            facts["status"][name] = "not_regular"
             facts["unavailable"].append(name)
             continue
         try:
@@ -318,9 +336,16 @@ def firmware_otg_inventory(root=Path("/sys"), run=subprocess.run):
             value = result.stdout.strip()
             if result.returncode == 0 and value in {"0", "1"}:
                 facts["values"][name] = int(value)
+                facts["status"][name] = "ok"
             else:
+                facts["status"][name] = ("read_error" if result.returncode
+                                         else "invalid_value")
                 facts["unavailable"].append(name)
-        except (OSError, subprocess.TimeoutExpired):
+        except subprocess.TimeoutExpired:
+            facts["status"][name] = "timeout"
+            facts["unavailable"].append(name)
+        except OSError:
+            facts["status"][name] = "read_error"
             facts["unavailable"].append(name)
     facts["complete"] = len(facts["values"]) == 2
     return facts

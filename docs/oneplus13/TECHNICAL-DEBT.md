@@ -1,3 +1,26 @@
+# r211 root-cause evidence and remaining hardware gates, 2026-10-31
+
+GNSS AFW registration passes, START returns 46 and STOP succeeds. Read-only
+engine lock=all is a concrete candidate cause, not proof. Operation mode is
+already standalone. The LOC lock is subscription-wide, not a client lease;
+its persistence/privacy and restoration semantics must be established before
+any SET. No automatic unlock is included. The previous cleanup correction
+works on hardware: USB observation continues after clean GNSS functional failure.
+
+OTG attributes were hidden for ABL's physical root identity by the patch's
+compiled-compatible-only gate. Reuse the established exact model/chassis/SoC
+identity boundary and distinguish missing attributes from failed reads. Actual
+firmware GET support, switch lease/restore and physical enumeration/read-only
+I/O remain unqualified. Preserve root-only read attributes and timeout poison.
+Real camera frames remain open; NFC physical tag testing is owner-skipped.
+See USB-OTG-IDENTITY-20261031.md and R211-HARDWARE-RESULT-20261031.json.
+
+The same milestone adds a read-only native --get-engine-lock diagnostic for
+the primary IDL engine state/client masks, with strict response/indication
+validation and no SET. Missing native helper now fails closed; the obsolete
+multi-process fallback with implicit unlock is removed. See
+GNSS-ENGINE-LOCK-20261031.md. This diagnostic still needs hardware observation.
+
 # GNSS start-result and collector semantics, 2026-10-31
 
 r210 hardware advances past Register Events with AFW identity but START fails

@@ -164,7 +164,7 @@ class GnssNmeaTests(unittest.TestCase):
             GNSS.Path, "is_file", return_value=True
         ), patch("os.access", return_value=True), patch.object(
             GNSS, "run", return_value=response
-        ) as run, patch.object(GNSS, "probe_devices") as legacy, patch(
+        ) as run, patch(
             "sys.stdout", output
         ):
             with self.assertRaises(SystemExit) as stopped:
@@ -173,7 +173,6 @@ class GnssNmeaTests(unittest.TestCase):
         run.assert_called_once_with(
             [str(Path("/usr/libexec/oneplus13-location-session")), "--seconds", "30"], 125
         )
-        legacy.assert_not_called()
         result = json.loads(output.getvalue().removeprefix("RAM_GNSS_RESULT "))
         self.assertTrue(result["pass"])
         self.assertTrue(result["cleanup_complete"])
@@ -218,78 +217,16 @@ class GnssNmeaTests(unittest.TestCase):
             sentence("GNGGA,123519,NaN,N,01131.0,E,1,08,0.9,1,M,1,M,,"),
         ]), [])
 
-    def test_loc_actions_separate_and_stop_reuses_client(self):
-        child = Mock(returncode=0)
-        child.communicate.return_value = (sentence("GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,"), "")
-        child.poll.return_value = 0
-        with patch.object(GNSS, "run", side_effect=[
-            {"returncode": 0, "stdout": "CID: '7'"},
-            {"returncode": 0, "stdout": "nmea types"},
-            {"returncode": 0, "stdout": "engine lock"},
-            {"returncode": 0, "stdout": "started"},
-            {"returncode": 0, "stdout": "stopped"},
-        ]) as run, patch.object(GNSS.subprocess, "Popen", return_value=child) as popen:
-            result = GNSS.collect_session("qmicli", "qrtr://0", 30)
-        self.assertTrue(result["fix_acquired"])
-        self.assertTrue(result["cleanup_complete"])
-        self.assertEqual(
-            [call.args[0][-2:] for call in run.call_args_list[:3]],
-            [
-                ["--loc-noop", "--client-no-release-cid"],
-                ["--loc-set-nmea-types=gga|rmc", "--client-no-release-cid"],
-                ["--loc-set-engine-lock=none", "--client-no-release-cid"],
-            ],
-        )
-        self.assertIn("--client-cid=7", popen.call_args.args[0])
-        self.assertIn("--client-cid=7", run.call_args_list[-1].args[0])
-        self.assertIn("--loc-stop", run.call_args_list[-1].args[0])
-        self.assertFalse(
-            any("--device-open-proxy" in call.args[0] for call in run.call_args_list)
-        )
-
-    def test_failed_start_cannot_qualify_engine_or_start_follower(self):
-        responses = [
-            {"returncode": 0, "stdout": "CID: '7'"},
-            {"returncode": 0},
-            {"returncode": 0},
-            {"returncode": 1},
-            {"returncode": 1},
-            {"returncode": 1},
-            {"returncode": 0},
-        ]
-        with patch.object(GNSS, "run", side_effect=responses), patch.object(
-            GNSS.time, "sleep"
-        ), patch.object(GNSS.subprocess, "Popen") as popen:
-            result = GNSS.collect_session("qmicli", "qrtr://0", 30)
-        self.assertFalse(result["engine_control_qualified"])
-        self.assertFalse(result["fix_acquired"])
-        self.assertEqual(len(result["start_attempts"]), 3)
-        self.assertTrue(result["cleanup_complete"])
-        popen.assert_not_called()
-
-    def test_failed_client_setup_skips_start_and_follower(self):
-        with patch.object(
-            GNSS, "run", return_value={"returncode": 1, "stdout": ""}
-        ), patch.object(GNSS.subprocess, "Popen") as popen:
-            result = GNSS.collect_session("qmicli", "qrtr://0", 30)
-        self.assertFalse(result["engine_control_qualified"])
-        self.assertEqual(result["start_attempts"], [])
-        popen.assert_not_called()
-
-    def test_loc_service_probe_retries_until_node_answers(self):
-        responses = [
-            {"returncode": 1, "stderr": "service not ready"},
-            {"returncode": 1, "stderr": "service not ready"},
-            {"returncode": 0, "stdout": "mode"},
-        ]
-        with patch.object(GNSS, "run", side_effect=responses), patch.object(
-            GNSS.time, "sleep"
-        ):
-            selected, probes = GNSS.probe_devices(
-                "qmicli", ["qrtr://0"], 5
-            )
-        self.assertEqual(selected, "qrtr://0")
-        self.assertEqual(len(probes), 3)
+    def test_missing_or_nonexecutable_native_never_starts_legacy_commands(self):
+        for available, executable in ((False, False), (True, False)):
+            def present(path):
+                return str(path) == str(Path("/run/oneplus13/ram-session")) or available
+            with self.subTest(available=available), patch("sys.argv", [str(PATH)]), patch.object(
+                GNSS.Path, "is_file", present
+            ), patch("os.access", return_value=executable), patch.object(GNSS, "run") as run:
+                with self.assertRaisesRegex(RuntimeError, "legacy fallback disabled"):
+                    GNSS.main()
+                run.assert_not_called()
 
     def test_native_session_preserves_nmea_and_cleanup(self):
         nmea = sentence(

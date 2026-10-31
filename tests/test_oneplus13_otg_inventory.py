@@ -38,7 +38,8 @@ class OtgInventoryTests(unittest.TestCase):
         run = Mock(side_effect=AssertionError('no attribute may be read'))
         self.assertEqual(self.inventory(run), {
             'read_only': True, 'values': {}, 'unavailable': list(NAMES),
-            'complete': False,
+            'complete': False, 'status': dict.fromkeys(NAMES, 'missing'),
+            'interface': {'device_present': True, 'driver_bound': False},
         })
         run.assert_not_called()
 
@@ -50,7 +51,8 @@ class OtgInventoryTests(unittest.TestCase):
         ])
         self.assertEqual(self.inventory(run), {
             'read_only': True, 'values': dict(zip(NAMES, (0, 1))),
-            'unavailable': [], 'complete': True,
+            'unavailable': [], 'complete': True, 'status': dict.fromkeys(NAMES, 'ok'),
+            'interface': {'device_present': True, 'driver_bound': False},
         })
         self.assertEqual(run.call_count, 2)
         for call, name in zip(run.call_args_list, NAMES):
@@ -78,6 +80,7 @@ class OtgInventoryTests(unittest.TestCase):
                 self.assertEqual(facts['values'], {})
                 self.assertEqual(facts['unavailable'], list(NAMES))
                 self.assertFalse(facts['complete'])
+                self.assertEqual(facts['status'], dict.fromkeys(NAMES, 'invalid_value'))
 
     def test_failed_command_with_boolean_stdout_is_not_success(self):
         self.attributes()
@@ -86,6 +89,7 @@ class OtgInventoryTests(unittest.TestCase):
         self.assertEqual(facts['values'], {})
         self.assertEqual(facts['unavailable'], list(NAMES))
         self.assertNotIn('private', str(facts))
+        self.assertEqual(facts['status'], dict.fromkeys(NAMES, 'read_error'))
 
     def test_timeout_does_not_claim_partial_stdout_and_continues_other_probe(self):
         self.attributes()
@@ -99,6 +103,7 @@ class OtgInventoryTests(unittest.TestCase):
         self.assertFalse(facts['complete'])
         self.assertEqual(run.call_count, 2)
         self.assertNotIn('private', str(facts))
+        self.assertEqual(facts['status'], {NAMES[0]: 'timeout', NAMES[1]: 'ok'})
 
     def test_oserror_is_unknown_and_does_not_prevent_second_probe(self):
         self.attributes()
@@ -109,6 +114,25 @@ class OtgInventoryTests(unittest.TestCase):
         self.assertEqual(facts['unavailable'], [NAMES[0]])
         self.assertFalse(facts['complete'])
         self.assertEqual(run.call_count, 2)
+        self.assertNotIn('private', str(facts))
+        self.assertEqual(facts['status'], {NAMES[0]: 'read_error', NAMES[1]: 'ok'})
+
+    def test_absent_auxiliary_device_is_distinct_from_missing_attributes(self):
+        self.base.rmdir()
+        facts = self.inventory(Mock(side_effect=AssertionError('no reads')))
+        self.assertFalse(facts['interface']['device_present'])
+        self.assertEqual(facts['status'], dict.fromkeys(NAMES, 'missing'))
+
+    def test_directory_is_not_an_attribute_and_never_read(self):
+        for name in NAMES:
+            (self.base / name).mkdir()
+        facts = self.inventory(Mock(side_effect=AssertionError('no reads')))
+        self.assertEqual(facts['status'], dict.fromkeys(NAMES, 'not_regular'))
+
+    def test_stat_errors_are_distinct_and_do_not_leak_exception_text(self):
+        with patch.object(Path, 'stat', side_effect=PermissionError('private')):
+            facts = self.inventory(Mock(side_effect=AssertionError('no reads')))
+        self.assertEqual(facts['status'], dict.fromkeys(NAMES, 'stat_error'))
         self.assertNotIn('private', str(facts))
 
     def test_unrelated_interface_and_extra_attributes_are_never_read(self):

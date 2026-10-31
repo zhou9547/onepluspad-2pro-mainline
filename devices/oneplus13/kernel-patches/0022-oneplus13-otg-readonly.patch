@@ -8,17 +8,18 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 
 --- a/drivers/power/supply/qcom_battmgr.c
 +++ b/drivers/power/supply/qcom_battmgr.c
-@@ -15,6 +15,9 @@
+@@ -15,6 +15,10 @@
  #include <linux/soc/qcom/pmic_glink.h>
  #include <linux/math.h>
  #include <linux/units.h>
 +#include <linux/of.h>
 +#include <linux/spinlock.h>
++#include <linux/string.h>
 +#include "oneplus13-otg-protocol.h"
  
  #define BATTMGR_CHEMISTRY_LEN	4
  #define BATTMGR_STRING_LEN	128
-@@ -333,6 +336,15 @@
+@@ -333,6 +337,15 @@
  
  	bool service_up;
  
@@ -34,7 +35,37 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  	struct qcom_battmgr_info info;
  	struct qcom_battmgr_status status;
  	struct qcom_battmgr_ac ac;
-@@ -1590,7 +1602,45 @@
+@@ -1586,11 +1599,75 @@
+ 	complete(&battmgr->ack);
+ }
+ 
++/* ABL rewrites root identity. Reuse the existing exact SPR phone gate;
++ * generic qcom,sun alone never exposes this vendor interface.
++ */
++static bool op13_otg_machine(void)
++{
++	struct device_node *root;
++	const char *model, *chassis;
++	bool match = false;
++
++	root = of_find_node_by_path("/");
++	if (!root)
++		return false;
++	if (of_property_read_string(root, "model", &model) ||
++	    of_property_read_string(root, "chassis-type", &chassis) ||
++	    strcmp(chassis, "handset"))
++		goto out;
++	if (!strcmp(model, "OnePlus 13 (AA569 native display experimental candidate)"))
++		match = of_device_is_compatible(root, "oneplus,dodge") &&
++			of_device_is_compatible(root, "qcom,sm8750");
++	else if (!strcmp(model, "Qualcomm Technologies, Inc. Sun MTP,dodge"))
++		match = of_device_is_compatible(root, "qcom,sun");
++out:
++	of_node_put(root);
++	return match;
++}
++
+ static void qcom_battmgr_callback(const void *data, size_t len, void *priv)
  {
  	const struct pmic_glink_hdr *hdr = data;
  	struct qcom_battmgr *battmgr = priv;
@@ -73,7 +104,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +	}
 +	spin_unlock_irqrestore(&battmgr->op13_otg_lock, flags);
 +	/* A late optional response must not complete an ordinary battery read. */
-+	if (of_machine_is_compatible("oneplus,dodge") &&
++	if (op13_otg_machine() &&
 +	    len >= 16 && opcode == OP13_OTG_GET &&
 +	    (op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_AP_ENABLE ||
 +	     op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_SWITCH))
@@ -81,7 +112,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  
  	if (opcode == BATTMGR_NOTIFICATION)
  		qcom_battmgr_notification(battmgr, data, len);
-@@ -1601,6 +1651,93 @@
+@@ -1601,6 +1678,93 @@
  		qcom_battmgr_sm8350_callback(battmgr, data, len);
  }
  
@@ -103,7 +134,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +	unsigned long flags;
 +	int ret;
 +
-+	if (!of_machine_is_compatible("oneplus,dodge"))
++	if (!op13_otg_machine())
 +		return -EOPNOTSUPP;
 +	mutex_lock(&battmgr->lock);
 +	spin_lock_irqsave(&battmgr->op13_otg_lock, flags);
@@ -164,7 +195,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
 +
 +static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, int n)
 +{
-+	return of_machine_is_compatible("oneplus,dodge") ? attr->mode : 0;
++	return op13_otg_machine() ? attr->mode : 0;
 +}
 +
 +static const struct attribute_group op13_otg_group = {
@@ -175,7 +206,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  static void qcom_battmgr_enable_worker(struct work_struct *work)
  {
  	struct qcom_battmgr *battmgr = container_of(work, struct qcom_battmgr, enable_work);
-@@ -1611,7 +1748,9 @@
+@@ -1611,7 +1775,9 @@
  	};
  	int ret;
  
@@ -185,7 +216,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  	if (ret)
  		dev_err(battmgr->dev, "failed to request power notifications\n");
  }
-@@ -1619,13 +1758,20 @@
+@@ -1619,13 +1785,20 @@
  static void qcom_battmgr_pdr_notify(void *priv, int state)
  {
  	struct qcom_battmgr *battmgr = priv;
@@ -210,7 +241,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  }
  
  static const struct of_device_id qcom_battmgr_of_variants[] = {
-@@ -1727,6 +1873,8 @@
+@@ -1727,6 +1900,8 @@
  	INIT_WORK(&battmgr->enable_work, qcom_battmgr_enable_worker);
  	mutex_init(&battmgr->lock);
  	init_completion(&battmgr->ack);
@@ -219,7 +250,7 @@ Source: OnePlusOSS d50b305f oplus_hal_adsp.c/.h. GPL-2.0-only.
  
  	match = of_match_device(qcom_battmgr_of_variants, dev->parent);
  	if (match)
-@@ -1812,7 +1960,8 @@
+@@ -1812,7 +1987,8 @@
  
  	pmic_glink_client_register(battmgr->client);
  

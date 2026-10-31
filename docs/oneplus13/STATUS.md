@@ -1,3 +1,29 @@
+# r211 hardware result and OTG identity correction, 2026-10-31
+
+r211 Actions 41191715898 passed all five hosted jobs and exact image readback.
+The combined RAM round completed in 93.22 seconds, returned to Android with
+seven baselines matching, and made zero partition writes. All executed private
+command evidence verifies. Camera chip-ID, 5 GHz control and MPSS pass. GNSS
+START remains GeneralError (46), but acknowledged STOP is now correctly clean
+and the independent USB phase continued. Read-only LOC reports engine lock=all
+and standalone mode; no lock/mode SET was attempted. NFC is owner-skipped.
+See R211-HARDWARE-RESULT-20261031.json. GNSS fix, real frames and USB I/O remain open.
+
+The optional OTG patch used only compiled oneplus,dodge compatibility, while
+the existing physical-platform/SPR code documents ABL replacing it with the
+exact physical dodge model and qcom,sun. The correction reuses the existing
+strict SPR model/chassis/compatible predicate for visibility, reads and late
+reply filtering. Generic Sun and other boards remain rejected. The USB helper
+now separates absent device/attributes, read error, timeout and invalid values.
+No setters or power policy changes are added. This source correction still
+requires Actions and new hardware observation; it does not establish OTG I/O.
+
+The same milestone adds a read-only native --get-engine-lock diagnostic for
+the primary IDL engine state/client masks, with strict response/indication
+validation and no SET. Missing native helper now fails closed; the obsolete
+multi-process fallback with implicit unlock is removed. See
+GNSS-ENGINE-LOCK-20261031.md. This diagnostic still needs hardware observation.
+
 # r210 hardware and rejected-start cleanup correction, 2026-10-31
 
 r210 Actions 41190113030 passed all five hosted jobs and exact archive/image
