@@ -1,3 +1,20 @@
+# Fixed single-primary camera profile, 2026-10-31
+
+r213 Actions 41193964798 passed all five jobs. Three archive digests, 66
+runtime files, 120 firmware files, 18 native dependencies and the actual OTG
+driver/header patch were independently read back. Native read-only lock and
+AFW markers are present. This image has not been hardware tested; r211 remains
+the last combined hardware record. GNSS fix and physical USB I/O remain open.
+
+The camera helper now offers explicit single-primary capture: one fixed RDI0
+stream, one bounded graph sweep, exact 15-module closure and policy binding,
+no retry/bind/RDI/TPG alternatives or test-pattern change. Work/cleanup/output
+alarms are separate 660/330/30-second ceilings. Cleanup expiry retains a failed
+receipt, failed topology reads cannot prove removal, and occupied trace probes
+refuse streaming. The default full diagnostic path remains available.
+See CAMERA-SINGLE-PRIMARY-20261031.md. These are source/offline lifecycle fixes,
+not real-frame acceptance. No phone operation or authorization renewal follows.
+
 # r211 hardware result and OTG identity correction, 2026-10-31
 
 r211 Actions 41191715898 passed all five hosted jobs and exact image readback.

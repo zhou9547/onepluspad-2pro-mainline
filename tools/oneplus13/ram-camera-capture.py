@@ -36,6 +36,16 @@ WORK_SECONDS = 1500
 CLEANUP_SECONDS = 1150
 OUTPUT_SECONDS = 45
 MEDIA_NODE_MAX = 8
+PROFILE = 'full-diagnostics'
+SINGLE_WORK_SECONDS = 660
+SINGLE_CLEANUP_SECONDS = 330
+SINGLE_OUTPUT_SECONDS = 30
+SINGLE_MODULES = (
+    'camcc_sm8750', 'cambistmclkcc_sm8750', 'phy_qcom_mipi_csi2',
+    'i2c_qcom_cci', 'v4l2_cci', 'mc', 'videodev', 'v4l2_async',
+    'v4l2_fwnode', 's5kjn5', 'videobuf2_common', 'videobuf2_memops',
+    'videobuf2_dma_sg', 'videobuf2_v4l2', 'qcom_camss',
+)
 DEADLINE = None
 TRACE_OWNERS = []
 CLEANUP_STARTED = False
@@ -65,26 +75,30 @@ def arm_deadline(seconds):
 
 
 def bounded_main():
-    global DEADLINE, CLEANUP_STARTED
+    global DEADLINE, CLEANUP_STARTED, PROFILE
+    previous_profile = PROFILE
+    args = parse_args()
+    PROFILE = args.profile
     old = signal.signal(signal.SIGALRM, deadline_expired)
     old_term = signal.signal(signal.SIGTERM, deadline_expired)
     TRACE_OWNERS.clear()
     CLEANUP_STARTED = False
-    arm_deadline(WORK_SECONDS)
+    arm_deadline(SINGLE_WORK_SECONDS if PROFILE == 'single-primary' else WORK_SECONDS)
     try:
-        main()
+        main(args)
     finally:
         signal.setitimer(signal.ITIMER_REAL, 0)
         signal.signal(signal.SIGALRM, old)
         signal.signal(signal.SIGTERM, old_term)
         DEADLINE = None
+        PROFILE = previous_profile
 
 
 def begin_cleanup():
     global CLEANUP_STARTED
     if DEADLINE is not None and not CLEANUP_STARTED:
         CLEANUP_STARTED = True
-        arm_deadline(CLEANUP_SECONDS)
+        arm_deadline(SINGLE_CLEANUP_SECONDS if PROFILE == 'single-primary' else CLEANUP_SECONDS)
 
 
 def media_nodes():
@@ -109,7 +123,9 @@ def progress(stage, **facts):
     temporary.replace(PROGRESS)
 
 
-def run(command, timeout=20, check=True):
+def run(command, timeout=None, check=True):
+    if timeout is None:
+        timeout = 8 if PROFILE == 'single-primary' else 20
     timeout = remaining(timeout)
     result = subprocess.run(
         [str(item) for item in command],
@@ -146,6 +162,8 @@ def load_capture_module(name, attempted):
         "s5kjn5": DEBUG_SENSOR_MODULE,
     }.get(name)
     if debug is not None and debug.is_file():
+        if PROFILE == 'single-primary':
+            raise ValueError('single-primary rejects debug module replacement')
         run(["insmod", str(debug)], timeout=20)
     else:
         run(["modprobe", "--ignore-install", name], timeout=20)
@@ -194,8 +212,12 @@ def parse_media(output):
 def find_media():
     matches = []
     observed = {}
+    until = time.monotonic() + 60 if PROFILE == 'single-primary' else None
     for path in media_nodes():
-        result = run(["media-ctl", "--device", path, "--print-topology"])
+        timeout = min(6, until - time.monotonic()) if until is not None else 20
+        if timeout <= 0:
+            raise CaptureDeadline('Camera discovery deadline expired')
+        result = run(["media-ctl", "--device", path, "--print-topology"], timeout=timeout)
         entities = parse_media(result.stdout)
         observed[str(path)] = sorted(entities)
         required = {"msm_csiphy1", "msm_csid1", VFE_ENTITY, VIDEO_ENTITY}
@@ -403,6 +425,7 @@ def stream_trace_start():
         return {
             "state": None,
             "report": {"available": True, "mode": "kprobe",
+                       "cleanup_pass": False,
                        "error": "Camera trace probes already exist"},
         }
     created = []
@@ -597,8 +620,7 @@ def accept_sensor_frame(report, path, primary_attempt):
     """A validated RDI sensor frame can qualify after the primary RDI fails."""
     fallback = any(item.get("frame_verified") is True
                    for item in report.get("rdi_fallbacks", []))
-    if not fallback and (primary_attempt["returncode"]
-                         or "VIDIOC_STREAMON returned" in primary_attempt["stderr"]):
+    if not fallback and not stream_frame_ready(path, primary_attempt):
         raise ValueError("V4L2 capture failed")
     # TPG output is kept in a separate file and never qualifies this path.
     report["pixels"] = validate_frame(path)
@@ -630,12 +652,19 @@ def cleanup_capture(loaded, original_policy):
         module_loaded(module) for module in loaded
     )
     try:
-        report["media_graph_removed"] = not any(
-            "msm_vfe1" in run(
-                ["media-ctl", "--device", path, "--print-topology"],
-                check=False,
-            ).stdout for path in media_nodes()
-        )
+        until = time.monotonic() + 48 if PROFILE == 'single-primary' else None
+        removed = True
+        for path in media_nodes():
+            timeout = min(6, until - time.monotonic()) if until is not None else 20
+            if timeout <= 0:
+                raise CaptureDeadline('Camera cleanup topology deadline expired')
+            topology = run(["media-ctl", "--device", path, "--print-topology"],
+                           timeout=timeout, check=False)
+            if topology.returncode:
+                raise RuntimeError('Camera cleanup topology read failed')
+            if 'msm_vfe1' in topology.stdout:
+                removed = False
+        report["media_graph_removed"] = removed
     except (OSError, RuntimeError, ValueError, subprocess.SubprocessError) as error:
         report["media_graph_removed"] = False
         cleanup_errors.append("media:" + type(error).__name__)
@@ -649,10 +678,13 @@ def cleanup_capture(loaded, original_policy):
     return report
 
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", required=True)
     parser.add_argument("--frame-timeout", type=int, default=25)
+    parser.add_argument('--profile', choices=('full-diagnostics', 'single-primary'),
+                        default='full-diagnostics')
+    parser.add_argument('--policy-sha256')
     parser.add_argument(
         "--sensor-test-pattern",
         type=int,
@@ -660,6 +692,26 @@ def main():
         help="Optionally select a sensor test pattern before streaming",
     )
     args = parser.parse_args()
+    if args.profile == 'single-primary':
+        if args.frame_timeout != 25 or args.sensor_test_pattern != -1:
+            parser.error('single-primary requires fixed 25s and no test pattern')
+        if not re.fullmatch('[0-9a-f]{64}', args.policy_sha256 or ''):
+            parser.error('single-primary requires exact policy SHA256')
+    return args
+
+
+def validate_single_primary(ordered, original_policy, expected_policy):
+    if tuple(ordered) != SINGLE_MODULES:
+        raise ValueError('Unexpected single-primary module dependency closure')
+    if hashlib.sha256(original_policy).hexdigest() != expected_policy:
+        raise ValueError('Changed single-primary module policy')
+    if any(path.exists() for path in (DEBUG_CPHY_MODULE, DEBUG_CAMSS_MODULE, DEBUG_SENSOR_MODULE)):
+        raise ValueError('single-primary rejects debug module replacement')
+    if any(module_loaded(name) for name in ('s5kjn5', 'qcom_camss', 'phy_qcom_mipi_csi2')):
+        raise ValueError('single-primary requires unowned camera modules')
+
+
+def main(args):
     if os.geteuid() != 0 or os.uname().release != args.release:
         raise ValueError("Wrong camera root/kernel")
     if not Path("/run/oneplus13/ram-session").is_file():
@@ -686,6 +738,7 @@ def main():
     loaded = []
     report = {
         "scope": "REAL_S5KJN5_CPHY_FRAME",
+        "profile": args.profile,
         "width": WIDTH,
         "height": HEIGHT,
         "pixel_format": "V4L2_PIX_FMT_SGBRG10P",
@@ -710,6 +763,8 @@ def main():
         (module_root / "modules.dep").read_text(), list(modules)
     )
     original_policy = POLICY.read_bytes()
+    if args.profile == 'single-primary':
+        validate_single_primary(ordered, original_policy, args.policy_sha256)
     report["module_closure"] = ordered
     report["policy_sha256_before"] = hashlib.sha256(
         original_policy
@@ -728,17 +783,21 @@ def main():
         ).stdout[-24000:]
         progress("media-discovery")
         device = None
-        until = time.monotonic() + 12
-        while time.monotonic() < until:
-            try:
-                device, entities, sensor = find_media()
-                break
-            except (OSError, RuntimeError, ValueError):
-                report["media_inventory"] = {
-                    str(path): run(["media-ctl", "--device", path, "--print-topology"], check=False).stdout[-32768:]
-                    for path in media_nodes()
-                }
-                time.sleep(0.25)
+        if args.profile == 'single-primary':
+            # Exactly one discovery sweep; no manual bind or repeated inventory.
+            device, entities, sensor = find_media()
+        else:
+            until = time.monotonic() + 12
+            while time.monotonic() < until:
+                try:
+                    device, entities, sensor = find_media()
+                    break
+                except (OSError, RuntimeError, ValueError):
+                    report["media_inventory"] = {
+                        str(path): run(["media-ctl", "--device", path, "--print-topology"], check=False).stdout[-32768:]
+                        for path in media_nodes()
+                    }
+                    time.sleep(0.25)
         if device is None:
             report["camss_probe_trace"] = camss_probe_trace()
             report["module_dmesg_after_retry"] = run(
@@ -824,7 +883,7 @@ def main():
         progress("stream-start", video=video)
         try:
             attempts = []
-            for attempt in range(3):
+            for attempt in range(1 if args.profile == 'single-primary' else 3):
                 if attempt:
                     time.sleep(0.75)
                 command = [
@@ -844,6 +903,7 @@ def main():
                     stderr=subprocess.PIPE,
                     text=True,
                 )
+                timed_out = False
                 try:
                     time.sleep(remaining(2))
                     during_irq = Path("/proc/interrupts").read_text()
@@ -851,6 +911,7 @@ def main():
                         timeout=remaining(args.frame_timeout)
                     )
                 except subprocess.TimeoutExpired:
+                    timed_out = True
                     stdout, stderr = reap_stream(process)
                     stderr += "\nv4l2-ctl process timeout\n"
                 except BaseException:
@@ -863,6 +924,7 @@ def main():
                 attempts.append({
                     "attempt": attempt + 1,
                     "returncode": process.returncode,
+                    "timed_out": timed_out,
                     "stdout": stdout[-2000:],
                     "stderr": stderr[-4000:],
                     "frame_bytes": FRAME.stat().st_size
@@ -903,7 +965,7 @@ def main():
             ["dmesg"], timeout=8, check=False
         ).stdout[-16000:]
         sensor_frame_ready = stream_frame_ready(FRAME, attempts[-1])
-        if not sensor_frame_ready:
+        if not sensor_frame_ready and args.profile != 'single-primary':
             variants = []
             report["rdi_fallbacks"] = variants
             for pad, vfe_entity, video_entity in (
@@ -984,7 +1046,7 @@ def main():
                     variant["error"] = (
                         type(error).__name__ + ": " + str(error)
                     )
-        if not sensor_frame_ready:
+        if not sensor_frame_ready and args.profile != 'single-primary':
             tpg_report = {"attempts": []}
             report["tpg_fallback"] = tpg_report
             try:
@@ -1077,16 +1139,22 @@ def main():
             report["cleanup_checkpoint_error"] = type(error).__name__
         report["trace_owner_cleanup"] = []
         try:
-            for item in TRACE_OWNERS:
-                try:
-                    report["trace_owner_cleanup"].append(stream_trace_stop(item))
-                except Exception as error:
-                    report["trace_owner_cleanup"].append({
-                        "cleanup_pass": False, "error": type(error).__name__})
-        finally:
-            report.update(cleanup_capture(loaded, original_policy))
+            try:
+                for item in TRACE_OWNERS:
+                    try:
+                        report["trace_owner_cleanup"].append(stream_trace_stop(item))
+                    except Exception as error:
+                        report["trace_owner_cleanup"].append({
+                            "cleanup_pass": False, "error": type(error).__name__})
+            finally:
+                report.update(cleanup_capture(loaded, original_policy))
+        except CaptureDeadline:
+            # The cleanup function still attempts exact policy restoration in
+            # its finally. Preserve an explicitly failed receipt under the
+            # separate output alarm; expiry never proves module/trace cleanup.
+            report.update(cleanup_pass=False, cleanup_deadline_expired=True)
         if DEADLINE is not None:
-            arm_deadline(OUTPUT_SECONDS)
+            arm_deadline(SINGLE_OUTPUT_SECONDS if PROFILE == 'single-primary' else OUTPUT_SECONDS)
         report["cleanup_pass"] &= (
             report.get("stream_trace", {}).get("cleanup_pass", True)
             and report.get("camss_probe_trace", {}).get("cleanup_pass", True)

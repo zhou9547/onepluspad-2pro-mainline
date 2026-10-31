@@ -141,6 +141,7 @@ class CameraCaptureRuntime(unittest.TestCase):
              mock.patch.object(capture.signal, 'ITIMER_REAL', 0, create=True), \
              mock.patch.object(capture.signal, 'signal', return_value=0) as handler, \
              mock.patch.object(capture.signal, 'setitimer', create=True) as alarm, \
+             mock.patch.object(capture, 'parse_args', return_value=mock.Mock(profile='full-diagnostics')), \
              mock.patch.object(capture, 'main', side_effect=capture.CaptureDeadline):
             with self.assertRaises(capture.CaptureDeadline):
                 capture.bounded_main()
