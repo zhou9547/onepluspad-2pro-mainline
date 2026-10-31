@@ -1,3 +1,37 @@
+# r217 hardware evidence and r218 USB timing correction, 2026-10-31
+
+r217 public image 1c3b87de92d9cb88ff51c7bff54da929a0d78262 passed all five
+Actions 41200667948 jobs and exact image readback. One combined RAM boot
+completed at guest uptime 306.19s, returned to Android with all seven baseline
+properties identical, and recorded zero partition writes. Independent review
+checked 23 command records and 34 receipts with 92 assertions. WiFi 5GHz,
+existing MPSS and camera chip-ID pass; this was not a full regression.
+
+The fixed USB gate reached ACTIVE and a real xHCI with root hubs. The final
+helper receipt independently verifies RESTORED, used1, dirty_ap0/dirty_switch0;
+role restoration and cleanup pass. No external peripheral enumeration or
+storage I/O is qualified. Local Type-C selected device/sink; the initial
+partner was present, later absent with host controller removed. The owner's
+connection confirmation arrived 7.79s after the first received clean receipt.
+That is a chat timing observation, not physical insertion timing or proof of
+the cause. Do not claim that the gate failed or CC/VBUS is definitively broken.
+
+USB's return card expired; later independent GNSS and camera stages continued
+after proven cleanup. The late owner return was recorded separately without
+backfilling an expired control grant. GNSS has no fix; one camera attempt
+produced zero bytes/select timeout, with full teardown. NFC remains skipped.
+The one-boot grant is consumed. See R217-HARDWARE-RESULT-20261031.json.
+
+r218 changes only the installed USB helper's bounded default/max enumeration
+wait from 45s to 60s, and records monotonic start/wait/restore boundaries.
+The 80s work budget, 120s kernel best-effort restore, 32s storage reservation,
+single acquire, firmware command sequence, poison/UNKNOWN behavior and role
+policy are unchanged. Slow start/diagnostics shorten the wait. No peripheral
+is reported as a budget-limited observation, with physical connection time
+explicitly unverified. Existing explicit 45s callers stay at 45s; any new
+runner must select the reviewed 60s wait explicitly. r218 is an offline
+candidate until exact Actions and a fresh reviewed hardware round qualify it.
+
 # USB image qualification correction, 2026-10-31
 
 The r215 kernel, rootfs, Mesa and SSC Actions jobs passed, but final image

@@ -23,6 +23,7 @@ FIRMWARE_LEASE = Path('/sys/bus/auxiliary/devices/pmic_glink.power-supply.0/onep
 # Reserve 40 of the fixed kernel 120 seconds for role/firmware restoration.
 # These are process budgets, not hard real-time scheduler guarantees.
 FIRMWARE_WORK_SECONDS = 80
+FIRMWARE_WAIT_SECONDS_MAX = 60
 
 
 def ensure_debugfs():
@@ -527,7 +528,7 @@ def main():
                         help='Explicit fixed AP17/SWITCH18 lease, experimental RAM boot only')
     args = parser.parse_args()
     if args.wait_seconds is None:
-        args.wait_seconds = 45 if args.firmware_lease else 75
+        args.wait_seconds = FIRMWARE_WAIT_SECONDS_MAX if args.firmware_lease else 75
     if not 3 <= args.wait_seconds <= 120:
         parser.error("--wait-seconds must be between 3 and 120")
     if not RAM_MARKER.is_file():
@@ -535,8 +536,8 @@ def main():
     if args.firmware_lease:
         flags = set(Path('/proc/cmdline').read_text().split())
         required = {'oneplus13.usb_host_probe=1', 'qcom_battmgr.oneplus13_otg_lease=1'}
-        if os.geteuid() != 0 or not required <= flags or args.wait_seconds > 45:
-            raise RuntimeError('USB firmware lease requires opt-in boot, root and at most 45s wait')
+        if os.geteuid() != 0 or not required <= flags or args.wait_seconds > FIRMWARE_WAIT_SECONDS_MAX:
+            raise RuntimeError('USB firmware lease requires opt-in boot, root and at most 60s wait')
     mode = mode_paths()
     before = read(mode)
     if before != "device":
@@ -562,6 +563,7 @@ def main():
             if status != {'state': 0, 'used': 0, 'dirty_ap': 0, 'dirty_switch': 0}:
                 raise RuntimeError('USB firmware lease is not unused')
             result['firmware_lease_attempted'] = True
+            result['firmware_lease_start_uptime'] = round(time.monotonic(), 3)
             lease_work_deadline = time.monotonic() + FIRMWARE_WORK_SECONDS
             firmware_lease_command('start')
             result['firmware_lease_active'] = firmware_lease_status()
@@ -582,16 +584,23 @@ def main():
         if args.firmware_lease:
             # Leave room for the following bounded kernel diagnostic.
             wait_seconds = min(wait_seconds, max(0, lease_work_deadline - time.monotonic() - 8))
+        result['peripheral_wait_requested_seconds'] = args.wait_seconds
+        result['peripheral_wait_budget_seconds'] = round(wait_seconds, 3)
+        result['peripheral_wait_begin_uptime'] = round(time.monotonic(), 3)
         result["host_inventory"], result["host_inventory_samples"] = (
             wait_for_host_driver(wait_seconds, reconcile=lambda: reconcile_host(
                 mode, result["role_observations"]))
         )
+        result['peripheral_wait_end_uptime'] = round(time.monotonic(), 3)
         result["typec_after_peripheral_wait"] = typec_inventory()
         result["role_after_peripheral_wait"] = read(mode)
         result["kernel_after_peripheral_wait"] = kernel_diagnostics()
         result["host_peripheral_receipt"] = bool(
             result["host_inventory"]["usb_peripherals"]
         )
+        result['physical_connection_time_verified'] = False
+        if not result['host_peripheral_receipt']:
+            result['peripheral_wait_outcome'] = 'no_peripheral_observed_within_budget'
         if result["host_inventory"]["usb_storage_bound"]:
             if not args.firmware_lease or lease_work_deadline - time.monotonic() >= 32:
                 result["storage_read_only"] = storage_read_only_probe()
@@ -618,7 +627,9 @@ def main():
         finally:
             if result.get('firmware_lease_attempted'):
                 try:
+                    result['firmware_restore_begin_uptime'] = round(time.monotonic(), 3)
                     result['firmware_lease_restore'] = firmware_lease_restore()
+                    result['firmware_restore_end_uptime'] = round(time.monotonic(), 3)
                 except (OSError, RuntimeError, subprocess.TimeoutExpired):
                     result['firmware_lease_restore'] = {'cleanup_complete': False}
         result["cleanup_inventory"] = inventory()

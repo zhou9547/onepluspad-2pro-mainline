@@ -1,0 +1,98 @@
+{
+  "scope": "R217_USB_FIRST_COMBINED_RAM_HARDWARE_EVIDENCE",
+  "source_commit": "1c3b87de92d9cb88ff51c7bff54da929a0d78262",
+  "source_tree": "389c44ae200fbba50c0f72bbcef5125744fa60bf",
+  "actions_run": 41200667948,
+  "completed": true,
+  "halted": false,
+  "cleanup_pass": true,
+  "gates": {
+    "camera": false,
+    "camera-chip-id": true,
+    "gnss": false,
+    "modem-verify": true,
+    "nfc": false,
+    "usb": false,
+    "wifi-a": true
+  },
+  "uptime_seconds": 306.19,
+  "android_return_confirmed": true,
+  "baseline_keys_match": true,
+  "baseline_key_count": 7,
+  "boot_attempts": 1,
+  "partition_writes": 0,
+  "private_command_evidence_verified": true,
+  "command_evidence_count": 23,
+  "receipt_count": 34,
+  "independent_assertions_passed": 92,
+  "host_errors": [],
+  "firmware_residual_unknown": false,
+  "usb": {
+    "firmware_baseline": {
+      "oneplus13_otg_ap_enable": 0,
+      "oneplus13_otg_switch": 0
+    },
+    "firmware_active": {
+      "dirty_ap": 1,
+      "dirty_switch": 1,
+      "state": 1,
+      "used": 1
+    },
+    "firmware_restore": {
+      "cleanup_complete": true,
+      "status": {
+        "dirty_ap": 0,
+        "dirty_switch": 0,
+        "state": 2,
+        "used": 1
+      }
+    },
+    "initial_host_controller_ready": true,
+    "host_role_verified": true,
+    "role_after_peripheral_wait": "device",
+    "peripheral_enumerated": false,
+    "physical_io_qualified": false,
+    "role_restored": true,
+    "cleanup_complete": true,
+    "selected_local_typec_role": "device/sink",
+    "partner_after_wait": false,
+    "host_absent_when_partner_absent": true,
+    "wait_seconds": 45,
+    "owner_return_card_unconfirmed_at_deadline": true,
+    "owner_return_later_observed": true,
+    "connection_confirmation_after_cleanup_seconds": 7.79,
+    "real_physical_plug_time_known": false,
+    "causality": "Initial partner present; later partner absent and host controller removed; no external peripheral enumeration or I/O qualified; physical timing and CC/VBUS cause unproven",
+    "no_runtime_firmware_transaction_trace": true
+  },
+  "gnss": {
+    "pass": false,
+    "started": false,
+    "stopped": true,
+    "timed_out": false,
+    "fix_acquired": false,
+    "cleanup_complete": true,
+    "returncode": 1
+  },
+  "camera": {
+    "real_frame_verified": false,
+    "attempts": [
+      {
+        "attempt": 1,
+        "returncode": 0,
+        "timed_out": false,
+        "frame_bytes": 0,
+        "error_class": "select_timeout"
+      }
+    ],
+    "cleanup_pass": true,
+    "modules_unloaded": true,
+    "policy_restored": true,
+    "media_graph_removed": true
+  },
+  "independent_functional_failures_continue_after_cleanup": true,
+  "nfc_skipped_owner_no_physical_tag": true,
+  "full_regression_retested": false,
+  "full_adaptation_complete": false,
+  "joint_acceptance_pass": false
+}

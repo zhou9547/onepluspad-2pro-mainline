@@ -2,6 +2,7 @@
 """Exercise the installed helper lifecycle without accessing a phone."""
 from contextlib import ExitStack
 import importlib.util
+import itertools
 import json
 from pathlib import Path
 import subprocess
@@ -124,16 +125,20 @@ class FirmwareLeaseHelperTests(unittest.TestCase):
             self.assertIsInstance(error, RuntimeError)
             self.assertIsNone(receipt)
             self.assertEqual((commands, cleanups), ([], 0))
-        receipt, error, commands, cleanups, _, _ = self.run_main(['--firmware-lease', '--wait-seconds', '46'])
+        receipt, error, commands, cleanups, _, _ = self.run_main(['--firmware-lease', '--wait-seconds', '61'])
         self.assertIsInstance(error, RuntimeError)
         self.assertEqual((commands, cleanups), ([], 0))
 
-    def test_opt_in_default_wait_is_45_and_cleaned(self):
+    def test_opt_in_default_wait_is_60_with_same_restore_reserve(self):
         receipt, error, commands, cleanups, wait, _ = self.run_main(['--firmware-lease'])
         self.assertEqual(error.code, 0)
         self.assertEqual(commands[0].args, ('start',))
         self.assertEqual(cleanups, 1)
-        self.assertLessEqual(wait.args[0], 45)
+        self.assertLessEqual(wait.args[0], 60)
+        self.assertEqual(receipt['peripheral_wait_requested_seconds'], 60)
+        self.assertEqual(USB.FIRMWARE_WORK_SECONDS, 80)
+        self.assertFalse(receipt['physical_connection_time_verified'])
+        self.assertEqual(receipt['peripheral_wait_outcome'], 'no_peripheral_observed_within_budget')
         self.assertTrue(receipt['cleanup_complete'])
 
     def test_start_failure_and_timeout_still_restore(self):
@@ -159,10 +164,28 @@ class FirmwareLeaseHelperTests(unittest.TestCase):
 
     def test_storage_requires_32_seconds_before_restore_reserve(self):
         receipt, error, _, _, _, probes = self.run_main(['--firmware-lease'],
-            storage=True, clock=iter([100, 149, 150, 151, 152]).__next__)
+            storage=True, clock=itertools.chain([100, 100, 149, 150, 151, 152], itertools.repeat(153)).__next__)
         self.assertEqual(probes, 0)
         self.assertTrue(receipt['storage_skipped_lease_budget'])
         self.assertFalse(receipt['functional_pass'])
+
+    def test_diagnostics_and_start_reduce_wait_without_extending_work(self):
+        receipt, error, _, cleanups, wait, _ = self.run_main(['--firmware-lease'],
+            clock=itertools.chain([100, 100, 140, 141, 142], itertools.repeat(143)).__next__)
+        self.assertEqual(error.code, 0)
+        self.assertEqual(wait.args[0], 32)
+        self.assertEqual(receipt['peripheral_wait_budget_seconds'], 32)
+        self.assertEqual(cleanups, 1)
+
+    def test_cleanup_is_recorded_after_explicit_60_second_wait(self):
+        receipt, error, commands, cleanups, wait, _ = self.run_main(
+            ['--firmware-lease', '--wait-seconds', '60'])
+        self.assertEqual(error.code, 0)
+        self.assertLessEqual(wait.args[0], 60)
+        self.assertEqual([c.args for c in commands], [('start',)])
+        self.assertEqual(cleanups, 1)
+        self.assertLessEqual(receipt['peripheral_wait_begin_uptime'], receipt['peripheral_wait_end_uptime'])
+        self.assertLessEqual(receipt['firmware_restore_begin_uptime'], receipt['firmware_restore_end_uptime'])
 
     def test_lease_headers_bundled_and_targets_boot_opt_in(self):
         build = (ROOT/'tools/oneplus13/build.sh').read_text()

@@ -1,3 +1,19 @@
+# r217 physical outcome and r218 wait accounting
+
+The reviewed r217 hardware round verifies gate ACTIVE, a real host controller,
+and final reverse restoration. External enumeration and I/O are still false.
+Chat confirmation occurred after cleanup; actual insertion time is unknown.
+The host-to-device transition and absent later partner do not prove a CC/VBUS
+root cause. See R217-HARDWARE-RESULT-20261031.json.
+
+r218 permits a 60s maximum/default wait only for the explicit lease helper.
+The same 80s work deadline deducts elapsed start/diagnostics plus 8s diagnostic
+reservation, and storage still needs at least 32s before work expiry. Monotonic
+boundaries distinguish actual observation time from owner message time. Kernel
+watchdog remains 120s; it is best effort and UNKNOWN remains terminal. No new
+firmware property, enabling retry or Type-C power-role write is introduced.
+Earlier 45s descriptions below document the r217 tested implementation.
+
 # USB fixed firmware gate candidate, 2026-10-31
 
 The owner prioritizes USB before the remaining peripherals. r214 proved only
