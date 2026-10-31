@@ -1,3 +1,18 @@
+# NFC event delivery and cleanup candidate, 2026-10-31
+
+5 GHz is an already qualified feature, not remaining RF work. The owner
+explicitly requests preserving it while advancing GNSS/NFC/camera/USB jointly.
+The NFC helper previously waited until the entire RF deadline instead of
+the next periodic query, dropped multicast during replies and always reported
+cleanup success. These userspace faults are reproduced and corrected.
+The new candidate still needs a physical tag and verified controller cleanup.
+It does not establish that the r191 RF/firmware behavior is fixed.
+
+Camera analysis still sees real CCI init -110 before real-frame acceptance.
+The checked-in upstream sensor driver stops on the first failing init write;
+changing C-PHY timing or copying Pad power data is not justified by that log.
+USB Type-C/ADSP observations and GNSS start/fix/stop remain in the joint plan.
+
 # WiFi delivery and USB observation boundary, 2026-10-31
 
 WiFi-only bringup no longer depends on accelerometer service availability;

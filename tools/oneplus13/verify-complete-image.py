@@ -390,14 +390,20 @@ def main():
             Fdt(target_sections['dtb']).nodes!=target_tree.nodes):
         raise ValueError('Infrared/USB-role DTB changed')
     nfc_files=m.get('nfc_files',{})
-    if (set(nfc_files)!={'usr/lib/systemd/system/oneplus13-nfc.service'} or
+    if (set(nfc_files)!={'usr/lib/systemd/system/oneplus13-nfc.service',
+                         'usr/libexec/oneplus13-ram-nfc-poll.py'} or
             m.get('nfc_service_auto_started') is not True or
+            m.get('nfc_poll_auto_started') is not False or
+            m.get('nfc_poll_requires_host_overlay') is not False or
             m.get('nfc_controller_bind_hardware_qualified') is not False or
             m.get('nfc_tag_poll_hardware_qualified') is not False):
         raise ValueError('Missing reviewed default NFC service')
     for name,digest in nfc_files.items():
         raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
-        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('NFC service changed')
+        source=(Path(__file__).resolve().parents[2]/('tools/oneplus13/ram-nfc-poll.py'
+                if name.endswith('ram-nfc-poll.py') else 'devices/oneplus13/nfc/oneplus13-nfc.service'))
+        if hashlib.sha256(raw).hexdigest()!=digest or sha256(source)!=digest:
+            raise ValueError('NFC runtime differs from manifest or checked-out source')
     nfc_review=m.get('nfc_dtb_review',{})
     if (nfc_review.get('output_sha256')!=hashlib.sha256(default_expected).hexdigest() or
             nfc_review.get('default_boot_tree_changed') is not True):

@@ -1,4 +1,19 @@
-# WiFi-first joint continuation, 2026-10-31
+# Accepted WiFi baseline and remaining joint targets, 2026-10-31
+
+The owner clarifies that 5 GHz is already working: r191's 5240 MHz control
+channel remains accepted. Both bands are preservation/regression targets.
+Actions 41156920220 completed all five source/image jobs for public commit
+9727c0c2204fa210a9aa8fe418b719f473a415d6. Its WiFi changes improve delivery
+and isolate sensor failures; they do not reopen RF adaptation.
+
+The next NFC candidate corrects the RF-wait timer and preserves multicast
+events received alongside request replies. Cleanup now requires bounded
+STOP/DOWN responses and power-off readback of the selected controller; failures
+can no longer pass. The polling helper is delivered and source/hash-verified
+in the complete image, without automatic RF polling. See
+NFC-JOINT-CONTINUATION-20261031.md. No new hardware acceptance is claimed.
+
+# WiFi delivery and joint continuation, 2026-10-31
 
 The current owner request resumes adaptation/builds with 5 GHz priority and
 combined hardware rounds. Historical 5240 MHz acceptance and the successful

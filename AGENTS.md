@@ -1,5 +1,10 @@
 # Owner resumes adaptation, 2026-10-31
 
+Owner clarification in the current chat: 5 GHz already works, including the
+5240 MHz r191 control channel. Treat both WiFi bands as preservation/regression
+baselines, not an unfinished RF adaptation target. Current work prioritizes
+the remaining GNSS, NFC, camera and USB goals in combined physical rounds.
+
 The current chat requests continued adaptation with 5 GHz WiFi first, then
 the original project's integration order. Preserve working features, combine
 several reviewed targets in one physical round, publish meaningful progress,

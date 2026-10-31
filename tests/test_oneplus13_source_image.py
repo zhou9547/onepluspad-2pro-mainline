@@ -4,6 +4,14 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 
 class SourceImageTests(unittest.TestCase):
+    def test_nfc_poll_is_delivered_and_bound_to_final_source(self):
+        package=(ROOT/'tools/oneplus13/package-source-local.py').read_text()
+        verify=(ROOT/'tools/oneplus13/verify-complete-image.py').read_text()
+        self.assertIn("nfc_poll=stage/'usr/libexec/oneplus13-ram-nfc-poll.py'",package)
+        self.assertIn('nfc_poll_auto_started=False,nfc_poll_requires_host_overlay=False',package)
+        self.assertIn('usr/libexec/oneplus13-ram-nfc-poll.py',verify)
+        self.assertIn("sha256(source)!=digest",verify)
+
     def test_run88_functional_inputs_are_restored(self):
         lock=json.loads((ROOT/'devices/oneplus13/functional-source-lock.json').read_text())
         for name,sha in lock['files'].items():

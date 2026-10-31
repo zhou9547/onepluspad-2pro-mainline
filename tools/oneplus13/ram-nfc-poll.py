@@ -3,6 +3,8 @@
 """Exercise the Linux NFC generic-netlink interface on a RAM session only."""
 
 import argparse
+from collections import deque
+import errno
 import json
 from pathlib import Path
 import select
@@ -148,6 +150,8 @@ class NfcNetlink:
         self.sock.setblocking(False)
         self.sequence = 1
         self.deadline = deadline
+        self.pending_events = deque()
+        self.target_event_observed = False
         self.family, self.events_group = self._family()
         self.last_targets = []
         if self.events_group is not None:
@@ -176,6 +180,18 @@ class NfcNetlink:
         self.sock.send(packet)
         return sequence
 
+    def _sequence_packets(self, sequence):
+        packets = recv_packets(self.sock)
+        # Preserve every multicast before returning on an ACK/DONE, including
+        # events later in that same datagram. Fail closed on an event flood.
+        for packet in packets:
+            kind, _, seq, _, payload = packet
+            if seq == 0 and kind == getattr(self, 'family', None) and len(payload) >= 4:
+                if len(self.pending_events) >= 128:
+                    raise RuntimeError('NFC event backlog exceeded')
+                self.pending_events.append(packet)
+        return [packet for packet in packets if packet[2] == sequence]
+
     def _receive_until(self, sequence, timeout):
         end = min(time.monotonic() + timeout, self.deadline)
         rows = []
@@ -183,7 +199,7 @@ class NfcNetlink:
             ready, _, _ = select.select([self.sock], [], [], max(0, end - time.monotonic()))
             if not ready:
                 break
-            for kind, flags, seq, _, payload in recv_packets(self.sock):
+            for kind, flags, seq, _, payload in self._sequence_packets(sequence):
                 if kind == NLMSG_ERROR:
                     code = parse_error(payload)
                     if seq == sequence:
@@ -195,8 +211,6 @@ class NfcNetlink:
                     if flags & NLM_F_MULTI == 0 and kind != NLMSG_DONE:
                         # Requests with ACK may return data followed by ACK.
                         continue
-        if rows:
-            return rows
         raise TimeoutError("NFC netlink request timed out")
 
     def request(self, command, attributes=(), timeout=8):
@@ -217,7 +231,7 @@ class NfcNetlink:
             )
             if not ready:
                 break
-            for kind, flags, seq, _, payload in recv_packets(self.sock):
+            for kind, flags, seq, _, payload in self._sequence_packets(sequence):
                 if seq != sequence:
                     continue
                 if kind == NLMSG_ERROR:
@@ -304,11 +318,12 @@ class NfcNetlink:
             rows.append(facts)
         return rows
 
-    def targets(self, index):
+    def targets(self, index, timeout=8):
         rows = []
         current = None
         for command, payload in self.dump(
-            NFC_CMD_GET_TARGET, attributes=(attr_u32(NFC_ATTR_DEVICE_INDEX, index),)
+            NFC_CMD_GET_TARGET, attributes=(attr_u32(NFC_ATTR_DEVICE_INDEX, index),),
+            timeout=timeout,
         ):
             if command != NFC_CMD_GET_TARGET:
                 continue
@@ -333,46 +348,97 @@ class NfcNetlink:
             rows.append(current)
         return rows
 
+    def _found_event(self, index):
+        while self.pending_events:
+            kind, _, _, _, payload = self.pending_events.popleft()
+            if kind != self.family or len(payload) < 4 or payload[0] != NFC_EVENT_TARGETS_FOUND:
+                continue
+            for attr_kind, value, _ in parse_attrs(payload[4:]):
+                if attr_kind == NFC_ATTR_DEVICE_INDEX and len(value) == 4:
+                    if struct.unpack('<I', value)[0] == index:
+                        self.target_event_observed = True
+                        return True
+        return False
+
     def wait_found(self, index, seconds):
         end = min(time.monotonic() + seconds, self.deadline)
         next_poll = 0.0
         while time.monotonic() < end:
+            if self._found_event(index):
+                return True
             now = time.monotonic()
             if now >= next_poll:
                 try:
-                    targets = self.targets(index)
+                    targets = self.targets(index, timeout=min(2, max(0, end - now)))
                     if targets:
                         self.last_targets = targets
                         return True
                 except (OSError, TimeoutError, ValueError):
                     pass
-                next_poll = now + 1.0
+                next_poll = time.monotonic() + 1.0
+                if self._found_event(index):
+                    return True
             ready, _, _ = select.select(
-                [self.sock], [], [], max(0, end - time.monotonic())
+                [self.sock], [], [], max(0, min(end, next_poll) - time.monotonic())
             )
             if not ready:
-                return False
-            for kind, _, _, _, payload in recv_packets(self.sock):
-                if kind != self.family or len(payload) < 4:
-                    continue
-                command = payload[0]
-                if command != NFC_EVENT_TARGETS_FOUND:
-                    continue
-                attributes = parse_attrs(payload[4:])
-                event_index = next(
-                    (
-                        struct.unpack("<I", value)[0]
-                        for attr_kind, value, _ in attributes
-                        if attr_kind == NFC_ATTR_DEVICE_INDEX and len(value) == 4
-                    ),
-                    None,
-                )
-                if event_index == index:
-                    return True
+                continue
+            self._sequence_packets(-1)
+        if self._found_event(index):
+            return True
         return False
 
     def close(self):
         self.sock.close()
+
+
+def selected_device(rows, index):
+    matches = [row for row in rows if row.get('index') == index]
+    if len(matches) != 1 or type(matches[0].get('powered')) is not bool:
+        raise RuntimeError('Selected NFC device power state is not uniquely known')
+    return matches[0]
+
+
+def cleanup(netlink, index, poll_attempted):
+    facts = {'stop_poll_ack': not poll_attempted, 'dev_down_ack': False,
+             'selected_device_powered_off': False, 'errors': []}
+    attributes = (attr_u32(NFC_ATTR_DEVICE_INDEX, index),)
+    if poll_attempted:
+        try:
+            netlink.request(NFC_CMD_STOP_POLL, attributes=attributes, timeout=4)
+            facts['stop_poll_ack'] = True
+        except OSError as exc:
+            # Linux stops polling when a target is found; STOP then returns
+            # EINVAL. Accept only this errno, and only with verified power-off.
+            if exc.errno == errno.EINVAL:
+                facts['stop_poll_already_idle'] = True
+            else:
+                facts['errors'].append({'operation': 'stop_poll', 'errno': exc.errno})
+        except (TimeoutError, ValueError, RuntimeError) as exc:
+            facts['errors'].append({'operation': 'stop_poll', 'error': type(exc).__name__})
+    try:
+        netlink.request(NFC_CMD_DEV_DOWN, attributes=attributes, timeout=4)
+        facts['dev_down_ack'] = True
+    except OSError as exc:
+        if exc.errno == errno.EALREADY:
+            facts['dev_down_already_off'] = True
+        else:
+            facts['errors'].append({'operation': 'dev_down', 'errno': exc.errno})
+    except (TimeoutError, ValueError, RuntimeError) as exc:
+        facts['errors'].append({'operation': 'dev_down', 'error': type(exc).__name__})
+    try:
+        facts['devices_after_cleanup'] = netlink.devices()
+        facts['selected_device_powered_off'] = selected_device(
+            facts['devices_after_cleanup'], index
+        )['powered'] is False
+    except (OSError, TimeoutError, ValueError, RuntimeError) as exc:
+        facts['errors'].append({'operation': 'readback', 'error': type(exc).__name__})
+    facts['complete'] = (
+        not facts['errors'] and facts['selected_device_powered_off']
+        and (facts['stop_poll_ack'] or facts.get('stop_poll_already_idle', False))
+        and (facts['dev_down_ack'] or facts.get('dev_down_already_off', False))
+    )
+    return facts
 
 
 def main():
@@ -381,7 +447,12 @@ def main():
     parser.add_argument("--wait-seconds", type=int, default=0)
     parser.add_argument("--require-target", action="store_true")
     args = parser.parse_args()
-    deadline = time.monotonic() + max(15, args.wait_seconds + 12)
+    if not 0 <= args.device <= 0xFFFFFFFF:
+        parser.error('--device must be a nonnegative u32')
+    if not 0 <= args.wait_seconds <= 120:
+        parser.error('--wait-seconds must be between 0 and 120')
+    # Reserve bounded start/observation and cleanup time in addition to RF wait.
+    deadline = time.monotonic() + args.wait_seconds + 65
     netlink = NfcNetlink(deadline)
     result = {
         "scope": "ONEPLUS13_RAM_NFC_GENERIC_NETLINK",
@@ -394,12 +465,19 @@ def main():
         "cleanup_complete": False,
     }
     pass_ = False
+    power_attempted = False
+    poll_attempted = False
     try:
         result["devices_before"] = netlink.devices()
+        before = selected_device(result['devices_before'], args.device)
+        if before['powered']:
+            raise RuntimeError('Selected NFC device is already powered; refusing to take ownership')
+        power_attempted = True
         netlink.request(
             NFC_CMD_DEV_UP,
             attributes=(attr_u32(NFC_ATTR_DEVICE_INDEX, args.device),),
         )
+        poll_attempted = True
         netlink.request(
             NFC_CMD_START_POLL,
             attributes=(
@@ -411,26 +489,30 @@ def main():
         result["controller_started"] = True
         result["devices_after_start"] = netlink.devices()
         if args.wait_seconds:
-            result["target_event_observed"] = netlink.wait_found(
+            result["target_found"] = netlink.wait_found(
                 args.device, args.wait_seconds
             )
-            if result["target_event_observed"]:
+            result['target_event_observed'] = netlink.target_event_observed
+            if result["target_found"]:
                 result["targets"] = netlink.last_targets or netlink.targets(args.device)
-        pass_ = result["controller_started"] and bool(result["devices_after_start"])
+        pass_ = result["controller_started"] and selected_device(
+            result['devices_after_start'], args.device
+        )['powered']
         if args.require_target:
-            pass_ = pass_ and result["target_event_observed"] and bool(result["targets"])
+            pass_ = pass_ and result.get('target_found', False) and bool(result["targets"])
+    except (OSError, TimeoutError, ValueError, RuntimeError) as exc:
+        result['error'] = str(exc)
+        pass_ = False
     finally:
-        for command in (NFC_CMD_STOP_POLL, NFC_CMD_DEV_DOWN):
-            try:
-                netlink.request(
-                    command,
-                    attributes=(attr_u32(NFC_ATTR_DEVICE_INDEX, args.device),),
-                    timeout=6,
-                )
-            except (OSError, TimeoutError, ValueError):
-                pass
-        netlink.close()
-        result["cleanup_complete"] = True
+        try:
+            if power_attempted:
+                result['cleanup'] = cleanup(netlink, args.device, poll_attempted)
+                result['cleanup_complete'] = result['cleanup']['complete']
+            else:
+                result['cleanup_not_needed_no_mutation'] = True
+        finally:
+            netlink.close()
+    pass_ = bool(pass_ and result['cleanup_complete'])
     result["pass"] = pass_
     print("NFC_POLL_RESULT " + json.dumps(result, sort_keys=True))
     raise SystemExit(0 if pass_ else 1)

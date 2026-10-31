@@ -150,6 +150,10 @@ def main():
     shutil.copyfile(REPO/'devices/oneplus13/nfc/oneplus13-nfc.service',nfc_service)
     nfc_service.chmod(0o644)
     nfc_hashes[str(nfc_service.relative_to(stage))]=sha256(nfc_service)
+    nfc_poll=stage/'usr/libexec/oneplus13-ram-nfc-poll.py'
+    shutil.copyfile(REPO/'tools/oneplus13/ram-nfc-poll.py',nfc_poll)
+    nfc_poll.chmod(0o755)
+    nfc_hashes[str(nfc_poll.relative_to(stage))]=sha256(nfc_poll)
     nfc_wants=stage/'etc/systemd/system/multi-user.target.wants/oneplus13-nfc.service'
     nfc_wants.parent.mkdir(parents=True,exist_ok=True)
     if nfc_wants.exists() or nfc_wants.is_symlink():raise ValueError('Unexpected NFC service link')
@@ -350,6 +354,7 @@ def main():
                   video_hardware_decode_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)
     result.update(nfc_files=nfc_hashes,nfc_service_auto_started=True,
+                  nfc_poll_auto_started=False,nfc_poll_requires_host_overlay=False,
                   nfc_dtb_review=nfc_report,
                   nfc_controller_bind_hardware_qualified=False,
                   nfc_tag_poll_hardware_qualified=False)
