@@ -2,6 +2,7 @@
 import configparser
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -13,6 +14,24 @@ wifi=importlib.util.module_from_spec(spec);spec.loader.exec_module(wifi)
 
 
 class Desktop(unittest.TestCase):
+    def test_installed_helper_loads_prefixed_sibling_only(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            (root/'oneplus13-automatic-wifi-check.py').write_text('ORIGIN="installed"\n')
+            (root/'automatic-wifi-check.py').write_text('raise AssertionError("unreviewed overlay")\n')
+            with patch.object(desktop,'__file__',str(root/'oneplus13-ram-desktop-check.py')):
+                self.assertEqual(desktop.load_wifi_helper().ORIGIN,'installed')
+
+    def test_installed_helper_missing_does_not_fall_back_to_overlay(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            (root/'automatic-wifi-check.py').write_text('ORIGIN="overlay"\n')
+            with patch.object(desktop,'__file__',str(root/'oneplus13-ram-desktop-check.py')):
+                with self.assertRaises(FileNotFoundError):desktop.load_wifi_helper()
+
+    def test_source_helper_keeps_unprefixed_sibling(self):
+        self.assertEqual(desktop.load_wifi_helper().HTTP_WRITE_OUT,wifi.HTTP_WRITE_OUT)
+
     def test_software_only_never_claims_wifi_or_combined_acceptance(self):
         with patch.object(desktop,'SAMPLES',[{'bound_wifi_http':None}]*3):
             r=desktop.completed_result(False)

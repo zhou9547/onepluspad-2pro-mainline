@@ -1,3 +1,18 @@
+# Installed desktop regression delivery, 2026-10-31
+
+The image uses prefixed runtime filenames. The desktop WiFi stability check
+previously resolved its unprefixed source sibling and could fail to import
+from the completed image. The exact installed sibling is now selected with
+no host-overlay fallback. Three new tests exercise actual module loading
+and missing-file refusal. Full WSL suite: 745 tests, five skips; phone subset:
+587 tests, one skip. No phone commands were needed to reproduce this defect.
+
+Private combined-runner review remains separate from shipped image code.
+New phase alarms, cleanup/recovery, timer readback and receipt-origin checks
+must pass their own mock review before a fresh source/image-bound plan is
+ready for the owner's start confirmation. Do not treat these offline tests
+as GNSS/NFC/camera/USB hardware qualification or reopen accepted 5 GHz RF work.
+
 # Camera trace lifecycle, 2026-10-31
 
 The kprobe trace state omitted mode and raised KeyError during stream cleanup.

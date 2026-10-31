@@ -19,6 +19,17 @@ COMPLETED = {}
 SAMPLES = []
 
 
+def load_wifi_helper():
+    """Use the image's prefixed sibling without substituting a host overlay."""
+    here = Path(__file__)
+    name = ('oneplus13-automatic-wifi-check.py' if here.name.startswith('oneplus13-')
+            else 'automatic-wifi-check.py')
+    spec = importlib.util.spec_from_file_location('desktop_wifi', here.with_name(name))
+    wifi = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(wifi)
+    return wifi
+
+
 def probe_http(wifi, iface, execute=None, probe_url=None):
     if probe_url is None:
         config=json.loads(Path('/run/oneplus13-wifi-probe.private.json').read_text())
@@ -162,9 +173,7 @@ def check(check_wifi=True):
     COMPLETED['settings_process_started'] = True
     wifi = None
     if check_wifi:
-        spec = importlib.util.spec_from_file_location('wifi', Path(__file__).with_name('automatic-wifi-check.py'))
-        wifi = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(wifi)
+        wifi = load_wifi_helper()
     interfaces = [p.name for p in Path('/sys/class/net').iterdir() if (p/'wireless').exists()]
     if check_wifi and len(interfaces) != 1:
         raise ValueError('exactly one WiFi interface required')

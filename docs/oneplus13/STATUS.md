@@ -1,3 +1,24 @@
+# Installed desktop regression helper, 2026-10-31
+
+5 GHz WiFi is already accepted historically, including r191's 5240 MHz
+control link. Both bands remain preservation/regression baselines; the open
+joint hardware goals are GNSS fix/start/stop, NFC tag, real camera frames and
+USB peripheral enumeration/read-only I/O.
+
+r195 public commit e0bb84b331e8b33781236343cd2e8a7a8b725265 completed all
+five Actions 41159270428 jobs. Three archive digests, 66 installed runtime
+files and the native GNSS dependencies were independently read back. This
+is offline image qualification, not new hardware acceptance.
+
+Joint-runner review found that the installed desktop checker still resolved
+the source filename automatic-wifi-check.py although image packaging installs
+oneplus13-automatic-wifi-check.py. It now selects its exact sibling according
+to its own packaged/source name and refuses an unprefixed overlay fallback
+in the image. Three tests cover installed loading, missing installed helper
+and source use. WSL full repository suite: 745 tests, five skips; phone suite:
+587 tests, one skip. Windows cannot run the Linux-wide suite and is not used
+as its acceptance environment. See DESKTOP-REGRESSION-CONTINUATION-20261031.md.
+
 # Camera trace correction and completed NFC build, 2026-10-31
 
 Actions 41158155405 completed all five jobs successfully for r194 public
