@@ -66,6 +66,23 @@ def unload(name):
         run(["modprobe", "--remove", name], timeout=15, check=False)
 
 
+def load_capture_module(name, attempted):
+    if module_loaded(name):
+        return
+    # A timed-out insertion can already have registered a live module. Own
+    # cleanup before invoking it; never unload modules present on entry.
+    attempted.append(name)
+    debug = {
+        "phy_qcom_mipi_csi2": DEBUG_CPHY_MODULE,
+        "qcom_camss": DEBUG_CAMSS_MODULE,
+        "s5kjn5": DEBUG_SENSOR_MODULE,
+    }.get(name)
+    if debug is not None and debug.is_file():
+        run(["insmod", str(debug)], timeout=20)
+    else:
+        run(["modprobe", "--ignore-install", name], timeout=20)
+
+
 def policy_without_camera_denials(text, module_names):
     """Remove only deny pairs for the reviewed camera dependency closure."""
     if len(module_names) > 64 or any(
@@ -624,29 +641,7 @@ def main():
     try:
         for module in ordered:
             progress("module-load", module=module)
-            if module_loaded(module):
-                continue
-            if (
-                module == "phy_qcom_mipi_csi2"
-                and DEBUG_CPHY_MODULE.is_file()
-            ):
-                run(
-                    ["insmod", str(DEBUG_CPHY_MODULE)],
-                    timeout=20,
-                )
-            elif module == "qcom_camss" and DEBUG_CAMSS_MODULE.is_file():
-                run(
-                    ["insmod", str(DEBUG_CAMSS_MODULE)],
-                    timeout=20,
-                )
-            elif module == "s5kjn5" and DEBUG_SENSOR_MODULE.is_file():
-                run(
-                    ["insmod", str(DEBUG_SENSOR_MODULE)],
-                    timeout=20,
-                )
-            else:
-                run(["modprobe", "--ignore-install", module], timeout=20)
-            loaded.append(module)
+            load_capture_module(module, loaded)
         report["module_diagnostics"] = module_diagnostics(ordered)
         report["module_dmesg"] = run(
             ["dmesg"], timeout=8, check=False

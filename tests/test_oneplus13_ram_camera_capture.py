@@ -36,6 +36,34 @@ TOPOLOGY = """
 
 
 class CameraCaptureRuntime(unittest.TestCase):
+    def test_module_timeout_keeps_attempt_owned_for_cleanup(self):
+        attempted = []
+        with mock.patch.object(capture, "module_loaded", return_value=False), \
+             mock.patch.object(capture, "run", side_effect=
+                 capture.subprocess.TimeoutExpired("modprobe", 20)):
+            with self.assertRaises(capture.subprocess.TimeoutExpired):
+                capture.load_capture_module("i2c_qcom_cci", attempted)
+        self.assertEqual(attempted, ["i2c_qcom_cci"])
+
+    def test_preexisting_module_is_not_owned_or_reinserted(self):
+        attempted = []
+        with mock.patch.object(capture, "module_loaded", return_value=True), \
+             mock.patch.object(capture, "run") as run:
+            capture.load_capture_module("qcom_camss", attempted)
+        self.assertEqual(attempted, [])
+        run.assert_not_called()
+
+    def test_debug_insertion_failure_keeps_attempt_owned(self):
+        attempted = []
+        debug = mock.Mock()
+        debug.is_file.return_value = True
+        with mock.patch.object(capture, "module_loaded", return_value=False), \
+             mock.patch.object(capture, "DEBUG_SENSOR_MODULE", debug), \
+             mock.patch.object(capture, "run", side_effect=RuntimeError("insert failed")):
+            with self.assertRaisesRegex(RuntimeError, "insert failed"):
+                capture.load_capture_module("s5kjn5", attempted)
+        self.assertEqual(attempted, ["s5kjn5"])
+
     def test_full_size_frame_from_failed_stream_cannot_qualify(self):
         frame = mock.Mock()
         frame.is_file.return_value = True

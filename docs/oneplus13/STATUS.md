@@ -1,3 +1,14 @@
+# Camera insertion cleanup ownership, 2026-10-31
+
+A module insertion timeout or error may leave a registered camera module.
+Capture now records ownership before insertion, so cleanup still attempts that
+module; preexisting modules remain unowned. All 26 camera regressions pass.
+The full Linux repository suite passes 759 tests with five skips.
+No sensor registers, CCI timing, C-PHY settings or firmware were changed.
+This does not resolve the observed CCI -110 or establish real-frame success.
+USB and documented network ADB preflights were unavailable in the current
+session; no new RAM boot occurred. Dual-band WiFi remains a preserved baseline.
+
 # GNSS bounded stop lifecycle, 2026-10-31
 
 The native LOC client now owns one stop request, removes its collection timer,

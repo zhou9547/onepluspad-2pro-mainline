@@ -1,3 +1,12 @@
+# Camera insertion cleanup ownership, 2026-10-31
+
+Timeouts/errors during module insertion no longer omit that attempt from
+camera teardown. Already-loaded modules are preserved. Three additional
+offline cases pass; CCI -110 and real sensor-frame qualification remain open.
+A fresh exact-image plan and independent runner review remain required.
+The current USB/network ADB preflights could not reach Android; source and
+Actions qualification must not be presented as new hardware evidence.
+
 # GNSS bounded stop lifecycle, 2026-10-31
 
 The native LOC client now owns one stop request, removes its collection timer,
