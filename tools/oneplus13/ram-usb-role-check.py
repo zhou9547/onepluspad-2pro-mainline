@@ -298,6 +298,34 @@ def typec_inventory(root=Path("/sys")):
     return {"ports": ports, "adsp": adsp, "read_only": True}
 
 
+def firmware_otg_inventory(root=Path("/sys"), run=subprocess.run):
+    """Read only the optional phone-bound kernel interface, once per phase.
+
+    The kernel serializes these requests with battery polling and poisons
+    optional probes after timeout. Missing or failed reads are unknown.
+    No raw property IDs, setter or automatic power policy is exposed here.
+    """
+    base = Path(root) / "bus/auxiliary/devices/pmic_glink.power-supply.0"
+    facts = {"read_only": True, "values": {}, "unavailable": []}
+    for name in ("oneplus13_otg_ap_enable", "oneplus13_otg_switch"):
+        path = base / name
+        if not path.is_file():
+            facts["unavailable"].append(name)
+            continue
+        try:
+            result = run(["cat", str(path)], capture_output=True, text=True,
+                         timeout=3, check=False)
+            value = result.stdout.strip()
+            if result.returncode == 0 and value in {"0", "1"}:
+                facts["values"][name] = int(value)
+            else:
+                facts["unavailable"].append(name)
+        except (OSError, subprocess.TimeoutExpired):
+            facts["unavailable"].append(name)
+    facts["complete"] = len(facts["values"]) == 2
+    return facts
+
+
 def usb_hid_input_present(facts, root=Path("/sys")):
     """Require an input node below the actual enumerated USB device."""
     devices = Path(root) / "bus/usb/devices"
@@ -449,6 +477,7 @@ def main():
         "host_peripheral_i_o_qualified": False,
         "typec_before": typec_inventory(),
         "inventory_before": inventory(),
+        "firmware_otg_before": firmware_otg_inventory(),
     }
     try:
         write(mode, "host")

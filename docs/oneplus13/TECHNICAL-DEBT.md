@@ -1,3 +1,15 @@
+# USB Type-C detach and unqualified firmware gates, 2026-10-31
+
+r207b confirms initial xHCI/root hubs but detach returns UCSI to device/sink;
+OTG insertion does not produce a partner. The new root-only read interface
+observes legacy AP17/SWITCH18 once, shares battery serialization and uses
+separate completion plus spinlock lifecycle. No SET, automatic policy or OEM
+fallback is added. Firmware support, switch lease/rollback and real USB I/O
+remain unqualified. The helper's additional six seconds must be in the fresh
+joint plan. GNSS register-events still returns InvalidArgument before start;
+camera chip-ID acceptance is not real-frame acceptance. See
+USB-OTG-FIRMWARE-READS-20261031.md for source provenance and evidence limits.
+
 # Exact source bytes and camera common deadline, 2026-10-31
 
 The r201 CI failure was a CRLF generated-source inventory mismatch; corrected

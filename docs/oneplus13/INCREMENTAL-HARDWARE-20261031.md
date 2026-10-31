@@ -1,5 +1,18 @@
 # Incremental combined RAM tests, 2026-10-31
 
+## r207b complete combined round
+
+The source b284752807d5d739b0a2c3d52c343ab3f3d35e6b and Actions
+41185176805 image completed one fresh combined RAM round in 288.55 seconds.
+All seven Android baseline properties matched on return; no partition writes
+occurred. Camera chip-ID, 5 GHz control and modem preservation pass. GNSS
+registration fails cleanly before start; NFC remains owner-skipped. The USB
+stage still executes after GNSS failure. Real xHCI/root hubs were present
+before detach, after which UCSI reverted to device/sink and no OTG partner
+appeared. Device role and cleanup passed before cable return and recovery.
+The new firmware-gate observation is documented in
+USB-OTG-FIRMWARE-READS-20261031.md; it does not establish working USB I/O.
+
 ## r205 complete combined round
 
 The exact source f67c02498fd6083f61821ed78818ad41ee71cf92 passed all five jobs

@@ -1,3 +1,15 @@
+# r207b physical evidence and USB firmware reads, 2026-10-31
+
+The r207b combined round completed in 288.55 seconds, returned to Android
+with all seven baseline properties matching, and made zero partition writes.
+5 GHz control, modem preservation and S5KJN5 chip-ID pass; real frames,
+GNSS start/fix/stop and USB physical I/O remain open. NFC is owner-skipped.
+USB xHCI/root hubs were confirmed before swapping, then UCSI reverted to
+device/sink on detach and no OTG partner appeared. The next candidate adds
+phone-only read-only firmware gate observation, without setters or blind
+protocol fallback. See USB-OTG-FIRMWARE-READS-20261031.md. This candidate
+requires its own Actions image qualification and reviewed joint RAM plan.
+
 # CCI source-byte correction and camera deadline, 2026-10-31
 
 r201 Actions rejected generated CCI reference hashes because Windows Git wrote

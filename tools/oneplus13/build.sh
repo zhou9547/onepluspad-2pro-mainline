@@ -82,6 +82,7 @@ cp -a devices/oneplus13/kernel/synaptics-dodge "$src/drivers/input/touchscreen/"
 cp -a devices/oneplus13/kernel/panel-aa569 "$src/drivers/gpu/drm/panel/"
 cp tools/oneplus13/audio-draft/aw88461.c tools/oneplus13/audio-draft/aw88461-profile.h "$src/sound/soc/codecs/"
 cp tools/oneplus13/infrared-draft/ir-dodge-spi.c "$src/drivers/media/rc/ir-dodge-spi.c"
+cp tools/oneplus13/usb-draft/otg-protocol.h "$src/drivers/power/supply/oneplus13-otg-protocol.h"
 if ! grep -q '^config IR_DODGE_SPI$' "$src/drivers/media/rc/Kconfig"; then
   cat >> "$src/drivers/media/rc/Kconfig" <<'KCONFIG'
 
@@ -148,6 +149,7 @@ git -C "$src" add --intent-to-add arch/arm64/boot/dts/qcom/sm8750-oneplus-dodge*
   drivers/gpu/drm/msm/disp/dpu1/dpu_aa569_spr*.[ch]
 git -C "$src" add --intent-to-add sound/soc/codecs/aw88461.c sound/soc/codecs/aw88461-profile.h
 git -C "$src" add --intent-to-add drivers/media/rc/ir-dodge-spi.c
+git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-protocol.h
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"
 export ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 export KBUILD_BUILD_USER=codex KBUILD_BUILD_HOST=github-actions KBUILD_BUILD_VERSION=1
