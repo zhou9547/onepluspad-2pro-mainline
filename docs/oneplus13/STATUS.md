@@ -1,21 +1,64 @@
-# Full Ubuntu Desktop rootfs candidate prepared, 2026-11-01
+# 2026-11-02 full Ubuntu first-user progress
 
-The next image candidate upgrades the existing Ubuntu Base/GNOME staging rootfs
-to the `ubuntu-desktop` metapackage with its signed-snapshot recommended
-applications. GDM Initial Setup is explicitly enabled and verified in the
-delivered SquashFS; no regular user is precreated, root stays locked, and SSH
-does not assume a fixed username. Existing OnePlus 13 kernel, Wi-Fi profile,
-GNOME runtime and automatic readonly OTG packaging remain in the same image
-assembly path. No new image has been built or run on hardware yet.
+r253's bound RAM overlay now proves screen-keyboard touch input for name and
+passwords, wizard-created disposable account, and ordinary Wayland/project Mesa.
+Initial5GHz5220/IP/HTTP/HTTPS passed; post-login fresh scan timed out at16s while
+NM remained connected. The whole round did not pass. Exact saved firmware close,
+PC device/sink+UDC and Android7 recovery passed. Physical USB was not retested.
+Production rootfs still has no regular users. Camera/GNSS paused; NFC skipped.
+New small-screen/app/preservation/manifest changes await packaged acceptance.
+See FIRST-USER-DESKTOP-20261102.md; older hardware claims retain their exact scope.
 
-The r247 delta remains important: its no-media USB readonly guard and exact
-packaged artifact were only offline-built/read back. r246's older image plus
-exact RAM overlay is the latest phone evidence for GNOME, 5 GHz Wi-Fi and the
-tested dock/U-disk readonly auto-mount path. The new full-desktop image needs its
-own exact-byte review and temporary boot before inheriting any hardware claim.
-Local validation: 833 OnePlus 13 tests pass, one skipped. Next: build and verify
-the complete RAM image through `oneplus13-current-image.yml`, then conduct one
-current-chat-bound temporary `fastboot boot` round; no flash or persistence.
+# r249 full Ubuntu reaches GDM but phone display stays black, 2026-11-01
+
+The exact r248 full Ubuntu image completed the rootfs transfer and systemd handoff
+on its one temporary r249 boot. GDM was active and a GNOME Initial Setup session
+was present. The owner observed a black phone screen, so first-user setup and
+visible desktop acceptance failed. DRM reported a connected connector and fb0
+mode `1440x3168`; neither observation proves pixels reached the panel. The round
+did not collect DRM plane state or a framebuffer pixel summary. USB and Wi-Fi
+were not tested, and the phone returned to Android. No persistent storage change
+was made. See the exact-bound r249 plan, consumed ledger, and result in
+`records/current-chat-20261101-01a1973e/r248-full-ubuntu-desktop/hardware-round-r249/`.
+
+Do not claim full Ubuntu desktop, first-user creation, Wi-Fi regression, or USB
+acceptance from r249. Source comparison shows the r248 rootfs delta adds the
+`ubuntu-desktop` metapackage and recommended dependencies, and enables GDM's
+Initial Setup; kernel and display DT are unchanged. A new source-only diagnostic
+collector is now wired into the RAM evidence service. It samples DRM connector
+and debug state, fb0 metadata and 16 bounded framebuffer windows (retaining only
+nonzero-byte counts), plus display process counts. The complete offline OnePlus
+13 suite passes in WSL: 834 tests, one skipped. This diagnostic change has not
+been built into an image or tested on the phone. Do not force panel power,
+clocks, or brightness without evidence. A further boot needs its own exact
+image/plan and fresh ledger.
+
+# r248 full Ubuntu image built; r249 hardware acceptance failed, 2026-11-01
+
+Actions `41315126988` passed and the complete RAM image was downloaded and
+verified. The image source is `7ad67e2f621d10dc6174443a488d4156ea16e57f`;
+the full Ubuntu rootfs SHA256 is
+`0409669f86951f3479f474d7ac4c3032a4f2529487810cdfabde00f2f833d6a1`, and the
+automatic-OTG RAM boot SHA256 is
+`7c908bce96ed715e5dc500e31c3a9b5db06dbffa1c62cc603aca640d2a6e6a5b`.
+
+The delivered SquashFS contains `ubuntu-desktop`, the Initial Setup package and
+common desktop applications. GDM first-user setup is enabled; no regular user
+is precreated. r247's no-media USB readonly protection, r246's desktop/Wi-Fi/
+automatic OTG implementation, and the same qualified OnePlus 13 kernel and
+firmware are packaged together. Static checks and 833 offline tests passed
+(one skipped); neither the complete desktop's first-run workflow nor this exact
+combined image's Wi-Fi/USB behavior was hardware-qualified at build completion.
+
+Round r248 consumed one RAM boot but remained in initramfs: the host rootfs
+server was started after the fetch window. The device returned to Android; no
+full Ubuntu, Wi-Fi or USB acceptance is claimed for that attempt. No partition
+write or persistent change was issued. The failure and consumed ledger are kept
+in `hardware-round-r248/`.
+
+Round r249 consumed one temporary boot and reached systemd/GDM, but the owner
+reported a black display before first-user setup. Hardware acceptance failed;
+USB and Wi-Fi were not tested. See `hardware-round-r249/result.json`.
 
 # Ordinary GNOME WiFi5GHz and readonly automatic OTG accepted, 2026-11-01
 

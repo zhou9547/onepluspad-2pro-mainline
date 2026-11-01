@@ -80,6 +80,25 @@ def main():
         raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(raw).hexdigest()!=wifi_files[name] or sha256(repo/source)!=wifi_files[name]:
             raise ValueError('Delivered WiFi runtime differs from current source')
+    from desktop import FIRSTBOOT_SOURCE_FILES, FIRSTBOOT_GENERATED_FILES
+    firstboot=m.get('firstboot_runtime_files',{})
+    if (set(firstboot) != set(FIRSTBOOT_SOURCE_FILES) | set(FIRSTBOOT_GENERATED_FILES)
+            or m.get('firstboot_installer_sha256') != sha256(repo/'tools/oneplus13/install-desktop.py')
+            or m.get('firstboot_small_screen') is not True
+            or m.get('firstboot_screen_keyboard_default') is not True
+            or m.get('firstboot_normal_users_precreated') is not False
+            or m.get('distro_sensor_proxy_masked') is not True):
+        raise ValueError('Missing source-bound first-user desktop runtime')
+    for name,digest in firstboot.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:
+            raise ValueError('Delivered first-user runtime changed: '+name)
+        if name in FIRSTBOOT_SOURCE_FILES and sha256(repo/FIRSTBOOT_SOURCE_FILES[name])!=digest:
+            raise ValueError('Delivered first-user runtime differs from source: '+name)
+    link=subprocess.check_output(['unsquashfs','-ll',str(root/'rootfs.squashfs'),
+                                 'etc/systemd/system/iio-sensor-proxy.service'],text=True)
+    if ' -> /dev/null' not in link:
+        raise ValueError('Conflicting distro SensorProxy is not masked')
     data=json.loads(subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'usr/lib/oneplus13-desktop/private-firmware.json']))
     import hashlib
     for name,digest in data.items():

@@ -3,7 +3,7 @@
 # Explicit previously-qualified features, only inside a protected RAM session.
 set -euo pipefail
 mode=${1:-}
-case "$mode" in --wifi|--all) ;; *) echo 'Usage: qualified-bringup {--wifi|--all}'; exit 2 ;; esac
+case "$mode" in --wifi|--all|--firstboot) ;; *) echo 'Usage: qualified-bringup {--wifi|--all|--firstboot}'; exit 2 ;; esac
 test -f /run/oneplus13/ram-session
 grep -q ' / overlay ' /proc/mounts
 systemctl is-active --quiet oneplus13-ram-guard.service
@@ -86,7 +86,17 @@ for attempt in $(seq 1 15); do
 done
 test -n "$(/usr/sbin/iw dev | awk '$1=="Interface"{print $2;exit}')"
 echo QUALIFIED_WIFI_DRIVER_READY
-if [ "$mode" = --all ]; then
+if [ "$mode" = --all ] || [ "$mode" = --firstboot ]; then
+    if [ "$mode" = --firstboot ]; then
+        # Full Ubuntu adds the distro proxy with the same D-Bus name. Keep
+        # only the phone's qualified SSC backend eligible for activation.
+        if systemctl cat iio-sensor-proxy.service >/dev/null 2>&1; then
+            systemctl stop iio-sensor-proxy.service
+        fi
+        systemctl mask --runtime iio-sensor-proxy.service
+        systemctl daemon-reload
+        python3 /usr/libexec/oneplus13-ram-sensor-desktop.py setup
+    fi
     prepare_desktop_sensors
     timeout -k 1 15 modprobe dodge-s3910
     timeout -k 1 6 systemctl start bluetooth
@@ -96,6 +106,13 @@ if [ "$mode" = --all ]; then
     timeout -k 1 12 python3 /usr/libexec/oneplus13-ram-display-prerequisites.py --release "$PLATFORM_KERNEL_RELEASE" --sha256 "$CEC_MODULE_SHA256" --ubwc-sha256 "$UBWC_MODULE_SHA256" --policy-sha256 "$MODULE_POLICY_SHA256"
     python3 /run/oneplus13/native/start-native-display --check
     python3 /run/oneplus13/native/start-native-display --activate
+    # Initial Setup owns first-user creation. Reuse the qualified hardware
+    # sequence, then leave account/session setup to GDM.
+    if [ "$mode" = --firstboot ]; then
+        grep -q '^GSK_RENDERER=cairo$' /etc/environment || echo GSK_RENDERER=cairo >> /etc/environment
+        echo QUALIFIED_FIRSTBOOT_HARDWARE_READY
+        exit 0
+    fi
     getent passwd a >/dev/null || { useradd -m -s /bin/bash -G adm,sudo a; echo 'a:a' | chpasswd; }
     install -d -m 0755 /var/lib/AccountsService/users
     cat > /var/lib/AccountsService/users/a <<'EOF'

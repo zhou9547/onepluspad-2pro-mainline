@@ -66,9 +66,25 @@ def main():
     gdm_config=read('etc/gdm3/custom.conf').decode()
     if '[daemon]' not in gdm_config or 'InitialSetupEnable=true' not in gdm_config:
         raise SystemExit('GDM first-user setup is not explicitly enabled')
+    environment=read('etc/environment').decode().splitlines()
+    if any(line.startswith(('GTK_IM_MODULE=','QT_IM_MODULE=','XMODIFIERS=')) for line in environment):
+        raise SystemExit('A global IM override bypasses the native Wayland input path')
+    mobile=read('usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override').decode()
+    if '[org.gnome.desktop.a11y.applications]\nscreen-keyboard-enabled=true\n' not in mobile:
+        raise SystemExit('Mobile first-user screen keyboard default missing')
+    if '[org.gnome.desktop.interface]\ntoolkit-accessibility=true\n' not in mobile:
+        raise SystemExit('Mobile accessibility bridge default missing')
+    for name in ['gnome-initial-setup', 'gnome-initial-setup-first-login',
+                 'gnome-initial-setup-upgrade-login']:
+        if 'Environment=GIS_SMALL_SCREEN=1' not in read(
+                'usr/lib/systemd/user/'+name+'.service.d/60-oneplus13-small-screen.conf').decode():
+            raise SystemExit('Initial Setup small-screen layout missing')
+    if 'x-scheme-handler/https=org.gnome.Epiphany.desktop' not in read('etc/xdg/mimeapps.list').decode():
+        raise SystemExit('Usable browser default missing')
     for name in ['usr/bin/gnome-shell', 'usr/sbin/gdm3', 'usr/sbin/NetworkManager',
                  'usr/sbin/wpa_supplicant','usr/sbin/iw','usr/bin/bluetoothctl',
-                 'usr/bin/bluetooth-sendto','usr/libexec/bluetooth/obexd']:
+                 'usr/bin/bluetooth-sendto','usr/libexec/bluetooth/obexd',
+                 'usr/bin/epiphany','usr/bin/gnome-software']:
         binary = read(name)
         if binary[:5] != b'\x7fELF\x02' or struct.unpack_from('<H', binary, 18)[0] != 183:
             raise SystemExit(f'Wrong executable architecture: {name}')

@@ -130,7 +130,7 @@ def set_stock_country(iface, country, command):
     return result
 
 
-def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None):
+def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None, existing_link=False):
     ssid, password = credentials['ssid'], credentials['password']
     probe_url = credentials.get('http_probe_url', 'http://example.com/')
     band = credentials.get('band')
@@ -149,6 +149,7 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
         raise ValueError('Invalid HTTP probe URL')
     result = {'scope': 'ONE_NETWORK_RAM_ONLY', 'interface_found': True,
               'association_pass': False, 'dhcp_pass': False, 'http_pass': False, 'https_pass': False,
+              'automatic_acceptance_pass': False,
               'password_logged': False, 'low_level_scan_or_reset': False}
     result['requested_band'] = {'a': '5GHz', 'bg': '2.4GHz'}.get(band, 'any')
     result['band_pass'] = False
@@ -184,6 +185,24 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     result['nm_device_ready']=code is not None and 30<=int(code[1])<=100
     if not result['nm_device_ready']:
         return result
+    if existing_link:
+        # Preservation observes the already-active connection. It never scans,
+        # creates a second profile, changes management or reauthenticates.
+        result.update(scope='ONE_NETWORK_EXISTING_LINK_RAM_ONLY',
+                      directed_scan_requested=False, connection_reactivation_requested=False)
+        if result['nm_device_state_code'] != 100:
+            return result
+        rc, active = command('active_profile', ['nmcli', '--wait', '4', '-g',
+                             'GENERAL.CON-UUID', 'device', 'show', iface], 6)
+        ident = active.strip()
+        if rc or not re.fullmatch(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', ident):
+            return result
+        rc, configured = command('active_ssid', ['nmcli', '--wait', '4', '--escape', 'no',
+                                '-g', '802-11-wireless.ssid', 'connection', 'show', 'uuid', ident], 6)
+        result['association_pass'] = rc == 0 and configured.removesuffix('\n') == ssid
+        if not result['association_pass']:
+            return result
+        return observe_link_and_traffic(credentials, iface, result, command, host_epoch, expected_ssid=ssid)
     rc, _ = command('managed', ['nmcli', '--wait', '4', 'device', 'set', iface, 'managed', 'yes'], 6)
     if rc:
         return result
@@ -209,9 +228,12 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     # NetworkManager documents LastScan as completion in CLOCK_BOOTTIME ms.
     # RequestScan success only acknowledges a request. Wait for its completion
     # without requesting a second scan, driver reset or reconnect.
-    scan_deadline = time.monotonic() + 16
+    # An associated radio may complete a foreground scan later than a
+    # disconnected one. Keep one request and a finite, explicit budget.
+    result['scan_wait_budget_seconds'] = 45 if result['nm_device_state_code'] == 100 else 16
+    scan_deadline = time.monotonic() + result['scan_wait_budget_seconds']
     result['scan_completed'] = False
-    for attempt in range(9):
+    for attempt in range(24 if result['nm_device_state_code'] == 100 else 9):
         remaining = scan_deadline - time.monotonic()
         if remaining <= 0:break
         rc, after = command('scan_completion',scan_property,min(3,remaining))
@@ -267,9 +289,22 @@ def check(credentials, iface, execute=run, runtime=Path('/run'), host_epoch=None
     result['association_pass'] = rc == 0 and active.strip() == ident
     if not result['association_pass']:
         return result
+    return observe_link_and_traffic(credentials, iface, result, command, host_epoch)
+
+
+def observe_link_and_traffic(credentials, iface, result, command, host_epoch, expected_ssid=None):
+    """Verify the current RF link and interface-bound traffic without a reset."""
+    band = credentials.get('band')
+    probe_url = credentials.get('http_probe_url', 'http://example.com/')
     # Profile identity and SSID do not prove the actual RF band. Read the
     # connected link through nl80211; never accept a 2.4GHz fallback as 5GHz.
     rc, link = command('link_frequency', ['iw', 'dev', iface, 'link'], 4)
+    if expected_ssid is not None:
+        associated = re.findall(r'^\s*SSID: (.*)$', link, re.M)
+        result['active_link_ssid_matches'] = rc == 0 and associated == [expected_ssid]
+        if not result['active_link_ssid_matches']:
+            result['association_pass'] = False
+            return result
     frequencies = re.findall(r'^\s*freq:\s*([0-9]{4})(?:\.0+)?\s*$', link, re.M)
     frequency = int(frequencies[0]) if len(frequencies) == 1 and not rc else None
     actual_band = ('2.4GHz' if frequency and 2400 <= frequency <= 2500 else
@@ -345,6 +380,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--credentials', type=Path, required=True)
     parser.add_argument('--host-epoch', type=int)
+    parser.add_argument('--existing-link', action='store_true', help='Observe the active link without scanning or reconnecting')
     args = parser.parse_args()
     if ' / overlay ' not in Path('/proc/mounts').read_text():
         raise SystemExit('Refusing WiFi credential staging outside RAM overlay')
@@ -363,7 +399,7 @@ def main():
         if probe.parent.is_dir():
             probe.write_text(json.dumps({'url':credentials.get('http_probe_url','http://example.com/')}),encoding='utf-8')
             if os.name=='posix':probe.chmod(0o600)
-        result = check(credentials, interfaces[0], execute=guarded_run, host_epoch=args.host_epoch)
+        result = check(credentials, interfaces[0], execute=guarded_run, host_epoch=args.host_epoch, existing_link=args.existing_link)
     if 'automatic_acceptance_pass' not in result:
         result['automatic_acceptance_pass'] = False
     print('AUTO_WIFI_RESULT ' + json.dumps(result, sort_keys=True), flush=True)

@@ -1,0 +1,18 @@
+[org.gnome.desktop.a11y.applications]
+screen-keyboard-enabled=true
+
+[org.gnome.desktop.interface]
+toolkit-accessibility=true
+
+[org.gnome.shell]
+favorite-apps=['org.gnome.Epiphany.desktop', 'org.gnome.Nautilus.desktop', 'libreoffice-writer.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Software.desktop']
+
+[org.gnome.shell:ubuntu]
+favorite-apps=['org.gnome.Epiphany.desktop', 'org.gnome.Nautilus.desktop', 'libreoffice-writer.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Software.desktop']
+
+[org.gnome.shell.extensions.dash-to-dock]
+dock-fixed=true
+autohide=false
+intellihide=false
+dock-position='LEFT'
+extend-height=true

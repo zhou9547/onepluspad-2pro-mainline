@@ -15,6 +15,24 @@ from common import make_cpio, read_cpio, sha256
 REPO = Path(__file__).resolve().parents[2]
 PIN = 'e5c694473d738f582056d5c35af96e4d8ecfe0ff'
 
+# Files which make a clean image reach a touch-operated, account-free welcome.
+FIRSTBOOT_SOURCE_FILES = {
+    'usr/libexec/oneplus13-qualified-bringup': 'devices/oneplus13/desktop/qualified-bringup',
+    'usr/libexec/oneplus13-display-diagnostics.py': 'tools/oneplus13/display-diagnostics.py',
+    'usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override':
+        'devices/oneplus13/desktop/90-oneplus13-mobile.gschema.override',
+}
+for _unit in ['gnome-initial-setup', 'gnome-initial-setup-first-login',
+              'gnome-initial-setup-upgrade-login']:
+    FIRSTBOOT_SOURCE_FILES['usr/lib/systemd/user/'+_unit+'.service.d/60-oneplus13-small-screen.conf'] = (
+        'devices/oneplus13/desktop/60-oneplus13-small-screen.conf')
+FIRSTBOOT_GENERATED_FILES = (
+    'usr/lib/systemd/system/oneplus13-firstboot-hardware.service',
+    'etc/systemd/system/gdm.service.d/60-oneplus13-hardware.conf',
+    'etc/xdg/mimeapps.list',
+    'usr/share/glib-2.0/schemas/gschemas.compiled',
+)
+
 
 def derive(original):
     entries = read_cpio(gzip.decompress(original))

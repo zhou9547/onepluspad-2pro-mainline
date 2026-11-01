@@ -42,6 +42,20 @@ def install(root, kernel=None, firmware=None):
               (REPO/'devices/oneplus13/desktop'/name).read_text(), 0o755)
     write('usr/libexec/oneplus13-readonly-block.py',
           (REPO/'tools/oneplus13/readonly-block.py').read_text(), 0o755)
+    write('usr/libexec/oneplus13-display-diagnostics.py',
+          (REPO/'tools/oneplus13/display-diagnostics.py').read_text(), 0o755)
+    write('usr/libexec/oneplus13-qualified-bringup',
+          (REPO/'devices/oneplus13/desktop/qualified-bringup').read_text(), 0o755)
+    write('usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override',
+          (REPO/'devices/oneplus13/desktop/90-oneplus13-mobile.gschema.override').read_text())
+    for name in ['gnome-initial-setup', 'gnome-initial-setup-first-login',
+                 'gnome-initial-setup-upgrade-login']:
+        write('usr/lib/systemd/user/'+name+'.service.d/60-oneplus13-small-screen.conf',
+              (REPO/'devices/oneplus13/desktop/60-oneplus13-small-screen.conf').read_text())
+    # A real deb browser and software manager work before any Snap seeding.
+    write('etc/xdg/mimeapps.list',
+          '[Default Applications]\nx-scheme-handler/http=org.gnome.Epiphany.desktop\n'
+          'x-scheme-handler/https=org.gnome.Epiphany.desktop\ntext/html=org.gnome.Epiphany.desktop\n')
     write('usr/lib/udev/rules.d/09-oneplus13-ram-readonly.rules',
           (REPO/'devices/oneplus13/desktop/09-oneplus13-ram-readonly.rules').read_text())
     write('usr/lib/oneplus13-desktop/version', '1\n')
@@ -109,6 +123,16 @@ def install(root, kernel=None, firmware=None):
     unit('oneplus13-ram-evidence.service',
          'Description=RAM desktop liveness evidence\nAfter=local-fs.target\n'
          '[Service]\nExecStart=/usr/libexec/oneplus13-runtime-evidence\n', 'multi-user.target')
+    unit('oneplus13-firstboot-hardware.service',
+         'Description=Initialize qualified phone hardware before first-user setup\n'
+         'ConditionKernelCommandLine=!oneplus13.desktop.qemu=1\n'
+         'Requires=oneplus13-ram-guard.service oneplus13-ram-deadline.timer oneplus13-ram-usb.service\n'
+         'After=oneplus13-ram-guard.service oneplus13-ram-deadline.timer oneplus13-ram-usb.service NetworkManager.service\n'
+         'Before=display-manager.service gdm.service gdm3.service\n'
+         '[Service]\nType=oneshot\nRemainAfterExit=yes\nTimeoutStartSec=300s\n'
+         'ExecStart=/usr/libexec/oneplus13-qualified-bringup --firstboot\n', 'multi-user.target')
+    write('etc/systemd/system/gdm.service.d/60-oneplus13-hardware.conf',
+          '[Unit]\nRequires=oneplus13-firstboot-hardware.service\nAfter=oneplus13-firstboot-hardware.service\n')
     unit('oneplus13-ram-usb.service',
          'Description=Retain the phone RAM USB network\nAfter=NetworkManager.service\n'
          'ConditionPathExists=/sys/kernel/config/usb_gadget/oneplus13/UDC\n'

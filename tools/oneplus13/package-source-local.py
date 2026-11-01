@@ -10,7 +10,7 @@ import argparse,gzip,importlib,json,os,secrets,shutil,struct,subprocess,sys,tarf
 from pathlib import Path
 from common import boot_sections,read_cpio,sha256
 from native import build_initramfs
-from desktop import derive
+from desktop import derive, FIRSTBOOT_SOURCE_FILES, FIRSTBOOT_GENERATED_FILES
 from stock import Fdt
 
 REPO=Path(__file__).resolve().parents[2]
@@ -61,6 +61,13 @@ def main():
         if (stage/name).read_bytes()!=(REPO/source).read_bytes():
             raise ValueError('Storage guard rootfs differs from current source')
         storage_guard_hashes[name]=sha256(stage/name)
+    firstboot_hashes={}
+    for name,source in FIRSTBOOT_SOURCE_FILES.items():
+        if (stage/name).read_bytes() != (REPO/source).read_bytes():
+            raise ValueError('First-user runtime differs from current source: '+name)
+        firstboot_hashes[name]=sha256(stage/name)
+    for name in FIRSTBOOT_GENERATED_FILES:
+        firstboot_hashes[name]=sha256(stage/name)
     for name,item in pin['files'].items():
         if not name.startswith('firmware/'):continue
         dest=stage/'usr/lib/firmware'/name.removeprefix('firmware/')
@@ -258,6 +265,15 @@ def main():
     dest.write_text(json.dumps(defaults,indent=2)+'\n');dest.chmod(0o644)
     runtime_hashes[str(dest.relative_to(stage))]=sha256(dest)
     runtime_hashes['usr/bin/strace']=sha256(stage/'usr/bin/strace')
+    # The full Ubuntu metapackage also installs the distro SensorProxy unit.
+    # Its BusName collides with the qualified phone SSC backend even when
+    # loaded but inactive. D-Bus activation is supplied by the phone unit below.
+    distro_proxy=stage/'etc/systemd/system/iio-sensor-proxy.service'
+    distro_proxy.parent.mkdir(parents=True,exist_ok=True)
+    if distro_proxy.exists() or distro_proxy.is_symlink():
+        if not distro_proxy.is_symlink() or str(distro_proxy.readlink())!='/dev/null':
+            raise ValueError('Unexpected existing distro sensor proxy override')
+    else:distro_proxy.symlink_to('/dev/null')
     sensor_desktop_hashes={}
     sensor_desktop_sources=[
         ('ram-sensor-desktop.py','usr/libexec/oneplus13-ram-sensor-desktop.py',0o755),
@@ -374,6 +390,11 @@ def main():
                   wifi_runtime_requires_host_overlay=False,
                   wifi_runtime_kernel_health_guard=True,
                   wifi_hardware_qualified=False)
+    result.update(firstboot_runtime_files=firstboot_hashes,
+                  firstboot_installer_sha256=sha256(REPO/'tools/oneplus13/install-desktop.py'),
+                  firstboot_small_screen=True, firstboot_screen_keyboard_default=True,
+                  firstboot_normal_users_precreated=False,
+                  distro_sensor_proxy_masked=True)
     result.update(camera_capture_runtime_files=camera_capture_hashes,
                   camera_capture_auto_started=False,camera_capture_hardware_qualified=False)
     result.update(peripheral_probe_runtime_files=peripheral_probe_hashes,

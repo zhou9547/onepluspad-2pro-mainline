@@ -88,17 +88,11 @@ cat > "$root/etc/profile.d/90-oneplus13-locale.sh" <<'EOF'
 export LANG=zh_CN.UTF-8
 export LANGUAGE=zh_CN:zh
 export LC_MESSAGES=zh_CN.UTF-8
-export GTK_IM_MODULE=ibus
-export QT_IM_MODULE=ibus
-export XMODIFIERS=@im=ibus
 EOF
 cat > "$root/etc/environment" <<'EOF'
 LANG=zh_CN.UTF-8
 LANGUAGE=zh_CN:zh
 LC_MESSAGES=zh_CN.UTF-8
-GTK_IM_MODULE=ibus
-QT_IM_MODULE=ibus
-XMODIFIERS=@im=ibus
 GSK_RENDERER=cairo
 EOF
 gdm_conf="$root/etc/gdm3/custom.conf"
@@ -174,11 +168,14 @@ if [[ -n ${ONEPLUS13_STOCK_FIRMWARE:-} ]]; then
   desktop_args+=(--firmware "$ONEPLUS13_STOCK_FIRMWARE")
 fi
 python3 tools/oneplus13/install-desktop.py "${desktop_args[@]}"
+glib-compile-schemas --strict "$root/usr/share/glib-2.0/schemas"
+test "$(chroot "$root" env GSETTINGS_BACKEND=memory gsettings get org.gnome.desktop.a11y.applications screen-keyboard-enabled)" = true
+test "$(chroot "$root" env GSETTINGS_BACKEND=memory gsettings get org.gnome.desktop.interface toolkit-accessibility)" = true
 chroot "$root" /usr/bin/systemd-analyze verify \
   oneplus13-ram-guard.service oneplus13-ram-deadline.timer \
   oneplus13-ram-evidence.service oneplus13-ram-usb.service \
   oneplus13-ram-dhcp.service oneplus13-ram-http.service \
-  oneplus13-ram-shell.service oneplus13-ram-serial.service \
+  oneplus13-ram-shell.service oneplus13-ram-serial.service oneplus13-firstboot-hardware.service \
   ssh.service oneplus13-ssh-host-keys.service rmtfs.service tqftpserv.service
 udevadm verify "$root/usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules"
 chroot "$root" dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' > "$dest/packages.tsv"

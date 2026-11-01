@@ -1,13 +1,52 @@
-# Full desktop and first-user acceptance remains open, 2026-11-01
+# 2026-11-02 full Ubuntu first-user progress
 
-The source candidate now requests Ubuntu's `ubuntu-desktop` metapackage with
-recommended applications, explicitly enables GDM Initial Setup, rejects any
-precreated regular account, and removes SSH's former fixed `AllowUsers a`
-restriction. The package set and recommendation closure still require a fresh
-ARM64 rootfs build and SquashFS readback. First-user interaction, application
-availability, memory use, and persistence semantics are not hardware-qualified;
-the current image remains RAM-only. r247's new packaged USB guard also remains
-without exact-image phone acceptance; r246's overlay result does not transfer.
+r253's bound RAM overlay now proves screen-keyboard touch input for name and
+passwords, wizard-created disposable account, and ordinary Wayland/project Mesa.
+Initial5GHz5220/IP/HTTP/HTTPS passed; post-login fresh scan timed out at16s while
+NM remained connected. The whole round did not pass. Exact saved firmware close,
+PC device/sink+UDC and Android7 recovery passed. Physical USB was not retested.
+Production rootfs still has no regular users. Camera/GNSS paused; NFC skipped.
+New small-screen/app/preservation/manifest changes await packaged acceptance.
+See FIRST-USER-DESKTOP-20261102.md; older hardware claims retain their exact scope.
+
+# r249 full Ubuntu display acceptance failed, 2026-11-01
+
+r249 booted the exact full Ubuntu image, transferred the rootfs, switched to
+systemd, and activated GDM with a GNOME Initial Setup session. The owner saw a
+black screen and could not create the first user. DRM connector `connected` and
+fb0 mode `1440x3168` are not evidence of successful scanout. No active DRM
+plane/CRTC state or framebuffer pixel summary was captured, so the cause is
+unknown. USB and Wi-Fi were not tested. Android returned and no persistent
+storage change was made. The one-boot ledger is consumed; do not retry it.
+
+Source comparison shows r248 added the `ubuntu-desktop` metapackage with
+recommended dependencies and enabled GDM Initial Setup; kernel and display DT
+were unchanged from the prior GNOME path. A source-only read-only collector is
+now installed by the desktop packager and called by the existing RAM evidence
+service. It records connector/mode data, available DRM debug state, fb0 metadata,
+16 bounded framebuffer samples as nonzero-byte counts only, and counts of
+GDM/GNOME/Initial Setup processes. The complete offline OnePlus 13 suite passes
+in WSL: 834 tests, one skipped. The diagnostic source is not yet built into an
+image and has no phone evidence. Next build and validate this instrumentation offline,
+then use a fresh exact-bound temporary boot to determine whether the framebuffer
+is black before scanout or the panel path is failing. Do not add speculative
+DSI, clock, power-domain, brightness, or sleep overrides.
+
+# r248 full Ubuntu desktop acceptance previously marked in progress, 2026-11-01
+
+The full `ubuntu-desktop` rootfs, GDM Initial Setup, no-precreated-user policy,
+and r247 readonly USB guard are included in Actions `41315126988` and passed
+static artifact readback. r248 reached the RAM initramfs but did not receive its
+rootfs because the host chunk server was started too late. The phone later
+returned to Android; no full-system behavior was tested. The exact image still
+needs first-user interaction, application launch, 5 GHz Wi-Fi regression,
+repeated automatic dock mounting and read-only I/O, unmount/firmware cleanup,
+and Android-return validation. The older r246 evidence is limited to its exact
+earlier image plus RAM overlay.
+
+The r249 attempt is complete and failed visible-display acceptance. The rootfs
+is RAM-only; no dual-boot layout or installer is included. Full Ubuntu package
+presence does not by itself establish an operable desktop or first-user setup.
 
 # No-media storage guard and r247 packaged image verified offline, 2026-11-01
 

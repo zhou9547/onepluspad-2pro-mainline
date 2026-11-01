@@ -91,10 +91,10 @@ class Checks(unittest.TestCase):
             self.call(fake,{'ssid':'offline-network','password':'offline-secret-value','stock_country_code':'CN'})
         self.assertEqual(fake.calls,[])
 
-    def call(self, fake, credentials=None):
+    def call(self, fake, credentials=None, existing_link=False):
         with tempfile.TemporaryDirectory() as d, contextlib.redirect_stdout(io.StringIO()) as output, patch.object(wifi.time, 'sleep'):
             result = wifi.check(credentials or {'ssid': 'offline-network', 'password': 'offline-secret-value', 'external_diagnostics': True},
-                                'wlan-test', execute=fake, runtime=Path(d))
+                                'wlan-test', execute=fake, runtime=Path(d), existing_link=existing_link)
             self.assertNotIn('offline-secret-value', output.getvalue())
             self.assertNotIn('offline-secret-value', repr(fake.calls))
             self.assertFalse(list(Path(d).iterdir()))
@@ -103,6 +103,64 @@ class Checks(unittest.TestCase):
     def test_full_success_requires_target_profile_dhcp_http(self):
         r = self.call(Fake())
         self.assertTrue(all(r[k] for k in ['association_pass', 'dhcp_pass', 'http_pass', 'https_pass', 'automatic_acceptance_pass']))
+
+    def existing_fake(self, configured='offline-network', linked='offline-network', frequency=5180):
+        base=Fake(state='100 (connected)')
+        base.ident='00000000-1111-2222-3333-444444444444'
+        def execute(args,seconds):
+            if '802-11-wireless.ssid' in args:
+                base.calls.append(args)
+                return 0,configured+'\n'
+            if args[0]=='iw':
+                base.calls.append(args)
+                return 0,'Connected to 02:00:00:00:00:01\n\tSSID: '+linked+'\n\tfreq: '+str(frequency)+'\n'
+            return base(args,seconds)
+        execute.calls=base.calls
+        return execute
+
+    def test_existing_link_checks_real_band_and_traffic_without_mutation(self):
+        fake=self.existing_fake()
+        r=self.call(fake,{'ssid':'offline-network','password':'offline-secret-value','band':'a',
+                          'external_diagnostics':True},existing_link=True)
+        self.assertTrue(r['automatic_acceptance_pass'] and r['https_pass'])
+        self.assertTrue(r['active_link_ssid_matches'])
+        self.assertEqual(r['link_frequency_mhz'],5180)
+        self.assertEqual(r['scope'],'ONE_NETWORK_EXISTING_LINK_RAM_ONLY')
+        self.assertFalse(r['directed_scan_requested'] or r['connection_reactivation_requested'])
+        self.assertFalse(any(any(token in c for token in ['rescan','add','up','managed','passwd-file']) for c in fake.calls))
+        self.assertNotIn('offline-network',json.dumps(r))
+
+    def test_existing_link_rejects_wrong_configured_or_actual_network(self):
+        for configured,linked in [('other','offline-network'),('offline-network','other')]:
+            with self.subTest(configured=configured,linked=linked):
+                fake=self.existing_fake(configured=configured,linked=linked)
+                r=self.call(fake,existing_link=True)
+                self.assertFalse(r['association_pass'] or r['automatic_acceptance_pass'])
+                self.assertFalse(any(c[0]=='curl' for c in fake.calls))
+
+    def test_existing_link_rejects_wrong_band_or_disconnected_state(self):
+        fake=self.existing_fake(frequency=2437)
+        r=self.call(fake,{'ssid':'offline-network','password':'offline-secret-value','band':'a'},existing_link=True)
+        self.assertFalse(r['band_pass'] or r['automatic_acceptance_pass'])
+        disconnected=Fake()
+        r=self.call(disconnected,existing_link=True)
+        self.assertFalse(r['association_pass'] or r['automatic_acceptance_pass'])
+        self.assertFalse(any('rescan' in c or 'up' in c for c in disconnected.calls))
+
+    def test_associated_scan_has_one_request_and_longer_bounded_completion_wait(self):
+        base=Fake(state='100 (connected)');observations=0
+        def delayed(args,seconds):
+            nonlocal observations
+            if 'LastScan' in args:
+                observations+=1
+                return 0,'x '+str(100 if observations<13 else 200)+'\n'
+            return base(args,seconds)
+        delayed.calls=base.calls
+        r=self.call(delayed)
+        self.assertTrue(r['scan_completed'] and r['automatic_acceptance_pass'])
+        self.assertEqual(r['scan_wait_budget_seconds'],45)
+        self.assertEqual(r['scan_observations'],12)
+        self.assertEqual(sum('rescan' in c for c in base.calls),1)
 
     def test_5ghz_profile_and_actual_frequency_are_both_required(self):
         fake=Fake()
