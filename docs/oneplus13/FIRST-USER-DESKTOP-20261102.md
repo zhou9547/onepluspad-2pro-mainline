@@ -1,5 +1,29 @@
 # Full Ubuntu first-user desktop, 2026-11-02
 
+## Follow-up on the exact full image
+
+Actions41335006902/source3f6f72af built all five jobs successfully. Independent
+readback verifies1662 installed packages, real ARM64 apps, and zero normal users.
+r256–r259 prove that packaged hardware bootstrap works without a host-injected
+bringup script. r259 also preserves GDM across the test deadline adjustment,
+passes5220MHz/HTTP/HTTPS and touch-driven name/password entry. Full onboarding
+is not yet accepted: its timezone city search returned no suggestion for the
+typed test query, leaving the touch Next button insensitive.
+
+The phone already configures Asia/Shanghai. The vendor profile now uses GNOME's
+supported `skip=timezone` option so this redundant search cannot block first-user
+creation. Language, input, account, password and the other setup pages remain;
+timezone can be changed later in Settings. A new full image and pristine-image
+phone test are required for this change.
+
+Observer pitfalls: the final source-image assembler changes the base900-second
+timer to300seconds. Read the actual delivered timer. After bootstrap, restarting
+that timer propagates through Requires to the firstboot oneshot and GDM; the
+attempt guard correctly refuses a second hardware initialization. Retiming the
+RAM test uses only daemon-reload, with timer readback and unchanged dependent
+service start timestamps. An isolated real systemd experiment verifies this
+method; r259 verifies it on the phone. Earlier observer failures remain failures.
+
 The production rootfs contains the full `ubuntu-desktop` dependency set and no
 regular user, password or autologin. GDM owns first-user creation. Phone testing
 remains temporary RAM boot only; no persistent installer or dual-boot layout has

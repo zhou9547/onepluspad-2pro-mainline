@@ -17,6 +17,7 @@ PIN = 'e5c694473d738f582056d5c35af96e4d8ecfe0ff'
 
 # Files which make a clean image reach a touch-operated, account-free welcome.
 FIRSTBOOT_SOURCE_FILES = {
+    'etc/gnome-initial-setup/vendor.conf': 'devices/oneplus13/desktop/firstboot-vendor.conf',
     'usr/libexec/oneplus13-qualified-bringup': 'devices/oneplus13/desktop/qualified-bringup',
     'usr/libexec/oneplus13-display-diagnostics.py': 'tools/oneplus13/display-diagnostics.py',
     'usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override':

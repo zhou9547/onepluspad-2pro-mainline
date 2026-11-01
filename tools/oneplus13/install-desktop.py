@@ -48,6 +48,8 @@ def install(root, kernel=None, firmware=None):
           (REPO/'devices/oneplus13/desktop/qualified-bringup').read_text(), 0o755)
     write('usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override',
           (REPO/'devices/oneplus13/desktop/90-oneplus13-mobile.gschema.override').read_text())
+    write('etc/gnome-initial-setup/vendor.conf',
+          (REPO/'devices/oneplus13/desktop/firstboot-vendor.conf').read_text())
     for name in ['gnome-initial-setup', 'gnome-initial-setup-first-login',
                  'gnome-initial-setup-upgrade-login']:
         write('usr/lib/systemd/user/'+name+'.service.d/60-oneplus13-small-screen.conf',

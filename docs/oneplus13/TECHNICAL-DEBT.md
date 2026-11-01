@@ -1,5 +1,12 @@
 # 2026-11-02 full Ubuntu first-user progress
 
+The complete3f6f72af image boots its packaged hardware bootstrap correctly.
+Touch onboarding remains blocked by timezone city lookup, so the next source
+uses GNOME's vendor configuration to retain the preconfigured Shanghai zone.
+It is not a new-image pass until rebuilt and phone tested. Recovery observers
+must not restart the timer required by the hardware oneshot; see the measured
+reload-only method in FIRST-USER-DESKTOP-20261102.md.
+
 r253's bound RAM overlay now proves screen-keyboard touch input for name and
 passwords, wizard-created disposable account, and ordinary Wayland/project Mesa.
 Initial5GHz5220/IP/HTTP/HTTPS passed; post-login fresh scan timed out at16s while

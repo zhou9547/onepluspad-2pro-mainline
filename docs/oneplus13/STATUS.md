@@ -1,5 +1,12 @@
 # 2026-11-02 full Ubuntu first-user progress
 
+Exact full image3f6f72af/Actions41335006902 now initializes native hardware
+automatically and passes5GHz5220/HTTP/HTTPS plus screen-keyboard name/password
+input. Timezone city lookup blocks touch onboarding. The next vendor profile
+retains the already configured Asia/Shanghai timezone and skips that redundant
+page through GNOME's standard configuration. New-image acceptance is pending.
+See FIRST-USER-DESKTOP-20261102.md for measured timer/Requires observer pitfalls.
+
 r253's bound RAM overlay now proves screen-keyboard touch input for name and
 passwords, wizard-created disposable account, and ordinary Wayland/project Mesa.
 Initial5GHz5220/IP/HTTP/HTTPS passed; post-login fresh scan timed out at16s while

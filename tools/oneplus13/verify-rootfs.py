@@ -81,6 +81,12 @@ def main():
             raise SystemExit('Initial Setup small-screen layout missing')
     if 'x-scheme-handler/https=org.gnome.Epiphany.desktop' not in read('etc/xdg/mimeapps.list').decode():
         raise SystemExit('Usable browser default missing')
+    import configparser
+    vendor=configparser.ConfigParser();vendor.read_string(read('etc/gnome-initial-setup/vendor.conf').decode())
+    if vendor.get('pages','skip',fallback='') != 'timezone':
+        raise SystemExit('Phone first-user timezone policy missing or other setup pages suppressed')
+    if read('etc/timezone').strip() != b'Asia/Shanghai':
+        raise SystemExit('Preconfigured first-user timezone differs')
     for name in ['usr/bin/gnome-shell', 'usr/sbin/gdm3', 'usr/sbin/NetworkManager',
                  'usr/sbin/wpa_supplicant','usr/sbin/iw','usr/bin/bluetoothctl',
                  'usr/bin/bluetooth-sendto','usr/libexec/bluetooth/obexd',
