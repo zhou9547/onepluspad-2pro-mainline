@@ -1,5 +1,24 @@
 # Ordinary GNOME WiFi5GHz and readonly automatic OTG accepted, 2026-11-01
 
+r247 packaging is now complete: Actions 41309908733 passed all five jobs after a
+second-runner checkout-directory repair. The failed Mesa checkout had removed
+`.git` from a stale working directory; its untracked contents were preserved
+outside the checkout before the retry. The kernel, rootfs and SSC jobs had
+already succeeded and were reused by the failed-job rerun.
+
+Exact artifact digests, all 41 image and 46 kernel checksum entries, 77 runtime
+files, 120 qualified firmware files, the automatic boot image and its 14,741,504
+byte size were independently verified. The new rootfs contains the exact
+nonblocking readonly helper, storage guard and early udev rule. The automatic
+OTG boot SHA256 is
+`c599b52095a1ecf04efaaaa20a5cc038b4ac7e038ef275f2f584125ef3a52ca3` and the
+rootfs SHA256 is
+`d480b8c275effea17701d94572bb76f760d114e2d100b5623f0c973d5672b1dd`.
+
+This is offline artifact acceptance only. It does not replace the r246 hardware
+result below and has not been run on a phone. A fresh current-chat authorization,
+exact plan and unused single-boot ledger are required before temporary boot.
+
 r246 passed the owner's narrowed WiFi/USB hardware matrix using source2b576347,
 Actions41299915186 and exact hash-bound RAM overlays. Both real dock insertions
 automounted NTFS3, exposed the desktop volume, read4096-byte blocks and file

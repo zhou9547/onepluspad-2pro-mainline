@@ -1,4 +1,24 @@
-# No-media storage guard corrected; packaged-image acceptance pending, 2026-11-01
+# No-media storage guard and r247 packaged image verified offline, 2026-11-01
+
+r247 Actions run 41309908733 passed all five jobs and all three artifact
+archives were downloaded with matching GitHub digests. Independent readback
+verified 41 image entries, 46 kernel entries, 77 manifest-bound runtime files,
+120 qualified firmware files and the actual automatic boot image. The generated
+image length is 14,741,504 bytes and matches the automatic boot manifest. The
+packaged rootfs contains byte-identical source copies of the nonblocking readonly
+ioctl helper, guard and early add/change udev rule.
+
+The first Mesa attempt failed during checkout because runner 2 had a stale
+working directory without `.git`. That directory's files were preserved in a
+separate backup before repairing the empty checkout; rerunning the failed job
+and dependent assembly completed successfully. No phone operation occurred.
+
+The packaged r247 image still needs a fresh exact-image temporary boot under a
+new chat-bound authorization, plan and unused ledger. The r246 hardware result
+qualifies the older image plus its exact RAM overlay only. Arbitrary hubs,
+USB writes, persistent installation and dual boot remain outside qualification.
+
+# r246 hardware matrix passed; r247 packaged-image acceptance pending
 
 r246 closes the narrowed ordinary-GNOME automatic readonly OTG runtime matrix:
 two actual dock insertions,130.6s hold, block/file I/O, unmounts, detach, process
