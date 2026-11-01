@@ -33,6 +33,14 @@ protect() {
             [ "$attempt" -le 3 ] && sleep 0.05
         done
         if [ "$value" != 1 ]; then
+            # A removed block node has no remaining target to protect.
+            if [ ! -e "$disk" ] && [ ! -e "/dev/$name" ]; then continue; fi
+            if timeout -k 1 4 /usr/bin/python3 /usr/libexec/oneplus13-readonly-block.py "/dev/$name" \
+                > /dev/null \
+                2>> /run/oneplus13/readonly-block-errors.log; then
+                continue
+            fi
+            if [ ! -e "$disk" ] && [ ! -e "/dev/$name" ]; then continue; fi
             mounted_read_only "$name" || return 1
         fi
     done

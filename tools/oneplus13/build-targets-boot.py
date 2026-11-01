@@ -179,6 +179,7 @@ def main():
         "cmdline": cmdline,
         "session_identity_nonce": nonce,
         "boot_image_sha256": sha256(image),
+        "boot_image_bytes": image.stat().st_size,
         "boot_image_file": image.name,
         "dtb_file": dtb_path.name,
         "dtb_sha256": sha256(dtb_path),

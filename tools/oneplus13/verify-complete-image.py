@@ -400,6 +400,18 @@ def main():
     for name,digest in peripheral_runtime.items():
         raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Manual peripheral runtime changed')
+    storage_guard_sources={
+        'usr/libexec/oneplus13-runtime-guard':'devices/oneplus13/desktop/runtime-guard',
+        'usr/libexec/oneplus13-readonly-block.py':'tools/oneplus13/readonly-block.py',
+        'usr/lib/udev/rules.d/09-oneplus13-ram-readonly.rules':'devices/oneplus13/desktop/09-oneplus13-ram-readonly.rules'}
+    storage_guard_runtime=m.get('storage_guard_runtime_files',{})
+    if (set(storage_guard_runtime)!=set(storage_guard_sources)
+            or m.get('storage_guard_nonblocking_readonly_ioctl') is not True):
+        raise ValueError('Missing nonblocking readonly storage protection')
+    for name,source in storage_guard_sources.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=storage_guard_runtime[name] or sha256(repo/source)!=storage_guard_runtime[name]:
+            raise ValueError('Storage protection differs from source')
     automatic_sources={
         'usr/libexec/oneplus13-auto-otg.py':'tools/oneplus13/auto-otg.py',
         'usr/lib/systemd/system/oneplus13-auto-otg.service':'devices/oneplus13/desktop/oneplus13-auto-otg.service',

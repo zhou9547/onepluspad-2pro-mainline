@@ -40,6 +40,10 @@ def install(root, kernel=None, firmware=None):
     for name in ['runtime-guard', 'runtime-usb', 'runtime-evidence', 'runtime-serial']:
         write('usr/libexec/oneplus13-'+name,
               (REPO/'devices/oneplus13/desktop'/name).read_text(), 0o755)
+    write('usr/libexec/oneplus13-readonly-block.py',
+          (REPO/'tools/oneplus13/readonly-block.py').read_text(), 0o755)
+    write('usr/lib/udev/rules.d/09-oneplus13-ram-readonly.rules',
+          (REPO/'devices/oneplus13/desktop/09-oneplus13-ram-readonly.rules').read_text())
     write('usr/lib/oneplus13-desktop/version', '1\n')
     write('usr/libexec/oneplus13-native-display',
           (REPO/'devices/oneplus13/native-desktop.py').read_text(), 0o755)

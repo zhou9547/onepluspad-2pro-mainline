@@ -67,7 +67,7 @@ class DesktopTests(unittest.TestCase):
                 self.assertIn('install '+module+' /bin/false\n',policy)
 
     def exercise_runtime_guard(self, already_read_only, setro_failures=0,
-                               expect_success=True, mountinfo=''):
+                               expect_success=True, mountinfo='', nonblock_success=False):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             block = root/'sys/class/block/sda1'
@@ -98,6 +98,10 @@ class DesktopTests(unittest.TestCase):
             script = (TOOLS.parents[1]/'devices/oneplus13/desktop/runtime-guard').read_text()
             script = script.replace('/sys/class/block', str(root/'sys/class/block'))
             script = script.replace('/proc/self/mountinfo', str(root/'mountinfo'))
+            fallback = root/'readonly-block.py'
+            fallback.write_text('import sys\nsys.exit('+('0' if nonblock_success else '1')+')\n')
+            script = script.replace('/usr/libexec/oneplus13-readonly-block.py',str(fallback))
+            script = script.replace('/run/oneplus13/readonly-block-errors.log',str(root/'fallback-errors'))
             script = script.replace('[ -b "/dev/$name" ]', '[ -e "/dev/$name" ]')
             script = script.replace('/dev/', str(root/'dev')+'/')
             script_path = root/'runtime-guard'
@@ -129,6 +133,9 @@ class DesktopTests(unittest.TestCase):
     def test_runtime_guard_stays_fail_closed_after_bounded_retries(self):
         self.exercise_runtime_guard(False, setro_failures=3,
                                     expect_success=False)
+
+    def test_runtime_guard_uses_confirmed_nonblocking_fallback_after_cli_failure(self):
+        self.exercise_runtime_guard(False,setro_failures=3,nonblock_success=True)
 
     def test_runtime_guard_accepts_failed_block_flag_for_readonly_mount(self):
         self.exercise_runtime_guard(False, setro_failures=3,

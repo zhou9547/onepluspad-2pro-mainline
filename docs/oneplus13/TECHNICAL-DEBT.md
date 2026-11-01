@@ -1,3 +1,27 @@
+# No-media storage guard corrected; packaged-image acceptance pending, 2026-11-01
+
+r246 closes the narrowed ordinary-GNOME automatic readonly OTG runtime matrix:
+two actual dock insertions,130.6s hold, block/file I/O, unmounts, detach, process
+freeze watchdog, restart/reread, firmware/PC restoration and post5GHz passed.
+The exact base image and RAM overlay are identified in R246-AUTOMATIC-OTG-ACCEPTANCE-20261101.json.
+This is not camera/GNSS/NFC or arbitrary-peripheral acceptance. Older UNKNOWN
+records remain unchanged. Persistent installation/OEM first-user/dual boot are deferred.
+
+The extra removable zero-capacity LUN cannot be protected through an ordinary
+blocking open in the same way as a media-present disk. The pinned kernel's
+[sd_open](https://github.com/yzddmr6/linux-sm8750-erhai/blob/7a81d184e3098624d4342d8f4eff5e23674bcc9f/drivers/scsi/sd.c)
+rejects no-media removable opens without NDELAY; util-linux
+[blockdev](https://github.com/util-linux/util-linux/blob/master/disk-utils/blockdev.c)
+uses ordinary O_RDONLY for its command loop. Use the verified nonblocking readonly
+ioctl fallback and add/change protection, not a blanket skip for empty USB disks.
+Node/sysfs identity changes and unconfirmed protection remain failures.
+
+The permanent integration changes only helper installation/log paths from the RAM
+prototype. The complete-image manifest now binds guard/helper/udev bytes. Fresh
+Actions/readback and a fresh exact-image phone ledger are still needed before
+claiming that new artifact itself is tested. The former stale boot byte count is
+replaced with the actual generated file size. USB write support is unqualified.
+
 # Automatic OTG runtime identity correction, 2026-11-01
 
 # USB mount/guard race remains hardware-unverified, 2026-11-01

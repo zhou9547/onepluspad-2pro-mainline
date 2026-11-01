@@ -52,6 +52,15 @@ def main():
     staging=tempfile.TemporaryDirectory(prefix='oneplus13-private-rootfs-',dir='/var/tmp')
     stage=Path(staging.name)/'rootfs'
     subprocess.run(['unsquashfs','-no-progress','-processors','2','-d',str(stage),str(rootfs/'rootfs.squashfs')],check=True)
+    storage_guard_sources={
+        'usr/libexec/oneplus13-runtime-guard':'devices/oneplus13/desktop/runtime-guard',
+        'usr/libexec/oneplus13-readonly-block.py':'tools/oneplus13/readonly-block.py',
+        'usr/lib/udev/rules.d/09-oneplus13-ram-readonly.rules':'devices/oneplus13/desktop/09-oneplus13-ram-readonly.rules'}
+    storage_guard_hashes={}
+    for name,source in storage_guard_sources.items():
+        if (stage/name).read_bytes()!=(REPO/source).read_bytes():
+            raise ValueError('Storage guard rootfs differs from current source')
+        storage_guard_hashes[name]=sha256(stage/name)
     for name,item in pin['files'].items():
         if not name.startswith('firmware/'):continue
         dest=stage/'usr/lib/firmware'/name.removeprefix('firmware/')
@@ -369,6 +378,8 @@ def main():
                   camera_capture_auto_started=False,camera_capture_hardware_qualified=False)
     result.update(peripheral_probe_runtime_files=peripheral_probe_hashes,
                   peripheral_probe_auto_started=False)
+    result.update(storage_guard_runtime_files=storage_guard_hashes,
+                  storage_guard_nonblocking_readonly_ioctl=True)
     result.update(automatic_usb_runtime_files=automatic_usb_hashes,
                   automatic_usb_service_conditional=True,
                   automatic_usb_service_link='/usr/lib/systemd/system/oneplus13-auto-otg.service')

@@ -1,3 +1,28 @@
+# Ordinary GNOME WiFi5GHz and readonly automatic OTG accepted, 2026-11-01
+
+r246 passed the owner's narrowed WiFi/USB hardware matrix using source2b576347,
+Actions41299915186 and exact hash-bound RAM overlays. Both real dock insertions
+automounted NTFS3, exposed the desktop volume, read4096-byte blocks and file
+prefixes, and unmounted normally. The first hold lasted130.6s. Actual detach,
+15.546s process-freeze watchdog recovery, service restart/reread, full saved-value
+restore, PC device/sink+UDC, post5GHz and Android seven-baseline return passed.
+One temporary boot, zero reported partition writes; no firmware UNKNOWN.
+
+r243 directly caught the storage guard issuing reboot with an extra bare LUN
+still writable. r245/r246 identify that LUN as removable with zero capacity;
+nonblocking readonly ioctls really changed0->1 and confirmed1. The guard now
+retains bounded ordinary-command retries, then opens O_RDONLY|O_NONBLOCK with
+identity verification and BLKROSET1/BLKROGET confirmation. An early add/change
+udev rule protects future media changes. No device-name exclusion or setrw.
+
+This commit packages that fix, hashes/verifies its exact runtime bytes, and fixes
+the inherited boot-size manifest field. Its newly built image is not yet hardware
+tested: do not relabel the old exact-image-plus-overlay result as its test.
+See R246-AUTOMATIC-OTG-ACCEPTANCE-20261101.json. Qualification is limited to the
+tested dock/Udisk and readonly I/O. USB writes, arbitrary hubs, full Ubuntu/OEM
+onboarding and dual boot remain deferred. Camera/GNSS are owner-paused; NFC skipped.
+WiFi5GHz is preserved, not an unfinished RF target. Android stays intact.
+
 # Automatic OTG runtime identity correction, 2026-11-01
 
 # r239 investigation: mount-time read-only and guard interaction, 2026-11-01
