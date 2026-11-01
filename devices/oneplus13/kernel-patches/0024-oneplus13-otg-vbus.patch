@@ -65,7 +65,7 @@ index bf1cead..555f4ad 100644
  	      (op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_VBUS_ENABLE ||
  	       op13_otg_le32((const unsigned char *)data + 12) == OP13_OTG_BOOST_CURRENT))))
  		return;
-@@ -1755,12 +1765,174 @@ static struct device_attribute dev_attr_oneplus13_otg_vbus_enable =
+@@ -1755,12 +1765,175 @@ static struct device_attribute dev_attr_oneplus13_otg_vbus_enable =
  static struct device_attribute dev_attr_oneplus13_otg_boost_current =
  	__ATTR(oneplus13_otg_boost_current, 0400, oneplus13_otg_boost_current_show, NULL);
  
@@ -198,7 +198,8 @@ index bf1cead..555f4ad 100644
 +		}
 +	} else if (sysfs_streq(buf, "start")) {
 +		mutex_lock(&battmgr->lock);
-+		if (battmgr->op13_otg_supply_lease.state != OP13_OTG_SUPPLY_ARMED) {
++		if (battmgr->op13_otg_supply_lease.state != OP13_OTG_SUPPLY_ARMED ||
++		    op13_otg_supply_expired(battmgr)) {
 +			ret = -EINVAL;
 +			goto out;
 +		}
@@ -240,7 +241,7 @@ index bf1cead..555f4ad 100644
  	NULL,
  };
  
-@@ -1775,6 +1947,9 @@ static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, in
+@@ -1775,6 +1948,9 @@ static umode_t op13_otg_visible(struct kobject *kobj, struct attribute *attr, in
  	if (attr == &dev_attr_oneplus13_otg_lease.attr &&
  	    !oneplus13_otg_lease_enabled)
  		return 0;
@@ -250,7 +251,7 @@ index bf1cead..555f4ad 100644
  	return attr->mode;
  }
  
-@@ -1925,6 +2100,8 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
+@@ -1925,6 +2101,8 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
  	init_completion(&battmgr->op13_otg_ack);
  	spin_lock_init(&battmgr->op13_otg_lock);
  	INIT_DELAYED_WORK(&battmgr->op13_otg_restore_work, op13_otg_restore_worker);
@@ -259,7 +260,7 @@ index bf1cead..555f4ad 100644
  
  	match = of_match_device(qcom_battmgr_of_variants, dev->parent);
  	if (match)
-@@ -2008,12 +2185,16 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
+@@ -2008,12 +2186,16 @@ static int qcom_battmgr_probe(struct auxiliary_device *adev,
  	if (IS_ERR(battmgr->client))
  		return PTR_ERR(battmgr->client);
  

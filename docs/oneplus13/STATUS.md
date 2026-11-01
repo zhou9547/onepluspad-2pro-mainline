@@ -1,3 +1,26 @@
+# r224 firmware-error ACK poison correction, 2026-11-01
+
+The same independent review reproduced an error-ACK path that returned a
+firmware SET error without latching transport poison, allowing another
+rollback SET. The shared transfer now incorporates callback errors before
+poisoning. Actual-kernel fault controls require zero subsequent requests
+from manual/watchdog cleanup; old ordering fails a negative control.
+See USB-ARM-DEADLINE-20261101.md. This source candidate needs a new exact
+Actions image; no new phone boot or physical USB success is claimed.
+# r224 expired-arm admission correction, 2026-11-01
+
+Independent pre-boot review found that r223 could renew an expired ARMED lease
+before testing its old deadline when the restore worker was delayed. Patch0024
+now rejects expiry under the battery mutex before deadline/timer renewal.
+Actual-store release/sanitizer checks and an old-code negative control pass.
+See USB-ARM-DEADLINE-20261101.md. Full source-suite and Actions qualification
+are pending; no new phone boot or hardware success is claimed.
+
+The new private combined runner is being revised for the unchanged120s arm
+watchdog, a90s actual cable-swap card, xHCI-only readiness, explicit external
+4096-byte block proof, hard-stop on unknown filesystem cleanup, terminal
+saved-value restoration and post-USB/GNSS/camera5GHz HTTPS regression.
+NFC remains skipped. Old r223 plans and approvals remain consumed.
 # r223 USB arm/restore hardware result, 2026-11-01
 
 Actions41221497802 passed all five jobs at4e5bf2d. A reviewed combined RAM

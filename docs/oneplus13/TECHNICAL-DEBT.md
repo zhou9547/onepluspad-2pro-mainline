@@ -1,3 +1,26 @@
+# r224 firmware-error ACK poison correction, 2026-11-01
+
+The same independent review reproduced an error-ACK path that returned a
+firmware SET error without latching transport poison, allowing another
+rollback SET. The shared transfer now incorporates callback errors before
+poisoning. Actual-kernel fault controls require zero subsequent requests
+from manual/watchdog cleanup; old ordering fails a negative control.
+See USB-ARM-DEADLINE-20261101.md. This source candidate needs a new exact
+Actions image; no new phone boot or physical USB success is claimed.
+# r224 arm-expiry admission boundary, 2026-11-01
+
+r223's sysfs start branch renewed its deadline before checking expiry. Delayed
+restore work could therefore let a stale ARMED state re-enable supply traffic.
+The new under-mutex expiry guard rejects start without GET/SET or timer renewal.
+Actual-store release/ASan/UBSan checks and a required old-code negative control
+pass; full Actions/image and fresh hardware qualification remain pending.
+Userspace state/clock checks alone cannot close this kernel scheduling race.
+See USB-ARM-DEADLINE-20261101.md. No additional phone boot occurred.
+
+The120s arm watchdog also bounds operator and xHCI preparation. A300s role wait
+cannot extend that eligibility. Keep the actual physical swap prompt timely,
+require a used terminal restore after successful arm, and halt on unknown
+filesystem cleanup before any following GNSS/camera/5GHz phase.
 # r223 USB physical-role boundary, 2026-11-01
 
 The r223 kernel accepted the staged AP17/18 arm and verified both values while

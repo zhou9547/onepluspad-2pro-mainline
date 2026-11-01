@@ -100,17 +100,36 @@ int main(int argc,char **argv){
  else if(!strcmp(argv[1],"idle-remove-no-traffic")){op13_otg_lease_remove(&b);CHECK(!sends && !schedules && wake.freed && cancels==1 && drains==1);}
  else if(!strcmp(argv[1],"rebind-latch")){oneplus13_otg_lease_enabled=true;CHECK(command("start")>0);CHECK(command("restore")>0);unsigned int before=sends;setup();CHECK(command("start")<0 && sends==before);}
  else if(!strcmp(argv[1],"poison-watchdog-no-retry")){oneplus13_otg_lease_enabled=true;CHECK(command("start")>0);mode=1;CHECK(command("restore")<0);CHECK(b.op13_otg_lease.state==3 && b.op13_otg_poisoned);unsigned int before=sends;op13_otg_restore_worker(&b.op13_otg_restore_work.work);CHECK(sends==before && !wake.held);}
+ else if(!strcmp(argv[1],"firmware-error-ack-no-rollback")){oneplus13_otg_lease_enabled=true;mode=2;CHECK(command("start")<0);CHECK(sends==3 && b.op13_otg_poisoned && b.op13_otg_lease.state==3);unsigned int before=sends;CHECK(command("restore")<0);op13_otg_restore_worker(&b.op13_otg_restore_work.work);CHECK(sends==before && !wake.held);}
  else if(!strcmp(argv[1],"expired-set-no-enable")){oneplus13_otg_lease_enabled=true;now=100; b.op13_otg_deadline=100;mutex_lock(&b.lock);CHECK(op13_otg_lease_set(&b,17,1)==-ETIME && !sends);mutex_unlock(&b.lock);}
  else if(!strcmp(argv[1],"refused-preserved-watchdog")){oneplus13_otg_lease_enabled=true;ap=1;CHECK(command("start")<0 && sends==2 && !wake.held);op13_otg_restore_worker(&b.op13_otg_restore_work.work);CHECK(sends==2 && b.op13_otg_lease.state==4);}
  else CHECK(0);
  CHECK(!mutex_depth && !spin_depth);return 0;
 }
 '''
-cases=['disabled-no-traffic','wrong-phone-no-traffic','invalid-no-traffic','start-store-manual-restore','watchdog-restores','remove-restores-drains','idle-remove-no-traffic','rebind-latch','poison-watchdog-no-retry','expired-set-no-enable','refused-preserved-watchdog']
+cases=['disabled-no-traffic','wrong-phone-no-traffic','invalid-no-traffic','start-store-manual-restore','watchdog-restores','remove-restores-drains','idle-remove-no-traffic','rebind-latch','poison-watchdog-no-retry','firmware-error-ack-no-rollback','expired-set-no-enable','refused-preserved-watchdog']
 
 @unittest.skipUnless(sys.platform.startswith('linux') and shutil.which('gcc'),
                      'Actual kernel scaffold harness requires Linux GCC')
 class OtgKernelScaffoldTests(unittest.TestCase):
+    def test_negative_control_error_ack_poison_order(self):
+        corrected = ('\tif (!ret)\n\t\tret = battmgr->op13_otg_error;\n'
+                     '\tif (ret)\n\t\tbattmgr->op13_otg_poisoned = true;')
+        original = ('\tif (ret)\n\t\tbattmgr->op13_otg_poisoned = true;\n'
+                    '\telse\n\t\tret = battmgr->op13_otg_error;')
+        self.assertIn(corrected, HARNESS)
+        with tempfile.TemporaryDirectory(prefix='op13-error-ack-control-') as temporary:
+            directory = Path(temporary)
+            source, binary = directory/'old.c', directory/'old'
+            source.write_text(HARNESS.replace(corrected, original))
+            compiled = subprocess.run(['gcc', '-std=c11', '-Wall', '-Wextra', '-Werror',
+                '-Wno-unused-parameter', '-O2', '-I', str(SOURCE/'tools/oneplus13/usb-draft'),
+                str(source), '-o', str(binary)], capture_output=True, text=True, timeout=30)
+            self.assertEqual(compiled.returncode, 0, compiled.stderr)
+            ran = subprocess.run([str(binary), 'firmware-error-ack-no-rollback'],
+                                 capture_output=True, text=True, timeout=5)
+            self.assertNotEqual(ran.returncode, 0, 'Old callback-error ordering must fail')
+
     def test_actual_store_watchdog_remove_in_release_and_sanitizers(self):
         with tempfile.TemporaryDirectory(prefix='op13-kernel-scaffold-') as temporary:
             directory = Path(temporary)

@@ -14,8 +14,8 @@ module_param_named(oneplus13_otg_lease, oneplus13_otg_lease_enabled, bool, 0400)
 MODULE_PARM_DESC(oneplus13_otg_lease,
 	"Opt-in experimental AP17/SWITCH18 120-second lease; no automatic writes");
 
-/* Caller owns battmgr->lock. No transaction ID exists. A timeout, send error
- * or service loss forbids further optional traffic, including rollback. The
+/* Caller owns battmgr->lock. No transaction ID exists. A timeout, send error,
+ * firmware error or service loss forbids optional traffic, including rollback. The
  * resulting UNKNOWN state is deliberately not successful cleanup.
  */
 static int op13_otg_transfer(struct qcom_battmgr *battmgr, unsigned int opcode,
@@ -48,10 +48,10 @@ static int op13_otg_transfer(struct qcom_battmgr *battmgr, unsigned int opcode,
 		ret = -ETIMEDOUT;
 	spin_lock_irqsave(&battmgr->op13_otg_lock, flags);
 	battmgr->op13_otg_pending = false;
+	if (!ret)
+		ret = battmgr->op13_otg_error;
 	if (ret)
 		battmgr->op13_otg_poisoned = true;
-	else
-		ret = battmgr->op13_otg_error;
 	if (battmgr->op13_otg_poisoned || !battmgr->service_up)
 		ret = -EHOSTDOWN;
 	if (!ret)
