@@ -1,3 +1,22 @@
+# Full Ubuntu Desktop rootfs candidate prepared, 2026-11-01
+
+The next image candidate upgrades the existing Ubuntu Base/GNOME staging rootfs
+to the `ubuntu-desktop` metapackage with its signed-snapshot recommended
+applications. GDM Initial Setup is explicitly enabled and verified in the
+delivered SquashFS; no regular user is precreated, root stays locked, and SSH
+does not assume a fixed username. Existing OnePlus 13 kernel, Wi-Fi profile,
+GNOME runtime and automatic readonly OTG packaging remain in the same image
+assembly path. No new image has been built or run on hardware yet.
+
+The r247 delta remains important: its no-media USB readonly guard and exact
+packaged artifact were only offline-built/read back. r246's older image plus
+exact RAM overlay is the latest phone evidence for GNOME, 5 GHz Wi-Fi and the
+tested dock/U-disk readonly auto-mount path. The new full-desktop image needs its
+own exact-byte review and temporary boot before inheriting any hardware claim.
+Local validation: 833 OnePlus 13 tests pass, one skipped. Next: build and verify
+the complete RAM image through `oneplus13-current-image.yml`, then conduct one
+current-chat-bound temporary `fastboot boot` round; no flash or persistence.
+
 # Ordinary GNOME WiFi5GHz and readonly automatic OTG accepted, 2026-11-01
 
 r247 packaging is now complete: Actions 41309908733 passed all five jobs after a

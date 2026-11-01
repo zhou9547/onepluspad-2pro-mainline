@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 import gzip
 import importlib.util
+import json
 from pathlib import Path
 import stat
 import sys
@@ -19,6 +20,23 @@ spec.loader.exec_module(installer)
 
 
 class DesktopTests(unittest.TestCase):
+    def test_rootfs_uses_full_ubuntu_desktop_and_first_user_setup(self):
+        repo=TOOLS.parents[1]
+        packages=json.loads((repo/'devices/oneplus13/ubuntu.json').read_text())['packages']
+        self.assertIn('ubuntu-desktop',packages)
+        self.assertIn('gnome-initial-setup',packages)
+        rootfs=(TOOLS/'rootfs.sh').read_text()
+        self.assertGreaterEqual(rootfs.count('--install-recommends'),2)
+        self.assertNotIn('--no-install-recommends',rootfs)
+        self.assertIn('GNOME Initial Setup to create the first user',rootfs)
+        self.assertIn('Refusing to ship a precreated desktop user',rootfs)
+        self.assertIn('usr/libexec/gnome-initial-setup',rootfs)
+        self.assertIn('InitialSetupEnable=true',rootfs)
+        self.assertIn('sed -i -E',rootfs)
+        ssh=(rootfs.split('PasswordAuthentication yes',1)[1].split('EOF',1)[0])
+        self.assertIn('PermitRootLogin no',ssh)
+        self.assertNotIn('AllowUsers',ssh)
+
     def fixture(self):
         init = (TOOLS.parents[1]/'devices/oneplus13/init').read_bytes().replace(b'\r\n', b'\n')
         return gzip.compress(make_cpio([

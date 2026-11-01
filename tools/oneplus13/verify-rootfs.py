@@ -41,12 +41,15 @@ def main():
         if arch not in {'arm64', 'all'}:
             raise SystemExit(f'Wrong target package architecture: {package} / {arch}')
         packages[package.split(':')[0]] = version
-    # --no-install-recommends requires an explicit complete seed. Checking only
-    # NetworkManager misses its WiFi authentication and desktop OBEX services.
+    # Require Ubuntu's full desktop metapackage alongside the device additions.
     repo=Path(__file__).resolve().parents[2]
-    for package in json.loads((repo/'devices/oneplus13/ubuntu.json').read_text())['packages']:
+    package_seed=json.loads((repo/'devices/oneplus13/ubuntu.json').read_text())['packages']
+    for package in package_seed:
         if package not in packages:
             raise SystemExit(f'Missing required desktop package: {package}')
+    for package in ['ubuntu-desktop','ubuntu-desktop-minimal','gnome-initial-setup']:
+        if package not in packages:
+            raise SystemExit(f'Missing standard Ubuntu desktop package: {package}')
     image = out / 'rootfs.squashfs'
     read = lambda name: subprocess.check_output(['unsquashfs', '-cat', str(image), name])
     if read('etc/machine-id').strip():
@@ -54,6 +57,15 @@ def main():
     root = next(line for line in read('etc/shadow').decode().splitlines() if line.startswith('root:'))
     if not root.split(':')[1].startswith(('!', '*')):
         raise SystemExit('Root account is not locked')
+    passwd = read('etc/passwd').decode().splitlines()
+    if any(1000 <= int(line.split(':')[2]) < 60000 for line in passwd if line):
+        raise SystemExit('A regular user was precreated in the rootfs')
+    initial_setup=read('usr/libexec/gnome-initial-setup')
+    if initial_setup[:5] != b'\x7fELF\x02' or struct.unpack_from('<H', initial_setup, 18)[0] != 183:
+        raise SystemExit('GNOME first-user setup binary missing or wrong architecture')
+    gdm_config=read('etc/gdm3/custom.conf').decode()
+    if '[daemon]' not in gdm_config or 'InitialSetupEnable=true' not in gdm_config:
+        raise SystemExit('GDM first-user setup is not explicitly enabled')
     for name in ['usr/bin/gnome-shell', 'usr/sbin/gdm3', 'usr/sbin/NetworkManager',
                  'usr/sbin/wpa_supplicant','usr/sbin/iw','usr/bin/bluetoothctl',
                  'usr/bin/bluetooth-sendto','usr/libexec/bluetooth/obexd']:
@@ -76,7 +88,8 @@ def main():
         'gnome': (out / 'gnome-version.txt').read_text().strip(),
         'packages': len(packages), 'hardware_tested': False,
         'checks': ['all downloaded SHA256SUMS', 'manifest sizes/hashes', 'all package architectures',
-                   'required runtime packages', 'locked root in SquashFS', 'empty machine-id in SquashFS',
+                   'full Ubuntu Desktop metapackages and required runtime packages',
+                   'locked root, no precreated desktop user, enabled GDM first-user setup, and empty machine-id',
                    'actual desktop/WiFi/Bluetooth ARM64 ELF binaries',
                    'supplicant and OBEX D-Bus/systemd activation contracts', 'actual Ubuntu os-release']}
     args.report.parent.mkdir(parents=True, exist_ok=True)

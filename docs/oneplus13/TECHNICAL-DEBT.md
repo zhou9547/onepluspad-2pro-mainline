@@ -1,3 +1,14 @@
+# Full desktop and first-user acceptance remains open, 2026-11-01
+
+The source candidate now requests Ubuntu's `ubuntu-desktop` metapackage with
+recommended applications, explicitly enables GDM Initial Setup, rejects any
+precreated regular account, and removes SSH's former fixed `AllowUsers a`
+restriction. The package set and recommendation closure still require a fresh
+ARM64 rootfs build and SquashFS readback. First-user interaction, application
+availability, memory use, and persistence semantics are not hardware-qualified;
+the current image remains RAM-only. r247's new packaged USB guard also remains
+without exact-image phone acceptance; r246's overlay result does not transfer.
+
 # No-media storage guard and r247 packaged image verified offline, 2026-11-01
 
 r247 Actions run 41309908733 passed all five jobs and all three artifact

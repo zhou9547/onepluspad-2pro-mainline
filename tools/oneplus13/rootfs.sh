@@ -63,17 +63,18 @@ chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -o APT::Updat
 # Read the exact package set from the locked JSON. Package versions are fixed by
 # the signed Ubuntu snapshot and recorded in the delivered manifest.
 read -r -a packages <<< "${pin[3]}"
-# Resolve using the validated snapshot indexes, then fetch eight packages at a
-# time. Cached bytes are accepted only against this plan's size and SHA256.
+# Resolve the standard Ubuntu Desktop metapackage and its recommended apps from
+# the validated snapshot, then fetch packages in bounded batches. Cached bytes
+# are accepted only against this plan's size and SHA256.
 chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
   apt-get -o Acquire::ForceHash=SHA256 --print-uris --download-only \
-  install -y --no-install-recommends "${packages[@]}" > "$dest/apt-package-plan.txt"
+  install -y --install-recommends "${packages[@]}" > "$dest/apt-package-plan.txt"
 python3 tools/oneplus13/prefetch-rootfs-debs.py \
   --plan "$dest/apt-package-plan.txt" --apt-uri "${pin[2]}" \
   --cache "$repo/cache/oneplus13-rootfs-debs" \
   --archives "$root/var/cache/apt/archives" --report "$dest/deb-prefetch.json"
 time chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
-  apt-get install --no-download -y --no-install-recommends "${packages[@]}"
+  apt-get install --no-download -y --install-recommends "${packages[@]}"
 chroot "$root" locale-gen en_US.UTF-8 zh_CN.UTF-8
 test -f "$root/usr/share/zoneinfo/Asia/Shanghai"
 ln -sfn /usr/share/zoneinfo/Asia/Shanghai "$root/etc/localtime"
@@ -100,6 +101,15 @@ QT_IM_MODULE=ibus
 XMODIFIERS=@im=ibus
 GSK_RENDERER=cairo
 EOF
+gdm_conf="$root/etc/gdm3/custom.conf"
+if grep -Eq '^[[:space:]]*#?[[:space:]]*InitialSetupEnable[[:space:]]*=' "$gdm_conf"; then
+  sed -i -E 's/^[[:space:]]*#?[[:space:]]*InitialSetupEnable[[:space:]]*=.*/InitialSetupEnable=true/' "$gdm_conf"
+elif grep -q '^\[daemon\]' "$gdm_conf"; then
+  sed -i '/^\[daemon\]/a InitialSetupEnable=true' "$gdm_conf"
+else
+  printf '\n[daemon]\nInitialSetupEnable=true\n' >> "$gdm_conf"
+fi
+grep -q '^InitialSetupEnable=true$' "$gdm_conf"
 echo oneplus13-linux > "$root/etc/hostname"
 printf '127.0.0.1 localhost\n127.0.1.1 oneplus13-linux\n::1 localhost ip6-localhost\n' > "$root/etc/hosts"
 mkdir -p "$root/etc/systemd/system" "$root/etc/systemd/logind.conf.d"
@@ -126,7 +136,6 @@ PasswordAuthentication yes
 KbdInteractiveAuthentication no
 PubkeyAuthentication yes
 PermitRootLogin no
-AllowUsers a
 EOF
 cat > "$root/usr/lib/systemd/system/oneplus13-ssh-host-keys.service" <<'EOF'
 [Unit]
@@ -183,6 +192,13 @@ test -x "$root/usr/bin/dockerd"
 test -x "$root/usr/sbin/iptables-nft"
 test -x "$root/usr/sbin/iptables-legacy"
 grep -qx 'PermitRootLogin no' "$root/etc/ssh/sshd_config.d/60-oneplus13.conf"
+! grep -q '^AllowUsers ' "$root/etc/ssh/sshd_config.d/60-oneplus13.conf"
+if awk -F: '$3 >= 1000 && $3 < 60000 { found=1 } END { exit found ? 0 : 1 }' "$root/etc/passwd"; then
+  echo 'Refusing to ship a precreated desktop user' >&2
+  exit 1
+fi
+test -x "$root/usr/sbin/gdm3"
+test -x "$root/usr/libexec/gnome-initial-setup"
 test ! -e "$root/etc/ssh/ssh_host_rsa_key"
 test -L "$root/etc/systemd/system/multi-user.target.wants/ssh.service"
 chroot "$root" apt-get clean
@@ -230,7 +246,7 @@ out=pathlib.Path(sys.argv[1])
 sha=lambda p:hashlib.file_digest(p.open('rb'),'sha256').hexdigest()
 result={'status':'OFFLINE_ROOTFS_BUILD_NOT_DEVICE_TESTED','hardware_tested':False,
  'integration_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
- 'user_account':'No default password or autologin; create user before deployment',
+ 'user_account':'No precreated user or autologin; GDM launches GNOME Initial Setup to create the first user',
  'kernel_modules':'Delivered separately with the matching kernel artifact',
  'files':{p.name:{'sha256':sha(p),'size':p.stat().st_size} for p in sorted(out.iterdir()) if p.is_file()}}
 (out/'manifest.json').write_text(json.dumps(result,indent=2)+'\n')

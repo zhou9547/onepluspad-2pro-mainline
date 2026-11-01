@@ -1,6 +1,8 @@
 # OnePlus 13 / 一加 13 原生 Linux
 
-适用一加 13（dodge / SM8750）。当前可临时进入 Ubuntu GNOME；只使用 RAM 启动，不刷写、不修改分区、不持久安装。
+适用一加 13（dodge / SM8750）。当前在构建完整 Ubuntu Desktop 用户态候选，目标是保留已验证的 GNOME、5 GHz Wi‑Fi 和限定拓展坞/U 盘只读自动 OTG 支持。临时测试只允许 RAM 启动，不刷写、不修改分区、不持久安装。
+
+当前已有的 r247 是 GNOME staging 镜像：新增的无介质 USB 只读保护和打包修复已离线构建、回读，但 r247 镜像本身没有上手机。r246 的 Wi‑Fi/USB 真机结果绑定于旧镜像加精确 RAM overlay，不代表 r247 已通过硬件测试。完整桌面候选会安装 Ubuntu Desktop 元包及推荐应用，保留 GDM 首次设置，不预建普通用户；新镜像仍需独立验收。
 
 截至 2026-10-29，最新已下载复核并完成联合回归的完整镜像来自提交 `ee214438`，
 [Actions 40833999996](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/40833999996) 的五个任务全部成功。
