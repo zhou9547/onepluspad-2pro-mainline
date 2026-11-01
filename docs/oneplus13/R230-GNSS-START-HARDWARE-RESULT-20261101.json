@@ -1,0 +1,90 @@
+{
+  "schema": "oneplus13-r230-gnss-start-profile-hardware-result-v1",
+  "date": "2026-11-01",
+  "round": "r230-gnss-start",
+  "image_source_commit": "96928a96b4d7a68ab099ae5447b32598876947a8",
+  "image_source_tree": "80ce13bf399f45618501c0347d5aa7ef9fc20f91",
+  "actions_run": 41264821109,
+  "boot_sha256": "49e18ab802b054fe1d389c8582afbb3d8be93d64f0552c57fca45daee944bd70",
+  "rootfs_sha256": "076283669f9379b875a46cef29cd1f70d63ff8397eae5206955c5e7f7da47078",
+  "plan_sha256": "2249a2b60ed97ca4ac892b1eb7b59454968c5cbda4dc4f6584f330db6cc8ab9c",
+  "one_ram_boot": true,
+  "boot_attempts": 1,
+  "reported_partition_writes": 0,
+  "android_return": true,
+  "android_baseline_matches": 7,
+  "cleanup_pass": true,
+  "firmware_residual_unknown": false,
+  "guest_uptime_seconds": 202.44,
+  "planned_phases": 13,
+  "every_planned_phase_completed": true,
+  "gates": {
+    "camera-chip-id": true,
+    "modem-verify": true,
+    "wifi-a": true,
+    "wifi-a-post": true,
+    "gnss": false,
+    "camera": false,
+    "usb": false
+  },
+  "gnss": {
+    "start_profile_sent": "accuracy=high recurrence=periodic intermediate=on min_interval_ms=1000 session=1",
+    "start_accepted": false,
+    "start_error": "QMI protocol error (46): 'GeneralError'",
+    "stop_acknowledged": true,
+    "fix_acquired": false,
+    "nmea_count": 0,
+    "loc_service": "node=0 port=94 version=2 instance=0",
+    "engine_lock_read_only": {
+      "status": 0,
+      "lock_type": 4,
+      "subscription": null,
+      "lock_client": null,
+      "clients_config": "0xffffffffffffffff",
+      "engine_lock_state": 1
+    },
+    "operation_mode": "standalone",
+    "conclusion": "Explicit HIGH horizontal accuracy is not the cause of GeneralError46; the rejected START is unchanged from r228 with a clean STOP."
+  },
+  "camera": {
+    "chip_id_pass": true,
+    "real_frame_pass": false,
+    "attempts": 1,
+    "teardown_complete": true
+  },
+  "usb": {
+    "arm17_18_pass": true,
+    "arm_values": {
+      "oneplus13_otg_ap_enable": 1,
+      "oneplus13_otg_switch": 1,
+      "oneplus13_otg_vbus_enable": 0,
+      "oneplus13_otg_boost_current": 0
+    },
+    "host_source_observed": false,
+    "host_error": "Attached OTG sink has no host/source role",
+    "current64_or_vbus24_written": false,
+    "restore_order": [24, 64, 18, 17],
+    "restore_values": {
+      "oneplus13_otg_ap_enable": 0,
+      "oneplus13_otg_switch": 0,
+      "oneplus13_otg_vbus_enable": 0,
+      "oneplus13_otg_boost_current": 0
+    },
+    "final_lease_state": 2,
+    "final_lease_used": 1,
+    "filesystem_modules_owned_and_removed": ["exfat", "ntfs3"],
+    "functional_pass": false,
+    "note": "No physical dock/U-disk swap occurred in this round; the bounded card expired before an operator action, so no external node or read-only I/O was attempted. Direct U-disk qualification remains r228's result on the older image."
+  },
+  "wifi_5ghz_post": {
+    "gate": true,
+    "note": "Post-round 5 GHz control link and certificate-verified HTTPS passed."
+  },
+  "nfc": "owner-skipped",
+  "all_adaptation_complete": false,
+  "limitations": [
+    "One attached-storage-free round; no dock, hub, HID or write I/O was exercised.",
+    "The accuracy variable is now excluded, not the underlying lock; no lock, subscription or privacy mutation was attempted.",
+    "Firmware/LOC replies carry no transaction id, so readback freshness is not provable."
+  ]
+}

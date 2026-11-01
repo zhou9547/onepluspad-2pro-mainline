@@ -1,3 +1,19 @@
+# r230 combined round: HIGH accuracy excluded, LOCK_ALL candidate, 2026-11-01
+
+The 96928a96 image booted once in RAM with the source-bound r230 runner and
+finished all 13 phases in 202.44 s, returning Android with seven matching
+baselines, zero partition writes and no firmware UNKNOWN. GNSS sent the new
+explicit HIGH-accuracy START profile and still received
+`QMI protocol error (46): 'GeneralError'` with a clean STOP, so the accuracy
+variable is excluded. The read-only engine-lock state is unchanged and the
+pinned IDL identifies `lock_type=4` as the legacy LOCK_ALL state, which refuses
+position sessions while accepting registration and STOP. No lock or privacy
+mutation was attempted. Camera repeated the single-primary attempt with proven
+teardown; USB armed and restored cleanly but no physical dock/U-disk swap
+happened, so nothing beyond preparation and cleanup is claimed. See
+[engine lock](GNSS-ENGINE-LOCK-LOCK-ALL-20261101.md) and
+[R230 result](R230-GNSS-START-HARDWARE-RESULT-20261101.json).
+
 # Explicit HIGH LOC START accuracy candidate, 2026-11-01
 
 r229 repackaged the r228 milestone source and passed all five Actions jobs with

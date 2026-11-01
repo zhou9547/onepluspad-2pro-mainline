@@ -1,3 +1,22 @@
+# GNSS GeneralError46: accuracy excluded, legacy LOCK_ALL stands, 2026-11-01
+
+r230 proves explicit HIGH horizontal accuracy is not the cause: the modem
+received that exact profile and still answered with the generic error, while the
+same client's STOP succeeded and event registration had already succeeded. The
+remaining candidate is the legacy LOC lock itself: `lock_type=4` is
+`eQMI_LOC_LOCK_ALL`, with an all-ones client mask, which explains a refusal of
+position sessions while everything else still works. `engine_lock_state=1` is
+the engine-enabled bit and does not contradict that reading.
+
+This is not yet a proven root cause, and no lock, subscription or privacy
+mutation was attempted. The next step stays read-only: establish who owns the
+persisted lock and whether the phone's location setting agrees with it. A
+bounded `SET_ENGINE_LOCK` experiment would need its own plan that saves the
+current lock, sets one value, starts once, restores the saved lock and proves
+the restore; that mutation is outside this chat's USB-supply authorization and
+must not be folded into an unrelated round. A fix still requires an accepted
+START, a checked real satellite fix and a clean STOP.
+
 # GNSS START accuracy profile is unqualified, 2026-11-01
 
 r228's rejected START proves only that the modem refused the LOW-accuracy
