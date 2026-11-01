@@ -1,5 +1,25 @@
 # Automatic OTG runtime identity correction, 2026-11-01
 
+# r239 investigation: mount-time read-only and guard interaction, 2026-11-01
+
+r238 remains the latest hardware result; its automatic OTG is unqualified and
+firmware state UNKNOWN. The short 0.7-second receipt still does not identify
+the restart cause. Offline work now makes UDisks mount USB filesystems read-only
+through a late `99-` udev rule, and lets the RAM guard tolerate a failed block
+readonly ioctl only when `/proc/self/mountinfo` proves every mount of that exact
+device is read-only. Writable mounts and missing/ambiguous mount evidence still
+fail closed. Tests cover both outcomes.
+
+The package builder and complete-image verifier now bind this additional rule.
+Focused desktop/OTG tests pass; the full `test_oneplus13*.py` suite passes 823
+tests with one skip in WSL. This is source-level evidence only. The local r239
+bundle is not eligible for boot: its automatic boot metadata reports 14,729,216
+bytes while the file is 14,741,504 bytes, and its exact-image QEMU handoff is
+marked incomplete. The bundle-level source tree matches local HEAD, while the
+component manifest retains its pinned kernel integration commit; these fields
+must remain distinct in the next exact source/image plan. No new phone boot or
+Actions build has been run; Android and firmware UNKNOWN remain unchanged.
+
 # r238 automatic desktop OTG result, 2026-11-01
 
 r238 booted the exact Actions image in RAM and reached GNOME. On a real

@@ -1,5 +1,16 @@
 # Automatic OTG runtime identity correction, 2026-11-01
 
+# USB mount/guard race remains hardware-unverified, 2026-11-01
+
+The r238 0.7-second attach receipt and restart do not establish that
+`blockdev --setro` caused the restart. The next source candidate adds a late
+UDisks USB-filesystem default of `ro`, and permits the RAM guard to accept a
+failed block-level readonly ioctl only if mountinfo shows all mounts for that
+device are readonly. Writable or unobservable mounts still fail closed. Builder
+and complete-image verification include the rule. Offline tests pass, but no
+new Actions artifact, exact-image QEMU handoff, or phone result exists yet;
+automatic OTG remains unqualified and USB firmware remains UNKNOWN.
+
 # r238 dock-attach restart and fail-closed stage ordering, 2026-11-01
 
 r238 proves automatic Type-C host/source, desktop automount and short

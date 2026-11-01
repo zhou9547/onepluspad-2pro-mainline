@@ -67,11 +67,12 @@ class DesktopTests(unittest.TestCase):
                 self.assertIn('install '+module+' /bin/false\n',policy)
 
     def exercise_runtime_guard(self, already_read_only, setro_failures=0,
-                               expect_success=True):
+                               expect_success=True, mountinfo=''):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             block = root/'sys/class/block/sda1'
             block.mkdir(parents=True)
+            (block/'dev').write_text('8:17\n')
             device = root/'dev/sda1'
             device.parent.mkdir()
             device.touch()
@@ -82,6 +83,7 @@ class DesktopTests(unittest.TestCase):
             failures = root/'setro-failures'
             state.write_text('1\n' if already_read_only else '0\n')
             failures.write_text(str(setro_failures)+'\n')
+            (root/'mountinfo').write_text(mountinfo)
             fake = binary/'blockdev'
             fake.write_text(
                 '#!/bin/sh\n'
@@ -95,6 +97,7 @@ class DesktopTests(unittest.TestCase):
             fake.chmod(0o755)
             script = (TOOLS.parents[1]/'devices/oneplus13/desktop/runtime-guard').read_text()
             script = script.replace('/sys/class/block', str(root/'sys/class/block'))
+            script = script.replace('/proc/self/mountinfo', str(root/'mountinfo'))
             script = script.replace('[ -b "/dev/$name" ]', '[ -e "/dev/$name" ]')
             script = script.replace('/dev/', str(root/'dev')+'/')
             script_path = root/'runtime-guard'
@@ -126,3 +129,11 @@ class DesktopTests(unittest.TestCase):
     def test_runtime_guard_stays_fail_closed_after_bounded_retries(self):
         self.exercise_runtime_guard(False, setro_failures=3,
                                     expect_success=False)
+
+    def test_runtime_guard_accepts_failed_block_flag_for_readonly_mount(self):
+        self.exercise_runtime_guard(False, setro_failures=3,
+            mountinfo='41 25 8:17 / /media/usb ro,nosuid,nodev - ntfs3 /dev/sda1 ro\n')
+
+    def test_runtime_guard_rejects_writable_mount_when_block_flag_fails(self):
+        self.exercise_runtime_guard(False, setro_failures=3, expect_success=False,
+            mountinfo='41 25 8:17 / /media/usb rw,nosuid,nodev - ntfs3 /dev/sda1 rw\n')

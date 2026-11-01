@@ -158,5 +158,14 @@ class BootPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.verifier.verify_automatic_boot_arguments(self.parent,self.manifest)
 
+    def test_automatic_usb_mount_policy_is_late_and_readonly(self):
+        rule=ROOT/'devices/oneplus13/desktop/99-oneplus13-auto-usb-readonly.rules'
+        self.assertTrue(rule.is_file())
+        self.assertTrue(rule.name.startswith('99-'))
+        text=rule.read_text()
+        self.assertIn('ENV{ID_FS_USAGE}=="filesystem"',text)
+        self.assertIn('UDISKS_MOUNT_OPTIONS_DEFAULTS}="ro"',text)
+        self.assertIn('TEST=="/run/oneplus13-auto-otg/desktop-mode"',text)
+
 
 if __name__=='__main__':unittest.main()

@@ -403,7 +403,8 @@ def main():
     automatic_sources={
         'usr/libexec/oneplus13-auto-otg.py':'tools/oneplus13/auto-otg.py',
         'usr/lib/systemd/system/oneplus13-auto-otg.service':'devices/oneplus13/desktop/oneplus13-auto-otg.service',
-        'usr/lib/udev/rules.d/11-oneplus13-auto-usb.rules':'devices/oneplus13/desktop/11-oneplus13-auto-usb.rules'}
+        'usr/lib/udev/rules.d/11-oneplus13-auto-usb.rules':'devices/oneplus13/desktop/11-oneplus13-auto-usb.rules',
+        'usr/lib/udev/rules.d/99-oneplus13-auto-usb-readonly.rules':'devices/oneplus13/desktop/99-oneplus13-auto-usb-readonly.rules'}
     automatic_runtime=m.get('automatic_usb_runtime_files',{})
     if set(automatic_runtime)!=set(automatic_sources) or m.get('automatic_usb_service_conditional') is not True:
         raise ValueError('Missing conditional desktop automatic USB runtime')

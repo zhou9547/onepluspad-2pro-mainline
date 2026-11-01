@@ -139,7 +139,8 @@ def main():
     for source,name in (
         ('tools/oneplus13/auto-otg.py','usr/libexec/oneplus13-auto-otg.py'),
         ('devices/oneplus13/desktop/oneplus13-auto-otg.service','usr/lib/systemd/system/oneplus13-auto-otg.service'),
-        ('devices/oneplus13/desktop/11-oneplus13-auto-usb.rules','usr/lib/udev/rules.d/11-oneplus13-auto-usb.rules')):
+        ('devices/oneplus13/desktop/11-oneplus13-auto-usb.rules','usr/lib/udev/rules.d/11-oneplus13-auto-usb.rules'),
+        ('devices/oneplus13/desktop/99-oneplus13-auto-usb-readonly.rules','usr/lib/udev/rules.d/99-oneplus13-auto-usb-readonly.rules')):
         dest=stage/name
         dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(REPO/source,dest)
