@@ -3,12 +3,14 @@
 """Exercise QMI location over QRTR after reviewed MPSS startup."""
 
 import argparse
+import hashlib
 import json
 import math
 import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 
 
 NMEA = re.compile(r"^\$(?:GP|GN|GL|GA|GB)(?:GGA|RMC),.*\*[0-9A-Fa-f]{2}$")
@@ -275,6 +277,11 @@ def main():
     if native.is_file() and os.access(native, os.X_OK):
         result = collect_native_session(native, args.seconds,
                                         unlock=args.temporary_unlock)
+        # Self-identification: proves which collector bytes and which argument
+        # vector produced this receipt when a round is reviewed afterwards.
+        result["collector_sha256"] = hashlib.sha256(
+            Path(__file__).read_bytes()).hexdigest()
+        result["argv"] = list(sys.argv[1:])
         result["scope"] = "ONEPLUS13_RAM_QMI_GNSS"
         result["pass"] = bool(
             result["engine_control_qualified"]
