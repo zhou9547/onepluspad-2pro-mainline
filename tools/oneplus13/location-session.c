@@ -31,6 +31,7 @@ struct session {
 	gboolean lock_diagnostic;
 	gboolean lock_response_ok;
 	gboolean lock_indication_ok;
+	guint16 start_transaction;
 	gchar *lock_report;
 };
 
@@ -101,6 +102,123 @@ registration_result (QmiMessage *message, GError **error)
 	return FALSE;
 }
 
+/* Qualcomm location_service_v02 START (0x0022) request TLVs, taken from the
+ * pinned IDL table qmiLocStartReqMsgT_data_v02:
+ *   0x01 sessionId u8, 0x10 fixRecurrence u32, 0x11 horizontalAccuracyLevel u32,
+ *   0x12 intermediateReportState u32, 0x13 minInterval u32.
+ * Enum values: eQMI_LOC_RECURRENCE_PERIODIC=1, eQMI_LOC_ACCURACY_HIGH=3,
+ * eQMI_LOC_INTERMEDIATE_REPORTS_ON=1. The same IDL documents that an omitted
+ * horizontal accuracy defaults to LOW, which is what every earlier round sent.
+ *
+ * Ubuntu's libqmi 1.38 exposes only the session/recurrence/intermediate/interval
+ * setters and no accuracy level, so the profile is encoded once here with the
+ * stable raw message API. tests/test_oneplus13_location_start.py verifies the
+ * exact serialized bytes with the installed libqmi and keeps a legacy-profile
+ * negative control, so this stays a single documented experimental variable
+ * instead of an unverifiable hand-built packet.
+ */
+#define OP13_LOC_START_REQUEST 0x0022
+#define OP13_LOC_START_RESULT_TLV 0x02
+#define OP13_LOC_START_TLV_SESSION_ID 0x01
+#define OP13_LOC_START_TLV_FIX_RECURRENCE 0x10
+#define OP13_LOC_START_TLV_HORIZONTAL_ACCURACY 0x11
+#define OP13_LOC_START_TLV_INTERMEDIATE_REPORT 0x12
+#define OP13_LOC_START_TLV_MIN_INTERVAL 0x13
+#define OP13_LOC_START_SESSION_ID 1
+#define OP13_LOC_START_RECURRENCE_PERIODIC 1
+#define OP13_LOC_START_ACCURACY_HIGH 3
+#define OP13_LOC_START_INTERMEDIATE_ON 1
+#define OP13_LOC_START_MIN_INTERVAL_MS 1000
+
+static gboolean
+add_u32_tlv (QmiMessage *message, guint8 type, guint32 value, GError **error)
+{
+	guint32 little = GUINT32_TO_LE (value);
+
+	return qmi_message_add_raw_tlv (message, type, (const guint8 *)&little,
+				       sizeof (little), error);
+}
+
+static QmiMessage *
+start_message (guint8 cid, guint16 transaction, GError **error)
+{
+	QmiMessage *message;
+	guint8 session_id = OP13_LOC_START_SESSION_ID;
+
+	message = qmi_message_new (QMI_SERVICE_LOC, cid, transaction,
+				   OP13_LOC_START_REQUEST);
+	if (!message) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NO_SPACE,
+				     "cannot allocate LOC start request");
+		return NULL;
+	}
+	if (!qmi_message_add_raw_tlv (message, OP13_LOC_START_TLV_SESSION_ID,
+				      &session_id, sizeof (session_id), error) ||
+	    !add_u32_tlv (message, OP13_LOC_START_TLV_FIX_RECURRENCE,
+			  OP13_LOC_START_RECURRENCE_PERIODIC, error) ||
+	    !add_u32_tlv (message, OP13_LOC_START_TLV_HORIZONTAL_ACCURACY,
+			  OP13_LOC_START_ACCURACY_HIGH, error) ||
+	    !add_u32_tlv (message, OP13_LOC_START_TLV_INTERMEDIATE_REPORT,
+			  OP13_LOC_START_INTERMEDIATE_ON, error) ||
+	    !add_u32_tlv (message, OP13_LOC_START_TLV_MIN_INTERVAL,
+			  OP13_LOC_START_MIN_INTERVAL_MS, error)) {
+		qmi_message_unref (message);
+		return NULL;
+	}
+	return message;
+}
+
+/* Reproduce libqmi's own response formatting so existing evidence parsers keep
+ * seeing the identical "QMI protocol error (N): 'Nick'" text that the typed
+ * client call used to generate. */
+static void
+set_protocol_error (GError **error, guint16 code)
+{
+	GEnumClass *klass = g_type_class_ref (QMI_TYPE_PROTOCOL_ERROR);
+	GEnumValue *value = g_enum_get_value (klass, code);
+	const gchar *nick = value ? value->value_nick : "Unknown";
+
+	g_set_error (error, QMI_PROTOCOL_ERROR, code,
+		     "QMI protocol error (%u): '%s'", (guint) code, nick);
+	g_type_class_unref (klass);
+}
+
+static gboolean
+start_result (QmiMessage *message, guint8 cid, guint16 transaction,
+	      GError **error)
+{
+	guint16 length = 0;
+	const guint8 *raw;
+	guint16 result, code;
+
+	if (!qmi_message_is_response (message) ||
+	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
+	    qmi_message_get_message_id (message) != OP13_LOC_START_REQUEST ||
+	    qmi_message_get_client_id (message) != cid ||
+	    qmi_message_get_transaction_id (message) != transaction) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+				     "unexpected LOC start response");
+		return FALSE;
+	}
+	raw = qmi_message_get_raw_tlv (message, OP13_LOC_START_RESULT_TLV, &length);
+	if (!raw || length != 4) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+				     "invalid LOC start result TLV");
+		return FALSE;
+	}
+	result = raw[0] | ((guint16)raw[1] << 8);
+	code = raw[2] | ((guint16)raw[3] << 8);
+	if (!result && !code)
+		return TRUE;
+	if (result != 1 || !code) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+				     "inconsistent LOC start result");
+		return FALSE;
+	}
+	set_protocol_error (error, code);
+	return FALSE;
+}
+
 static gboolean
 claim_stop (struct session *session)
 {
@@ -133,6 +251,65 @@ retry_position_events (const GError *error, gboolean already_retried)
 {
 	return !already_retried && g_error_matches (error, QMI_PROTOCOL_ERROR,
 						 QMI_PROTOCOL_ERROR_INVALID_ARGUMENT);
+}
+
+static void
+start_self_test (void)
+{
+	static const guint8 expected[] = {
+		OP13_LOC_START_TLV_SESSION_ID, 0x01, 0x00, OP13_LOC_START_SESSION_ID,
+		OP13_LOC_START_TLV_FIX_RECURRENCE, 0x04, 0x00,
+			OP13_LOC_START_RECURRENCE_PERIODIC, 0x00, 0x00, 0x00,
+		OP13_LOC_START_TLV_HORIZONTAL_ACCURACY, 0x04, 0x00,
+			OP13_LOC_START_ACCURACY_HIGH, 0x00, 0x00, 0x00,
+		OP13_LOC_START_TLV_INTERMEDIATE_REPORT, 0x04, 0x00,
+			OP13_LOC_START_INTERMEDIATE_ON, 0x00, 0x00, 0x00,
+		OP13_LOC_START_TLV_MIN_INTERVAL, 0x04, 0x00,
+			0xe8, 0x03, 0x00, 0x00,
+	};
+	QmiMessage *request, *response;
+	GError *error = NULL;
+	gsize wire_length = 0;
+	const guint8 *raw;
+
+	request = start_message (0x27, 0x1234, &error);
+	g_assert_no_error (error);
+	g_assert_nonnull (request);
+	g_assert_true (qmi_message_is_request (request));
+	g_assert_cmpint (qmi_message_get_service (request), ==, QMI_SERVICE_LOC);
+	g_assert_cmpuint (qmi_message_get_client_id (request), ==, 0x27);
+	g_assert_cmpuint (qmi_message_get_transaction_id (request), ==, 0x1234);
+	g_assert_cmpuint (qmi_message_get_message_id (request), ==,
+			  OP13_LOC_START_REQUEST);
+	raw = qmi_message_get_raw (request, &wire_length, &error);
+	g_assert_no_error (error);
+	g_assert_cmpuint (wire_length, ==, 13 + sizeof (expected));
+	g_assert_cmpmem (raw + 13, sizeof (expected), expected, sizeof (expected));
+
+	response = qmi_message_response_new (request, QMI_PROTOCOL_ERROR_NONE);
+	g_assert_true (start_result (response, 0x27, 0x1234, &error));
+	g_assert_no_error (error);
+	qmi_message_unref (response);
+
+	response = qmi_message_response_new (request,
+					     QMI_PROTOCOL_ERROR_GENERAL_ERROR);
+	g_assert_false (start_result (response, 0x27, 0x1234, &error));
+	g_assert_error (error, QMI_PROTOCOL_ERROR,
+			QMI_PROTOCOL_ERROR_GENERAL_ERROR);
+	g_assert_cmpstr (error->message, ==,
+			 "QMI protocol error (46): 'GeneralError'");
+	g_clear_error (&error);
+	qmi_message_unref (response);
+
+	response = qmi_message_response_new (request, QMI_PROTOCOL_ERROR_NONE);
+	g_assert_false (start_result (response, 0x27, 0x1235, &error));
+	g_assert_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA);
+	g_clear_error (&error);
+	g_assert_false (start_result (response, 0x28, 0x1234, &error));
+	g_assert_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA);
+	g_clear_error (&error);
+	qmi_message_unref (response);
+	qmi_message_unref (request);
 }
 
 static int
@@ -179,7 +356,8 @@ configuration_self_test (void)
 	g_assert_false (pending.stop_requested);
 	g_assert_true (unix_terminate (&session));
 	g_assert_true (unix_terminate (&pending));
-	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=19 no_qrtr=1\n");
+	start_self_test ();
+	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=26 no_qrtr=1\n");
 	return 0;
 }
 
@@ -446,13 +624,13 @@ request_stop (gpointer user_data)
 }
 
 static void
-start_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
+start_ready (QmiDevice *device, GAsyncResult *result, gpointer user_data)
 {
 	struct session *session = user_data;
-	QmiMessageLocStartOutput *output;
+	QmiMessage *output;
 	GError *error = NULL;
 
-	output = qmi_client_loc_start_finish (client, result, &error);
+	output = qmi_device_command_full_finish (device, result, &error);
 	session->start_pending = FALSE;
 	if (!output) {
 		print_error ("start", error);
@@ -461,14 +639,15 @@ start_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 		request_stop (session);
 		return;
 	}
-	if (!qmi_message_loc_start_output_get_result (output, &error)) {
+	if (!start_result (output, qmi_client_get_cid (QMI_CLIENT (session->client)),
+			   session->start_transaction, &error)) {
 		print_error ("start-result", error);
 		g_clear_error (&error);
-		qmi_message_loc_start_output_unref (output);
+		qmi_message_unref (output);
 		request_stop (session);
 		return;
 	}
-	qmi_message_loc_start_output_unref (output);
+	qmi_message_unref (output);
 	session->started = TRUE;
 	g_print ("LOCATION_SESSION_STARTED seconds=%u\n", session->requested_seconds);
 	fflush (stdout);
@@ -481,12 +660,40 @@ start_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 }
 
 static void
+start_dispatch (struct session *session)
+{
+	QmiMessage *input;
+	GError *error = NULL;
+	QmiClient *client = QMI_CLIENT (session->client);
+
+	session->start_transaction = qmi_client_get_next_transaction_id (client);
+	input = start_message (qmi_client_get_cid (client),
+			       session->start_transaction, &error);
+	if (!input) {
+		print_error ("build-start", error);
+		g_clear_error (&error);
+		finish (session, 1);
+		return;
+	}
+	session->start_requested = TRUE;
+	session->start_pending = TRUE;
+	g_print ("LOCATION_SESSION_START_PROFILE accuracy=high recurrence=periodic "
+		 "intermediate=on min_interval_ms=%u session=%u\n",
+		 (guint) OP13_LOC_START_MIN_INTERVAL_MS,
+		 (guint) OP13_LOC_START_SESSION_ID);
+	fflush (stdout);
+	qmi_device_command_full (session->device, input, NULL, 20,
+				 session->cancellable,
+				 (GAsyncReadyCallback) start_ready, session);
+	qmi_message_unref (input);
+}
+
+static void
 register_events_ready (QmiDevice *device, GAsyncResult *result,
 		       gpointer user_data)
 {
 	struct session *session = user_data;
 	QmiMessage *output;
-	QmiMessageLocStartInput *input;
 	GError *error = NULL;
 
 	output = qmi_device_command_full_finish (device, result, &error);
@@ -515,19 +722,7 @@ register_events_ready (QmiDevice *device, GAsyncResult *result,
 	}
 	qmi_message_unref (output);
 
-	input = qmi_message_loc_start_input_new ();
-	qmi_message_loc_start_input_set_session_id (input, 1, NULL);
-	qmi_message_loc_start_input_set_intermediate_report_state (
-		input, QMI_LOC_INTERMEDIATE_REPORT_STATE_ENABLE, NULL);
-	qmi_message_loc_start_input_set_minimum_interval_between_position_reports (
-		input, 1000, NULL);
-	qmi_message_loc_start_input_set_fix_recurrence_type (
-		input, QMI_LOC_FIX_RECURRENCE_TYPE_REQUEST_PERIODIC_FIXES, NULL);
-	session->start_requested = TRUE;
-	session->start_pending = TRUE;
-	qmi_client_loc_start (session->client, input, 20, session->cancellable,
-			      (GAsyncReadyCallback) start_ready, session);
-	qmi_message_loc_start_input_unref (input);
+	start_dispatch (session);
 }
 
 static void

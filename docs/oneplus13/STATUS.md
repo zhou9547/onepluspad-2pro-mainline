@@ -1,3 +1,22 @@
+# Explicit HIGH LOC START accuracy candidate, 2026-11-01
+
+r229 repackaged the r228 milestone source and passed all five Actions jobs with
+exact artifact readback, but has no hardware evidence of its own. The next
+active target is GNSS: START still returns QMI GeneralError(46) after AFW
+registration while the same client's STOP is acknowledged.
+
+This candidate changes one variable. The periodic START session now carries the
+IDL's explicit `0x11` horizontal accuracy TLV with `eQMI_LOC_ACCURACY_HIGH=3`
+instead of omitting it, which the same IDL documents as LOW and which every
+earlier round sent. The request is encoded once with the stable raw message API
+because Ubuntu's libqmi 1.38 has no accuracy setter; the exact serialized TLVs
+are pinned by tests with the installed libqmi, the r228 profile remains a
+required negative control, and libqmi's `QMI protocol error (46):
+'GeneralError'` text is reproduced so the existing evidence classifier keeps
+working. The collector now records the sent `start_profile` as bounded evidence.
+No engine-lock SET, identity scan or privacy change is included, and no fix is
+claimed. See [GNSS start profile](GNSS-START-PROFILE-20261101.md).
+
 # r228 direct USB storage milestone, 2026-11-01
 
 The source d0c8d20e image (Actions 41258076551) passed real USB storage

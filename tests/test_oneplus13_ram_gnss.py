@@ -271,6 +271,45 @@ class GnssNmeaTests(unittest.TestCase):
         self.assertTrue(result["cleanup_complete"])
         self.assertFalse(result["fix_acquired"])
 
+    def test_start_profile_evidence_is_recorded_and_bounded(self):
+        profile = ("LOCATION_SESSION_START_PROFILE accuracy=high "
+                   "recurrence=periodic intermediate=on min_interval_ms=1000 session=1")
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 1,
+            "stdout": profile + "\nLOCATION_SESSION_STOPPED nmea=0\n",
+            "stderr": "LOCATION_SESSION_ERROR operation=start-result "
+                      "error=QMI protocol error (46): 'GeneralError'\n",
+        }):
+            result = GNSS.collect_native_session("/native", 25)
+        self.assertEqual(result["start_profile"], profile.split(" ", 1)[1])
+        self.assertTrue(result["cleanup_complete"])
+        self.assertFalse(result["engine_control_qualified"])
+        # The profile marker is evidence, never acceptance on its own.
+        self.assertFalse(result["fix_acquired"])
+
+    def test_start_profile_marker_survives_long_nmea_output(self):
+        fix = sentence("GNGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,")
+        profile = ("LOCATION_SESSION_START_PROFILE accuracy=high "
+                   "recurrence=periodic intermediate=on min_interval_ms=1000 session=1")
+        raw = (profile + "\nLOCATION_SESSION_STARTED seconds=180\n" +
+               ("NMEA " + fix + "\n") * 400 +
+               "LOCATION_SESSION_STOPPED nmea=400\n")
+        with patch.object(GNSS.subprocess, "run",
+                          return_value=Mock(returncode=0, stdout=raw, stderr="")):
+            result = GNSS.collect_native_session("/native/probe", 180)
+        self.assertEqual(result["start_profile"], profile.split(" ", 1)[1])
+        self.assertTrue(result["engine_control_qualified"])
+        self.assertTrue(result["fix_acquired"])
+        self.assertLessEqual(len(GNSS.bounded_stdout(raw)), 8192 + 4 * 513)
+
+    def test_missing_start_profile_is_reported_as_absent(self):
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 1, "stdout": "LOCATION_SESSION_STOPPED nmea=0\n",
+            "stderr": "LOCATION_SESSION_ERROR operation=start-result "
+                      "error=QMI protocol error (46): 'GeneralError'\n",
+        }):
+            self.assertIsNone(GNSS.collect_native_session("/native", 25)["start_profile"])
+
 
 if __name__ == "__main__":
     unittest.main()

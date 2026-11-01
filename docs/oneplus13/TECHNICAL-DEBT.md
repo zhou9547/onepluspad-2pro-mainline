@@ -1,3 +1,26 @@
+# GNSS START accuracy profile is unqualified, 2026-11-01
+
+r228's rejected START proves only that the modem refused the LOW-accuracy
+periodic profile it was sent; QMI code 46 is the generic protocol error and does
+not name a cause. The current candidate sends the IDL's explicit HIGH
+horizontal accuracy TLV as the single new variable and records the sent profile
+as evidence. It cannot resolve the read-only engine-lock observation
+(`clients_config=0xffffffffffffffff`, legacy `lock_type=4`,
+`engine_lock_state=1`), and no lock, subscription, privacy or identity change is
+included, because none of those semantics is established for this firmware.
+
+The raw START builder also means libqmi no longer formats the response error;
+the helper reproduces the exact `QMI protocol error (N): 'Nick'` text with the
+public protocol-error GEnum, and a test pins the GeneralError(46) string the
+evidence collector depends on. That formatting must stay in sync if the
+collector ever stops matching the literal text. A rejected START followed by an
+acknowledged STOP remains clean-but-unqualified, never acceptance.
+
+If START still fails, the next single variables are the position-report timeout
+and GNSS-only reporting TLVs, or an owner-controlled privacy/lock investigation.
+They must not be combined into one unattributable round, and a fix still
+requires an accepted START, a checked real satellite fix and a clean STOP.
+
 # r228 USB direct-storage scope and remaining work, 2026-11-01
 
 Direct USB storage now passes real enumeration, 4096-byte read-only block and

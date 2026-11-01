@@ -20,6 +20,7 @@ def bounded_stdout(output):
     markers = []
     for prefix in ("LOCATION_SESSION_NMEA_DEFAULTS ",
                    "LOCATION_SESSION_POSITION_EVENTS ", "LOCATION_SESSION_NO_SESSION ",
+                   "LOCATION_SESSION_START_PROFILE ",
                    "LOCATION_SESSION_STARTED ", "LOCATION_SESSION_STOPPED "):
         marker = next((line for line in output.splitlines()
                        if line.startswith(prefix) and len(line) <= 512), None)
@@ -192,6 +193,10 @@ def collect_native_session(native, seconds):
         "nmea_defaults_used": any(
             line.startswith("LOCATION_SESSION_NMEA_DEFAULTS ") for line in lines
         ),
+        "start_profile": next(
+            (line[len("LOCATION_SESSION_START_PROFILE "):] for line in lines
+             if line.startswith("LOCATION_SESSION_START_PROFILE ")
+             and len(line) <= 512), None),
         "stderr": process.get("stderr", "")[-8192:],
         "nmea": nmea,
         "fixes": fixes,
