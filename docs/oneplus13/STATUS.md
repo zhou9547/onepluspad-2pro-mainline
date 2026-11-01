@@ -1,3 +1,19 @@
+# Automatic OTG runtime identity correction, 2026-11-01
+
+r235 passed all five Actions jobs and exact image readback, but its first RAM
+boot stopped before any physical dock card: the desktop service rejected the
+ABL-rewritten root identity. Android returned with seven matching baselines
+and zero reported partition writes. The runner could not obtain a clean kernel
+receipt, so its firmware-residual UNKNOWN is preserved; Android return is not
+firmware-restoration proof. See R235-AUTOMATIC-STARTUP-RESULT-20261101.json.
+
+The userspace device gate now matches the existing kernel gate: exact handset
+model plus its matching compatible, including the ABL Sun MTP,dodge identity.
+Generic Sun, other models, tablets and partial compatible strings are rejected.
+This is a new offline candidate, not automatic OTG hardware acceptance. GNSS
+lock mutation stays disabled; full Ubuntu/OEM onboarding and dual boot remain
+deferred until ordinary desktop automatic OTG works.
+
 # Automatic desktop OTG candidate after r234 dock proof, 2026-11-01
 
 r234 qualifies one physical expansion dock plus NTFS U disk: real host/source,

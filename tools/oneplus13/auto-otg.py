@@ -36,10 +36,24 @@ def clean_status(status):
         status[k] for k in ('dirty_ap', 'dirty_switch', 'dirty_vbus', 'dirty_current'))
 
 
+def oneplus13_machine(root=Path('/sys/firmware/devicetree/base')):
+    """Match the kernel gate, including the exact identity rewritten by ABL."""
+    try:
+        compatible = root.joinpath('compatible').read_bytes().decode().split('\0')
+        model = root.joinpath('model').read_bytes().decode().rstrip('\0')
+        chassis = root.joinpath('chassis-type').read_bytes().decode().rstrip('\0')
+    except (OSError, UnicodeError):
+        return False
+    if chassis != 'handset':
+        return False
+    if model == 'OnePlus 13 (AA569 native display experimental candidate)':
+        return {'oneplus,dodge', 'qcom,sm8750'} <= set(compatible)
+    return model == 'Qualcomm Technologies, Inc. Sun MTP,dodge' and 'qcom,sun' in compatible
+
+
 class Backend:
     def __init__(self):
-        if os.geteuid() or 'oneplus,dodge' not in Path(
-                '/sys/firmware/devicetree/base/compatible').read_bytes().decode().split('\0'):
+        if os.geteuid() or not oneplus13_machine():
             raise RuntimeError('Exact OnePlus 13 root service required')
         flags = set(Path('/proc/cmdline').read_text().split())
         if FLAG not in flags or flags & {

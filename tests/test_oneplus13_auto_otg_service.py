@@ -4,11 +4,60 @@ import errno
 import importlib.util
 from pathlib import Path
 import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
 spec=importlib.util.spec_from_file_location('auto_otg',ROOT/'tools/oneplus13/auto-otg.py')
 auto=importlib.util.module_from_spec(spec);spec.loader.exec_module(auto)
+
+
+class MachineIdentityTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.addCleanup(self.directory.cleanup)
+        self.root = Path(self.directory.name)
+        self.identity('Qualcomm Technologies, Inc. Sun MTP,dodge', ['qcom,sun'])
+
+    def identity(self, model, compatible, chassis='handset'):
+        for name, value in [('model', model), ('compatible', '\0'.join(compatible)),
+                            ('chassis-type', chassis)]:
+            (self.root/name).write_bytes(value.encode() + b'\0')
+
+    def test_abl_rewritten_phone_is_recognized(self):
+        self.assertTrue(auto.oneplus13_machine(self.root))
+
+    def test_original_phone_requires_both_compatibles(self):
+        model = 'OnePlus 13 (AA569 native display experimental candidate)'
+        self.identity(model, ['oneplus,dodge', 'qcom,sm8750'])
+        self.assertTrue(auto.oneplus13_machine(self.root))
+        for compatible in [['oneplus,dodge'], ['qcom,sm8750']]:
+            self.identity(model, compatible)
+            self.assertFalse(auto.oneplus13_machine(self.root))
+
+    def test_generic_sun_and_other_phones_are_rejected(self):
+        for model in ['Qualcomm Technologies, Inc. Sun MTP',
+                      'Qualcomm Technologies, Inc. Sun MTP,other', 'OnePlus 13R']:
+            self.identity(model, ['qcom,sun'])
+            self.assertFalse(auto.oneplus13_machine(self.root))
+
+    def test_tablet_and_incomplete_identity_are_rejected(self):
+        self.identity('Qualcomm Technologies, Inc. Sun MTP,dodge', ['qcom,sun'], 'tablet')
+        self.assertFalse(auto.oneplus13_machine(self.root))
+        (self.root/'model').unlink()
+        self.assertFalse(auto.oneplus13_machine(self.root))
+
+    def test_substring_compatible_does_not_match(self):
+        self.identity('Qualcomm Technologies, Inc. Sun MTP,dodge', ['qcom,sun-other'])
+        self.assertFalse(auto.oneplus13_machine(self.root))
+
+    def test_non_root_backend_is_rejected_before_device_access(self):
+        with patch.object(auto.os, 'geteuid', return_value=1000), \
+                patch.object(auto, 'oneplus13_machine') as gate:
+            with self.assertRaisesRegex(RuntimeError, 'Exact OnePlus 13'):
+                auto.Backend()
+            gate.assert_not_called()
 
 
 class Fake:
