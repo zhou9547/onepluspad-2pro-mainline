@@ -1,5 +1,25 @@
 # Automatic OTG runtime identity correction, 2026-11-01
 
+# r237 automatic desktop OTG first-attach result, 2026-11-01
+
+r237 booted the r236 exact image once in RAM and reached the ordinary GNOME
+desktop. With the owner's real dock/U disk attached, the desktop auto-mount,
+4096-byte read-only block read and bounded file-prefix read passed. The planned
+130-second hold did not complete: host receipt handling failed after the LAN
+receipt stopped refreshing, and the phone restarted to Android shortly after
+the dock was attached. Android's seven baseline properties match and the boot
+reason reports bootloader; no panic record is retained. These facts do not
+identify the restart cause or prove USB firmware restoration. Preserve firmware
+UNKNOWN and do not qualify automatic OTG or the whole round.
+
+The leading code-level hypothesis is the RAM storage guard retrying
+`blockdev --setro` on a partition after GNOME mounted it. The guard now skips a
+device already confirmed read-only; the fault test covers both already-readonly
+and writable new partitions. This hypothesis still needs exact-image hardware
+validation. The host now checks receipt freshness only when creating a new
+physical-operation card, not while replaying the same request. GNSS lock changes
+remain disabled. See `R237-AUTOMATIC-OTG-RESTART-20261101.json`.
+
 r235 passed all five Actions jobs and exact image readback, but its first RAM
 boot stopped before any physical dock card: the desktop service rejected the
 ABL-rewritten root identity. Android returned with seven matching baselines

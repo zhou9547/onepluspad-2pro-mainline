@@ -5,6 +5,7 @@ from pathlib import Path
 import stat
 import sys
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -64,3 +65,46 @@ class DesktopTests(unittest.TestCase):
             for module in ['panel_oneplus_aa569','msm']:
                 self.assertIn('blacklist '+module+'\n',policy)
                 self.assertIn('install '+module+' /bin/false\n',policy)
+
+    def exercise_runtime_guard(self, already_read_only):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            block = root/'sys/class/block/sda1'
+            block.mkdir(parents=True)
+            device = root/'dev/sda1'
+            device.parent.mkdir()
+            device.touch()
+            binary = root/'bin'
+            binary.mkdir()
+            calls = root/'blockdev-calls'
+            state = root/'read-only-state'
+            state.write_text('1\n' if already_read_only else '0\n')
+            fake = binary/'blockdev'
+            fake.write_text(
+                '#!/bin/sh\n'
+                'printf "%s\\n" "$*" >> "$BLOCKDEV_CALLS"\n'
+                'if [ "$1" = --getro ]; then IFS= read -r value < "$BLOCKDEV_STATE"; echo "$value"; exit 0; fi\n'
+                'if [ "$1" = --setro ]; then echo 1 > "$BLOCKDEV_STATE"; exit 0; fi\n'
+                'exit 1\n'
+            )
+            fake.chmod(0o755)
+            script = (TOOLS.parents[1]/'devices/oneplus13/desktop/runtime-guard').read_text()
+            script = script.replace('/sys/class/block', str(root/'sys/class/block'))
+            script = script.replace('[ -b "/dev/$name" ]', '[ -e "/dev/$name" ]')
+            script = script.replace('/dev/', str(root/'dev')+'/')
+            script_path = root/'runtime-guard'
+            script_path.write_text(script)
+            result = subprocess.run(['/bin/sh', str(script_path), '--once'],
+                env={'PATH':str(binary), 'BLOCKDEV_CALLS':str(calls),
+                     'BLOCKDEV_STATE':str(state)},
+                capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            commands = calls.read_text().splitlines()
+            self.assertEqual(commands, ['--getro '+str(device)] +
+                ([] if already_read_only else ['--setro '+str(device), '--getro '+str(device)]))
+
+    def test_runtime_guard_does_not_rewrite_read_only_mounted_partition(self):
+        self.exercise_runtime_guard(True)
+
+    def test_runtime_guard_sets_read_only_on_new_writable_partition(self):
+        self.exercise_runtime_guard(False)

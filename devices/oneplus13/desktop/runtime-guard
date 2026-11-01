@@ -7,6 +7,9 @@ protect() {
         name=${disk##*/}
         case "$name" in loop*|ram*|zram*) continue ;; esac
         [ -b "/dev/$name" ] || continue
+        if [ "$(blockdev --getro "/dev/$name")" = 1 ]; then
+            continue
+        fi
         blockdev --setro "/dev/$name" || return 1
         [ "$(blockdev --getro "/dev/$name")" = 1 ] || return 1
     done

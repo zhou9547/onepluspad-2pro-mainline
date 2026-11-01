@@ -1,5 +1,27 @@
 # Automatic OTG runtime identity correction, 2026-11-01
 
+# Automatic OTG: r237 restart hypothesis, 2026-11-01
+
+r237's first real automatic dock attach reached desktop automount and passed
+bounded readonly block and file reads. The phone then restarted to Android
+before the required hold, detach/reinsert, service-watchdog/restart tests,
+firmware restore evidence or same-boot GNSS/camera/5GHz checks. The host runner
+also stopped receiving LAN updates and treated an already-issued operation card
+as expired; that error is fixed for the next plan but did not prove the phone's
+restart cause. Android's bootloader reason and matching seven-key baseline only
+identify the returned OS, not the RAM kernel exit path. No pstore/last-kmsg data
+was available. USB state remains UNKNOWN.
+
+One plausible trigger is `devices/oneplus13/desktop/runtime-guard`: its
+one-second loop issues `blockdev --setro` for every block node, including a
+partition that UDisks/GNOME may already have mounted read-only. A repeated
+BLKROSET on an open partition may fail and activate the guard unit's
+`FailureAction=reboot-force`. The guard now checks `--getro` first and only
+issues `--setro` for writable nodes. Local tests cover those two branches, but
+the suspected kernel ioctl/mount interaction is not reproduced on this phone.
+The next hardware run must retain private boot logs and fresh USB kernel/service
+receipts before calling this cause confirmed.
+
 r235 passed all five Actions jobs and exact image readback, but its first RAM
 boot stopped before any physical dock card: the desktop service rejected the
 ABL-rewritten root identity. Android returned with seven matching baselines
