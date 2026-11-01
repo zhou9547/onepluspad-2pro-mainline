@@ -1,0 +1,136 @@
+{
+  "updated_at": "2026-11-02T06:43:56.170713+08:00",
+  "round": "r263",
+  "scope": "FULL_FIRST_USER_DESKTOP_GPU_APPS_AND_WIFI_PHYSICAL_USB_DEFERRED",
+  "software_acceptance_pass": true,
+  "source_commit": "d16f1ae794aa1ee4b3b26958a6e5d9a22349b6c0",
+  "local_source_commit": "8002be25b8015e6527d9fb6da9cb2495e2dab136",
+  "source_tree": "b9bafccf91f1b483bc9cdef93b44e18a31a6f210",
+  "actions_run": 41355509240,
+  "actions_url": "https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/41355509240",
+  "plan_sha256": "af92bcddee9d01a62058981c51865cbbb5f3518107c67fcab1e03b5dd5090d38",
+  "boot_sha256": "ba470aee454f9851e49cbbce7dd4c060a1e302b1f0d62045f2e791e51e2d5064",
+  "rootfs_sha256": "e53f66e31a34654a8b66dc4ece9f7d4f4c47a96247f09b132dd35c9754e81467",
+  "kernel_release": "7.2.0-oneplus13-g7a81d184e309-cabf055643d7a-p59bf6260c9f9",
+  "installed_packages": 1662,
+  "delivered_normal_users": 0,
+  "packaged_runtime_unmodified": true,
+  "first_user_ui": {
+    "account_scope": "DISPOSABLE_RAM_WIZARD_ONLY",
+    "all_pages_within_phone_viewport": true,
+    "fixture_input_source": "xkb us in RAM only",
+    "pages": 9,
+    "password_character_count": 24,
+    "password_logged": false,
+    "physical_touch_or_usb_qualification": false,
+    "production_account_created": false,
+    "screen_keyboard_name_pass": true,
+    "screen_keyboard_password_pass": true,
+    "virtual_touch_destroyed": true,
+    "wizard_input_pass": true
+  },
+  "ordinary_session": {
+    "ordinary_user_created_by_setup": true,
+    "project_mesa_mapped": true,
+    "user_wayland_active": true
+  },
+  "gpu": {
+    "gl_error": 0,
+    "hardware_renderer": true,
+    "pass": true,
+    "physical_visual_confirmation": false,
+    "readback_4x4_pass": true,
+    "renderer": "Adreno (TM) 830v1",
+    "scope": "REAL_USER_GTK_GLES_4X4_READBACK"
+  },
+  "desktop_application_gates": {
+    "browser_document_loaded": true,
+    "conversion_rc": 0,
+    "dock_enabled": true,
+    "editor_test_document": true,
+    "files_window_present": true,
+    "pass": true,
+    "software_window_present": true,
+    "terminal_child_executed": true,
+    "writer_document_text": true,
+    "writer_document_window": true,
+    "writer_pdf_conversion": true
+  },
+  "wifi": {
+    "wifi5_initial": {
+      "automatic_acceptance_pass": true,
+      "associated_band": "5GHz",
+      "link_frequency_mhz": 5220,
+      "association_pass": true,
+      "dhcp_pass": true,
+      "http_pass": true,
+      "https_pass": true,
+      "connection_reactivation_requested": null,
+      "directed_scan_requested": true
+    },
+    "wifi5_post": {
+      "automatic_acceptance_pass": true,
+      "associated_band": "5GHz",
+      "link_frequency_mhz": 5220,
+      "association_pass": true,
+      "dhcp_pass": true,
+      "http_pass": true,
+      "https_pass": true,
+      "connection_reactivation_requested": false,
+      "directed_scan_requested": false
+    }
+  },
+  "usb_desktop_policy_readiness_pass": true,
+  "physical_usb_retested": false,
+  "prior_physical_usb_qualification": "r246 source2b576347 Actions41299915186 boot5aa85c0b plus exact RAM overlay: two actual dock insertions, readonly block/file reads,130.6s hold,unmount,watchdog/service recovery",
+  "firmware_cleanup": {
+    "cleanup_complete": true,
+    "kernel": {
+      "dirty_ap": 0,
+      "dirty_current": 0,
+      "dirty_switch": 0,
+      "dirty_vbus": 0,
+      "generation": 0,
+      "healthy": 1,
+      "saved_ap": 0,
+      "saved_current": 0,
+      "saved_switch": 0,
+      "saved_vbus": 0,
+      "source": 0,
+      "state": 2
+    },
+    "stage": "stop"
+  },
+  "pc_return": {
+    "cleanup_complete": true,
+    "device_sink": true,
+    "kernel": {
+      "dirty_ap": 0,
+      "dirty_current": 0,
+      "dirty_switch": 0,
+      "dirty_vbus": 0,
+      "generation": 0,
+      "healthy": 1,
+      "saved_ap": 0,
+      "saved_current": 0,
+      "saved_switch": 0,
+      "saved_vbus": 0,
+      "source": 0,
+      "state": 2
+    },
+    "role_restored": true,
+    "stage": "return",
+    "udc_configured": true
+  },
+  "android_seven_baseline_keys_match": true,
+  "boot_count": 1,
+  "reported_partition_writes": 0,
+  "normal_test_account_scope": "RAM_ONLY_NOT_IN_IMAGE",
+  "remaining": [
+    "Exact full image physical dock/Udisk regression with owner",
+    "Owner physical touchscreen/Chinese IME review",
+    "Permanent installation/dual boot requires later explicit approval"
+  ],
+  "camera_gnss": "paused",
+  "nfc": "skipped"
+}

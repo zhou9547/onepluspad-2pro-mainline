@@ -1,3 +1,25 @@
+# Current remaining work after r263, 2026-11-02
+
+Complete Ubuntu first-user/OSK, ordinary Wayland, real GLES readback, common
+desktop app operations and5GHz before/after acceptance now pass on the pristine
+d16f1ae7 image (Actions41355509240). Do not repeat RF bringup or rebuild because
+of the older timer, timezone or language-download observer failures.
+
+Still open: owner-assisted physical dock/U-disk regression on the exact full
+image; physical touchscreen and Chinese IME experience; permanent installation
+and dual-boot design/approval. The current system remains a bounded RAM image.
+Only read-only storage is qualified in the older r246 physical scope. Full-image
+USB readiness does not replace physical nodes and block/file reads. Audio and
+calling are outside this milestone; camera/GNSS paused and NFC skipped.
+
+Preserve measured observer fixes: actual packaged300s timer, reload-only bounded
+RAM retiming with unchanged dependent timestamps, wait for normal optional
+language download, use valid ODT and user-session app environment, and preserve
+the existing5GHz link during post-check. See FULL-UBUNTU-R263-ACCEPTANCE-20261102.md.
+Historical UNKNOWN cleanup results are never retroactively marked successful.
+
+The older sections below document prior states and superseded next steps.
+
 # 2026-11-02 full Ubuntu first-user progress
 
 The complete3f6f72af image boots its packaged hardware bootstrap correctly.

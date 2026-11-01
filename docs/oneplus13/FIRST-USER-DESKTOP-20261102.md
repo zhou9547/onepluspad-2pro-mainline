@@ -1,3 +1,13 @@
+# r263 update: exact full image accepted
+
+Actions41355509240/source d16f1ae7 now passes the complete unattended first-user,
+ordinary desktop, GPU/app and Wi-Fi software path. The timezone vendor profile,
+small-screen mode and OSK defaults are in the built image. Its optional language
+download finishes naturally when the observer waits for it. No functional RAM
+patches were applied. Normal users in the delivered image remain zero.
+See FULL-UBUNTU-R263-ACCEPTANCE-20261102.md for exact hashes, recovery and remaining
+physical USB/touch/Chinese-IME boundaries. The following is the retained history.
+
 # Full Ubuntu first-user desktop, 2026-11-02
 
 ## Follow-up on the exact full image

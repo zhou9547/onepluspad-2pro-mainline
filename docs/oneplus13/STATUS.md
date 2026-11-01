@@ -1,3 +1,22 @@
+# Current: full Ubuntu r263 software acceptance passed, 2026-11-02
+
+Exact source d16f1ae7 / Actions41355509240 now passes packaged firstboot,
+touch-driven screen-keyboard first-user creation, ordinary Wayland/project Mesa,
+Adreno830 GLES pixel readback, Dock/Settings and actual desktop application
+operations including Writer ODT/PDF, plus initial/post5220MHz HTTP/HTTPS.
+The delivered rootfs has zero normal users and1662 installed packages. Firmware
+restoration, PC device/sink+UDC and Android seven-property return passed.
+No functional runtime overlay or permanent storage operation was used.
+
+USB ordinary-user policy readiness passed. Fresh physical dock/U-disk regression
+on this full image remains pending; prior r246 exact-image+overlay qualification
+is retained separately. Owner physical touch/Chinese IME review, dual boot and
+permanent installation are pending. Camera/GNSS paused; NFC skipped.
+See FULL-UBUNTU-R263-ACCEPTANCE-20261102.md and its sanitized evidence.
+
+The sections below are historical observations, not current failure claims or
+reusable authorizations.
+
 # 2026-11-02 full Ubuntu first-user progress
 
 Exact full image3f6f72af/Actions41335006902 now initializes native hardware
