@@ -1,3 +1,24 @@
+# Automatic OTG qualification and r234 GNSS restore blocker, 2026-11-01
+
+Direct dock/storage readonly I/O now passes in r234, but ordinary desktop OTG
+is still unqualified. New automatic ownership must demonstrate repeated attach,
+active operation beyond 120s, correct detach/crash restore, normal PC/charger
+sink behavior and desktop volume visibility without role/power commands.
+The standalone service and actual kernel automatic endpoint have fault tests;
+they do not constitute phone acceptance. The new image must be read back exactly.
+
+r234 GNSS saved4, confirmed1, accepted START and STOP, but restore confirmation
+failed with LOCATION_ENGINE_LOCK_UNRESTORED. Android return is not recovery
+proof. No further lock mutation is allowed without resolving that uncertainty.
+Initial source inspection finds that indication callbacks can advance a lock
+query before its ACK callback, overwriting the expected transaction. The
+standalone diagnostic path also sends transaction1 while its expected field
+remains0. These are source findings, not yet reproduced fixes or proof of the
+phone's current lock value. Preserve the raw failure and do not relabel it.
+
+Full Ubuntu/OEM onboarding and dual boot follow automatic OTG acceptance. NFC
+remains skipped; 5GHz is preservation, not an unfinished RF bringup target.
+
 # GNSS lock mutation is now bounded but still unqualified, 2026-11-01
 
 The engine-lock cycle is a modem-state mutation with a real restore path: one

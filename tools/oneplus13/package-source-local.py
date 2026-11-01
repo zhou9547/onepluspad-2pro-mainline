@@ -135,6 +135,20 @@ def main():
     shutil.copyfile(REPO/'tools/oneplus13/ram-camera-capture.py',dest);dest.chmod(0o755)
     camera_capture_hashes[str(dest.relative_to(stage))]=sha256(dest)
     peripheral_probe_hashes={}
+    automatic_usb_hashes={}
+    for source,name in (
+        ('tools/oneplus13/auto-otg.py','usr/libexec/oneplus13-auto-otg.py'),
+        ('devices/oneplus13/desktop/oneplus13-auto-otg.service','usr/lib/systemd/system/oneplus13-auto-otg.service'),
+        ('devices/oneplus13/desktop/11-oneplus13-auto-usb.rules','usr/lib/udev/rules.d/11-oneplus13-auto-usb.rules')):
+        dest=stage/name
+        dest.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(REPO/source,dest)
+        dest.chmod(0o755 if name.endswith('.py') else 0o644)
+        automatic_usb_hashes[name]=sha256(dest)
+    auto_wants=stage/'etc/systemd/system/multi-user.target.wants/oneplus13-auto-otg.service'
+    auto_wants.parent.mkdir(parents=True,exist_ok=True)
+    if auto_wants.exists() or auto_wants.is_symlink():raise ValueError('Automatic USB service link already exists')
+    auto_wants.symlink_to('/usr/lib/systemd/system/oneplus13-auto-otg.service')
     for source,name in [
         ('ram-ir-check.py','usr/libexec/oneplus13-ram-ir-check.py'),
         ('ram-usb-role-check.py','usr/libexec/oneplus13-ram-usb-role-check.py'),
@@ -354,6 +368,9 @@ def main():
                   camera_capture_auto_started=False,camera_capture_hardware_qualified=False)
     result.update(peripheral_probe_runtime_files=peripheral_probe_hashes,
                   peripheral_probe_auto_started=False)
+    result.update(automatic_usb_runtime_files=automatic_usb_hashes,
+                  automatic_usb_service_conditional=True,
+                  automatic_usb_service_link='/usr/lib/systemd/system/oneplus13-auto-otg.service')
     result.update(video_probe_runtime_files=video_hashes,video_probe_auto_started=False,
                   video_hardware_decode_qualified=False)
     result.update(experimental_microphone_files=microphone_hashes,microphone_auto_started=False,microphone_hardware_qualified=False)

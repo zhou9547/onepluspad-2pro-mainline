@@ -1,3 +1,26 @@
+# Automatic desktop OTG candidate after r234 dock proof, 2026-11-01
+
+r234 qualifies one physical expansion dock plus NTFS U disk: real host/source,
+4096-byte readonly block and file-prefix reads, unmount, exact saved-value USB
+restore, device/sink+UDC return and owned module cleanup. The later GNSS session
+started/stopped but did not prove lock restoration; the round halted before
+camera and 5GHz post-check. Android returned with seven matching baselines and
+zero reported partition writes. Do not call the whole joint round clean.
+
+The owner now prioritizes ordinary desktop automatic OTG. A separate repeatable
+kernel owner, strict firmware notification generations, a 15s heartbeat watchdog
+and a conditional systemd desktop policy are implemented as a new RAM desktop
+alternative. The manual 120s one-shot path remains separate. UCSI owns the role;
+the automatic service never writes debugfs or media. UDisks/GVFS expose real USB
+storage to the desktop while RAM qualification retains block-level readonly.
+Full Linux source suite: 810 tests, one skip. Exact Actions and hardware
+qualification are still pending. See USB-AUTOMATIC-DESKTOP-20261101.md.
+
+Full Ubuntu with first-user onboarding and dual boot are deferred until automatic
+OTG acceptance. No default account or persistent installation was added. GNSS
+temporary lock cycles remain blocked by r234's unproven restore; readonly
+diagnosis and existing camera/5GHz preservation may follow in a combined boot.
+
 # Bounded engine-lock experiment candidate, 2026-11-01
 
 The 96928a96 round excluded explicit HIGH accuracy as the cause of GNSS START

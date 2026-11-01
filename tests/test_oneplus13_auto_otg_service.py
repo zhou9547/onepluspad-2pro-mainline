@@ -1,0 +1,113 @@
+# SPDX-License-Identifier: GPL-2.0-only
+"""Exercise the actual desktop controller without sysfs writes or hardware."""
+import errno
+import importlib.util
+from pathlib import Path
+import sys
+import unittest
+
+ROOT=Path(__file__).resolve().parents[1]
+spec=importlib.util.spec_from_file_location('auto_otg',ROOT/'tools/oneplus13/auto-otg.py')
+auto=importlib.util.module_from_spec(spec);spec.loader.exec_module(auto)
+
+
+class Fake:
+    def __init__(self):
+        self.value=dict.fromkeys(auto.FIELDS,0)
+        self.value.update(healthy=1,generation=1,source=1)
+        self.calls=[]
+        self.physical=dict(host_source=False,host_controller_ready=False)
+        self.fail_on=False
+        self.samples=None
+    def status(self):return dict(self.value)
+    def observe(self):
+        return dict(self.samples.pop(0) if self.samples else self.physical)
+    def command(self,action):
+        self.calls.append(action)
+        if action=='arm':self.value.update(state=5,dirty_ap=1,dirty_switch=1)
+        elif action.startswith('on '):
+            if self.fail_on:
+                self.value['generation']+=1
+                raise OSError(errno.EINVAL,'event changed')
+            self.value.update(state=1,dirty_current=1,dirty_vbus=1)
+        elif action in ('off','close'):
+            self.value.update(state=2,dirty_ap=0,dirty_switch=0,dirty_current=0,dirty_vbus=0)
+
+
+class DesktopControllerTests(unittest.TestCase):
+    def setUp(self):
+        self.backend=Fake();self.now=0
+        self.control=auto.Controller(self.backend,clock=lambda:self.now)
+    def test_firmware_event_alone_never_enables_supply(self):
+        self.control.step();self.assertEqual(self.backend.calls,['arm'])
+    def test_host_without_source_or_xhci_never_enables_supply(self):
+        self.backend.physical=dict(host_source=True,host_controller_ready=False)
+        self.control.step();self.assertEqual(self.backend.calls,['arm'])
+    def test_actual_host_source_and_controller_start_once(self):
+        self.backend.physical=dict(host_source=True,host_controller_ready=True)
+        self.control.step();self.control.step()
+        self.assertEqual(self.backend.calls,['arm','on 1'])
+    def test_second_physical_sample_catches_disconnect(self):
+        self.backend.samples=[dict(host_source=True,host_controller_ready=True),
+                              dict(host_source=False,host_controller_ready=False)]
+        self.control.step();self.assertEqual(self.backend.calls,['arm'])
+    def test_unplug_restores_and_next_insert_is_a_new_cycle(self):
+        self.backend.physical=dict(host_source=True,host_controller_ready=True)
+        self.control.step();self.backend.physical['host_source']=False
+        self.control.step();self.assertEqual(self.backend.calls[-1],'off')
+        self.backend.physical['host_source']=True;self.control.step()
+        self.assertEqual(self.backend.calls,['arm','on 1','off','arm','on 1'])
+    def test_heartbeat_is_not_a_power_enable_retry(self):
+        self.control.step();self.now=2;self.control.step()
+        self.assertEqual(self.backend.calls,['arm'])
+        self.now=3;self.control.step();self.assertEqual(self.backend.calls,['arm','keepalive'])
+    def test_generation_change_during_start_does_not_claim_success(self):
+        self.backend.physical=dict(host_source=True,host_controller_ready=True)
+        self.backend.fail_on=True;state=self.control.step()
+        self.assertEqual(state['on_count'],0);self.assertEqual(state['kernel']['state'],5)
+    def test_poisoned_service_never_rearms(self):
+        self.backend.value.update(state=3,healthy=0)
+        with self.assertRaises(RuntimeError):self.control.step()
+        self.assertEqual(self.backend.calls,[])
+    def test_dirty_restored_receipt_cannot_start_a_new_cycle(self):
+        self.backend.value.update(state=2,dirty_current=1)
+        with self.assertRaises(RuntimeError):self.control.step()
+        self.assertEqual(self.backend.calls,[])
+    def test_close_requires_explicit_clean_readback(self):
+        self.control.step();self.assertTrue(self.control.close()['cleanup_proven'])
+        self.assertEqual(self.backend.calls[-1],'close')
+    def test_duplicate_and_unknown_kernel_receipts_are_rejected(self):
+        raw=' '.join(k+'='+str(v) for k,v in self.backend.value.items())+'\n'
+        self.assertEqual(auto.parse_status(raw),self.backend.value)
+        for changed in [raw+'state=0',raw.replace('healthy=1','healthy=2'),raw.replace('state=0','state=6')]:
+            with self.assertRaises(RuntimeError):auto.parse_status(changed)
+
+
+class BootPolicyTests(unittest.TestCase):
+    def setUp(self):
+        sys.path.insert(0,str(ROOT/'tools/oneplus13'))
+        import importlib
+        self.verifier=importlib.import_module('verify-complete-image')
+        self.parent=dict(cmdline='oneplus13.desktop=1 oneplus13.session=old',session_identity_nonce='old')
+        self.manifest=dict(scope='AUTOMATIC_OTG_DESKTOP_RAM_CANDIDATE',
+            session_identity_nonce='fresh',automatic_usb_service_enabled=True,
+            automatic_usb_hardware_qualified=False,automatic_usb_watchdog_seconds=15,
+            automatic_usb_heartbeat_seconds=3,usb_firmware_lease_available=False,
+            usb_supply_setters_available=False,
+            cmdline='oneplus13.desktop=1 oneplus13.session=fresh oneplus13.usb_host_probe=1 qcom_battmgr.oneplus13_otg_auto=1')
+    def test_exact_automatic_profile_is_allowed(self):
+        self.verifier.verify_automatic_boot_arguments(self.parent,self.manifest)
+    def test_automatic_owner_cannot_leak_to_unqualified_parent(self):
+        with self.assertRaises(ValueError):
+            self.verifier.reject_parent_usb_lease(self.manifest['cmdline'])
+    def test_manual_owner_cannot_coexist_in_automatic_profile(self):
+        self.manifest['cmdline']+=' qcom_battmgr.oneplus13_otg_supply_lease=1'
+        with self.assertRaises(ValueError):
+            self.verifier.verify_automatic_boot_arguments(self.parent,self.manifest)
+    def test_manifest_cannot_claim_hardware_acceptance(self):
+        self.manifest['automatic_usb_hardware_qualified']=True
+        with self.assertRaises(ValueError):
+            self.verifier.verify_automatic_boot_arguments(self.parent,self.manifest)
+
+
+if __name__=='__main__':unittest.main()

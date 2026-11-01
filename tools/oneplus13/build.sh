@@ -87,6 +87,8 @@ cp tools/oneplus13/usb-draft/otg-lease.h "$src/drivers/power/supply/oneplus13-ot
 cp tools/oneplus13/usb-draft/otg-kernel.h "$src/drivers/power/supply/oneplus13-otg-kernel.h"
 cp tools/oneplus13/usb-draft/otg-supply-read.h "$src/drivers/power/supply/oneplus13-otg-supply-read.h"
 cp tools/oneplus13/usb-draft/otg-supply-lease.h "$src/drivers/power/supply/oneplus13-otg-supply-lease.h"
+cp tools/oneplus13/usb-draft/otg-auto-policy.h "$src/drivers/power/supply/oneplus13-otg-auto-policy.h"
+cp tools/oneplus13/usb-draft/otg-auto-kernel.h "$src/drivers/power/supply/oneplus13-otg-auto-kernel.h"
 if ! grep -q '^config IR_DODGE_SPI$' "$src/drivers/media/rc/Kconfig"; then
   cat >> "$src/drivers/media/rc/Kconfig" <<'KCONFIG'
 
@@ -155,6 +157,8 @@ git -C "$src" add --intent-to-add sound/soc/codecs/aw88461.c sound/soc/codecs/aw
 git -C "$src" add --intent-to-add drivers/media/rc/ir-dodge-spi.c
 git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-protocol.h
 git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-supply-read.h
+git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-auto-policy.h \
+  drivers/power/supply/oneplus13-otg-auto-kernel.h
 git -C "$src" add --intent-to-add drivers/power/supply/oneplus13-otg-lease.h \
   drivers/power/supply/oneplus13-otg-kernel.h drivers/power/supply/oneplus13-otg-supply-lease.h
 git -C "$src" diff --binary HEAD > "$dest/phone-kernel.patch"

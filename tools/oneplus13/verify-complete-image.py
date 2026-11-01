@@ -8,11 +8,12 @@ from common import sha256
 USB_LEASE_FLAG = 'qcom_battmgr.oneplus13_otg_lease=1'
 USB_SUPPLY_READ_FLAG = 'qcom_battmgr.oneplus13_otg_supply_read=1'
 USB_SUPPLY_LEASE_FLAG = 'qcom_battmgr.oneplus13_otg_supply_lease=1'
+USB_AUTO_FLAG = 'qcom_battmgr.oneplus13_otg_auto=1'
 
 
 def reject_parent_usb_lease(cmdline):
     keys = {flag.split('=', 1)[0] for flag in
-            (USB_LEASE_FLAG, USB_SUPPLY_READ_FLAG, USB_SUPPLY_LEASE_FLAG)}
+            (USB_LEASE_FLAG, USB_SUPPLY_READ_FLAG, USB_SUPPLY_LEASE_FLAG, USB_AUTO_FLAG)}
     if any(token.split('=', 1)[0] in keys for token in cmdline.split()):
         raise ValueError('USB firmware lease leaked into default/parent boot')
 
@@ -33,6 +34,23 @@ def verify_targets_boot_arguments(camera_gnss, targets):
             or targets.get('usb_supply_setters_available') is not True
             or targets.get('usb_supply_setters_auto_started') is not False):
         raise ValueError('Infrared/USB-role boot arguments or manual lease policy changed')
+
+
+def verify_automatic_boot_arguments(camera_gnss, automatic):
+    reject_parent_usb_lease(camera_gnss['cmdline'])
+    expected=camera_gnss['cmdline'].replace(
+        'oneplus13.session='+camera_gnss['session_identity_nonce'],
+        'oneplus13.session='+automatic['session_identity_nonce'])
+    expected+=' oneplus13.usb_host_probe=1 '+USB_AUTO_FLAG
+    if (automatic['cmdline']!=expected
+            or automatic.get('scope')!='AUTOMATIC_OTG_DESKTOP_RAM_CANDIDATE'
+            or automatic.get('automatic_usb_service_enabled') is not True
+            or automatic.get('automatic_usb_hardware_qualified') is not False
+            or automatic.get('automatic_usb_watchdog_seconds')!=15
+            or automatic.get('automatic_usb_heartbeat_seconds')!=3
+            or automatic.get('usb_firmware_lease_available') is not False
+            or automatic.get('usb_supply_setters_available') is not False):
+        raise ValueError('Automatic USB policy or owner exclusivity changed')
 
 
 def main():
@@ -382,6 +400,38 @@ def main():
     for name,digest in peripheral_runtime.items():
         raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Manual peripheral runtime changed')
+    automatic_sources={
+        'usr/libexec/oneplus13-auto-otg.py':'tools/oneplus13/auto-otg.py',
+        'usr/lib/systemd/system/oneplus13-auto-otg.service':'devices/oneplus13/desktop/oneplus13-auto-otg.service',
+        'usr/lib/udev/rules.d/11-oneplus13-auto-usb.rules':'devices/oneplus13/desktop/11-oneplus13-auto-usb.rules'}
+    automatic_runtime=m.get('automatic_usb_runtime_files',{})
+    if set(automatic_runtime)!=set(automatic_sources) or m.get('automatic_usb_service_conditional') is not True:
+        raise ValueError('Missing conditional desktop automatic USB runtime')
+    for name,source in automatic_sources.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=automatic_runtime[name] or sha256(repo/source)!=automatic_runtime[name]:
+            raise ValueError('Automatic USB runtime differs from source')
+    link=subprocess.check_output(['unsquashfs','-ll',str(root/'rootfs.squashfs'),
+        'etc/systemd/system/multi-user.target.wants/oneplus13-auto-otg.service'],text=True)
+    if ' -> /usr/lib/systemd/system/oneplus13-auto-otg.service' not in link:
+        raise ValueError('Automatic USB service is not enabled conditionally')
+    auto_files=m.get('automatic_usb_artifacts',{})
+    if set(auto_files)!={'boot-automatic-usb-ram-experimental.img','sm8750-oneplus13-automatic-usb.dtb',
+                        'automatic-usb-manifest.json','automatic-usb-dtb-review.json'}:
+        raise ValueError('Missing automatic USB desktop alternative')
+    for name,digest in auto_files.items():
+        if sha256(root/name)!=digest:raise ValueError('Automatic USB artifact changed')
+    automatic=json.loads((root/'automatic-usb-manifest.json').read_text())
+    verify_automatic_boot_arguments(camera_gnss,automatic)
+    auto_sections=boot_sections((root/automatic['boot_image_file']).read_bytes())
+    auto_expected,_=importlib.import_module('camera-gnss-ir-usb-dtb').derive(
+        (repo/'devices/oneplus13/qualified-data/calibrated.dtb').read_bytes())
+    auto_tree=Fdt(auto_expected)
+    auto_tree.nodes['/chosen']['bootargs']=(automatic['cmdline']+'\0').encode()
+    if (auto_sections['kernel']!=default_sections['kernel'] or auto_sections['ramdisk']!=default_sections['ramdisk']
+            or auto_sections['dtb']!=(root/automatic['dtb_file']).read_bytes()
+            or Fdt(auto_sections['dtb']).nodes!=auto_tree.nodes):
+        raise ValueError('Automatic USB boot sections or role-switch DTB differ')
     target_files=m.get('targets_ir_usb_artifacts',{})
     target_names={'boot-targets-ir-usb-ram-experimental.img',
                   'sm8750-oneplus13-targets-ir-usb.dtb',

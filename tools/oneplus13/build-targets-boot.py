@@ -24,6 +24,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--kernel", required=True, type=Path)
     parser.add_argument("--image", required=True, type=Path)
+    parser.add_argument("--automatic-otg", action="store_true")
     args = parser.parse_args()
     kernel = args.kernel.resolve()
     out = args.image.resolve()
@@ -75,10 +76,13 @@ def main():
         "oneplus13.session=" + original["session_identity_nonce"],
         "oneplus13.session=" + nonce,
     )
-    for flag in ("oneplus13.ir_probe=1", "oneplus13.usb_host_probe=1",
+    flags = (("oneplus13.usb_host_probe=1", "qcom_battmgr.oneplus13_otg_auto=1")
+             if args.automatic_otg else
+             ("oneplus13.ir_probe=1", "oneplus13.usb_host_probe=1",
                  "qcom_battmgr.oneplus13_otg_lease=1",
                  "qcom_battmgr.oneplus13_otg_supply_read=1",
-                 "qcom_battmgr.oneplus13_otg_supply_lease=1"):
+                 "qcom_battmgr.oneplus13_otg_supply_lease=1"))
+    for flag in flags:
         if flag not in cmdline.split():
             cmdline += " " + flag
     tree.nodes["/chosen"]["bootargs"] = (cmdline + "\0").encode()
@@ -93,6 +97,14 @@ def main():
         "targets-ir-usb-dtb-review.json",
     )
     paths = {name: out / name for name in names}
+    if args.automatic_otg:
+        replacements = {
+            names[0]: "boot-automatic-usb-ram-experimental.img",
+            names[1]: "sm8750-oneplus13-automatic-usb.dtb",
+            names[2]: "automatic-usb-manifest.json",
+            names[3]: "automatic-usb-dtb-review.json",
+        }
+        paths = {name: out / replacements[name] for name in names}
     if any(path.exists() for path in paths.values()):
         raise ValueError("Preserve previous target alternatives")
     dtb_path = paths["sm8750-oneplus13-targets-ir-usb.dtb"]
@@ -162,7 +174,8 @@ def main():
 
     result = {
         **original,
-        "scope": "MANUAL_CAMERA_GNSS_IR_USB_ROLE_RAM_BOOT",
+        "scope": ("AUTOMATIC_OTG_DESKTOP_RAM_CANDIDATE" if args.automatic_otg else
+                  "MANUAL_CAMERA_GNSS_IR_USB_ROLE_RAM_BOOT"),
         "cmdline": cmdline,
         "session_identity_nonce": nonce,
         "boot_image_sha256": sha256(image),
@@ -171,30 +184,40 @@ def main():
         "dtb_sha256": sha256(dtb_path),
         "ir_probe_auto_started": False,
         "usb_host_probe_auto_started": False,
-        "usb_firmware_lease_available": True,
+        "usb_firmware_lease_available": not args.automatic_otg,
         "usb_firmware_lease_auto_started": False,
-        "usb_supply_read_available": True,
+        "usb_supply_read_available": not args.automatic_otg,
         "usb_supply_read_auto_started": False,
-        "usb_supply_setters_available": True,
+        "usb_supply_setters_available": not args.automatic_otg,
         "usb_supply_setters_auto_started": False,
         "optical_output_qualified": False,
         "usb_host_peripheral_receipt": False,
         "default_boot_image_sha256": original["default_boot_image_sha256"],
     }
+    if args.automatic_otg:
+        result.update(automatic_usb_service_enabled=True,
+                      automatic_usb_hardware_qualified=False,
+                      automatic_usb_watchdog_seconds=15,
+                      automatic_usb_heartbeat_seconds=3)
+        report.update(scope="AUTOMATIC_OTG_DESKTOP_RAM_CANDIDATE",
+                      debugfs_role_writes=False, ucsi_owns_data_role=True)
     paths["targets-ir-usb-dtb-review.json"].write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
     paths["targets-ir-usb-manifest.json"].write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8"
     )
-    current.update(
-        targets_ir_usb_artifacts={
-            name: sha256(path) for name, path in paths.items()
-        },
-        target_ir_usb_auto_started=False,
-        target_ir_optical_output_qualified=False,
-        target_usb_host_peripheral_qualified=False,
-    )
+    if args.automatic_otg:
+        current.update(automatic_usb_artifacts={
+            path.name: sha256(path) for path in paths.values()},
+            automatic_usb_hardware_qualified=False)
+    else:
+        current.update(
+            targets_ir_usb_artifacts={name: sha256(path) for name, path in paths.items()},
+            target_ir_usb_auto_started=False,
+            target_ir_optical_output_qualified=False,
+            target_usb_host_peripheral_qualified=False,
+        )
     (out / "manifest.json").write_text(
         json.dumps(current, indent=2) + "\n", encoding="utf-8"
     )

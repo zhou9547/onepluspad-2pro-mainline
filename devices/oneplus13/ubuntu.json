@@ -19,7 +19,8 @@
     "v4l-utils", "ir-keytable",
     "libgudev-1.0-0", "libpolkit-gobject-1-0", "polkitd",
     "gir1.2-gstreamer-1.0", "gir1.2-gst-plugins-base-1.0", "gstreamer1.0-tools",
-    "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good"
+    "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good",
+    "udisks2", "gvfs-backends", "gvfs-fuse"
   ],
   "hardware_status": "NOT_DEVICE_TESTED",
   "accounts": "No default password or autologin. Create a user before deployment.",
