@@ -310,6 +310,86 @@ class GnssNmeaTests(unittest.TestCase):
         }):
             self.assertIsNone(GNSS.collect_native_session("/native", 25)["start_profile"])
 
+    def test_unlock_cycle_requires_restore_proof_for_clean_cleanup(self):
+        saved = ('LOCATION_ENGINE_LOCK_SAVED {"lock_type":4,'
+                 '"clients_config":"0xffffffffffffffff"}')
+        confirmed = 'LOCATION_ENGINE_UNLOCK_CONFIRMED {"lock_type":1}'
+        marker = "LOCATION_SESSION_STOPPED nmea=0\n"
+        error = ("LOCATION_SESSION_ERROR operation=start-result "
+                 "error=QMI protocol error (46): 'GeneralError'\n")
+        cases = [
+            (saved + "\n" + confirmed + "\n" + marker, error, False),
+            (saved + "\n" + confirmed + "\n" + marker, error, True),
+        ]
+        for stdout, stderr, with_restore in cases:
+            if with_restore:
+                stdout += ('LOCATION_ENGINE_LOCK_RESTORED {"lock_type":4}\n')
+            with self.subTest(with_restore=with_restore), patch.object(
+                GNSS, "run", return_value={"returncode": 1, "stdout": stdout,
+                                           "stderr": stderr}
+            ):
+                result = GNSS.collect_native_session("/native", 25, unlock=True)
+            self.assertTrue(result["unlock_requested"])
+            self.assertTrue(result["lock_restore_required"])
+            self.assertEqual(result["lock_restore_proven"], with_restore)
+            self.assertEqual(result["cleanup_complete"], with_restore)
+
+    def test_unlock_cycle_without_restore_attempt_is_not_clean(self):
+        stdout = ('LOCATION_ENGINE_LOCK_SAVED {"lock_type":4}\n'
+                  'LOCATION_ENGINE_UNLOCK_CONFIRMED {"lock_type":1}\n'
+                  'LOCATION_SESSION_STARTED seconds=25\n'
+                  'LOCATION_SESSION_STOPPED nmea=0\n')
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 0, "stdout": stdout, "stderr": "",
+        }):
+            result = GNSS.collect_native_session("/native", 25, unlock=True)
+        self.assertTrue(result["started"])
+        self.assertTrue(result["lock_restore_required"])
+        self.assertFalse(result["lock_restore_proven"])
+        self.assertFalse(result["cleanup_complete"])
+
+    def test_unrestored_lock_marker_is_never_clean(self):
+        stdout = ('LOCATION_ENGINE_LOCK_SAVED {"lock_type":4}\n'
+                  'LOCATION_ENGINE_UNLOCK_CONFIRMED {"lock_type":1}\n'
+                  'LOCATION_SESSION_STOPPED nmea=0\n')
+        stderr = ("LOCATION_SESSION_ERROR operation=start-result "
+                  "error=QMI protocol error (46): 'GeneralError'\n"
+                  "LOCATION_ENGINE_LOCK_UNRESTORED saved=4\n")
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 1, "stdout": stdout, "stderr": stderr,
+        }):
+            result = GNSS.collect_native_session("/native", 25, unlock=True)
+        self.assertTrue(result["lock_unrestored"])
+        self.assertFalse(result["cleanup_complete"])
+        self.assertFalse(result["engine_control_qualified"])
+
+    def test_already_unlocked_device_needs_no_restore(self):
+        stdout = ('LOCATION_ENGINE_LOCK_SAVED {"lock_type":1}\n'
+                  'LOCATION_ENGINE_UNLOCK already=none\n'
+                  'LOCATION_SESSION_STARTED seconds=25\n'
+                  'LOCATION_SESSION_STOPPED nmea=0\n')
+        with patch.object(GNSS, "run", return_value={
+            "returncode": 0, "stdout": stdout, "stderr": "",
+        }):
+            result = GNSS.collect_native_session("/native", 25, unlock=True)
+        self.assertTrue(result["lock_already_unlocked"])
+        self.assertFalse(result["lock_restore_required"])
+        self.assertTrue(result["cleanup_complete"])
+
+    def test_temporary_unlock_passes_flag_and_extends_timeout(self):
+        response = {"returncode": 1, "stdout": "LOCATION_SESSION_STOPPED nmea=0\n",
+                    "stderr": "LOCATION_SESSION_ERROR operation=start-result "
+                              "error=QMI protocol error (46): 'GeneralError'\n"}
+        with patch.object(GNSS, "run", return_value=response) as run:
+            GNSS.collect_native_session("/native/probe", 80, unlock=True)
+        self.assertEqual(run.call_args.args[0], [
+            "/native/probe", "--unlock-engine-lock", "--seconds", "80"])
+        self.assertEqual(run.call_args.args[1], 220)
+        with patch.object(GNSS, "run", return_value=response) as plain:
+            GNSS.collect_native_session("/native/probe", 80)
+        self.assertEqual(plain.call_args.args[0], ["/native/probe", "--seconds", "80"])
+        self.assertEqual(plain.call_args.args[1], 175)
+
 
 if __name__ == "__main__":
     unittest.main()

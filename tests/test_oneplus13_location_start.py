@@ -232,6 +232,49 @@ static void check_identity(void)
                     G_IO_ERROR, G_IO_ERROR_INVALID_DATA, 0x1234);
 }
 
+static void check_lock_set(void)
+{
+    /* SET_ENGINE_LOCK 0x003a carries only the mandatory lockType TLV. */
+    static const guint8 none_bytes[] = { 0x01, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00 };
+    static const guint8 all_bytes[] = { 0x01, 0x04, 0x00, 0x04, 0x00, 0x00, 0x00 };
+    QmiMessage *request, *response;
+    GError *error = NULL;
+    gsize wire_length = 0;
+    const guint8 *raw;
+
+    request = lock_set_message(0x27, 0x1234, 1, &error);
+    g_assert_no_error(error);
+    g_assert_nonnull(request);
+    g_assert_true(qmi_message_is_request(request));
+    g_assert_cmpint(qmi_message_get_service(request), ==, QMI_SERVICE_LOC);
+    g_assert_cmpuint(qmi_message_get_message_id(request), ==, 0x3a);
+    g_assert_cmpuint(qmi_message_get_client_id(request), ==, 0x27);
+    g_assert_cmpuint(qmi_message_get_transaction_id(request), ==, 0x1234);
+    raw = qmi_message_get_raw(request, &wire_length, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(wire_length, ==, 13 + sizeof(none_bytes));
+    g_assert_cmpmem(raw + 13, sizeof(none_bytes), none_bytes, sizeof(none_bytes));
+    response = qmi_message_response_new(request, QMI_PROTOCOL_ERROR_NONE);
+    g_assert_true(lock_set_response_valid(response, 0x27, 0x1234));
+    /* The read-only GET validator must not accept a SET transaction. */
+    g_assert_false(lock_response_valid(response, 0x27, 0x1234));
+    g_assert_false(lock_set_response_valid(response, 0x27, 0x1235));
+    g_assert_false(lock_set_response_valid(response, 0x28, 0x1234));
+    qmi_message_unref(response);
+    qmi_message_unref(request);
+
+    request = lock_set_message(0x27, 0x1234, 4, &error);
+    g_assert_no_error(error);
+    raw = qmi_message_get_raw(request, &wire_length, &error);
+    g_assert_no_error(error);
+    g_assert_cmpuint(wire_length, ==, 13 + sizeof(all_bytes));
+    g_assert_cmpmem(raw + 13, sizeof(all_bytes), all_bytes, sizeof(all_bytes));
+    response = qmi_message_response_new(request, QMI_PROTOCOL_ERROR_GENERAL_ERROR);
+    g_assert_false(lock_set_response_valid(response, 0x27, 0x1234));
+    qmi_message_unref(response);
+    qmi_message_unref(request);
+}
+
 int main(int argc, char **argv)
 {
     g_assert_cmpint(argc, ==, 2);
@@ -249,6 +292,8 @@ int main(int argc, char **argv)
         check_malformed_results();
     else if (!strcmp(argv[1], "identity"))
         check_identity();
+    else if (!strcmp(argv[1], "lock-set"))
+        check_lock_set();
     else
         g_assert_not_reached();
     return 0;
@@ -308,6 +353,9 @@ class LocationStartTests(unittest.TestCase):
 
     def test_wrong_message_transaction_or_indication_is_rejected(self):
         self.check_case('identity')
+
+    def test_engine_lock_set_request_pins_type_only_tlv(self):
+        self.check_case('lock-set')
 
 
 if __name__ == '__main__':

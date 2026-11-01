@@ -1,3 +1,18 @@
+# GNSS lock mutation is now bounded but still unqualified, 2026-11-01
+
+The engine-lock cycle is a modem-state mutation with a real restore path: one
+SET to LOCK_NONE, confirmation by readback, then the saved lockType restored and
+confirmed. Three gaps remain. First, ownership of the persisted lock is still
+unknown, so a successful unlock would prove only that LOCK_ALL blocks START, not
+what set it. Second, the restore is proven by a query on the same transport that
+has no transaction id, so reply freshness is not provable. Third, a crash inside
+the SET window can leave the lock changed until the next boot; the helper
+reports that state instead of hiding it, but it cannot repair a dead process.
+
+The experiment must not be merged with privacy changes or client-mask clearing,
+and it needs its own image and plan. Acceptance still requires an accepted START,
+a checked real satellite fix and a clean STOP with the lock restored.
+
 # GNSS GeneralError46: accuracy excluded, legacy LOCK_ALL stands, 2026-11-01
 
 r230 proves explicit HIGH horizontal accuracy is not the cause: the modem

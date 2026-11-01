@@ -32,12 +32,33 @@ struct session {
 	gboolean lock_response_ok;
 	gboolean lock_indication_ok;
 	guint16 start_transaction;
+	/* Optional bounded engine-lock experiment: read the legacy lock, set
+	 * LOCK_NONE for this session only, and restore the saved value before
+	 * exit. Disabled unless --unlock-engine-lock is passed. */
+	gboolean unlock_engine_lock;
+	gboolean lock_changed;
+	gboolean lock_get_pending;
+	gboolean lock_restore_pending;
+	gboolean lock_applied;
+	gboolean lock_restored;
+	int lock_phase;
+	int restore_status;
+	guint32 saved_lock_type;
+	guint16 lock_transaction;
 	gchar *lock_report;
 };
 
 static int exit_status = 1;
 static gboolean terminate (gpointer user_data);
 static gboolean unix_terminate (gpointer user_data);
+static QmiMessage *lock_set_message (guint8 cid, guint16 transaction,
+				    guint32 lock_type, GError **error);
+static gboolean lock_response_valid (QmiMessage *message, guint8 cid,
+				     guint16 transaction);
+static gboolean lock_set_response_valid (QmiMessage *message, guint8 cid,
+					 guint16 transaction);
+static void lock_ready (QmiDevice *device, GAsyncResult *result,
+			gpointer user_data);
 
 /* libqmi 1.40 LOC client-identification TLVs, encoded with the stable raw
  * message API so Ubuntu's older libqmi runtime ABI remains usable.
@@ -130,6 +151,39 @@ registration_result (QmiMessage *message, GError **error)
 #define OP13_LOC_START_INTERMEDIATE_ON 1
 #define OP13_LOC_START_MIN_INTERVAL_MS 1000
 
+/* Qualcomm location_service_v02 engine-lock messages:
+ *   GET_ENGINE_LOCK 0x003B (empty request; indication carries lockType 0x10)
+ *   SET_ENGINE_LOCK 0x003A (lockType 0x01 u32 mandatory, subType 0x10,
+ *                           lockClient 0x11 u64, clientsConfig 0x12 u64 optional)
+ * Legacy lock values: NONE=1, MI(AFW)=2, MT=3, ALL=4.
+ *
+ * r230 observed lockType=4 (LOCK_ALL) with an all-ones client mask while event
+ * registration and STOP still succeeded and every START failed generically.
+ * LOCK_ALL is the standing candidate for that shape, but who owns the persisted
+ * lock is NOT established. This helper therefore offers an opt-in, bounded
+ * cycle: read and save the lock, set NONE once, confirm by readback, run the
+ * normal session, then restore the saved lockType and confirm the restore. An
+ * unproven restore is reported and is never treated as clean.
+ */
+#define OP13_LOC_SET_ENGINE_LOCK 0x003A
+#define OP13_LOC_GET_ENGINE_LOCK 0x003B
+#define OP13_LOC_LOCK_TLV_TYPE 0x01
+#define OP13_LOC_LOCK_RESULT_TLV 0x02
+#define OP13_LOC_LOCK_NONE 1
+#define OP13_LOC_LOCK_MI 2
+#define OP13_LOC_LOCK_MT 3
+#define OP13_LOC_LOCK_ALL 4
+#define OP13_LOC_LOCK_TLV_SUB_TYPE 0x10
+#define OP13_LOC_LOCK_TLV_LOCK_CLIENT 0x11
+#define OP13_LOC_LOCK_TLV_CLIENTS_CONFIG 0x12
+
+enum lock_phase {
+	LOCK_PHASE_NONE,
+	LOCK_PHASE_SAVE,
+	LOCK_PHASE_CONFIRM_NONE,
+	LOCK_PHASE_CONFIRM_RESTORE,
+};
+
 static gboolean
 add_u32_tlv (QmiMessage *message, guint8 type, guint32 value, GError **error)
 {
@@ -183,9 +237,12 @@ set_protocol_error (GError **error, guint16 code)
 	g_type_class_unref (klass);
 }
 
+/* Shared response check for the raw LOC commands this helper sends. The error
+ * text for a firmware failure is byte-identical to libqmi's own formatting so
+ * existing evidence parsers keep matching. */
 static gboolean
-start_result (QmiMessage *message, guint8 cid, guint16 transaction,
-	      GError **error)
+command_result (QmiMessage *message, guint16 message_id, guint8 cid,
+		guint16 transaction, const char *what, GError **error)
 {
 	guint16 length = 0;
 	const guint8 *raw;
@@ -193,17 +250,17 @@ start_result (QmiMessage *message, guint8 cid, guint16 transaction,
 
 	if (!qmi_message_is_response (message) ||
 	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
-	    qmi_message_get_message_id (message) != OP13_LOC_START_REQUEST ||
+	    qmi_message_get_message_id (message) != message_id ||
 	    qmi_message_get_client_id (message) != cid ||
 	    qmi_message_get_transaction_id (message) != transaction) {
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-				     "unexpected LOC start response");
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+			     "unexpected LOC %s response", what);
 		return FALSE;
 	}
-	raw = qmi_message_get_raw_tlv (message, OP13_LOC_START_RESULT_TLV, &length);
+	raw = qmi_message_get_raw_tlv (message, OP13_LOC_LOCK_RESULT_TLV, &length);
 	if (!raw || length != 4) {
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-				     "invalid LOC start result TLV");
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+			     "invalid LOC %s result TLV", what);
 		return FALSE;
 	}
 	result = raw[0] | ((guint16)raw[1] << 8);
@@ -211,12 +268,20 @@ start_result (QmiMessage *message, guint8 cid, guint16 transaction,
 	if (!result && !code)
 		return TRUE;
 	if (result != 1 || !code) {
-		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-				     "inconsistent LOC start result");
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
+			     "inconsistent LOC %s result", what);
 		return FALSE;
 	}
 	set_protocol_error (error, code);
 	return FALSE;
+}
+
+static gboolean
+start_result (QmiMessage *message, guint8 cid, guint16 transaction,
+	      GError **error)
+{
+	return command_result (message, OP13_LOC_START_REQUEST, cid, transaction,
+			       "start", error);
 }
 
 static gboolean
@@ -312,6 +377,51 @@ start_self_test (void)
 	qmi_message_unref (request);
 }
 
+static void
+lock_self_test (void)
+{
+	static const guint8 none_bytes[] = {
+		OP13_LOC_LOCK_TLV_TYPE, 0x04, 0x00, OP13_LOC_LOCK_NONE, 0x00, 0x00, 0x00,
+	};
+	static const guint8 all_bytes[] = {
+		OP13_LOC_LOCK_TLV_TYPE, 0x04, 0x00, OP13_LOC_LOCK_ALL, 0x00, 0x00, 0x00,
+	};
+	QmiMessage *request, *response;
+	GError *error = NULL;
+	gsize wire_length = 0;
+	const guint8 *raw;
+
+	request = lock_set_message (0x27, 0x1234, OP13_LOC_LOCK_NONE, &error);
+	g_assert_no_error (error);
+	g_assert_nonnull (request);
+	g_assert_true (qmi_message_is_request (request));
+	g_assert_cmpuint (qmi_message_get_message_id (request), ==, 0x3a);
+	g_assert_cmpuint (qmi_message_get_transaction_id (request), ==, 0x1234);
+	raw = qmi_message_get_raw (request, &wire_length, &error);
+	g_assert_no_error (error);
+	g_assert_cmpuint (wire_length, ==, 13 + sizeof (none_bytes));
+	g_assert_cmpmem (raw + 13, sizeof (none_bytes), none_bytes, sizeof (none_bytes));
+	response = qmi_message_response_new (request, QMI_PROTOCOL_ERROR_NONE);
+	g_assert_true (lock_set_response_valid (response, 0x27, 0x1234));
+	/* A read-only GET response must never validate a SET transaction. */
+	g_assert_false (lock_response_valid (response, 0x27, 0x1234));
+	g_assert_false (lock_set_response_valid (response, 0x27, 0x1235));
+	qmi_message_unref (response);
+	qmi_message_unref (request);
+
+	request = lock_set_message (0x27, 0x1234, OP13_LOC_LOCK_ALL, &error);
+	g_assert_no_error (error);
+	raw = qmi_message_get_raw (request, &wire_length, &error);
+	g_assert_no_error (error);
+	g_assert_cmpuint (wire_length, ==, 13 + sizeof (all_bytes));
+	g_assert_cmpmem (raw + 13, sizeof (all_bytes), all_bytes, sizeof (all_bytes));
+	response = qmi_message_response_new (request,
+					     QMI_PROTOCOL_ERROR_GENERAL_ERROR);
+	g_assert_false (lock_set_response_valid (response, 0x27, 0x1234));
+	qmi_message_unref (response);
+	qmi_message_unref (request);
+}
+
 static int
 configuration_self_test (void)
 {
@@ -357,7 +467,8 @@ configuration_self_test (void)
 	g_assert_true (unix_terminate (&session));
 	g_assert_true (unix_terminate (&pending));
 	start_self_test ();
-	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=26 no_qrtr=1\n");
+	lock_self_test ();
+	g_print ("LOCATION_SESSION_CONFIG_SELF_TEST_PASS checks=35 no_qrtr=1\n");
 	return 0;
 }
 
@@ -415,35 +526,55 @@ lock_field (guint8 type, const guint8 *value, gsize length, gpointer user_data)
 		fields->values[index] |= ((guint64)value[i]) << (8 * i);
 }
 
+/* Parse one GET_ENGINE_LOCK_IND 0x003b indication. Field order follows the
+ * pinned IDL: status 0x01, lockType 0x10, subType 0x11, lockClient 0x12,
+ * clientsConfig 0x13, engineLockState 0x14. A non-zero status or a malformed
+ * field set is never treated as a usable reading. */
+static gboolean
+lock_parse (QmiMessage *message, guint8 cid, struct lock_fields *fields)
+{
+	if (!qmi_message_is_indication (message) ||
+	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
+	    qmi_message_get_message_id (message) != OP13_LOC_GET_ENGINE_LOCK ||
+	    qmi_message_get_client_id (message) != cid)
+		return FALSE;
+	qmi_message_foreach_raw_tlv (message, lock_field, fields);
+	return !fields->invalid && fields->counts[0] == 1 && fields->values[0] == 0;
+}
+
 static gchar *
-lock_indication_report (QmiMessage *message, guint8 cid)
+lock_report (const struct lock_fields *fields)
 {
 	static const char *names[] = { "status", "lock_type", "subscription",
 		"lock_client", "clients_config", "engine_lock_state" };
-	struct lock_fields fields = { 0 };
 	GString *json;
 	guint i;
-	if (!qmi_message_is_indication (message) ||
-	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
-	    qmi_message_get_message_id (message) != 0x003b ||
-	    qmi_message_get_client_id (message) != cid)
-		return NULL;
-	qmi_message_foreach_raw_tlv (message, lock_field, &fields);
-	if (fields.invalid || fields.counts[0] != 1 || fields.values[0] != 0)
-		return NULL;
+
 	json = g_string_new ("{\"read_only\":true,\"default_data_subscription\":true");
 	for (i = 0; i < G_N_ELEMENTS (names); i++) {
 		g_string_append_printf (json, ",\"%s\":", names[i]);
-		if (!fields.counts[i])
+		if (!fields->counts[i])
 			g_string_append (json, "null");
 		else if (i == 3 || i == 4)
 			g_string_append_printf (json, "\"0x%016" G_GINT64_MODIFIER "x\"",
-				fields.values[i]);
+				fields->values[i]);
 		else
-			g_string_append_printf (json, "%" G_GUINT64_FORMAT, fields.values[i]);
+			g_string_append_printf (json, "%" G_GUINT64_FORMAT,
+				fields->values[i]);
 	}
 	g_string_append_c (json, '}');
 	return g_string_free (json, FALSE);
+}
+
+
+static gchar *
+lock_indication_report (QmiMessage *message, guint8 cid)
+{
+	struct lock_fields fields = { 0 };
+
+	if (!lock_parse (message, cid, &fields))
+		return NULL;
+	return lock_report (&fields);
 }
 
 static void
@@ -453,27 +584,6 @@ lock_maybe_finish (struct session *session)
 		g_print ("LOCATION_ENGINE_LOCK_RESULT %s\n", session->lock_report);
 		finish (session, 0);
 	}
-}
-
-static void
-lock_received (QmiDevice *device, QmiMessage *message, gpointer user_data)
-{
-	struct session *session = user_data;
-	(void)device;
-	if (!qmi_message_is_indication (message) ||
-	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
-	    qmi_message_get_message_id (message) != 0x003b ||
-	    qmi_message_get_client_id (message) != qmi_client_get_cid (QMI_CLIENT (session->client)))
-		return;
-	if (session->lock_indication_ok ||
-	    !(session->lock_report = lock_indication_report (message,
-		qmi_client_get_cid (QMI_CLIENT (session->client))))) {
-		g_printerr ("LOCATION_ENGINE_LOCK_ERROR malformed-or-duplicate-indication\n");
-		finish (session, 1);
-		return;
-	}
-	session->lock_indication_ok = TRUE;
-	lock_maybe_finish (session);
 }
 
 static gboolean
@@ -499,17 +609,168 @@ lock_response_field (guint8 type, const guint8 *value, gsize length, gpointer us
 }
 
 static gboolean
-lock_response_valid (QmiMessage *message, guint8 cid, guint16 transaction)
+lock_response_valid_id (QmiMessage *message, guint16 message_id, guint8 cid,
+			guint16 transaction)
 {
 	struct lock_response_fields fields = { 0 };
 	if (!qmi_message_is_response (message) ||
 	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
-	    qmi_message_get_message_id (message) != 0x003b ||
+	    qmi_message_get_message_id (message) != message_id ||
 	    qmi_message_get_client_id (message) != cid ||
 	    qmi_message_get_transaction_id (message) != transaction)
 		return FALSE;
 	qmi_message_foreach_raw_tlv (message, lock_response_field, &fields);
 	return fields.count == 1 && fields.ok;
+}
+
+static gboolean
+lock_response_valid (QmiMessage *message, guint8 cid, guint16 transaction)
+{
+	return lock_response_valid_id (message, OP13_LOC_GET_ENGINE_LOCK, cid,
+				       transaction);
+}
+
+static gboolean
+lock_set_response_valid (QmiMessage *message, guint8 cid, guint16 transaction)
+{
+	return lock_response_valid_id (message, OP13_LOC_SET_ENGINE_LOCK, cid,
+				       transaction);
+}
+
+/* SET_ENGINE_LOCK 0x003a carries only the mandatory lockType TLV. subType,
+ * lockClient and clientsConfig are deliberately not sent: the pinned IDL states
+ * that lockClient overwrites lockType, so restoring lockType is the faithful
+ * and minimal way back to the saved state. */
+static QmiMessage *
+lock_set_message (guint8 cid, guint16 transaction, guint32 lock_type,
+		  GError **error)
+{
+	QmiMessage *message;
+
+	message = qmi_message_new (QMI_SERVICE_LOC, cid, transaction,
+				   OP13_LOC_SET_ENGINE_LOCK);
+	if (!message) {
+		g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NO_SPACE,
+				     "cannot allocate LOC engine-lock request");
+		return NULL;
+	}
+	if (!add_u32_tlv (message, OP13_LOC_LOCK_TLV_TYPE, lock_type, error)) {
+		qmi_message_unref (message);
+		return NULL;
+	}
+	return message;
+}
+
+static void begin_session (struct session *session);
+static void lock_query (struct session *session, int phase);
+static void unlock_set (struct session *session, guint32 lock_type);
+static void unlock_restore (struct session *session, int status);
+
+/* Any path that ends the helper must not drop an unproven mutation: report it
+ * explicitly instead of exiting quietly with a changed lock. */
+static void
+finish_session (struct session *session, int status)
+{
+	if (session->unlock_engine_lock && session->lock_changed &&
+	    !session->lock_restored)
+		g_printerr ("LOCATION_ENGINE_LOCK_UNRESTORED saved=%u\n",
+			    (guint) session->saved_lock_type);
+	finish (session, status);
+}
+
+static void
+lock_received (QmiDevice *device, QmiMessage *message, gpointer user_data)
+{
+	struct session *session = user_data;
+	struct lock_fields fields = { 0 };
+	gchar *report;
+	guint8 cid;
+
+	(void)device;
+	if (!session->client ||
+	    !qmi_message_is_indication (message) ||
+	    qmi_message_get_service (message) != QMI_SERVICE_LOC ||
+	    qmi_message_get_message_id (message) != OP13_LOC_GET_ENGINE_LOCK)
+		return;
+	cid = qmi_client_get_cid (QMI_CLIENT (session->client));
+	if (qmi_message_get_client_id (message) != cid)
+		return;
+	if (session->lock_indication_ok || !lock_parse (message, cid, &fields)) {
+		g_printerr ("LOCATION_ENGINE_LOCK_ERROR malformed-or-duplicate-indication\n");
+		finish_session (session, 1);
+		return;
+	}
+	session->lock_indication_ok = TRUE;
+	report = lock_report (&fields);
+
+	switch (session->lock_phase) {
+	case LOCK_PHASE_NONE:
+		g_free (report);
+		g_free (session->lock_report);
+		session->lock_report = lock_indication_report (message, cid);
+		lock_maybe_finish (session);
+		return;
+	case LOCK_PHASE_SAVE:
+		session->saved_lock_type = (guint32) fields.values[1];
+		g_print ("LOCATION_ENGINE_LOCK_SAVED %s\n", report);
+		g_free (report);
+		if (session->saved_lock_type == OP13_LOC_LOCK_NONE) {
+			g_print ("LOCATION_ENGINE_UNLOCK already=none\n");
+			begin_session (session);
+			return;
+		}
+		unlock_set (session, OP13_LOC_LOCK_NONE);
+		return;
+	case LOCK_PHASE_CONFIRM_NONE:
+		g_print ("LOCATION_ENGINE_UNLOCK_CONFIRMED %s\n", report);
+		g_free (report);
+		if ((guint32) fields.values[1] != OP13_LOC_LOCK_NONE) {
+			g_printerr ("LOCATION_ENGINE_UNLOCK_ERROR not-applied\n");
+			unlock_restore (session, 1);
+			return;
+		}
+		session->lock_applied = TRUE;
+		begin_session (session);
+		return;
+	case LOCK_PHASE_CONFIRM_RESTORE:
+		g_print ("LOCATION_ENGINE_LOCK_RESTORED %s\n", report);
+		g_free (report);
+		if ((guint32) fields.values[1] != session->saved_lock_type) {
+			g_printerr ("LOCATION_ENGINE_LOCK_RESTORE_ERROR mismatch saved=%u\n",
+				    (guint) session->saved_lock_type);
+			finish_session (session, 1);
+			return;
+		}
+		session->lock_restored = TRUE;
+		finish (session, session->restore_status);
+		return;
+	default:
+		g_free (report);
+		return;
+	}
+}
+
+static void
+lock_query (struct session *session, int phase)
+{
+	QmiMessage *input;
+	QmiClient *client = QMI_CLIENT (session->client);
+
+	session->lock_phase = phase;
+	session->lock_indication_ok = FALSE;
+	session->lock_transaction = qmi_client_get_next_transaction_id (client);
+	input = qmi_message_new (QMI_SERVICE_LOC, qmi_client_get_cid (client),
+				 session->lock_transaction,
+				 OP13_LOC_GET_ENGINE_LOCK);
+	if (!input) {
+		g_printerr ("LOCATION_ENGINE_LOCK_ERROR query-allocation\n");
+		finish_session (session, 1);
+		return;
+	}
+	qmi_device_command_full (session->device, input, NULL, 20,
+				 session->cancellable,
+				 (GAsyncReadyCallback) lock_ready, session);
+	qmi_message_unref (input);
 }
 
 static void
@@ -518,18 +779,77 @@ lock_ready (QmiDevice *device, GAsyncResult *result, gpointer user_data)
 	struct session *session = user_data;
 	GError *error = NULL;
 	QmiMessage *output = qmi_device_command_full_finish (device, result, &error);
+
 	if (!output || !lock_response_valid (output,
-		qmi_client_get_cid (QMI_CLIENT (session->client)), 1)) {
+		qmi_client_get_cid (QMI_CLIENT (session->client)),
+		session->lock_transaction)) {
 		g_printerr ("LOCATION_ENGINE_LOCK_ERROR rejected-or-invalid-response\n");
 		g_clear_error (&error);
 		if (output)
 			qmi_message_unref (output);
-		finish (session, 1);
+		finish_session (session, 1);
 		return;
 	}
 	qmi_message_unref (output);
 	session->lock_response_ok = TRUE;
-	lock_maybe_finish (session);
+	if (session->lock_phase == LOCK_PHASE_NONE)
+		lock_maybe_finish (session);
+}
+
+static void
+unlock_set_ready (QmiDevice *device, GAsyncResult *result, gpointer user_data)
+{
+	struct session *session = user_data;
+	GError *error = NULL;
+	QmiMessage *output = qmi_device_command_full_finish (device, result, &error);
+
+	if (!output || !lock_set_response_valid (output,
+		qmi_client_get_cid (QMI_CLIENT (session->client)),
+		session->lock_transaction)) {
+		print_error ("set-engine-lock", error);
+		g_clear_error (&error);
+		if (output)
+			qmi_message_unref (output);
+		g_printerr ("LOCATION_ENGINE_LOCK_SET_ERROR rejected-or-invalid-response\n");
+		finish_session (session, 1);
+		return;
+	}
+	qmi_message_unref (output);
+	/* The SET is applied: from here the saved value must be restored even if
+	 * the confirmation query fails. */
+	session->lock_changed = TRUE;
+	lock_query (session, session->lock_restore_pending ?
+		    LOCK_PHASE_CONFIRM_RESTORE : LOCK_PHASE_CONFIRM_NONE);
+}
+
+static void
+unlock_set (struct session *session, guint32 lock_type)
+{
+	QmiMessage *input;
+	GError *error = NULL;
+	QmiClient *client = QMI_CLIENT (session->client);
+
+	session->lock_transaction = qmi_client_get_next_transaction_id (client);
+	input = lock_set_message (qmi_client_get_cid (client),
+				  session->lock_transaction, lock_type, &error);
+	if (!input) {
+		print_error ("build-set-engine-lock", error);
+		g_clear_error (&error);
+		finish_session (session, 1);
+		return;
+	}
+	qmi_device_command_full (session->device, input, NULL, 20,
+				 session->cancellable,
+				 (GAsyncReadyCallback) unlock_set_ready, session);
+	qmi_message_unref (input);
+}
+
+static void
+unlock_restore (struct session *session, int status)
+{
+	session->restore_status = status;
+	session->lock_restore_pending = TRUE;
+	unlock_set (session, session->saved_lock_type);
 }
 
 static void
@@ -590,20 +910,24 @@ stop_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 	if (!output) {
 		print_error ("stop", error);
 		g_clear_error (&error);
-		finish (session, 1);
+		finish_session (session, 1);
 		return;
 	}
 	if (!qmi_message_loc_stop_output_get_result (output, &error)) {
 		print_error ("stop-result", error);
 		g_clear_error (&error);
 		qmi_message_loc_stop_output_unref (output);
-		finish (session, 1);
+		finish_session (session, 1);
 		return;
 	}
 	qmi_message_loc_stop_output_unref (output);
 	session->stopped = TRUE;
 	g_print ("LOCATION_SESSION_STOPPED nmea=%u\n", session->nmea_count);
-	finish (session, session->started ? 0 : 1);
+	if (session->unlock_engine_lock && session->lock_changed &&
+	    !session->lock_restored)
+		unlock_restore (session, session->started ? 0 : 1);
+	else
+		finish (session, session->started ? 0 : 1);
 }
 
 static gboolean
@@ -782,10 +1106,27 @@ set_nmea_ready (QmiClientLoc *client, GAsyncResult *result, gpointer user_data)
 }
 
 static void
+begin_session (struct session *session)
+{
+	QmiMessageLocSetNmeaTypesInput *input;
+
+	g_signal_connect (session->client, "nmea",
+			  G_CALLBACK (nmea_received), session);
+	g_signal_connect (session->client, "position-report",
+			  G_CALLBACK (position_received), session);
+	input = qmi_message_loc_set_nmea_types_input_new ();
+	qmi_message_loc_set_nmea_types_input_set_nmea_types (
+		input, QMI_LOC_NMEA_TYPE_GGA | QMI_LOC_NMEA_TYPE_RMC, NULL);
+	qmi_client_loc_set_nmea_types (
+		session->client, input, 20, session->cancellable,
+		(GAsyncReadyCallback) set_nmea_ready, session);
+	qmi_message_loc_set_nmea_types_input_unref (input);
+}
+
+static void
 client_ready (QmiDevice *device, GAsyncResult *result, gpointer user_data)
 {
 	struct session *session = user_data;
-	QmiMessageLocSetNmeaTypesInput *input;
 	GError *error = NULL;
 
 	session->client = QMI_CLIENT_LOC (
@@ -806,17 +1147,13 @@ client_ready (QmiDevice *device, GAsyncResult *result, gpointer user_data)
 		qmi_message_unref (input);
 		return;
 	}
-	g_signal_connect (session->client, "nmea",
-			  G_CALLBACK (nmea_received), session);
-	g_signal_connect (session->client, "position-report",
-			  G_CALLBACK (position_received), session);
-	input = qmi_message_loc_set_nmea_types_input_new ();
-	qmi_message_loc_set_nmea_types_input_set_nmea_types (
-		input, QMI_LOC_NMEA_TYPE_GGA | QMI_LOC_NMEA_TYPE_RMC, NULL);
-	qmi_client_loc_set_nmea_types (
-		session->client, input, 20, session->cancellable,
-		(GAsyncReadyCallback) set_nmea_ready, session);
-	qmi_message_loc_set_nmea_types_input_unref (input);
+	if (session->unlock_engine_lock) {
+		g_signal_connect (session->device, QMI_DEVICE_SIGNAL_INDICATION,
+			G_CALLBACK (lock_received), session);
+		lock_query (session, LOCK_PHASE_SAVE);
+		return;
+	}
+	begin_session (session);
 }
 
 static void
@@ -950,10 +1287,17 @@ main (int argc, char **argv)
 		return configuration_self_test ();
 	if (argc == 2 && g_str_equal (argv[1], "--get-engine-lock"))
 		session.lock_diagnostic = TRUE;
-	else if (argc == 3 && g_str_equal (argv[1], "--seconds"))
+	else if (argc == 2 && g_str_equal (argv[1], "--unlock-engine-lock"))
+		session.unlock_engine_lock = TRUE;
+	else if (argc == 4 && g_str_equal (argv[1], "--unlock-engine-lock") &&
+		 g_str_equal (argv[2], "--seconds")) {
+		session.unlock_engine_lock = TRUE;
+		seconds = (unsigned int) g_ascii_strtoull (argv[3], NULL, 10);
+	} else if (argc == 3 && g_str_equal (argv[1], "--seconds"))
 		seconds = (unsigned int) g_ascii_strtoull (argv[2], NULL, 10);
 	else if (argc != 1) {
-		g_printerr ("usage: %s [--seconds SECONDS|--get-engine-lock]\n", argv[0]);
+		g_printerr ("usage: %s [--seconds SECONDS|--get-engine-lock|"
+			    "--unlock-engine-lock [--seconds SECONDS]]\n", argv[0]);
 		return 2;
 	}
 	if (seconds < 5 || seconds > 180)
@@ -966,9 +1310,12 @@ main (int argc, char **argv)
 	g_unix_signal_add (SIGTERM, unix_terminate, &session);
 	/* Allow pending start (20s) and stop (20s) after this soft deadline.
 	 * The Python wrapper reserves 95 seconds beyond collection time. */
-	session.deadline_id =
-		g_timeout_add_seconds (session.lock_diagnostic ? 35 : seconds + 45,
-			deadline_expired, &session);
+	/* The unlock cycle adds a SET plus two readback queries around the
+	 * normal start/stop budget. */
+	session.deadline_id = g_timeout_add_seconds (
+		session.lock_diagnostic ? 35 :
+		seconds + (session.unlock_engine_lock ? 90 : 45),
+		deadline_expired, &session);
 	qrtr_bus_new (5000, session.cancellable,
 		      (GAsyncReadyCallback) bus_ready, &session);
 	g_main_loop_run (session.loop);

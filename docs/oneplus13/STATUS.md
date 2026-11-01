@@ -1,3 +1,16 @@
+# Bounded engine-lock experiment candidate, 2026-11-01
+
+The 96928a96 round excluded explicit HIGH accuracy as the cause of GNSS START
+GeneralError46 and left legacy `lockType=4` (LOCK_ALL) as the standing candidate.
+This candidate adds one opt-in, reversible experiment to the LOC helper: save the
+read lock, set LOCK_NONE once, confirm by readback, run the normal session, then
+restore the saved lockType and confirm the restore. A SET marks the lock mutated
+before its confirmation, an unproven restore prints
+`LOCATION_ENGINE_LOCK_UNRESTORED` and is never reported clean, and the deadline
+reserves the extra SET plus two readbacks. Request bytes are pinned by tests.
+No privacy-provider read, identity scan or client-mask clearing is included, and
+no fix is claimed. See [engine-lock cycle](GNSS-ENGINE-LOCK-CYCLE-20261101.md).
+
 # r230 combined round: HIGH accuracy excluded, LOCK_ALL candidate, 2026-11-01
 
 The 96928a96 image booted once in RAM with the source-bound r230 runner and

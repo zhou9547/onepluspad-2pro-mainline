@@ -21,6 +21,9 @@ def bounded_stdout(output):
     for prefix in ("LOCATION_SESSION_NMEA_DEFAULTS ",
                    "LOCATION_SESSION_POSITION_EVENTS ", "LOCATION_SESSION_NO_SESSION ",
                    "LOCATION_SESSION_START_PROFILE ",
+                   "LOCATION_ENGINE_LOCK_SAVED ", "LOCATION_ENGINE_UNLOCK ",
+                   "LOCATION_ENGINE_UNLOCK_CONFIRMED ",
+                   "LOCATION_ENGINE_LOCK_RESTORED ",
                    "LOCATION_SESSION_STARTED ", "LOCATION_SESSION_STOPPED "):
         marker = next((line for line in output.splitlines()
                        if line.startswith(prefix) and len(line) <= 512), None)
@@ -125,14 +128,35 @@ def parse_fix(lines):
     return fixes[-8:]
 
 
-def collect_native_session(native, seconds):
-    """Run one native QRTR client for setup, start, follow and stop."""
+def marker_json(lines, prefix):
+    """Return the JSON payload of one bounded marker line, or None."""
+    for line in lines:
+        if line.startswith(prefix) and len(line) <= 512:
+            try:
+                return json.loads(line[len(prefix):])
+            except ValueError:
+                return None
+    return None
+
+
+def collect_native_session(native, seconds, unlock=False):
+    """Run one native QRTR client for setup, start, follow and stop.
+
+    With unlock=True the helper first saves the legacy engine lock, sets
+    LOCK_NONE, confirms it by readback, runs the normal session, then restores
+    the saved lock and confirms the restore. The restore proof is required for a
+    clean cleanup; an unproven restore is never reported as clean.
+    """
     if not 5 <= seconds <= 180:
         raise ValueError('Native GNSS collection must stay between 5 and 180 seconds')
     native = str(native)
-    # Native soft deadline is seconds+45; pending start and stop take up to
-    # 20 seconds each. Keep ten more for GLib timer granularity/process exit.
-    process = run([native, "--seconds", str(seconds)], seconds + 95)
+    # Native soft deadline is seconds+45 (seconds+90 while the unlock cycle adds
+    # a SET plus two readback queries); pending start and stop take up to 20
+    # seconds each. Keep ten more for GLib timer granularity/process exit.
+    arguments = [native, "--seconds", str(seconds)]
+    if unlock:
+        arguments = [native, "--unlock-engine-lock", "--seconds", str(seconds)]
+    process = run(arguments, seconds + (140 if unlock else 95))
     lines = process.get("stdout", "").splitlines()
     loc_services = loc_service_lines(lines)
     nmea = [
@@ -166,15 +190,33 @@ def collect_native_session(native, seconds):
     # The native client deliberately exits 1 after a rejected/lost START even
     # when the same client's STOP succeeded. Keep functional failure separate
     # from that explicit cleanup acknowledgement; timeout/crash stays unsafe.
-    start_errors = process.get("stderr", "").splitlines()
+    start_errors = [line for line in process.get("stderr", "").splitlines() if line]
+    # Engine-lock evidence may share stderr with the protocol error; only the
+    # non-lock lines take part in the rejected-start classification.
+    lock_errors = [line for line in start_errors
+                   if line.startswith("LOCATION_ENGINE_LOCK_")]
+    protocol_errors = [line for line in start_errors
+                       if not line.startswith("LOCATION_ENGINE_LOCK_")]
+    lock_unrestored = any(line.startswith("LOCATION_ENGINE_LOCK_UNRESTORED")
+                          for line in lock_errors)
     rejected_start_cleaned = (
         process.get("returncode") == 1 and not started and len(stop_markers) == 1
         and not any(line.startswith("LOCATION_SESSION_NO_SESSION") for line in lines)
-        and start_errors == ["LOCATION_SESSION_ERROR operation=start-result "
-                            "error=QMI protocol error (46): 'GeneralError'"]
+        and protocol_errors == ["LOCATION_SESSION_ERROR operation=start-result "
+                                "error=QMI protocol error (46): 'GeneralError'"]
     )
     clean_stop = (stopped and process.get("timed_out", False) is False
-                  and (process.get("returncode") == 0 or rejected_start_cleaned))
+                  and (process.get("returncode") == 0 or rejected_start_cleaned)
+                  and not lock_unrestored)
+    saved_lock = marker_json(lines, "LOCATION_ENGINE_LOCK_SAVED ")
+    restored_lock = marker_json(lines, "LOCATION_ENGINE_LOCK_RESTORED ")
+    already_none = any(line.startswith("LOCATION_ENGINE_UNLOCK already=none")
+                       for line in lines)
+    unlock_confirmed = marker_json(lines, "LOCATION_ENGINE_UNLOCK_CONFIRMED ")
+    lock_changed = bool(saved_lock) and saved_lock.get("lock_type") != 1
+    restore_required = bool(unlock) and lock_changed
+    restore_proven = bool(restored_lock) and (
+        restored_lock.get("lock_type") == saved_lock.get("lock_type"))
     no_session = ("LOCATION_SESSION_NO_SESSION start_requested=0" in lines
                   and not started and not stopped and process.get("returncode") == 1
                   and process.get("timed_out", False) is False)
@@ -197,12 +239,21 @@ def collect_native_session(native, seconds):
             (line[len("LOCATION_SESSION_START_PROFILE "):] for line in lines
              if line.startswith("LOCATION_SESSION_START_PROFILE ")
              and len(line) <= 512), None),
+        "unlock_requested": bool(unlock),
+        "lock_saved": saved_lock,
+        "lock_already_unlocked": already_none,
+        "lock_unlock_confirmed": unlock_confirmed,
+        "lock_restored": restored_lock,
+        "lock_restore_required": restore_required,
+        "lock_restore_proven": restore_proven,
+        "lock_unrestored": lock_unrestored,
         "stderr": process.get("stderr", "")[-8192:],
         "nmea": nmea,
         "fixes": fixes,
         "fix_acquired": bool(fixes),
         "engine_control_qualified": started and clean_stop,
-        "cleanup_complete": clean_stop or no_session,
+        "cleanup_complete": (clean_stop or no_session)
+                            and not (restore_required and not restore_proven),
     }
 
 
@@ -211,6 +262,8 @@ def main():
     parser.add_argument("--device", default=None)
     parser.add_argument("--seconds", type=int, default=45)
     parser.add_argument("--ready-seconds", type=int, default=60)
+    parser.add_argument("--temporary-unlock", action="store_true",
+                        help="Save, set LOCK_NONE, then restore the legacy engine lock")
     args = parser.parse_args()
     if not 5 <= args.seconds <= 180:
         raise ValueError("GNSS collection must stay between 5 and 180 seconds")
@@ -220,7 +273,8 @@ def main():
         raise RuntimeError("Protected phone RAM session required")
     native = Path("/usr/libexec/oneplus13-location-session")
     if native.is_file() and os.access(native, os.X_OK):
-        result = collect_native_session(native, args.seconds)
+        result = collect_native_session(native, args.seconds,
+                                        unlock=args.temporary_unlock)
         result["scope"] = "ONEPLUS13_RAM_QMI_GNSS"
         result["pass"] = bool(
             result["engine_control_qualified"]
