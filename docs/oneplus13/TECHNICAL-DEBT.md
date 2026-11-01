@@ -1,5 +1,35 @@
 # Automatic OTG runtime identity correction, 2026-11-01
 
+# r238 dock-attach restart and fail-closed stage ordering, 2026-11-01
+
+r238 proves automatic Type-C host/source, desktop automount and short
+read-only block/file access on the real dock/U disk. It does not prove the
+130-second hold, successful unmount, supply restoration or a second insertion.
+The phone restarted to Android shortly after attach. Android reports
+`bootloader`, but pstore is unreadable and `last_kmsg` is absent, so the exit
+cause remains unknown. The r237 storage-guard hypothesis is still unconfirmed;
+do not attribute this restart to that guard or mark firmware clean.
+
+The runner at `records/codex-resume-20261031/work/joint-r238-auto-desktop/`
+previously allowed GNSS, camera and post-USB Wi-Fi work to run even when the USB
+gate was false, and did not enforce the owner's NFC skip. The local host runner
+now ties GNSS/camera/Wi-Fi post-checks to USB success and gates NFC on explicit
+owner opt-in. All 50 local runner tests pass. This changes only the next runner
+candidate; it does not alter or qualify the r238 image.
+
+Next hardware work needs a new exact source/image/plan binding and a fresh
+single-use ledger. The r238 attempt cannot be reused. Keep Android intact and
+use `fastboot boot` only. If another restart occurs, collect the earliest
+possible pre-restart kernel and firmware receipts; Android return alone is not
+cleanup evidence.
+
+Offline follow-up: `devices/oneplus13/desktop/runtime-guard` now retries
+read-only set/readback failures up to three times with 50ms gaps before
+reporting failure. Tests cover a transient hotplug-style failure and persistent
+failure after the retry budget. This reduces a verified transient-error reboot
+path but does not identify the r238 restart cause. The 820-test source suite
+passes; no rebuilt image or hardware revalidation exists yet.
+
 # Automatic OTG: r237 restart hypothesis, 2026-11-01
 
 r237's first real automatic dock attach reached desktop automount and passed

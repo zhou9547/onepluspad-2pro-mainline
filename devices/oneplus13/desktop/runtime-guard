@@ -7,11 +7,17 @@ protect() {
         name=${disk##*/}
         case "$name" in loop*|ram*|zram*) continue ;; esac
         [ -b "/dev/$name" ] || continue
-        if [ "$(blockdev --getro "/dev/$name")" = 1 ]; then
-            continue
-        fi
-        blockdev --setro "/dev/$name" || return 1
-        [ "$(blockdev --getro "/dev/$name")" = 1 ] || return 1
+        attempt=1
+        while [ "$attempt" -le 3 ]; do
+            value=$(blockdev --getro "/dev/$name" 2>/dev/null) || value=
+            [ "$value" = 1 ] && break
+            blockdev --setro "/dev/$name" 2>/dev/null || true
+            value=$(blockdev --getro "/dev/$name" 2>/dev/null) || value=
+            [ "$value" = 1 ] && break
+            attempt=$((attempt + 1))
+            [ "$attempt" -le 3 ] && sleep 0.05
+        done
+        [ "$value" = 1 ] || return 1
     done
 }
 if [ "${1:-}" = --once ]; then protect; exit; fi

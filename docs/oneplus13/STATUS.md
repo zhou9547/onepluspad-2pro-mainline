@@ -1,5 +1,37 @@
 # Automatic OTG runtime identity correction, 2026-11-01
 
+# r238 automatic desktop OTG result, 2026-11-01
+
+r238 booted the exact Actions image in RAM and reached GNOME. On a real
+expansion dock/U disk attach, Type-C host/source appeared, the desktop mounted
+the volume, and a 4096-byte read-only block read plus a bounded read-only file
+prefix passed. The latest live receipt reported only 0.7 seconds of continuous
+operation against the planned 130 seconds; the phone then restarted to Android.
+ADB later returned Android 16 on slot `_a`; the reported boot reason is
+`bootloader`. This proves the system returned, not why it restarted or whether
+the USB firmware values were restored. No pstore record was readable and
+`/proc/last_kmsg` was absent. Preserve firmware state as UNKNOWN.
+
+The round did not prove filesystem unmount or USB firmware cleanup. It did not
+reach GNSS, camera frames, or the post-USB Wi-Fi regression. The automatic OTG
+candidate remains unqualified despite the observed mount and reads. Exact
+evidence is in `R238-AUTOMATIC-OTG-RESULT-20261101.json`.
+
+The r238 host runner also lacked a hard dependency from GNSS, camera and
+post-USB Wi-Fi to the USB success gate, and its NFC phase was not owner-gated.
+The local runner now skips those actions unless USB cleanup and functional
+acceptance pass, and keeps NFC skipped without explicit opt-in. All 50 local
+runner tests pass; this runner-only correction is not part of the r238 image
+or its hardware evidence.
+
+Offline follow-up: the RAM storage guard now retries a failed read-only
+set/readback up to three times with 50ms gaps, then remains fail-closed. This
+covers transient block-device hotplug errors but does not establish that the
+guard caused the r238 restart. The desktop, automatic OTG kernel and service
+regression tests pass (43 tests); the full `test_oneplus13*.py` suite passes
+820 tests with one conditional skip. No new image or phone boot was produced,
+so r238 remains the latest hardware evidence and OTG remains unqualified.
+
 # r237 automatic desktop OTG first-attach result, 2026-11-01
 
 r237 booted the r236 exact image once in RAM and reached the ordinary GNOME

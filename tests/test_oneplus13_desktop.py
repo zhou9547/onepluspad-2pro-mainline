@@ -66,7 +66,8 @@ class DesktopTests(unittest.TestCase):
                 self.assertIn('blacklist '+module+'\n',policy)
                 self.assertIn('install '+module+' /bin/false\n',policy)
 
-    def exercise_runtime_guard(self, already_read_only):
+    def exercise_runtime_guard(self, already_read_only, setro_failures=0,
+                               expect_success=True):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             block = root/'sys/class/block/sda1'
@@ -78,13 +79,17 @@ class DesktopTests(unittest.TestCase):
             binary.mkdir()
             calls = root/'blockdev-calls'
             state = root/'read-only-state'
+            failures = root/'setro-failures'
             state.write_text('1\n' if already_read_only else '0\n')
+            failures.write_text(str(setro_failures)+'\n')
             fake = binary/'blockdev'
             fake.write_text(
                 '#!/bin/sh\n'
                 'printf "%s\\n" "$*" >> "$BLOCKDEV_CALLS"\n'
                 'if [ "$1" = --getro ]; then IFS= read -r value < "$BLOCKDEV_STATE"; echo "$value"; exit 0; fi\n'
-                'if [ "$1" = --setro ]; then echo 1 > "$BLOCKDEV_STATE"; exit 0; fi\n'
+                'if [ "$1" = --setro ]; then IFS= read -r failures < "$SETRO_FAILURES"; '
+                'if [ "$failures" -gt 0 ]; then echo "$((failures-1))" > "$SETRO_FAILURES"; exit 1; fi; '
+                'echo 1 > "$BLOCKDEV_STATE"; exit 0; fi\n'
                 'exit 1\n'
             )
             fake.chmod(0o755)
@@ -95,16 +100,29 @@ class DesktopTests(unittest.TestCase):
             script_path = root/'runtime-guard'
             script_path.write_text(script)
             result = subprocess.run(['/bin/sh', str(script_path), '--once'],
-                env={'PATH':str(binary), 'BLOCKDEV_CALLS':str(calls),
-                     'BLOCKDEV_STATE':str(state)},
+                env={'PATH':str(binary)+':/usr/bin:/bin', 'BLOCKDEV_CALLS':str(calls),
+                     'BLOCKDEV_STATE':str(state), 'SETRO_FAILURES':str(failures)},
                 capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.returncode, 0 if expect_success else 1,
+                             result.stderr)
             commands = calls.read_text().splitlines()
-            self.assertEqual(commands, ['--getro '+str(device)] +
-                ([] if already_read_only else ['--setro '+str(device), '--getro '+str(device)]))
+            expected = ['--getro '+str(device)]
+            if not already_read_only:
+                for attempt in range(min(setro_failures + 1, 3)):
+                    if attempt:
+                        expected.append('--getro '+str(device))
+                    expected += ['--setro '+str(device), '--getro '+str(device)]
+            self.assertEqual(commands, expected)
 
     def test_runtime_guard_does_not_rewrite_read_only_mounted_partition(self):
         self.exercise_runtime_guard(True)
 
     def test_runtime_guard_sets_read_only_on_new_writable_partition(self):
         self.exercise_runtime_guard(False)
+
+    def test_runtime_guard_retries_transient_hotplug_setro_failure(self):
+        self.exercise_runtime_guard(False, setro_failures=1)
+
+    def test_runtime_guard_stays_fail_closed_after_bounded_retries(self):
+        self.exercise_runtime_guard(False, setro_failures=3,
+                                    expect_success=False)
