@@ -1,0 +1,87 @@
+{
+  "schema": "oneplus13-r228-usb-hardware-milestone-v1",
+  "date": "2026-11-01",
+  "image_source_commit": "d0c8d20ee66ca73397f8c1abf6b915b9d05a8678",
+  "image_source_tree": "198fc245d058f51233c7732129080c47bc952959",
+  "actions_run": 41258076551,
+  "boot_sha256": "e4809cfd064fc4688a88e54b62a38c3bf753708bc5a54024a6a0a0f7b6c278bb",
+  "rootfs_sha256": "f35120715396baf0b0a99d36899acb11e55b317544e962326e7c2c76f9e88cd4",
+  "plan_sha256": "7b42f5bc836200fbb4e83e2cecf407b024083348cc2911722632a916a572a95e",
+  "usb_milestone_pass": true,
+  "every_planned_phase_completed": true,
+  "planned_phases": 13,
+  "command_evidence_files_verified": 25,
+  "one_ram_boot": true,
+  "reported_partition_writes": 0,
+  "android_return": true,
+  "android_baseline_matches": 7,
+  "cleanup_pass": true,
+  "firmware_residual_unknown": false,
+  "usb": {
+    "real_typec_host_source": true,
+    "exact_phone_xhci_root_hubs": true,
+    "real_external_storage_node": true,
+    "readonly_block_bytes": 4096,
+    "block_identity_and_usb_ancestry_verified": true,
+    "filesystem": "ntfs",
+    "readonly_mount": true,
+    "readonly_file_prefix_bytes": 4096,
+    "unmount_pass": true,
+    "current64_active": 1250,
+    "vbus24_active": 1,
+    "restore_order_by_bound_source": [
+      24,
+      64,
+      18,
+      17
+    ],
+    "saved_values": {
+      "ap17": 0,
+      "switch18": 0,
+      "current64": 0,
+      "vbus24": 0
+    },
+    "exact_saved_value_readback": true,
+    "final_lease_state": 2,
+    "final_lease_used": 1,
+    "device_sink_and_udc_restored": true,
+    "owned_filesystem_modules_removed": true,
+    "physical_swap_detected_by_typec": true,
+    "chat_ack_used_as_supply_authorization": false,
+    "runtime_firmware_transaction_trace": false,
+    "expansion_dock_tested": false,
+    "default_automatic_otg_policy_qualified": false
+  },
+  "preservation": {
+    "wifi5_post_frequency_mhz": 5220,
+    "wifi5_post_https_http_code": 200,
+    "wifi5_post_https_certificate_result": 0,
+    "modem_verification": true,
+    "camera_chip_id": true
+  },
+  "remaining": {
+    "gnss": "START GeneralError46; no fix; cleanup passed",
+    "camera": "No real sensor frame; teardown passed",
+    "nfc": "owner-skipped",
+    "dock": "Owner plans a future dock test; not yet qualified"
+  },
+  "all_adaptation_complete": false,
+  "limitations": [
+    "One attached storage device and NTFS readonly I/O are qualified in this bounded manual RAM round.",
+    "Dock/hub, HID events, write I/O, automatic persistent OTG policy and other filesystem formats were not qualified.",
+    "The firmware wire has no transaction ID; readback cannot prove reply freshness.",
+    "Physical evidence binds the stated image plus the locally staged source-bound runtime; a later repackaged image needs its own evidence."
+  ],
+  "exported_runtime_sources": {
+    "ram-usb-supply-check.py": {
+      "public_sha256": "fc46078207824e501f824a22b3e61ebef3533d55549b14fb15f676918564ec7e",
+      "hardware_overlay_sha256": "129e9c09480163873659369cb6e28bc8dfda1cbf4e139257a47836dc9502481b",
+      "export_only_change": "SPDX license header and shebang if absent"
+    },
+    "usb-filesystem-modules.py": {
+      "public_sha256": "0e8dc514d0dfb8749942c35e7099efdf7514639bff42bdd4a2dfdd5ddcbbced9",
+      "hardware_overlay_sha256": "ab343bcdb03246f1943e473b61613e0789b5263098d20d445fc25ecbb53454db",
+      "export_only_change": "SPDX license header and shebang if absent"
+    }
+  }
+}

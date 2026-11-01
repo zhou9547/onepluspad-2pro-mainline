@@ -1,3 +1,19 @@
+# r228 direct USB storage milestone, 2026-11-01
+
+The source d0c8d20e image (Actions 41258076551) passed real USB storage
+qualification with the source-bound r228 runtime overlay: actual host/source,
+4096-byte read-only block I/O, NTFS read-only file I/O, unmount, saved-value
+24->64->18->17 restoration, device/sink plus UDC return and owned module cleanup.
+All 13 phases finished in one RAM boot, Android returned with seven baseline
+properties equal and zero reported partition writes. Post-USB 5 GHz at 5220 MHz
+and verified HTTPS passed. GNSS remains START GeneralError46; camera has no
+real frame; NFC remains skipped. Expansion docks are not yet tested.
+
+The two tested helpers are exported as manual-only runtime files, with 14
+portable fault/ownership tests. Repackaging is an offline candidate until its
+own Actions and hardware evidence exists. See
+[USB milestone](USB-READONLY-MILESTONE-20261101.md) and its sanitized result.
+
 # r224 firmware-error ACK poison correction, 2026-11-01
 
 The same independent review reproduced an error-ACK path that returned a

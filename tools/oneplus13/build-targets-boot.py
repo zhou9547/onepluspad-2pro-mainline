@@ -50,6 +50,8 @@ def main():
         "usr/libexec/oneplus13-ram-usb-role-check.py",
         "usr/libexec/oneplus13-ram-usb-native-host-check.py",
         "usr/libexec/oneplus13-ram-usb-powered-native-check.py",
+        "usr/libexec/oneplus13-ram-usb-supply-check.py",
+        "usr/libexec/oneplus13-usb-filesystem-modules.py",
         "usr/libexec/oneplus13-ram-suspend-check.py",
     }
     if set(runtime) != expected_runtime:

@@ -1,3 +1,17 @@
+# r228 USB direct-storage scope and remaining work, 2026-11-01
+
+Direct USB storage now passes real enumeration, 4096-byte read-only block and
+NTFS file reads, unmount and exact saved-value cleanup in the r228 combined
+round. The same boot passed final 5 GHz/HTTPS preservation and Android return.
+The exported helpers retain the tested behavior; default automatic OTG policy
+is still absent. A repackaged image needs separate evidence. Docks/hubs, HID,
+write I/O and other filesystem formats are unqualified; the owner will try a
+dock later. Firmware reply freshness remains unresolved without transaction IDs.
+
+GNSS START GeneralError46 and real camera frames remain the active targets;
+NFC is owner-skipped. See USB-READONLY-MILESTONE-20261101.md for exact scope.
+Older pending notes below are superseded only by this stated milestone.
+
 # r224 firmware-error ACK poison correction, 2026-11-01
 
 The same independent review reproduced an error-ACK path that returned a
