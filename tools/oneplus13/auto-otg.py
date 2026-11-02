@@ -86,6 +86,7 @@ class Controller:
         self.last_heartbeat = float('-inf')
         self.on_count = self.off_count = 0
         self.last = None
+        self.last_off_observation = None
 
     def step(self):
         state = self.backend.status()
@@ -102,7 +103,13 @@ class Controller:
             self.last_heartbeat = self.clock()
         observed = self.backend.observe()
         attached = observed['host_source'] and observed['host_controller_ready']
-        if state['state'] == 1 and (not attached or not state['source']):
+        # Controller/root-hub enumeration is an activation prerequisite, not a
+        # physical detach signal. Rebuilding xHCI must not cut a valid source's
+        # VBUS and thereby prevent that same controller from enumerating again.
+        # Actual Type-C or firmware source loss still turns power off at once.
+        if state['state'] == 1 and (not observed['host_source'] or not state['source']):
+            self.last_off_observation = dict(monotonic=self.clock(),
+                firmware_source=state['source'],physical=dict(observed))
             self.backend.command('off')
             self.off_count += 1
         elif state['state'] == 5 and attached and state['source']:
@@ -122,7 +129,8 @@ class Controller:
                     self.on_count += 1
         final = self.backend.status()
         self.last = dict(kernel=final, physical=observed, on_count=self.on_count,
-                         off_count=self.off_count, cleanup_proven=clean_status(final))
+                         off_count=self.off_count, cleanup_proven=clean_status(final),
+                         last_off_observation=self.last_off_observation)
         return self.last
 
     def close(self):
@@ -131,7 +139,7 @@ class Controller:
         if not clean_status(status):
             raise RuntimeError('Automatic OTG cleanup remains unproven')
         return dict(kernel=status, cleanup_proven=True, on_count=self.on_count,
-                    off_count=self.off_count)
+                    off_count=self.off_count,last_off_observation=self.last_off_observation)
 
 
 def save(value):
@@ -139,6 +147,10 @@ def save(value):
     temporary.write_text(json.dumps(value, sort_keys=True)+'\n')
     temporary.chmod(0o600)
     temporary.replace(RUNTIME/'state.json')
+    if value.get('last_off_observation') is not None:
+        receipt=RUNTIME/'last-off-observation.json'
+        receipt.write_text(json.dumps(value['last_off_observation'],sort_keys=True)+'\n')
+        receipt.chmod(0o600)
 
 
 def main():

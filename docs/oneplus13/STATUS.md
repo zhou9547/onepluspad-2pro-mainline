@@ -1,3 +1,11 @@
+# 2026-11-02 r270 full-system RAM candidate checks complete; final image pending
+
+Full Ubuntu6ce15078 plus exact e1ddf027 RAM OTG helper completes130.297s hold, two successful readonly dock mounts/read-file/unmount,15.271s watchdog restore, service restart/read/unmount, image-native GPU/automatic audio,5GHz before/post/display health and full firmware-PC-audio-Android cleanup. One second-attachment source loss required an extra physical180degree flip/reinsert before the successful attachment; no userspace off trigger was recorded. Keep this exception, do not claim universal orientation stability or pristine final-image acceptance. Package the tested helper and validate the new exact image. See FULL-UBUNTU-R270-CANDIDATE-20261102.md.
+
+# 2026-11-02 full Ubuntu ordinary USB pass; recovery candidate remains unqualified
+
+r269 pristine6ce15078 / Actions41441022720 passes two actual automatic NTFS3 readonly insertions,4096-byte block/file reads,130.562s hold and both unmounts; image-native GTK GPU/automatic first-user audio and owner UI checks pass. Watchdog restoration passes, but service-restart recovery is not accepted: one immediate unmount check fails, and a separately bound same-boot retry encounters-71/real bus removal and no host/source return. Full cleanup,5GHz post and Android7 pass. New controller candidate stops treating temporary xHCI/root-hub absence as physical detach while actual Type-C and firmware source remain valid. Offline25 focused/823 phone tests pass,1skip; no new phone/image qualification. See FULL-UBUNTU-USB-RECOVERY-20261102.md.
+
 # Current: full-desktop renderer/audio migration candidate, 2026-11-02 evening
 
 Owner-confirmed r266 RAM prototype restores audible speakers and clearly smoother

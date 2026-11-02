@@ -96,6 +96,27 @@ class DesktopControllerTests(unittest.TestCase):
         self.backend.physical=dict(host_source=True,host_controller_ready=True)
         self.control.step();self.control.step()
         self.assertEqual(self.backend.calls,['arm','on 1'])
+    def test_active_supply_survives_controller_rebuild_with_valid_source(self):
+        self.backend.physical=dict(host_source=True,host_controller_ready=True)
+        self.control.step()
+        self.backend.physical['host_controller_ready']=False
+        self.control.step()
+        self.backend.physical['host_controller_ready']=True
+        self.control.step()
+        self.assertEqual(self.backend.calls,['arm','on 1'])
+        self.assertEqual(self.backend.value['state'],1)
+    def test_real_role_loss_still_turns_off_during_controller_rebuild(self):
+        self.backend.physical=dict(host_source=True,host_controller_ready=True)
+        self.control.step()
+        self.backend.physical=dict(host_source=False,host_controller_ready=False)
+        self.control.step()
+        self.assertEqual(self.backend.calls[-1],'off')
+    def test_firmware_source_loss_still_turns_off_with_host_role_present(self):
+        self.backend.physical=dict(host_source=True,host_controller_ready=True)
+        self.control.step();self.backend.value['source']=0
+        self.backend.physical['host_controller_ready']=False
+        self.control.step()
+        self.assertEqual(self.backend.calls[-1],'off')
     def test_second_physical_sample_catches_disconnect(self):
         self.backend.samples=[dict(host_source=True,host_controller_ready=True),
                               dict(host_source=False,host_controller_ready=False)]
