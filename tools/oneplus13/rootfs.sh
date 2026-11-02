@@ -93,7 +93,7 @@ cat > "$root/etc/environment" <<'EOF'
 LANG=zh_CN.UTF-8
 LANGUAGE=zh_CN:zh
 LC_MESSAGES=zh_CN.UTF-8
-GSK_RENDERER=cairo
+GSK_RENDERER=gl
 EOF
 gdm_conf="$root/etc/gdm3/custom.conf"
 if grep -Eq '^[[:space:]]*#?[[:space:]]*InitialSetupEnable[[:space:]]*=' "$gdm_conf"; then

@@ -317,6 +317,8 @@ def main():
         (REPO/'devices/oneplus13/audio/HiFi.conf','usr/share/alsa/ucm2/Qualcomm/sm8750/OnePlus13/HiFi.conf'),
         (REPO/'devices/oneplus13/audio/95-oneplus13-desktop-audio.conf','usr/lib/oneplus13-audio/95-oneplus13-desktop-audio.conf'),
         (REPO/'tools/oneplus13/ram-desktop-audio.py','usr/libexec/oneplus13-ram-desktop-audio.py'),
+        (REPO/'tools/oneplus13/first-user-audio.py','usr/libexec/oneplus13-first-user-audio.py'),
+        (REPO/'devices/oneplus13/audio/oneplus13-first-user-audio.service','usr/lib/systemd/system/oneplus13-first-user-audio.service'),
         (REPO/'tools/oneplus13/ram-desktop-volume-check.py','usr/libexec/oneplus13-ram-desktop-volume-check.py')]
     for source,name in desktop_audio_sources:
         dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
@@ -328,6 +330,9 @@ def main():
     dest=stage/'usr/lib/oneplus13-audio/desktop-bindings.json'
     dest.write_text(json.dumps(desktop_audio_bindings,indent=2)+'\n');dest.chmod(0o644)
     desktop_audio_hashes[str(dest.relative_to(stage))]=sha256(dest)
+    first_audio=stage/'etc/systemd/system/user@1000.service.wants/oneplus13-first-user-audio.service'
+    first_audio.parent.mkdir(parents=True,exist_ok=True)
+    first_audio.symlink_to('/usr/lib/systemd/system/oneplus13-first-user-audio.service')
     image_rootfs=out/'rootfs.squashfs'
     subprocess.run(['mksquashfs',str(stage),str(image_rootfs),'-noappend','-comp','zstd','-processors','2','-mkfs-time','0','-all-time','0','-no-progress'],check=True)
     staging.cleanup()
@@ -416,6 +421,8 @@ def main():
                   modem_hardware_functional_qualified=False,
                   gnss_hardware_functional_qualified=False)
     result.update(desktop_audio_files=desktop_audio_hashes,desktop_audio_auto_started=False,
+                  desktop_audio_first_user_service_available=True,
+                  desktop_audio_first_user_gate='oneplus13.first_user_audio=1',
                   desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=1023)
     result.update(container_files=container_hashes,container_daemon_auto_started=False,
                   container_hardware_qualified=False)

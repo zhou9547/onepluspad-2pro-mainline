@@ -109,7 +109,7 @@ if [ "$mode" = --all ] || [ "$mode" = --firstboot ]; then
     # Initial Setup owns first-user creation. Reuse the qualified hardware
     # sequence, then leave account/session setup to GDM.
     if [ "$mode" = --firstboot ]; then
-        grep -q '^GSK_RENDERER=cairo$' /etc/environment || echo GSK_RENDERER=cairo >> /etc/environment
+        grep -q '^GSK_RENDERER=gl$' /etc/environment || echo GSK_RENDERER=gl >> /etc/environment
         echo QUALIFIED_FIRSTBOOT_HARDWARE_READY
         exit 0
     fi
@@ -124,7 +124,7 @@ EOF
     chmod 0600 /var/lib/AccountsService/users/a
     printf 'run_im ibus\n' > /home/a/.xinputrc
     chown a:a /home/a/.xinputrc
-    grep -q '^GSK_RENDERER=cairo$' /etc/environment || echo GSK_RENDERER=cairo >> /etc/environment
+    grep -q '^GSK_RENDERER=gl$' /etc/environment || echo GSK_RENDERER=gl >> /etc/environment
     python3 /usr/libexec/oneplus13-ram-desktop-check.py --configure
     timeout -k 1 6 systemctl restart gdm
     for attempt in $(seq 1 15); do

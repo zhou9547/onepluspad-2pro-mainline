@@ -1,3 +1,21 @@
+# Current: full-desktop renderer/audio migration candidate, 2026-11-02 evening
+
+Owner-confirmed r266 RAM prototype restores audible speakers and clearly smoother
+GTK interaction; actual GskGLRenderer and msm engine/cycle counters prove GPU
+work in GTK widgets, GNOME Shell, Settings and Files. The candidate integrates
+the GL default and actual first-user audio activation with real native prechecks.
+It is not yet a new pristine-image pass. Zero users/default passwords/autologin
+remain in the image; all phone operation is temporary RAM only.
+
+Still open: orientation-dependent stereo, proper idle blank/unblank/wake, and
+repeated physical full-image U-disk mount. r266 first130.694s hold/read/unmount
+passed; the second disk enumerated but did not mount while the screen was locked
+and powered off. Its overall failure is retained. Recovery, audio stop and5GHz
+before/after passed. The RAM idle-awake policy is a workaround, not a wake fix.
+See FULL-UBUNTU-RENDER-AUDIO-20261102.md. Camera/GNSS paused; NFC skipped.
+
+Earlier milestones and unqualified states are retained below as history.
+
 # Current remaining work after r263, 2026-11-02
 
 Complete Ubuntu first-user/OSK, ordinary Wayland, real GLES readback, common

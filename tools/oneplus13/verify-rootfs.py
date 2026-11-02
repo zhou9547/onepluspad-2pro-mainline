@@ -67,9 +67,13 @@ def main():
     if '[daemon]' not in gdm_config or 'InitialSetupEnable=true' not in gdm_config:
         raise SystemExit('GDM first-user setup is not explicitly enabled')
     environment=read('etc/environment').decode().splitlines()
+    if [line for line in environment if line.startswith('GSK_RENDERER=')] != ['GSK_RENDERER=gl']:
+        raise SystemExit('Full desktop must select the measured GTK GL renderer')
     if any(line.startswith(('GTK_IM_MODULE=','QT_IM_MODULE=','XMODIFIERS=')) for line in environment):
         raise SystemExit('A global IM override bypasses the native Wayland input path')
     mobile=read('usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override').decode()
+    if '[org.gnome.desktop.session]\nidle-delay=uint32 0\n' not in mobile:
+        raise SystemExit('Bounded RAM display-awake policy missing')
     if '[org.gnome.desktop.a11y.applications]\nscreen-keyboard-enabled=true\n' not in mobile:
         raise SystemExit('Mobile first-user screen keyboard default missing')
     if '[org.gnome.desktop.interface]\ntoolkit-accessibility=true\n' not in mobile:

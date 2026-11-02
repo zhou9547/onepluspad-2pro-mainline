@@ -143,7 +143,7 @@ class BootPolicyTests(unittest.TestCase):
             automatic_usb_hardware_qualified=False,automatic_usb_watchdog_seconds=15,
             automatic_usb_heartbeat_seconds=3,usb_firmware_lease_available=False,
             usb_supply_setters_available=False,
-            cmdline='oneplus13.desktop=1 oneplus13.session=fresh oneplus13.usb_host_probe=1 qcom_battmgr.oneplus13_otg_auto=1')
+            cmdline='oneplus13.desktop=1 oneplus13.session=fresh oneplus13.usb_host_probe=1 qcom_battmgr.oneplus13_otg_auto=1 oneplus13.first_user_audio=1')
     def test_exact_automatic_profile_is_allowed(self):
         self.verifier.verify_automatic_boot_arguments(self.parent,self.manifest)
     def test_automatic_owner_cannot_leak_to_unqualified_parent(self):

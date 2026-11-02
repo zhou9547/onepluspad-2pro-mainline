@@ -11,13 +11,25 @@ UNITS=['pipewire.service','pipewire-pulse.service','wireplumber.service']
 STATE=Path('/run/oneplus13/desktop-audio')
 MODULE=STATE/'pause-module-id'
 NODE=STATE/'pipewire-node-id'
+SESSION=STATE/'user-bus-inode'
+
+
+def desktop_user():
+    # First-user creation is owned by GDM. Never create a legacy test account.
+    user=pwd.getpwuid(1000)
+    if not 1000<=user.pw_uid<60000:raise ValueError('Ordinary first user required')
+    return user
+
+
+def user_bus():
+    return Path('/run/user')/str(desktop_user().pw_uid)/'bus'
 
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 def run(args,timeout=8,user=False):
     if user:
-        uid=pwd.getpwnam('a').pw_uid
-        args=['runuser','-u','a','--','env','XDG_RUNTIME_DIR=/run/user/'+str(uid),
+        owner=desktop_user();uid=owner.pw_uid
+        args=['runuser','-u',owner.pw_name,'--','env','XDG_RUNTIME_DIR=/run/user/'+str(uid),
               'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+str(uid)+'/bus',
               'PULSE_SERVER=unix:/run/user/'+str(uid)+'/pulse/native',*args]
     p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
@@ -34,7 +46,7 @@ def validate_policy(actual,expected):
         original=original.replace(rule,('install '+name+' /bin/false\n').encode(),1)
     if hashlib.sha256(original).hexdigest()!=expected:raise ValueError('Peripheral denial changed')
 
-def guard():
+def guard(require_card=True):
     doc=json.loads(BINDINGS.read_text())
     if os.geteuid()!=0 or doc['kernel_release']!=os.uname().release:raise ValueError('Wrong root/kernel')
     if not Path('/run/oneplus13/ram-session').is_file() or not any(r.split()[1:3]==['/','overlay'] for r in Path('/proc/mounts').read_text().splitlines()):
@@ -48,6 +60,7 @@ def guard():
     if sha(module)!=doc['amplifier_module_sha256']:raise ValueError('Wrong amplifier module')
     validate_policy(Path('/etc/modprobe.d/91-oneplus13-unreviewed-peripherals.conf').read_bytes(),doc['original_policy_sha256'])
     if Path('/proc/device-tree/sound/model').read_bytes()!=CARD.encode()+b'\0':raise ValueError('Wrong audio boot alternative')
+    if not require_card:return doc,None
     cards=re.findall(r'^\s*(\d+) \[.*\]: .* - '+re.escape(CARD)+r'$',Path('/proc/asound/cards').read_text(),re.M)
     if len(cards)!=1:raise ValueError('Unique phone card required')
     return doc,cards[0]
@@ -108,8 +121,8 @@ def load_native_sink(card):
 
 def load_pulse_sink(card):
     prepare_explicit_route(card)
-    uid=pwd.getpwnam('a').pw_uid
-    command=['runuser','-u','a','--','env',
+    owner=desktop_user();uid=owner.pw_uid
+    command=['runuser','-u',owner.pw_name,'--','env',
              'XDG_RUNTIME_DIR=/run/user/'+str(uid),
              'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+str(uid)+'/bus',
              'PULSE_SERVER=unix:/run/user/'+str(uid)+'/pulse/native',
@@ -138,23 +151,30 @@ def load_pulse_sink(card):
 
 def disable(card):
     errors=[]
+    # A vanished/replaced user bus means its Pulse objects no longer belong to
+    # this session. Do not send stale numeric IDs into a later login's server.
+    bus=user_bus()
+    same_bus=bus.exists() and (not SESSION.exists() or
+        SESSION.read_text().strip()==str(bus.stat().st_ino))
     try:
         if MODULE.exists():
             module=MODULE.read_text().strip()
             if not re.fullmatch(r'[0-9]{1,8}',module):raise ValueError('Unknown desktop audio module')
-            run(['pactl','unload-module',module],8,user=True)
+            if same_bus:run(['pactl','unload-module',module],8,user=True)
             MODULE.unlink()
         if NODE.exists():
             node=NODE.read_text().strip()
             if not re.fullmatch(r'[0-9]{1,8}',node):raise ValueError('Unknown desktop audio node')
-            objects=json.loads(run(['pw-dump'],user=True))
-            if any(str(obj.get('id'))==node for obj in objects):
-                run(['pw-cli','destroy',node],8,user=True)
+            if same_bus:
+                objects=json.loads(run(['pw-dump'],user=True))
+                if any(str(obj.get('id'))==node for obj in objects):
+                    run(['pw-cli','destroy',node],8,user=True)
             NODE.unlink()
         if RULE.exists():
             if RULE.is_symlink() or RULE.read_bytes()!=(ROOT/RULE.name).read_bytes():raise ValueError('Unknown desktop rule')
             RULE.unlink()
-        run(['systemctl','--user','restart',*UNITS],timeout=15,user=True)
+        if same_bus:run(['systemctl','--user','restart',*UNITS],timeout=15,user=True)
+        SESSION.unlink(missing_ok=True)
     except Exception as e:errors.append(str(e))
     for name,value in [('Amp0 Playback Volume','0'),('Amp1 Playback Volume','0'),('Secondary MI2S Audio Mixer MultiMedia1','off,off')]:
         try:mixer(card,name,value)
@@ -167,6 +187,8 @@ def enable(card):
         result=json.loads((Path('/run/oneplus13')/folder/'result.json').read_text())
         if not all(result.get(k) is True for k in keys):raise ValueError('Independent native audio precheck required')
     if RULE.exists():raise ValueError('Desktop audio already attempted')
+    STATE.mkdir(mode=0o700,parents=True,exist_ok=True)
+    SESSION.write_text(str(user_bus().stat().st_ino)+'\n');SESSION.chmod(0o600)
     if 'HiFi' not in run(['alsaucm','-c','hw:'+card,'list','_verbs']):raise ValueError('Phone UCM profile unavailable')
     # Keep GNOME from exposing amplification beyond the software-unity ceiling.
     run(['gsettings','set','org.gnome.desktop.sound','allow-volume-above-100-percent','false'],user=True)

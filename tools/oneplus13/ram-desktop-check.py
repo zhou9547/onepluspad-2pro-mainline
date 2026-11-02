@@ -162,7 +162,7 @@ def check(check_wifi=True):
     COMPLETED['ubuntu_dock_always_visible']=True
     command(user + ['systemd-run', '--user', '--collect', '--unit=oneplus13-ram-settings',
                     '--property=RuntimeMaxSec=90s', '--setenv=WAYLAND_DISPLAY='+displays[0].name,
-                    '--setenv=GSK_RENDERER=cairo', '/usr/bin/gnome-control-center', 'network'], 6)
+                    '/usr/bin/gnome-control-center', 'network'], 6)
     app_until = time.monotonic() + 10
     while time.monotonic() < app_until:
         if process_ids(uid, 'gnome-control-center'):

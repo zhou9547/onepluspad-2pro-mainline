@@ -76,7 +76,8 @@ def main():
         "oneplus13.session=" + original["session_identity_nonce"],
         "oneplus13.session=" + nonce,
     )
-    flags = (("oneplus13.usb_host_probe=1", "qcom_battmgr.oneplus13_otg_auto=1")
+    flags = (("oneplus13.usb_host_probe=1", "qcom_battmgr.oneplus13_otg_auto=1",
+              "oneplus13.first_user_audio=1")
              if args.automatic_otg else
              ("oneplus13.ir_probe=1", "oneplus13.usb_host_probe=1",
                  "qcom_battmgr.oneplus13_otg_lease=1",
@@ -197,6 +198,11 @@ def main():
     }
     if args.automatic_otg:
         result.update(automatic_usb_service_enabled=True,
+                      desktop_audio_first_user_conditional=True,
+                      desktop_audio_first_user_gate="oneplus13.first_user_audio=1",
+                      desktop_audio_auto_started=True,
+                      microphone_auto_started=True,
+                      desktop_audio_activation_scope="BOUNDED_RAM_FIRST_USER_NATIVE_PRECHECKS",
                       automatic_usb_hardware_qualified=False,
                       automatic_usb_watchdog_seconds=15,
                       automatic_usb_heartbeat_seconds=3)

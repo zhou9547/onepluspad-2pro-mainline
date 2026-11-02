@@ -41,7 +41,7 @@ def verify_automatic_boot_arguments(camera_gnss, automatic):
     expected=camera_gnss['cmdline'].replace(
         'oneplus13.session='+camera_gnss['session_identity_nonce'],
         'oneplus13.session='+automatic['session_identity_nonce'])
-    expected+=' oneplus13.usb_host_probe=1 '+USB_AUTO_FLAG
+    expected+=' oneplus13.usb_host_probe=1 '+USB_AUTO_FLAG+' oneplus13.first_user_audio=1'
     if (automatic['cmdline']!=expected
             or automatic.get('scope')!='AUTOMATIC_OTG_DESKTOP_RAM_CANDIDATE'
             or automatic.get('automatic_usb_service_enabled') is not True
@@ -184,12 +184,19 @@ def main():
         'usr/share/alsa/ucm2/Qualcomm/sm8750/OnePlus13/HiFi.conf',
         'usr/lib/oneplus13-audio/95-oneplus13-desktop-audio.conf',
         'usr/libexec/oneplus13-ram-desktop-audio.py','usr/libexec/oneplus13-ram-desktop-volume-check.py',
+        'usr/libexec/oneplus13-first-user-audio.py',
+        'usr/lib/systemd/system/oneplus13-first-user-audio.service',
         'usr/lib/oneplus13-audio/desktop-bindings.json'}
     if set(desktop_audio_files)!=required_desktop_audio or m.get('desktop_audio_auto_started') is not False:
         raise ValueError('Missing explicitly gated desktop audio files')
     for name,digest in desktop_audio_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered desktop audio changed')
+    first_audio=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),
+        'usr/lib/systemd/system/oneplus13-first-user-audio.service'],text=True)
+    if ('ConditionKernelCommandLine=oneplus13.first_user_audio=1\n' not in first_audio or
+            'BindsTo=user@1000.service\n' not in first_audio or 'ExecStopPost=' not in first_audio):
+        raise ValueError('First-user RAM audio gate/cleanup changed')
     timezone=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'etc/timezone'],text=True)
     if timezone!='Asia/Shanghai\n':raise ValueError('Wrong phone timezone')
     microphone_files=m.get('experimental_microphone_files',{})
@@ -454,6 +461,9 @@ def main():
     for name,digest in auto_files.items():
         if sha256(root/name)!=digest:raise ValueError('Automatic USB artifact changed')
     automatic=json.loads((root/'automatic-usb-manifest.json').read_text())
+    if ('oneplus13.first_user_audio=1' not in automatic['cmdline'].split() or
+            automatic.get('desktop_audio_first_user_conditional') is not True):
+        raise ValueError('Automatic desktop first-user audio gate missing')
     verify_automatic_boot_arguments(camera_gnss,automatic)
     auto_sections=boot_sections((root/automatic['boot_image_file']).read_bytes())
     auto_expected,_=importlib.import_module('camera-gnss-ir-usb-dtb').derive(
