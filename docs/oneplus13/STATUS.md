@@ -1,4 +1,10 @@
-# 2026-11-02 r270 full-system RAM candidate checks complete; final image pending
+# Current: pristine full Ubuntu combined acceptance passed, 2026-11-03
+
+Exact d3605af2 / Actions41462106749 passes r272 on the new packaged image without functional RAM overlays: owner OSK first-user setup, actual GTK GL/MSM and GLES GPU, automatic native microphone/two-speaker checks, two same-orientation dock attachments plus a controlled180degree flip,130.549/15.458/30.617s readonly holds,15.525s watchdog restore and service restart/read/unmount with5.138s stable source/role/node. Sameboot5220MHz HTTP/HTTPS before/post, display health, saved firmware/PC/audio cleanup and Android7 all pass. Zero-user full1662-package image delivered. See FULL-UBUNTU-R272-ACCEPTANCE-20261103.md and JSON.
+
+Scope is the tested phone-powered dock/Udisk and readonly operation. Prior failures remain; no universal orientation/dock claim. Manual lock/wake/suspend and opposite-landscape stereo remain open; idle-delay0 is avoidance only. Camera/GNSS paused, NFC skipped. Temporary RAM only; dual boot/persistent install not authorized. The sections below are retained historical states, not current pending-image claims or reusable authorizations.
+
+# Historical: 2026-11-02 r270 full-system RAM candidate checks complete; final image pending
 
 Full Ubuntu6ce15078 plus exact e1ddf027 RAM OTG helper completes130.297s hold, two successful readonly dock mounts/read-file/unmount,15.271s watchdog restore, service restart/read/unmount, image-native GPU/automatic audio,5GHz before/post/display health and full firmware-PC-audio-Android cleanup. One second-attachment source loss required an extra physical180degree flip/reinsert before the successful attachment; no userspace off trigger was recorded. Keep this exception, do not claim universal orientation stability or pristine final-image acceptance. Package the tested helper and validate the new exact image. See FULL-UBUNTU-R270-CANDIDATE-20261102.md.
 

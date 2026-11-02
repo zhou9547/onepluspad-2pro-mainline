@@ -1,4 +1,10 @@
-# 2026-11-02 r270 full-system RAM candidate checks complete; final image pending
+# Current remaining work after pristine r272 acceptance, 2026-11-03
+
+New d3605af2 / Actions41462106749 full1662-package image passes native GTK GPU/automatic audio, owner OSK account setup and combined physical readonly OTG/recovery/controlled connector flip plus5GHz before/post and full cleanup. See FULL-UBUNTU-R272-ACCEPTANCE-20261103.md and sanitized JSON. This closes migration of the implemented targets into the pristine full image for the tested bounded scope; do not repeat RF bringup or rebuild unchanged code because of old observer failures.
+
+Still open: manual lock/power-button wake/suspend (idle-delay0 only avoids automatic blanking), opposite-landscape stereo remapping, Chinese IME owner experience, disk writes, externally powered/PD docks, other dock interfaces and wider connector/device stability. Retain r270 real source loss and r269-71 recovery failure without assigning a proven cause; r272's planned three attachments passed without extra retries. Camera/GNSS paused, NFC skipped. Dual boot/storage layout/persistent installation require separate owner approval; the current delivery remains temporary RAM only and contains no regular user. All sections below are historical observations, not current pending-image claims or reusable authorization.
+
+# Historical: 2026-11-02 r270 full-system RAM candidate checks complete; final image pending
 
 Full Ubuntu6ce15078 plus exact e1ddf027 RAM OTG helper completes130.297s hold, two successful readonly dock mounts/read-file/unmount,15.271s watchdog restore, service restart/read/unmount, image-native GPU/automatic audio,5GHz before/post/display health and full firmware-PC-audio-Android cleanup. One second-attachment source loss required an extra physical180degree flip/reinsert before the successful attachment; no userspace off trigger was recorded. Keep this exception, do not claim universal orientation stability or pristine final-image acceptance. Package the tested helper and validate the new exact image. See FULL-UBUNTU-R270-CANDIDATE-20261102.md.
 
