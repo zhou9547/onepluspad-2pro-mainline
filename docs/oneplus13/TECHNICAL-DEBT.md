@@ -1,6 +1,25 @@
-# Current: offline wake/stereo/Resources work, 2026-11-03
+# Current: lightweight r274 code built and independently read back, 2026-11-03
 
-No phone available. Implement and compile the lightweight diagnostic candidate, repeat source/protocol/PCM/fault checks and inspect delivered image; physical acceptance remains pending. Compatibility blanking keeps KMS/SPR alive and must not be described as native DPMS or deep suspend. GMU generic backports are relevant fixes, not proof of r266 cause. Stereo transform3 reversal is an owner-derived mapping assumption requiring audition; preserve software/hardware gain ceilings and stop cleanup. Resources must consume actual MSM counters/card identity and show unavailable readings honestly. Keep fixed r272 full image/milestone and all prior failures intact. See OFFLINE-WAKE-STEREO-GPU-20261103.md.
+Exact source `5e09fadb1f1e7bfefcd6ccfcd0ed68107c9675b7` / Actions [41633350418](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/41633350418)
+passes all6 ARM64 jobs for `desktop_profile=diagnostic`. The downloaded actual
+boot/rootfs, Resources binary plus corresponding source, ARM64 ELF files,
+source bindings, default-off suspend policy and zero-user/privacy state pass
+independent readback. Local suite: 874run/1skip/0fail;
+CI suite: 849run/7skip/0fail;
+Resources: 107 Rust tests pass. Actual isolated production
+PipeWire PCM proves reverse permutation, system volume and mute; disposable
+ARM64 userspace proves package install/audit, schemas, display units, udev and
+library closure. These are **offline proofs, not phone acceptance**.
+
+Candidate implements AA569 binary compatibility blank/key wake with lock
+authentication retained, four generic GMU backports, internal-Mutter-transform
+stereo permutation, and real MSM/Adreno-aware Resources. It keeps KMS/SPR
+running; native DPMS/deep suspend remain unqualified and automatic system
+suspend is disabled. Physical wake cycles, acoustic orientation, GPU counters,
+and sameboot USB/5GHz regression remain pending. Camera/GNSS paused, NFC skipped.
+No phone query/boot/flash/slot/storage operation was performed. Preserve fixed
+r272 full delivery/tag; do not transfer its hardware qualification to r274.
+See OFFLINE-WAKE-STEREO-GPU-20261103.md and OFFLINE-R274-BUILD-20261103.json.
 
 # Historical remaining work after pristine r272 acceptance, 2026-11-03
 

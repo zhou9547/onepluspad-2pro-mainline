@@ -1,6 +1,25 @@
-# Current: offline lightweight wake/stereo/MSM Resources candidate, 2026-11-03
+# Current: lightweight r274 code built and independently read back, 2026-11-03
 
-Owner requests code, repeated review and compilation only; no phone is available and no device operations are authorized. Work branch preserves the fixed r272 milestone. New candidate adds bounded AA569 backlight compatibility blank/lock restoration (not native DPMS/deep-suspend qualification), four generic GMU fixes from the original project's v0.6 kernel pin, a unity PipeWire stereo permutation from Mutter's internal output transform, and source-built ARM64 Resources with generic MSM/Adreno telemetry. Actions diagnostic profile retains Files/Terminal/Settings/OSK/resource tools while omitting the full desktop suite. Offline checks/build/readback are required; hardware_tested remains false. See OFFLINE-WAKE-STEREO-GPU-20261103.md.
+Exact source `5e09fadb1f1e7bfefcd6ccfcd0ed68107c9675b7` / Actions [41633350418](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/41633350418)
+passes all6 ARM64 jobs for `desktop_profile=diagnostic`. The downloaded actual
+boot/rootfs, Resources binary plus corresponding source, ARM64 ELF files,
+source bindings, default-off suspend policy and zero-user/privacy state pass
+independent readback. Local suite: 874run/1skip/0fail;
+CI suite: 849run/7skip/0fail;
+Resources: 107 Rust tests pass. Actual isolated production
+PipeWire PCM proves reverse permutation, system volume and mute; disposable
+ARM64 userspace proves package install/audit, schemas, display units, udev and
+library closure. These are **offline proofs, not phone acceptance**.
+
+Candidate implements AA569 binary compatibility blank/key wake with lock
+authentication retained, four generic GMU backports, internal-Mutter-transform
+stereo permutation, and real MSM/Adreno-aware Resources. It keeps KMS/SPR
+running; native DPMS/deep suspend remain unqualified and automatic system
+suspend is disabled. Physical wake cycles, acoustic orientation, GPU counters,
+and sameboot USB/5GHz regression remain pending. Camera/GNSS paused, NFC skipped.
+No phone query/boot/flash/slot/storage operation was performed. Preserve fixed
+r272 full delivery/tag; do not transfer its hardware qualification to r274.
+See OFFLINE-WAKE-STEREO-GPU-20261103.md and OFFLINE-R274-BUILD-20261103.json.
 
 # Historical accepted baseline: pristine full Ubuntu combined acceptance passed, 2026-11-03
 

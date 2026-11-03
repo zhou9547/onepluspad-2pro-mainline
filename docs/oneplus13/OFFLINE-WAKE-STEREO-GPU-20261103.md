@@ -101,3 +101,61 @@ proof cannot establish real panel, acoustic orientation, GPU telemetry or
 peripheral recovery on the phone. Future hardware acceptance must bind the
 new exact boot/rootfs/source and a fresh ledger, preserve Android and retain
 USB/5GHz regressions. Camera/GNSS stay paused, NFC skipped; no permanent install.
+
+## Offline build completion (2026-11-03)
+
+Image source: `5e09fadb1f1e7bfefcd6ccfcd0ed68107c9675b7`, tree `dcc995b80da72af8375e93a1983b1eabca9d0677`.
+[Actions 41633350418](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/41633350418) passes all6 jobs on GitHub ARM64 with
+desktop_profile=diagnostic, use_server=false, all_on_server=false,
+runtime_qemu=false. New builds need no private owner server or Wi-Fi secret.
+
+| Delivered artifact | SHA256 | Bytes |
+| --- | --- | ---: |
+| boot-automatic-usb-ram-experimental.img | `d62eb29c1b8db3ce25ccea7c047c0308aa037018e1cbb949e38970c365af0670` | 14741504 |
+| rootfs.squashfs | `4e42d6b653e60ce1df86c3f608032d038479eab840828b204b945c3c0adda4bd` | 683958272 |
+
+The image contains 840 packages, including Files/Terminal/Settings/OSK,
+Text Editor, Resources 1.10.2-0ubuntu3.1+op13.1 and GNOME System Monitor.
+Full desktop metapackages, Office, browser/Software suite and Docker are omitted.
+The full profile remains selectable. Zero regular users, locked root, empty
+machine-id, no saved NetworkManager connection/private SSH key or autologin
+are checked against the actual SquashFS. Firmware/calibration remains only the
+previously owner-approved qualified-data; no cross-device/licensing claim.
+
+Local 874run/1skip/0fail; ARM64 CI 849run/7skip/0fail;
+107 Resources Rust tests pass. The ordinary-user filter's volume and
+mute are proved with real generated PCM in isolated PipeWire as well as its
+dynamic native target and reverse matrix. This is not acoustic phone proof.
+The older native-only desktop-volume observer does not qualify the new default
+filter; future physical acceptance must measure that path explicitly.
+
+Build failures are retained: generated config.rs/resources.pot prevented the
+first corresponding-source package (fixed by capturing clean source first);
+full-only Docker disable broke diagnostic staging (now profile-scoped);
+APT's offline local-file path handling rejected the renamed deb (now verified
+dpkg install plus package audit, with dependency checks retained). ARM64
+usermode preflight confirms installation/schema/systemd/udev/library closure
+without a phone or host dev/sys/proc bind. Diagnostic MIME defaults only point
+to its included text editor. Actual delivered service/library/script bindings
+and ARM64 executables are checked after download, not merely in staging.
+The diagnostic seed names GNOME50's actual Ubuntu gnome-shell-ubuntu-extensions
+bundle rather than its virtual Dock alias; the installed Dock metadata UUID
+is independently verified instead of ignoring a missing-package check.
+Container userspace/config/binary checks remain mandatory for full, while
+diagnostic keeps the same kernel/module checks without claiming Docker is
+installed. Manifest/payload disagreements and daemon autostart are rejected;
+five additional profile regression cases cover these boundaries.
+Diagnostic binding data is captured and all referenced files are checked
+before releasing the temporary filesystem; four further lifetime/tampering/
+unearned-qualification regressions reject reuse of cleaned staging paths.
+
+Source and artifact provenance is in OFFLINE-R274-BUILD-20261103.json. Actions
+artifacts retain their14day lifetime; source/pins/patches permit a fresh build.
+The boot and rootfs are a pair: a trusted host must serve the exact rootfs at
+172.16.13.2:8000 over the RAM USB NCM channel. This is not a persistent installer.
+Its default RAM return deadline remains300seconds; a future physical round
+needs its own exact image/source/plan/unused ledger and separately bound runtime
+window. Do not replay historical host scripts or authorization.
+
+All three new targets remain hardware_tested=false until the owner has a phone
+and completes acceptance. Keep r272's stable full image/tag/current aliases.
