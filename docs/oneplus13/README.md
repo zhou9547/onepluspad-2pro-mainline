@@ -1,3 +1,18 @@
+# OnePlus 13 / 一加13原生Linux：r272完整系统里程碑
+
+2026-11-03新原始完整Ubuntu镜像已完成屏幕键盘首次建号、实际GTK GPU、自动音频、普通桌面只读自动OTG及5GHz联合验收。手机返回Android，全程临时RAM启动、分区写入0。
+
+- [里程碑说明、GitHub构建与临时启动准备](../../ONEPLUS13-MILESTONE.zh-CN.md)
+- [r272精确真机验收与限制](FULL-UBUNTU-R272-ACCEPTANCE-20261103.md) / [脱敏证据JSON](FULL-UBUNTU-R272-ACCEPTANCE-20261103.json)
+- [里程碑快照](MILESTONE-R272-20261103.json)、[最新状态](STATUS.md)、[技术债](TECHNICAL-DEBT.md)
+
+分支`milestone/oneplus13-full-ubuntu-r272-20261103`，同名快照标签去掉`milestone/`前缀。原镜像源码d3605af2，成功Actions41462106749。本次里程碑仅添加说明，不更改已验收运行代码，不因文档重复构建。
+
+完整1662包、零预建用户；自动OTG资格是已测手机供电拓展坞/U盘的只读操作。临时启动还需要主机正确提供配套rootfs，非独立boot文件或永久安装器。锁屏唤醒、反向横屏声道、写盘/PD/其他hub接口仍待修或待验收，相机/GNSS暂停、NFC跳过。旧授权与ledger不能复用。
+
+<details>
+<summary>此前版本的历史概述（不作为当前里程碑状态或通用手机安装说明）</summary>
+
 # OnePlus 13 / 一加 13 原生 Linux
 
 适用一加 13（dodge / SM8750）。当前在构建完整 Ubuntu Desktop 用户态候选，目标是保留已验证的 GNOME、5 GHz Wi‑Fi 和限定拓展坞/U 盘只读自动 OTG 支持。临时测试只允许 RAM 启动，不刷写、不修改分区、不持久安装。
@@ -52,3 +67,5 @@ GNSS、NFC、红外、完整 USB OTG/USB-C、电源管理和更多手机专用�
 
 保留原始版权、许可证与补丁来源。构建只使用经过审核和哈希绑定的 qualified-data 白名单；
 网络凭据、个人数据、原始私有记录、私钥和未审查数据不进入仓库。
+
+</details>

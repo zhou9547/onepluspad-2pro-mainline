@@ -1,3 +1,11 @@
+# 一加13完整Ubuntu：r272里程碑
+
+当前分支固定2026-11-03已验收进展。请先阅读[构建与临时启动说明](ONEPLUS13-MILESTONE.zh-CN.md)、[真机验收记录](docs/oneplus13/FULL-UBUNTU-R272-ACCEPTANCE-20261103.md)与[机器可读快照](docs/oneplus13/MILESTONE-R272-20261103.json)。支持GitHub Actions从源码构建配套boot/rootfs；电脑须通过USB提供rootfs，仅临时fastboot boot，零预建普通用户。
+
+**下方保留原OnePlus Pad 2 Pro项目说明作为来源和历史；其中的分区/安装步骤不适用于本一加13里程碑。**
+
+---
+
 # Ubuntu for OnePlus Pad 2 Pro
 
 在一加平板 2 Pro 上运行 Ubuntu Desktop 26.04，采用 GNOME 桌面与基于上游 Linux

@@ -1,0 +1,15 @@
+{
+  "scope": "ACTUAL_DELIVERED_R272_SQUASHFS_PRIVACY_RECHECK",
+  "source_commit": "d3605af22a7377a244421babfb65f73afbc617ea",
+  "normal_users": 0,
+  "personal_home_files": 0,
+  "unlocked_password_hashes": 0,
+  "persisted_networkmanager_connections": 0,
+  "ssh_client_or_host_private_keys": 0,
+  "machine_id_empty": true,
+  "autologin_enabled": false,
+  "device_identifier_or_token_values_printed": false,
+  "firmware_calibration_scope": "Owner-authorized qualified-data only; not a guarantee of cross-device compatibility or firmware relicensing",
+  "phone_operations": 0,
+  "pass": true
+}

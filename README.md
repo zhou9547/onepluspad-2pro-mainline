@@ -1,3 +1,11 @@
+# OnePlus 13 full Ubuntu — r272 milestone
+
+This branch preserves the verified OnePlus 13 RAM desktop milestone. Read the [Chinese build and temporary-boot guide](ONEPLUS13-MILESTONE.zh-CN.md), [acceptance record](docs/oneplus13/FULL-UBUNTU-R272-ACCEPTANCE-20261103.md), and [machine-readable snapshot](docs/oneplus13/MILESTONE-R272-20261103.json). Build the paired boot/rootfs from Actions; the host must serve rootfs over USB. No persistent installation is provided.
+
+**The original OnePlus Pad 2 Pro documentation below is retained for attribution and project history. Its partition/installation instructions do not apply to this OnePlus 13 milestone.**
+
+---
+
 # Ubuntu for OnePlus Pad 2 Pro
 
 Run Ubuntu Desktop 26.04 with GNOME on the OnePlus Pad 2 Pro, using a device-adapted

@@ -1,0 +1,59 @@
+{
+  "source_commit": "d3605af22a7377a244421babfb65f73afbc617ea",
+  "source_tree": "db78ba9e36a221f89cb7062cbd2e03e646be57a1",
+  "actions": 41462106749,
+  "actions_url": "https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/41462106749",
+  "boot_file": "boot-automatic-usb-ram-experimental.img",
+  "boot_sha256": "8e21ce9e2ae46486a7c8d82354f470221e16643afa2e79c2c9770637685c15be",
+  "rootfs_file": "rootfs.squashfs",
+  "rootfs_sha256": "28c13993f6b01cef36cf55aac151d4226473e20d07d5c356d140fce0b63138bb",
+  "kernel_release": "7.2.0-oneplus13-g7a81d184e309-cabf055643d7a-p59bf6260c9f9",
+  "normal_users": 0,
+  "installed_packages": 1662,
+  "usb_hold_seconds": [
+    130.549,
+    15.458,
+    30.617
+  ],
+  "watchdog_restore_seconds": 15.525,
+  "recovery_stable_seconds": 5.138,
+  "known_limits": [
+    "Only the tested phone-powered dock and Udisk, bounded holds and this physical flip are qualified; prior r270 source loss remains preserved, no universal connector or dock stability claim",
+    "External storage was readonly; writing, powered docks, charging/PD passthrough, display output and other dock ports were not qualified",
+    "Automatic screen blanking avoided with idle-delay0; manual lock/power-button wake and suspend are not fixed or qualified",
+    "Opposite landscape stereo channel remapping remains open",
+    "Camera and GNSS paused; NFC skipped; no dual boot or persistent installation",
+    "Boot/rootfs are a bounded RAM test pair, not an installer; original image deadline300s, r272 planned RAM override3300s; new boots need fresh bound plans and ledgers"
+  ],
+  "schema": 1,
+  "milestone": "oneplus13-full-ubuntu-r272-20261103",
+  "date": "2026-11-03",
+  "branch": "milestone/oneplus13-full-ubuntu-r272-20261103",
+  "tag": "oneplus13-full-ubuntu-r272-20261103",
+  "acceptance_commit": "0150de1cf3b1e0ff53eba77e95df10124648bc5d",
+  "acceptance_record": "docs/oneplus13/FULL-UBUNTU-R272-ACCEPTANCE-20261103.json",
+  "guide": "ONEPLUS13-MILESTONE.zh-CN.md",
+  "documentation_only_since_accepted_source": true,
+  "new_build_on_milestone_branch_executed": false,
+  "workflow": ".github/workflows/oneplus13-current-image.yml",
+  "hosted_build_inputs": {
+    "use_server": false,
+    "all_on_server": false,
+    "runtime_qemu": false
+  },
+  "qualified_successful_run_inputs": {
+    "use_server": true,
+    "all_on_server": false,
+    "runtime_qemu": false
+  },
+  "requires_owner_private_build_files": false,
+  "requires_host_rootfs_server": true,
+  "rootfs_server": "172.16.13.2:8000",
+  "phone_usb_address": "172.16.13.1/24",
+  "default_systemd_ram_deadline_seconds": 300,
+  "accepted_round_ram_deadline_override_seconds": 3300,
+  "one_click_cross_platform_launcher": false,
+  "temporary_fastboot_boot_only": true,
+  "persistent_install_supported": false,
+  "artifact_retention_days": 14
+}
