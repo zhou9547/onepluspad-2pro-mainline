@@ -192,7 +192,11 @@ for name,digest in m['files'].items():
  assert hashlib.file_digest((out/name).open('rb'),'sha256').hexdigest()==digest
 PY
 cp "${resource_debs[0]}" "$root/tmp/oneplus13-resources.deb"
-chroot "$root" apt-get install -y --no-download /tmp/oneplus13-resources.deb
+# Dependencies were resolved above using Ubuntu's Resources package. Install
+# the verified local replacement directly; dpkg still refuses unmet Depends.
+# APT's --no-download local-file path handling rejects the renamed archive.
+chroot "$root" dpkg --install /tmp/oneplus13-resources.deb
+test -z "$(chroot "$root" dpkg --audit)"
 rm "$root/tmp/oneplus13-resources.deb"
 python3 tools/oneplus13/install-user-diagnostics.py "$root"
 glib-compile-schemas --strict "$root/usr/share/glib-2.0/schemas"
