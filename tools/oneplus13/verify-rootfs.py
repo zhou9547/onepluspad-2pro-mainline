@@ -133,7 +133,8 @@ def main():
         'gnome': (out / 'gnome-version.txt').read_text().strip(),
         'packages': len(packages), 'desktop_profile':profile,'hardware_tested': False,
         'checks': ['all downloaded SHA256SUMS', 'manifest sizes/hashes', 'all package architectures',
-                   'full Ubuntu Desktop metapackages and required runtime packages',
+                   ('full Ubuntu Desktop metapackages and required runtime packages' if profile=='full'
+                    else 'diagnostic runtime packages and actual Dock files; full desktop omitted'),
                    'locked root, no precreated desktop user, enabled GDM first-user setup, and empty machine-id',
                    'actual desktop/WiFi/Bluetooth ARM64 ELF binaries',
                    'supplicant and OBEX D-Bus/systemd activation contracts', 'actual Ubuntu os-release']}

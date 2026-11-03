@@ -53,6 +53,20 @@ def verify_automatic_boot_arguments(camera_gnss, automatic):
         raise ValueError('Automatic USB policy or owner exclusivity changed')
 
 
+def validate_container_profile(manifest):
+    profile=manifest.get('desktop_profile','full')
+    if profile not in ('full','diagnostic'):raise ValueError('Unknown desktop profile')
+    installed=profile=='full'
+    required={'usr/lib/oneplus13-container/kernel.config',
+              'usr/libexec/oneplus13-container-kernel.py','usr/libexec/oneplus13-ram-container-check.py'}
+    if installed:required.add('etc/docker/daemon.json')
+    if (set(manifest.get('container_files',{}))!=required or
+            manifest.get('container_userspace_installed') is not installed or
+            manifest.get('container_daemon_auto_started') is not False):
+        raise ValueError('Container payload does not match the declared desktop profile')
+    return installed
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--kernel',type=Path,required=True);p.add_argument('--image',type=Path,required=True)
@@ -160,9 +174,7 @@ def main():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered desktop sensor input changed')
     container_files=m.get('container_files',{})
-    if set(container_files)!={'usr/lib/oneplus13-container/kernel.config',
-            'usr/libexec/oneplus13-container-kernel.py','usr/libexec/oneplus13-ram-container-check.py','etc/docker/daemon.json'} or m.get('container_daemon_auto_started') is not False:
-        raise ValueError('Missing gated container support')
+    container_userspace=validate_container_profile(m)
     for name,digest in container_files.items():
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(blob).hexdigest()!=digest:raise ValueError('Delivered container input changed')
@@ -170,7 +182,7 @@ def main():
                                    'usr/lib/oneplus13-container/kernel.config'],text=True)
     import importlib
     importlib.import_module('container-kernel').check_config(config)
-    for name in ['usr/bin/docker','usr/bin/dockerd','usr/sbin/xtables-nft-multi','usr/sbin/xtables-legacy-multi']:
+    for name in (['usr/bin/docker','usr/bin/dockerd','usr/sbin/xtables-nft-multi','usr/sbin/xtables-legacy-multi'] if container_userspace else []):
         blob=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if blob[:6]!=b'\x7fELF\x02\x01' or int.from_bytes(blob[18:20],'little')!=183:
             raise ValueError('Missing native container binary: '+name)
@@ -619,7 +631,7 @@ def main():
             'wifi_runtime_files_verified':len(wifi_files),'wifi_runtime_requires_host_overlay':False,
             'rootfs_sha256':m['rootfs_sha256'],'boot_image_sha256':m['boot_image_sha256'],
             'firmware_files_verified':len(data),'kernel_module_release_match':True,
-            'container_files_verified':len(container_files),'container_daemon_auto_started':False,
+            'container_files_verified':len(container_files),'container_userspace_installed':container_userspace,'container_daemon_auto_started':False,
             'sensor_runtime_files_verified':len(runtime_files),'sensor_runtime_host_private_inputs_required':False,
             'ssc_probe_files_verified':len(ssc_files),'ssc_probe_auto_started':False,
             'ssc_sample_files_verified':len(sample_files),'ssc_samples_auto_started':False,

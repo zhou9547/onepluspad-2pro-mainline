@@ -38,6 +38,8 @@ def main():
         if Path(name).is_absolute() or '..' in Path(name).parts or (private/name).is_symlink():raise ValueError('Unsafe private data path')
         if sha256(private/name)!=item['sha256'] or (private/name).stat().st_size!=item['bytes']:raise ValueError('Changed private input')
     km=json.loads((kernel/'manifest.json').read_text());dm=json.loads((desktop/'manifest.json').read_text());rm=json.loads((rootfs/'manifest.json').read_text())
+    profile=rm.get('desktop_profile','full')
+    if profile not in ('full','diagnostic'):raise ValueError('Unknown desktop profile')
     if len({km['integration_commit'],dm['integration_commit'],rm['integration_commit']})!=1:raise ValueError('Public components must share one source commit')
     if a.runtime_checks=='static' and not public:raise ValueError('Static-only packaging is limited to the reviewed repository dataset')
     if a.runtime_checks=='qemu' and not all(dm.get(k) is True for k in ['qemu_handoff_verified','qemu_deadline_expiry_verified','qemu_native_preflight_runtime_guards_verified']):raise ValueError('Fresh complete-rootfs QEMU handoff/recovery required')
@@ -302,8 +304,11 @@ def main():
         dest=stage/name;dest.parent.mkdir(parents=True,exist_ok=True)
         shutil.copyfile(source,dest);dest.chmod(0o755 if name.endswith('.py') else 0o644)
         container_hashes[name]=sha256(dest)
-    if (stage/'etc/docker/daemon.json').read_bytes()!=(REPO/'devices/oneplus13/docker/daemon.json').read_bytes():raise ValueError('Docker RAM defaults changed')
-    container_hashes['etc/docker/daemon.json']=sha256(stage/'etc/docker/daemon.json')
+    if profile=='full':
+        if (stage/'etc/docker/daemon.json').read_bytes()!=(REPO/'devices/oneplus13/docker/daemon.json').read_bytes():raise ValueError('Docker RAM defaults changed')
+        container_hashes['etc/docker/daemon.json']=sha256(stage/'etc/docker/daemon.json')
+    elif (stage/'etc/docker/daemon.json').exists():
+        raise ValueError('Docker configuration leaked into diagnostic profile')
     microphone_hashes={}
     for source,name in [(REPO/'out/phone-audio/speaker-microphone-probe.tplg','usr/lib/firmware/qcom/sm8750/OnePlus13-Audio-Probe-tplg.bin'),
                         (REPO/'tools/oneplus13/ram-microphone-check.py','usr/libexec/oneplus13-ram-microphone-check.py'),
@@ -429,7 +434,7 @@ def main():
                   desktop_audio_first_user_service_available=True,
                   desktop_audio_first_user_gate='oneplus13.first_user_audio=1',
                   desktop_audio_hardware_qualified=False,desktop_audio_hardware_level=1023)
-    result.update(container_files=container_hashes,container_daemon_auto_started=False,
+    result.update(container_files=container_hashes,container_userspace_installed=profile=='full',container_daemon_auto_started=False,
                   container_hardware_qualified=False)
     result.update(sensor_runtime_files=runtime_hashes,sensor_runtime_host_private_inputs_required=False,
                   sensor_runtime_auto_started=False,sensor_proxy_hardware_qualified=False)
