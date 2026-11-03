@@ -1,3 +1,10 @@
+# 一加13精简诊断候选：离线修复与编译
+
+当前开发分支修复锁屏可见唤醒、反向横屏声道及MSM Resources监控。
+没有真机，本阶段仅检查代码和构建，不能声称新硬件验收通过。
+见[候选说明](docs/oneplus13/OFFLINE-WAKE-STEREO-GPU-20261103.md)。
+下方r272已验收里程碑仅指其固定标签，不是本开发分支的新树。
+
 # 一加13完整Ubuntu：r272里程碑
 
 当前分支固定2026-11-03已验收进展。请先阅读[构建与临时启动说明](ONEPLUS13-MILESTONE.zh-CN.md)、[真机验收记录](docs/oneplus13/FULL-UBUNTU-R272-ACCEPTANCE-20261103.md)与[机器可读快照](docs/oneplus13/MILESTONE-R272-20261103.json)。支持GitHub Actions从源码构建配套boot/rootfs；电脑须通过USB提供rootfs，仅临时fastboot boot，零预建普通用户。

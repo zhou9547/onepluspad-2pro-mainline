@@ -1,4 +1,8 @@
-# Current remaining work after pristine r272 acceptance, 2026-11-03
+# Current: offline wake/stereo/Resources work, 2026-11-03
+
+No phone available. Implement and compile the lightweight diagnostic candidate, repeat source/protocol/PCM/fault checks and inspect delivered image; physical acceptance remains pending. Compatibility blanking keeps KMS/SPR alive and must not be described as native DPMS or deep suspend. GMU generic backports are relevant fixes, not proof of r266 cause. Stereo transform3 reversal is an owner-derived mapping assumption requiring audition; preserve software/hardware gain ceilings and stop cleanup. Resources must consume actual MSM counters/card identity and show unavailable readings honestly. Keep fixed r272 full image/milestone and all prior failures intact. See OFFLINE-WAKE-STEREO-GPU-20261103.md.
+
+# Historical remaining work after pristine r272 acceptance, 2026-11-03
 
 New d3605af2 / Actions41462106749 full1662-package image passes native GTK GPU/automatic audio, owner OSK account setup and combined physical readonly OTG/recovery/controlled connector flip plus5GHz before/post and full cleanup. See FULL-UBUNTU-R272-ACCEPTANCE-20261103.md and sanitized JSON. This closes migration of the implemented targets into the pristine full image for the tested bounded scope; do not repeat RF bringup or rebuild unchanged code because of old observer failures.
 

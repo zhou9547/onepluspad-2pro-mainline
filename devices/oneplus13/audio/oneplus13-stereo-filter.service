@@ -1,0 +1,15 @@
+[Unit]
+Description=OnePlus 13 unity stereo permutation filter
+ConditionPathExists=/run/oneplus13/ram-session
+After=pipewire.service wireplumber.service
+BindsTo=pipewire.service
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/pipewire -c /usr/share/oneplus13/stereo-filter.conf
+ExecStopPost=-/usr/bin/pactl set-sink-volume oneplus13_speakers 50%%
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

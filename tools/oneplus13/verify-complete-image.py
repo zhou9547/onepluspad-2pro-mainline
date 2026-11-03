@@ -76,6 +76,15 @@ def main():
         raise ValueError('Missing source-bound WiFi runtime')
     repo=Path(__file__).resolve().parents[2]
     import hashlib
+    diagnostic=m.get('diagnostic_runtime_files',{})
+    if not diagnostic or m.get('diagnostic_runtime_hardware_qualified') is not False:
+        raise ValueError('Missing offline diagnostic candidate bindings')
+    for name,digest in diagnostic.items():
+        raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
+        if hashlib.sha256(raw).hexdigest()!=digest:raise ValueError('Diagnostic runtime changed: '+name)
+    raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),'usr/lib/oneplus13-desktop/diagnostic-runtime.json'])
+    if hashlib.sha256(raw).hexdigest()!=m['diagnostic_runtime_manifest_sha256']:
+        raise ValueError('Diagnostic binding manifest changed')
     for name,source in wifi_sources.items():
         raw=subprocess.check_output(['unsquashfs','-cat',str(root/'rootfs.squashfs'),name])
         if hashlib.sha256(raw).hexdigest()!=wifi_files[name] or sha256(repo/source)!=wifi_files[name]:

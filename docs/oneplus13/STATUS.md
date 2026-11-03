@@ -1,4 +1,8 @@
-# Current: pristine full Ubuntu combined acceptance passed, 2026-11-03
+# Current: offline lightweight wake/stereo/MSM Resources candidate, 2026-11-03
+
+Owner requests code, repeated review and compilation only; no phone is available and no device operations are authorized. Work branch preserves the fixed r272 milestone. New candidate adds bounded AA569 backlight compatibility blank/lock restoration (not native DPMS/deep-suspend qualification), four generic GMU fixes from the original project's v0.6 kernel pin, a unity PipeWire stereo permutation from Mutter's internal output transform, and source-built ARM64 Resources with generic MSM/Adreno telemetry. Actions diagnostic profile retains Files/Terminal/Settings/OSK/resource tools while omitting the full desktop suite. Offline checks/build/readback are required; hardware_tested remains false. See OFFLINE-WAKE-STEREO-GPU-20261103.md.
+
+# Historical accepted baseline: pristine full Ubuntu combined acceptance passed, 2026-11-03
 
 Exact d3605af2 / Actions41462106749 passes r272 on the new packaged image without functional RAM overlays: owner OSK first-user setup, actual GTK GL/MSM and GLES GPU, automatic native microphone/two-speaker checks, two same-orientation dock attachments plus a controlled180degree flip,130.549/15.458/30.617s readonly holds,15.525s watchdog restore and service restart/read/unmount with5.138s stable source/role/node. Sameboot5220MHz HTTP/HTTPS before/post, display health, saved firmware/PC/audio cleanup and Android7 all pass. Zero-user full1662-package image delivered. See FULL-UBUNTU-R272-ACCEPTANCE-20261103.md and JSON.
 

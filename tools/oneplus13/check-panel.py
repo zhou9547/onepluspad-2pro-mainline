@@ -40,6 +40,7 @@ def main():
     extract = load('display_check', Path(__file__).with_name('check-display.py')).extract_function
     callbacks = '\n'.join(extract(source, x) for x in [
         'static struct aa569 *to_aa569(', 'static int aa569_send(',
+        'static int aa569_backlight_update_status(',
         'static int aa569_power_off(', 'static int aa569_power_on(',
         'static int aa569_prepare(', 'static int aa569_enable(',
         'static int aa569_disable_locked(', 'static int aa569_disable(',
@@ -74,6 +75,10 @@ struct mutex {int held;};
 static void mutex_lock(struct mutex *m) {if(m->held)abort();m->held=1;}
 static void mutex_unlock(struct mutex *m) {if(!m->held)abort();m->held=0;}
 static int verbose,op,fail_op,tx,groups,fail_group,fail_disable_id,warnings;
+static u8 last_packet[3];
+struct backlight_device {void *data;struct {int brightness,power;} props;};
+static void *bl_get_data(struct backlight_device *b) {return b->data;}
+static int backlight_get_brightness(struct backlight_device *b) {return b->props.power?0:b->props.brightness;}
 #define dev_warn(dev,...) do {(void)(dev);warnings++;} while(0)
 #define dev_err(dev,...) do {(void)(dev);} while(0)
 static void msleep(unsigned int ms) {if(verbose)printf("W %u\n",ms);}
@@ -108,6 +113,7 @@ static int mipi_dsi_transfer_batch(struct mipi_dsi_device *d,const struct mipi_d
  if(verbose)printf("B %zu %d\n",n,!!(m[0].flags&MIPI_DSI_MSG_USE_LPM));
  for(size_t j=0;j<n;j++) {
    const u8 *b=m[j].tx_buf;++tx;
+   if(m[j].tx_len==3)memcpy(last_packet,b,3);
    if(m[j].channel!=d->channel || m[j].flags!=m[0].flags || m[j].rx_len || m[j].rx_buf)abort();
    if(m[j].type!=(m[j].tx_len==1?5:m[j].tx_len==2?21:57))abort();
    if(verbose){printf("P %d ",!!(m[j].flags&MIPI_DSI_MSG_USE_LPM));
@@ -182,6 +188,21 @@ int main(void) {
    CHECK(!first&&!last&&warnings>0&&off(&c)&&!c.prepared&&!c.enabled);
    CHECK(!aa569_unprepare(&c.panel)&&off(&c));
  }
+ /* Binary compatibility blanking must keep the prepared/enabled pipeline,
+  * send only DBV0/1433, and do no transfer after panel power down. */
+ fresh(&c);struct backlight_device backlight={.data=&c,.props={.brightness=1}};
+ CHECK(!aa569_backlight_update_status(&backlight)&&tx==0);
+ CHECK(!aa569_prepare(&c.panel)&&!aa569_enable(&c.panel));
+ backlight.props.power=4;CHECK(!aa569_backlight_update_status(&backlight));
+ CHECK(last_packet[0]==0x51&&last_packet[1]==0&&last_packet[2]==0&&c.enabled&&c.prepared);
+ backlight.props.power=0;CHECK(!aa569_backlight_update_status(&backlight));
+ CHECK(last_packet[0]==0x51&&last_packet[1]==5&&last_packet[2]==0x99);
+ int before=tx;backlight.props.brightness=2;
+ CHECK(aa569_backlight_update_status(&backlight)==-EINVAL&&tx==before);
+ backlight.props.brightness=1;fail_group=groups+1;
+ CHECK(aa569_backlight_update_status(&backlight)==-EIO&&c.enabled&&c.prepared&&!c.lock.held);
+ fail_group=0;CHECK(!aa569_unprepare(&c.panel)&&off(&c));before=tx;
+ CHECK(!aa569_backlight_update_status(&backlight)&&tx==before);
  puts("OK real AA569 callbacks and fault recovery; no hardware I/O");return 0;
 }
 '''

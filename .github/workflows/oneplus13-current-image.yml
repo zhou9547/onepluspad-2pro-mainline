@@ -2,6 +2,11 @@ name: OnePlus 13 current image from source
 on:
   workflow_dispatch:
     inputs:
+      desktop_profile:
+        description: Full desktop or lightweight diagnostic desktop with MSM Resources
+        type: choice
+        options: [full, diagnostic]
+        default: diagnostic
       use_server:
         description: Use the owner's trusted ARM64 server for kernel, Mesa and SSC
         type: boolean
@@ -20,6 +25,7 @@ jobs:
   source:
     uses: ./.github/workflows/oneplus13-source-image.yml
     with:
+      desktop_profile: ${{ inputs.desktop_profile }}
       use_server: ${{ inputs.use_server }}
       all_on_server: ${{ inputs.all_on_server }}
       runtime_qemu: ${{ inputs.runtime_qemu }}

@@ -5,6 +5,7 @@
  * Only the isolated experimental native DTB enables this component.
  * Author: Codex. No hardware Tested-by claim.
  */
+#include <linux/backlight.h>
 #include <linux/delay.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
@@ -27,6 +28,7 @@ struct aa569 {
 	struct gpio_desc *reset, *vddr;
 	struct mutex lock;
 	struct drm_dsc_config dsc;
+	struct backlight_device *backlight;
 	bool vddio_on, vci_on, vddr_on, prepared, enabled, off_sent;
 };
 
@@ -80,6 +82,40 @@ static int aa569_send(struct aa569 *ctx, const struct aa569_cmd *cmd,
 	kfree(msgs);
 	return ret;
 }
+
+/* Compatibility blanking leaves KMS/SPR running: only DBV0 or the already
+ * qualified normal starting DBV1433. No low-DBV range, HBM or new calibration.
+ */
+static int aa569_backlight_update_status(struct backlight_device *backlight)
+{
+	struct aa569 *ctx = bl_get_data(backlight);
+	int level = backlight_get_brightness(backlight);
+	u8 bytes[] = { 0x51, 0, 0 };
+	const struct aa569_cmd cmd = {
+		.length = sizeof(bytes), .type = MIPI_DSI_DCS_LONG_WRITE,
+	};
+	int ret = 0;
+
+	if (level < 0 || level > 1)
+		return -EINVAL;
+	if (level) {
+		bytes[1] = 0x05;
+		bytes[2] = 0x99;
+	}
+	mutex_lock(&ctx->lock);
+	/* DRM can update a disabled backlight during teardown; remember props
+	 * without sending a DCS transaction through a powered-down DSI host.
+	 */
+	if (ctx->enabled && ctx->prepared && ctx->vddio_on &&
+	    ctx->vci_on && ctx->vddr_on)
+		ret = aa569_send(ctx, &cmd, bytes, 1, false);
+	mutex_unlock(&ctx->lock);
+	return ret;
+}
+
+static const struct backlight_ops aa569_backlight_ops = {
+	.update_status = aa569_backlight_update_status,
+};
 
 static int aa569_power_off(struct aa569 *ctx)
 {
@@ -323,6 +359,9 @@ static int aa569_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
 	struct aa569 *ctx;
+	const struct backlight_properties props = {
+		.type = BACKLIGHT_RAW, .max_brightness = 1, .brightness = 1,
+	};
 	int ret;
 
 	ctx = devm_drm_panel_alloc(dev, struct aa569, panel, &aa569_funcs,
@@ -370,6 +409,11 @@ static int aa569_probe(struct mipi_dsi_device *dsi)
 	dsi->mode_flags = MIPI_DSI_MODE_NO_EOT_PACKET | MIPI_DSI_CLOCK_NON_CONTINUOUS;
 	dsi->hs_rate = 1363200000;
 	mipi_dsi_set_drvdata(dsi, ctx);
+	ctx->backlight = devm_backlight_device_register(dev, "oneplus13-aa569",
+				dev, ctx, &aa569_backlight_ops, &props);
+	if (IS_ERR(ctx->backlight))
+		return dev_err_probe(dev, PTR_ERR(ctx->backlight), "AA569 blank control\n");
+	ctx->panel.backlight = ctx->backlight;
 	drm_panel_add(&ctx->panel);
 	ret = mipi_dsi_attach(dsi);
 	if (ret)

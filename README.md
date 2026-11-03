@@ -1,3 +1,10 @@
+# OnePlus 13 offline diagnostic candidate
+
+This development branch adds lightweight wake/stereo/MSM Resources candidates.
+No phone is available: changes are under offline review/build and are not
+hardware qualified. Read [the candidate notes](docs/oneplus13/OFFLINE-WAKE-STEREO-GPU-20261103.md).
+The accepted r272 milestone below refers to its fixed tag, not this changed tree.
+
 # OnePlus 13 full Ubuntu — r272 milestone
 
 This branch preserves the verified OnePlus 13 RAM desktop milestone. Read the [Chinese build and temporary-boot guide](ONEPLUS13-MILESTONE.zh-CN.md), [acceptance record](docs/oneplus13/FULL-UBUNTU-R272-ACCEPTANCE-20261103.md), and [machine-readable snapshot](docs/oneplus13/MILESTONE-R272-20261103.json). Build the paired boot/rootfs from Actions; the host must serve rootfs over USB. No persistent installation is provided.

@@ -15,7 +15,7 @@ case "${1:-}" in
     python3 tools/oneplus13/verify.py --artifacts out/oneplus13 "${qemu_args[@]}"
     ;;
   rootfs)
-    sudo bash tools/oneplus13/rootfs.sh
+    sudo env ONEPLUS13_DESKTOP_PROFILE="${ONEPLUS13_DESKTOP_PROFILE:-full}" bash tools/oneplus13/rootfs.sh
     sudo python3 tools/oneplus13/verify-rootfs.py out/oneplus13-rootfs-artifacts --report out/oneplus13-rootfs-artifacts/download-verification.json
     ;;
   mesa)

@@ -157,6 +157,9 @@ def disable(card):
     same_bus=bus.exists() and (not SESSION.exists() or
         SESSION.read_text().strip()==str(bus.stat().st_ino))
     try:
+        if same_bus and Path('/usr/lib/systemd/user/oneplus13-stereo-filter.service').exists():
+            run(['systemctl','--user','stop','oneplus13-stereo-orientation.service',
+                 'oneplus13-stereo-filter.service'],15,user=True)
         if MODULE.exists():
             module=MODULE.read_text().strip()
             if not re.fullmatch(r'[0-9]{1,8}',module):raise ValueError('Unknown desktop audio module')
@@ -180,6 +183,40 @@ def disable(card):
         try:mixer(card,name,value)
         except Exception as e:errors.append(str(e))
     if errors:raise ValueError('Desktop audio cleanup failed: '+'; '.join(errors))
+
+def stereo_sink(native):
+    """Move the real speaker streams behind a unity permutation, muted first.
+
+    GNOME's volume remains50% on the new sink, with the physical sink at unity;
+    amp controls and software ceilings are unchanged. Never reroute Bluetooth
+    or other hardware sinks. Stop cleanup returns the native software cap.
+    """
+    run(['wpctl','set-mute',str(native['id']),'1'],user=True)
+    run(['systemctl','--user','start','oneplus13-stereo-filter.service',
+         'oneplus13-stereo-orientation.service'],15,user=True)
+    end=time.monotonic()+8
+    while True:
+        nodes=[o for o in json.loads(run(['pw-dump'],user=True))
+            if o.get('type')=='PipeWire:Interface:Node'
+            and o.get('info',{}).get('props',{}).get('node.name')=='oneplus13_stereo']
+        if len(nodes)==1:break
+        if time.monotonic()>end:raise ValueError('Phone stereo filter unavailable')
+        time.sleep(.2)
+    sink={'id':nodes[0]['id'],'name':'oneplus13_stereo'}
+    run(['wpctl','set-volume','--limit','1',str(sink['id']),'0.5'],user=True)
+    run(['wpctl','set-mute',str(sink['id']),'0'],user=True)
+    run(['wpctl','set-default',str(sink['id'])],user=True)
+    run(['pactl','set-default-sink',sink['name']],user=True)
+    pulse=[o for o in json.loads(run(['pactl','--format=json','list','sinks'],user=True))
+        if o.get('name')==native['name']]
+    if len(pulse)!=1:raise ValueError('Unique native Pulse sink required')
+    for stream in json.loads(run(['pactl','--format=json','list','sink-inputs'],user=True)):
+        if stream.get('sink')==pulse[0]['index']:
+            run(['pactl','move-sink-input',str(stream['index']),sink['name']],user=True)
+    run(['wpctl','set-volume','--limit','1',str(native['id']),'1'],user=True)
+    run(['wpctl','set-mute',str(native['id']),'0'],user=True)
+    return sink
+
 
 def enable(card):
     for folder,keys in [('microphone-check',('bounded_nonzero_capture_pass','controls_restored','raw_audio_deleted')),
@@ -211,9 +248,11 @@ def enable(card):
             raise ValueError('Unique desktop speaker sink did not appear')
         time.sleep(.3)
     sink=sinks[0]
+    if Path('/usr/lib/systemd/user/oneplus13-stereo-filter.service').exists():
+        sink=stereo_sink(sink)
     run(['wpctl','set-default',str(sink['id'])],user=True)
     try:
-        run(['pactl','set-default-sink','oneplus13_speakers'],user=True)
+        run(['pactl','set-default-sink',sink['name']],user=True)
     except ValueError:
         pass
     run(['wpctl','set-volume','--limit','1',str(sink['id']),'0.5'],user=True)

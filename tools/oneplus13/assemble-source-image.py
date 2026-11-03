@@ -105,7 +105,8 @@ def main():
         'base_rootfs_sha256':sha256(base/'rootfs.squashfs'),'kernel_sha256':sha256(kernel/'Image'),
         'modules_sha256':sha256(kernel/'modules.tar.gz'),'mesa_sha256':sha256(deb),
         'old_actions_artifacts_used':False,'private_inputs_in_public_image':False,'hardware_tested':False,
-        'runtime_deadline_seconds':300,'features':['GNOME','settings','screen keyboard','Adreno830v1 Mesa','touch driver','WiFi userspace and driver','Bluetooth OBEX','battery'],
+        'runtime_deadline_seconds':300,'desktop_profile':json.loads((base/'manifest.json').read_text()).get('desktop_profile','full'),
+        'features':['GNOME','settings','screen keyboard','Adreno830v1 Mesa','touch driver','WiFi userspace and driver','Bluetooth OBEX','battery','MSM Resources','compatibility blank and stereo candidates'],
         'checks':checks,'radio_activation':'explicit local RAM bring-up only',
         'private_local_inputs_required':['phone signed ADSP and graphics firmware','existing qualified radio firmware','display profile','ABL memory calibration']}
     (out/'manifest.json').write_text(json.dumps(value,indent=2)+'\n')

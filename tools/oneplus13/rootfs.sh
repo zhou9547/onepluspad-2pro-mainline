@@ -9,9 +9,16 @@ root="$repo/out/oneplus13-rootfs-stage"
 dest="$repo/out/oneplus13-rootfs-artifacts"
 mkdir -p "$root" "$dest" "$repo/cache"
 [[ ! -e $root/etc/os-release ]] || { echo 'Use a fresh staging directory' >&2; exit 1; }
+profile=${ONEPLUS13_DESKTOP_PROFILE:-full}
+case "$profile" in
+  full) profile_file=devices/oneplus13/ubuntu.json ;;
+  diagnostic) profile_file=devices/oneplus13/ubuntu-diagnostic.json ;;
+  *) echo 'Unknown desktop profile' >&2; exit 2 ;;
+esac
+export ONEPLUS13_PROFILE_FILE="$profile_file"
 readarray -t pin < <(python3 - <<'PY'
-import json
-s=json.load(open('devices/oneplus13/ubuntu.json'))
+import json,os
+s=json.load(open(os.environ['ONEPLUS13_PROFILE_FILE']))
 print(s['base_url']); print(s['base_sha256']); print(s['apt_uri'])
 print(' '.join(s['packages']))
 PY
@@ -63,18 +70,20 @@ chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -o APT::Updat
 # Read the exact package set from the locked JSON. Package versions are fixed by
 # the signed Ubuntu snapshot and recorded in the delivered manifest.
 read -r -a packages <<< "${pin[3]}"
+recommend_args=(--install-recommends)
+if [[ $profile == diagnostic ]]; then recommend_args=(--no-install-recommends); fi
 # Resolve the standard Ubuntu Desktop metapackage and its recommended apps from
 # the validated snapshot, then fetch packages in bounded batches. Cached bytes
 # are accepted only against this plan's size and SHA256.
 chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
   apt-get -o Acquire::ForceHash=SHA256 --print-uris --download-only \
-  install -y --install-recommends "${packages[@]}" > "$dest/apt-package-plan.txt"
+  install -y "${recommend_args[@]}" "${packages[@]}" > "$dest/apt-package-plan.txt"
 python3 tools/oneplus13/prefetch-rootfs-debs.py \
   --plan "$dest/apt-package-plan.txt" --apt-uri "${pin[2]}" \
   --cache "$repo/cache/oneplus13-rootfs-debs" \
   --archives "$root/var/cache/apt/archives" --report "$dest/deb-prefetch.json"
 time chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
-  apt-get install --no-download -y --install-recommends "${packages[@]}"
+  apt-get install --no-download -y "${recommend_args[@]}" "${packages[@]}"
 chroot "$root" locale-gen en_US.UTF-8 zh_CN.UTF-8
 test -f "$root/usr/share/zoneinfo/Asia/Shanghai"
 ln -sfn /usr/share/zoneinfo/Asia/Shanghai "$root/etc/localtime"
@@ -168,6 +177,12 @@ if [[ -n ${ONEPLUS13_STOCK_FIRMWARE:-} ]]; then
   desktop_args+=(--firmware "$ONEPLUS13_STOCK_FIRMWARE")
 fi
 python3 tools/oneplus13/install-desktop.py "${desktop_args[@]}"
+resource_debs=("$repo"/out/oneplus13-resources/resources_*_arm64.deb)
+[[ ${#resource_debs[@]} == 1 && -f ${resource_debs[0]} ]] || { echo 'Matching Resources artifact required' >&2; exit 1; }
+cp "${resource_debs[0]}" "$root/tmp/oneplus13-resources.deb"
+chroot "$root" apt-get install -y --no-download /tmp/oneplus13-resources.deb
+rm "$root/tmp/oneplus13-resources.deb"
+python3 tools/oneplus13/install-user-diagnostics.py "$root"
 glib-compile-schemas --strict "$root/usr/share/glib-2.0/schemas"
 test "$(chroot "$root" env GSETTINGS_BACKEND=memory gsettings get org.gnome.desktop.a11y.applications screen-keyboard-enabled)" = true
 test "$(chroot "$root" env GSETTINGS_BACKEND=memory gsettings get org.gnome.desktop.interface toolkit-accessibility)" = true
@@ -184,10 +199,14 @@ chroot "$root" /usr/bin/env bash -n /etc/profile
 chroot "$root" dpkg-query -W systemd-resolved > /dev/null
 chroot "$root" locale -a | grep -qx 'zh_CN.utf8'
 test -x "$root/usr/sbin/sshd"
-test -x "$root/usr/bin/docker"
-test -x "$root/usr/bin/dockerd"
-test -x "$root/usr/sbin/iptables-nft"
-test -x "$root/usr/sbin/iptables-legacy"
+if [[ $profile == full ]]; then
+  test -x "$root/usr/bin/docker"
+  test -x "$root/usr/bin/dockerd"
+  test -x "$root/usr/sbin/iptables-nft"
+  test -x "$root/usr/sbin/iptables-legacy"
+fi
+test -x "$root/usr/bin/resources"
+test -x "$root/usr/bin/gnome-system-monitor"
 grep -qx 'PermitRootLogin no' "$root/etc/ssh/sshd_config.d/60-oneplus13.conf"
 ! grep -q '^AllowUsers ' "$root/etc/ssh/sshd_config.d/60-oneplus13.conf"
 if awk -F: '$3 >= 1000 && $3 < 60000 { found=1 } END { exit found ? 0 : 1 }' "$root/etc/passwd"; then
@@ -232,7 +251,7 @@ time mksquashfs "$root" "$dest/rootfs.squashfs" -noappend -comp zstd \
   -processors "$(nproc)" -mkfs-time "$epoch" -all-time "$epoch" -no-progress
 unsquashfs -s "$dest/rootfs.squashfs" > "$dest/squashfs-info.txt"
 unsquashfs -cat "$dest/rootfs.squashfs" etc/os-release > "$dest/os-release"
-cp devices/oneplus13/ubuntu.json "$dest/ubuntu-source.json"
+cp "$profile_file" "$dest/ubuntu-source.json"
 cp docs/oneplus13/README.md "$dest/README.md"
 test -z "$(unsquashfs -cat "$dest/rootfs.squashfs" etc/machine-id)"
 unsquashfs -cat "$dest/rootfs.squashfs" etc/shadow | \
@@ -243,6 +262,7 @@ out=pathlib.Path(sys.argv[1])
 sha=lambda p:hashlib.file_digest(p.open('rb'),'sha256').hexdigest()
 result={'status':'OFFLINE_ROOTFS_BUILD_NOT_DEVICE_TESTED','hardware_tested':False,
  'integration_commit':subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+ 'desktop_profile':json.loads((out/'ubuntu-source.json').read_text())['desktop_profile'],
  'user_account':'No precreated user or autologin; GDM launches GNOME Initial Setup to create the first user',
  'kernel_modules':'Delivered separately with the matching kernel artifact',
  'files':{p.name:{'sha256':sha(p),'size':p.stat().st_size} for p in sorted(out.iterdir()) if p.is_file()}}

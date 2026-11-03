@@ -43,11 +43,14 @@ def main():
         packages[package.split(':')[0]] = version
     # Require Ubuntu's full desktop metapackage alongside the device additions.
     repo=Path(__file__).resolve().parents[2]
-    package_seed=json.loads((repo/'devices/oneplus13/ubuntu.json').read_text())['packages']
+    profile=manifest.get('desktop_profile','full')
+    if profile not in ('full','diagnostic'):raise SystemExit('Unknown rootfs profile')
+    seed=repo/('devices/oneplus13/ubuntu-diagnostic.json' if profile=='diagnostic' else 'devices/oneplus13/ubuntu.json')
+    package_seed=json.loads(seed.read_text())['packages']
     for package in package_seed:
         if package not in packages:
             raise SystemExit(f'Missing required desktop package: {package}')
-    for package in ['ubuntu-desktop','ubuntu-desktop-minimal','gnome-initial-setup']:
+    for package in (['ubuntu-desktop','ubuntu-desktop-minimal'] if profile=='full' else [])+['gnome-initial-setup','resources','gnome-system-monitor']:
         if package not in packages:
             raise SystemExit(f'Missing standard Ubuntu desktop package: {package}')
     image = out / 'rootfs.squashfs'
@@ -72,8 +75,10 @@ def main():
     if any(line.startswith(('GTK_IM_MODULE=','QT_IM_MODULE=','XMODIFIERS=')) for line in environment):
         raise SystemExit('A global IM override bypasses the native Wayland input path')
     mobile=read('usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override').decode()
-    if '[org.gnome.desktop.session]\nidle-delay=uint32 0\n' not in mobile:
-        raise SystemExit('Bounded RAM display-awake policy missing')
+    if '[org.gnome.desktop.session]\nidle-delay=uint32 300\n' not in mobile:
+        raise SystemExit('Phone compatibility blank policy missing')
+    if 'power-button-action=\'nothing\'' not in mobile or 'sleep-inactive-battery-type=\'nothing\'' not in mobile:
+        raise SystemExit('Unqualified system suspend must remain disabled')
     if '[org.gnome.desktop.a11y.applications]\nscreen-keyboard-enabled=true\n' not in mobile:
         raise SystemExit('Mobile first-user screen keyboard default missing')
     if '[org.gnome.desktop.interface]\ntoolkit-accessibility=true\n' not in mobile:
@@ -91,10 +96,16 @@ def main():
         raise SystemExit('Phone first-user timezone policy missing or other setup pages suppressed')
     if read('etc/timezone').strip() != b'Asia/Shanghai':
         raise SystemExit('Preconfigured first-user timezone differs')
-    for name in ['usr/bin/gnome-shell', 'usr/sbin/gdm3', 'usr/sbin/NetworkManager',
+    binaries=['usr/bin/gnome-shell', 'usr/sbin/gdm3', 'usr/sbin/NetworkManager',
                  'usr/sbin/wpa_supplicant','usr/sbin/iw','usr/bin/bluetoothctl',
                  'usr/bin/bluetooth-sendto','usr/libexec/bluetooth/obexd',
-                 'usr/bin/epiphany','usr/bin/gnome-software']:
+                 'usr/bin/resources','usr/bin/gnome-system-monitor']
+    if profile=='full':binaries+=['usr/bin/epiphany','usr/bin/gnome-software']
+    if profile=='diagnostic' and 'ubuntu-desktop' in packages:
+        raise SystemExit('Diagnostic profile unexpectedly contains full desktop metapackage')
+    if packages['resources']!='1.10.2-0ubuntu3.1+op13.1':
+        raise SystemExit('MSM-aware Resources build missing')
+    for name in binaries:
         binary = read(name)
         if binary[:5] != b'\x7fELF\x02' or struct.unpack_from('<H', binary, 18)[0] != 183:
             raise SystemExit(f'Wrong executable architecture: {name}')
@@ -112,7 +123,7 @@ def main():
         'integration_commit': manifest['integration_commit'],
         'rootfs_sha256': digest(image), 'rootfs_bytes': image.stat().st_size,
         'gnome': (out / 'gnome-version.txt').read_text().strip(),
-        'packages': len(packages), 'hardware_tested': False,
+        'packages': len(packages), 'desktop_profile':profile,'hardware_tested': False,
         'checks': ['all downloaded SHA256SUMS', 'manifest sizes/hashes', 'all package architectures',
                    'full Ubuntu Desktop metapackages and required runtime packages',
                    'locked root, no precreated desktop user, enabled GDM first-user setup, and empty machine-id',

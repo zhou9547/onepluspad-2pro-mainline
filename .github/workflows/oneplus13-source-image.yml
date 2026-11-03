@@ -6,6 +6,11 @@ on:
         description: Run all jobs on the trusted ARM64 server
         type: boolean
         default: false
+      desktop_profile:
+        description: Full desktop or lightweight diagnostic desktop with MSM Resources
+        type: choice
+        options: [full, diagnostic]
+        default: diagnostic
       use_server:
         description: Use the owner's trusted ARM64 component runners (requires oneplus13-arm64 label)
         type: boolean
@@ -16,6 +21,9 @@ on:
         default: false
   workflow_call:
     inputs:
+      desktop_profile:
+        type: string
+        default: full
       all_on_server:
         type: boolean
         default: false
@@ -79,7 +87,25 @@ jobs:
           path: out/oneplus13/
           if-no-files-found: error
           retention-days: 14
+  resources:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y curl ca-certificates patch
+      - run: sudo bash tools/oneplus13/build-resources.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: oneplus13-resources-${{ github.sha }}
+          path: out/oneplus13-resources/
+          if-no-files-found: error
+          retention-days: 14
   rootfs:
+    needs: [resources]
+    env:
+      ONEPLUS13_DESKTOP_PROFILE: ${{ inputs.desktop_profile }}
     runs-on: ${{ inputs.all_on_server && fromJSON('["self-hosted", "Linux", "ARM64", "oneplus13-arm64"]') || fromJSON('["ubuntu-24.04-arm"]') }}
     timeout-minutes: 100
     steps:
@@ -95,6 +121,10 @@ jobs:
           restore-keys: |
             oneplus13-gnome-debs-v1-${{ runner.arch }}-${{ hashFiles('devices/oneplus13/ubuntu.json') }}-
             oneplus13-gnome-debs-v1-${{ runner.arch }}-
+      - uses: actions/download-artifact@v4
+        with:
+          name: oneplus13-resources-${{ github.sha }}
+          path: out/oneplus13-resources/
       - run: bash tools/oneplus13/source-image.sh rootfs
       # Keep completed downloads even if the snapshot transport later fails.
       - uses: actions/cache/save@v4

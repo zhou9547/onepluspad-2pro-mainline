@@ -390,6 +390,11 @@ def main():
         'ssc_sensor_property_types_corrected':True,
         'experimental_audio_files':audio_hashes,'audio_auto_started':False,
         'audio_hardware_qualified':False,'audio_base_dtb_sha256':audio.BASE_SHA}
+    diagnostics=json.loads((stage/'usr/lib/oneplus13-desktop/diagnostic-runtime.json').read_text())
+    result.update(desktop_profile=rm.get('desktop_profile','full'),
+                  diagnostic_runtime_files=diagnostics['files'],
+                  diagnostic_runtime_hardware_qualified=False,
+                  diagnostic_runtime_manifest_sha256=sha256(stage/'usr/lib/oneplus13-desktop/diagnostic-runtime.json'))
     result.update(camera_probe_runtime_files=camera_hashes,camera_probe_auto_started=False,camera_capture_qualified=False)
     result.update(wifi_runtime_files=wifi_runtime_hashes,
                   wifi_runtime_requires_host_overlay=False,

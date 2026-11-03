@@ -4,17 +4,22 @@ screen-keyboard-enabled=true
 [org.gnome.desktop.interface]
 toolkit-accessibility=true
 
-# This is the bounded RAM validation profile. Automatic DPMS off currently
-# leaves the physical panel black after wake; keep the display awake until
-# the phone's blank/unblank path is qualified. Manual lock is unchanged.
+# Phone candidate uses the AA569 backlight compatibility backend. This is
+# blank/lock restoration, not qualification of native DPMS or system suspend.
 [org.gnome.desktop.session]
-idle-delay=uint32 0
+idle-delay=uint32 300
+
+[org.gnome.settings-daemon.plugins.power]
+idle-dim=false
+power-button-action='nothing'
+sleep-inactive-ac-type='nothing'
+sleep-inactive-battery-type='nothing'
 
 [org.gnome.shell]
-favorite-apps=['org.gnome.Epiphany.desktop', 'org.gnome.Nautilus.desktop', 'libreoffice-writer.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Software.desktop']
+favorite-apps=['org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Settings.desktop', 'net.nokyan.Resources.desktop']
 
 [org.gnome.shell:ubuntu]
-favorite-apps=['org.gnome.Epiphany.desktop', 'org.gnome.Nautilus.desktop', 'libreoffice-writer.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Software.desktop']
+favorite-apps=['org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Settings.desktop', 'net.nokyan.Resources.desktop']
 
 [org.gnome.shell.extensions.dash-to-dock]
 dock-fixed=true
