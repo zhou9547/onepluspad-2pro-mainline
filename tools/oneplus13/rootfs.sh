@@ -131,8 +131,10 @@ chroot "$root" passwd -l root
 # Supply the real engine and both firewall frontends, but do not create a
 # docker0 bridge or modify the phone's forwarding policy during qualification.
 # The owner can start docker.service explicitly in the RAM desktop.
-chroot "$root" systemctl disable docker.service docker.socket containerd.service
-install -D -m 0644 devices/oneplus13/docker/daemon.json "$root/etc/docker/daemon.json"
+if [[ $profile == full ]]; then
+  chroot "$root" systemctl disable docker.service docker.socket containerd.service
+  install -D -m 0644 devices/oneplus13/docker/daemon.json "$root/etc/docker/daemon.json"
+fi
 mkdir -p "$root/etc/ssh/sshd_config.d"
 cat > "$root/etc/ssh/sshd_config.d/60-oneplus13.conf" <<'EOF'
 PasswordAuthentication yes
@@ -169,7 +171,7 @@ install -Dm0644 devices/oneplus13/rmtfs-uio.rules "$root/etc/udev/rules.d/90-one
 install -Dm0644 devices/oneplus13/rmtfs-wait.conf \
   "$root/etc/systemd/system/rmtfs.service.d/50-oneplus13-wait.conf"
 rm -f "$root"/etc/ssh/ssh_host_*
-desktop_args=("$root")
+desktop_args=("$root" --profile "$profile")
 if [[ -n ${ONEPLUS13_KERNEL_ARTIFACT:-} ]]; then
   desktop_args+=(--kernel "$ONEPLUS13_KERNEL_ARTIFACT")
 fi
@@ -179,6 +181,16 @@ fi
 python3 tools/oneplus13/install-desktop.py "${desktop_args[@]}"
 resource_debs=("$repo"/out/oneplus13-resources/resources_*_arm64.deb)
 [[ ${#resource_debs[@]} == 1 && -f ${resource_debs[0]} ]] || { echo 'Matching Resources artifact required' >&2; exit 1; }
+python3 - "$repo" <<'PY'
+import hashlib,json,pathlib,subprocess,sys
+repo=pathlib.Path(sys.argv[1]);out=repo/'out/oneplus13-resources'
+m=json.loads((out/'manifest.json').read_text())
+assert m['source_commit']==subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+assert m['hardware_tested'] is False and m['corresponding_source_included'] is True
+for name,digest in m['files'].items():
+ assert pathlib.Path(name).name==name
+ assert hashlib.file_digest((out/name).open('rb'),'sha256').hexdigest()==digest
+PY
 cp "${resource_debs[0]}" "$root/tmp/oneplus13-resources.deb"
 chroot "$root" apt-get install -y --no-download /tmp/oneplus13-resources.deb
 rm "$root/tmp/oneplus13-resources.deb"
@@ -192,7 +204,10 @@ chroot "$root" /usr/bin/systemd-analyze verify \
   oneplus13-ram-dhcp.service oneplus13-ram-http.service \
   oneplus13-ram-shell.service oneplus13-ram-serial.service oneplus13-firstboot-hardware.service \
   ssh.service oneplus13-ssh-host-keys.service rmtfs.service tqftpserv.service
+chroot "$root" /usr/bin/systemd-analyze verify \
+  oneplus13-display-power.socket oneplus13-display-power.service oneplus13-power-key@event0.service
 udevadm verify "$root/usr/lib/udev/rules.d/10-oneplus13-ram-storage.rules"
+udevadm verify "$root/usr/lib/udev/rules.d/82-oneplus13-power-key.rules"
 chroot "$root" dpkg-query -W -f='${Package}\t${Version}\t${Architecture}\n' > "$dest/packages.tsv"
 chroot "$root" /usr/bin/gnome-shell --version > "$dest/gnome-version.txt"
 chroot "$root" /usr/bin/env bash -n /etc/profile

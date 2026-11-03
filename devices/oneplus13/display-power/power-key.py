@@ -1,14 +1,12 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0-only
-"""Route the phone's physical power key to GNOME lock, suspend and wake.
+"""Route the phone's physical power key to GNOME lock, blank and visible wake.
 
 Only the selected input device is grabbed. Authentication remains with GNOME;
 waking never calls ScreenSaver.SetActive(false), including in the greeter.
 
-The display is switched through the backlight service by default (compat).
-When oneplus13-display-power-mode has selected the standard path, it is switched
-through Mutter's PowerSaveMode instead, the property GNOME Settings Daemon
-itself sets when the screen blanks.
+This phone candidate uses the binary backlight service only. Native Mutter
+DPMS and system suspend remain disabled pending separate physical acceptance.
 """
 import argparse
 import fcntl
@@ -95,16 +93,6 @@ def call_session(info, dest, path, method, *args):
 def screensaver(info, method, *args):
     return call_session(info, 'org.gnome.ScreenSaver', '/org/gnome/ScreenSaver',
                         f'org.gnome.ScreenSaver.{method}', *args)
-
-
-# Written by oneplus13-display-power-mode; read at every press, so a switch needs
-# no restart of this service.
-MODE_MARKERS = (Path('/run/oneplus13/display-power-mode'), Path('/etc/oneplus13/display-power-mode'))
-
-# Suspend by default; "blank" opts out to lock-and-blank only. Read at every
-# press, with the first valid value taking precedence (/run before /etc).
-# "suspend" remains supported for explicit selection of the default action.
-SUSPEND_MARKERS = (Path('/run/oneplus13/power-key-action'), Path('/etc/oneplus13/power-key-action'))
 
 
 def suspend_requested():

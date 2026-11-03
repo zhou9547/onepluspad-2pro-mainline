@@ -10,8 +10,7 @@ import subprocess
 import sys
 
 BACKLIGHT_CLASS = Path('/sys/class/backlight')
-# The kernel combines the LED strings of both KTZ8868 chips into one
-# led-backlight device, which the panel itself switches on and off.
+# The phone OLED panel exposes only its bounded DBV0/1433 binary blank control.
 PANEL_BACKLIGHT = 'oneplus,dodge-aa569'
 
 

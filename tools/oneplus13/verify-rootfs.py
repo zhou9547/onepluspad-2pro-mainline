@@ -88,8 +88,12 @@ def main():
         if 'Environment=GIS_SMALL_SCREEN=1' not in read(
                 'usr/lib/systemd/user/'+name+'.service.d/60-oneplus13-small-screen.conf').decode():
             raise SystemExit('Initial Setup small-screen layout missing')
-    if 'x-scheme-handler/https=org.gnome.Epiphany.desktop' not in read('etc/xdg/mimeapps.list').decode():
-        raise SystemExit('Usable browser default missing')
+    defaults=read('etc/xdg/mimeapps.list').decode()
+    if profile=='full' and 'x-scheme-handler/https=org.gnome.Epiphany.desktop' not in defaults:
+        raise SystemExit('Usable full-profile browser default missing')
+    if profile=='diagnostic' and ('org.gnome.Epiphany.desktop' in defaults or
+            'text/plain=org.gnome.TextEditor.desktop' not in defaults):
+        raise SystemExit('Diagnostic profile advertises a removed application')
     import configparser
     vendor=configparser.ConfigParser();vendor.read_string(read('etc/gnome-initial-setup/vendor.conf').decode())
     if vendor.get('pages','skip',fallback='') != 'timezone':

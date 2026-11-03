@@ -20,7 +20,7 @@ git am /path/to/xiaomipad-8pro-mainline/apps/resources/patches/*.patch
 Build with Resources' upstream Meson/Cargo instructions and your distribution's
 build dependencies, then package with that distribution's normal tooling.
 Ubuntu's older source package needs the context/API adaptations described in
-[the Ubuntu recipe](../../ubuntu/resources/README.zh-CN.md).
+[the Ubuntu recipe](../ubuntu/README.zh-CN.md).
 
 Patches are GPL-3.0-or-later, like Resources; see [COPYING](COPYING).
 Remove each patch once the selected upstream version includes equivalent

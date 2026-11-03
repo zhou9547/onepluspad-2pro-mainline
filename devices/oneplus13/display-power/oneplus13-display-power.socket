@@ -2,7 +2,7 @@
 [Unit]
 ConditionKernelCommandLine=oneplus13.desktop=1
 ConditionPathExists=/run/oneplus13/ram-session
-Description=Tablet backlight power requests
+Description=OnePlus 13 binary panel power requests
 
 [Socket]
 ListenStream=/run/oneplus13-display-power/control

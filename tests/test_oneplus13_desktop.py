@@ -23,6 +23,25 @@ spec.loader.exec_module(installer)
 
 
 class DesktopTests(unittest.TestCase):
+    def test_profile_mime_defaults_only_advertise_included_applications(self):
+        out=TOOLS.parents[1]/'out';out.mkdir(exist_ok=True)
+        for profile in ['full','diagnostic']:
+            with tempfile.TemporaryDirectory(dir=out) as temporary:
+                root=Path(temporary).resolve();(root/'etc').mkdir()
+                (root/'etc/os-release').write_text('ID=ubuntu\n')
+                with patch.object(Path,'symlink_to'):installer.install(root,profile=profile)
+                defaults=(root/'etc/xdg/mimeapps.list').read_text()
+                seed='ubuntu.json' if profile=='full' else 'ubuntu-diagnostic.json'
+                packages=json.loads((TOOLS.parents[1]/'devices/oneplus13'/seed).read_text())['packages']
+                if profile=='full':
+                    self.assertIn('epiphany-browser',packages)
+                    self.assertIn('x-scheme-handler/https=org.gnome.Epiphany.desktop',defaults)
+                else:
+                    self.assertIn('gnome-text-editor',packages)
+                    self.assertIn('text/plain=org.gnome.TextEditor.desktop',defaults)
+                    self.assertNotIn('Epiphany',defaults)
+        with self.assertRaises(ValueError):installer.mime_defaults('unknown')
+
     def test_firstboot_service_orders_native_activation_before_initial_setup(self):
         out=TOOLS.parents[1]/'out';out.mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=out) as temporary:

@@ -13,9 +13,20 @@ CONDITION = ('ConditionKernelCommandLine=oneplus13.desktop=1\n'
              'ConditionPathExists=/run/oneplus13/ram-session\n')
 
 
-def install(root, kernel=None, firmware=None):
+def mime_defaults(profile):
+    if profile=='full':
+        return ('[Default Applications]\nx-scheme-handler/http=org.gnome.Epiphany.desktop\n'
+                'x-scheme-handler/https=org.gnome.Epiphany.desktop\ntext/html=org.gnome.Epiphany.desktop\n')
+    if profile=='diagnostic':
+        return '[Default Applications]\ntext/plain=org.gnome.TextEditor.desktop\n'
+    raise ValueError('Unknown desktop profile')
+
+
+def install(root, kernel=None, firmware=None, profile='full'):
     if not root.is_relative_to((REPO/'out').resolve()) or not (root/'etc/os-release').is_file():
         raise ValueError('Expected a fresh phone rootfs staging tree under repository out/')
+
+    defaults=mime_defaults(profile)
 
     def write(name, data, mode=0o644):
         path = root/name
@@ -54,10 +65,8 @@ def install(root, kernel=None, firmware=None):
                  'gnome-initial-setup-upgrade-login']:
         write('usr/lib/systemd/user/'+name+'.service.d/60-oneplus13-small-screen.conf',
               (REPO/'devices/oneplus13/desktop/60-oneplus13-small-screen.conf').read_text())
-    # A real deb browser and software manager work before any Snap seeding.
-    write('etc/xdg/mimeapps.list',
-          '[Default Applications]\nx-scheme-handler/http=org.gnome.Epiphany.desktop\n'
-          'x-scheme-handler/https=org.gnome.Epiphany.desktop\ntext/html=org.gnome.Epiphany.desktop\n')
+    # Do not advertise a removed browser in the lightweight diagnostic profile.
+    write('etc/xdg/mimeapps.list',defaults)
     write('usr/lib/udev/rules.d/09-oneplus13-ram-readonly.rules',
           (REPO/'devices/oneplus13/desktop/09-oneplus13-ram-readonly.rules').read_text())
     write('usr/lib/oneplus13-desktop/version', '1\n')
@@ -158,6 +167,7 @@ if __name__ == '__main__':
     p.add_argument('root', type=Path)
     p.add_argument('--kernel', type=Path)
     p.add_argument('--firmware', type=Path)
+    p.add_argument('--profile', choices=['full','diagnostic'],default='full')
     a = p.parse_args()
     install(a.root.resolve(), a.kernel.resolve() if a.kernel else None,
-            a.firmware.resolve() if a.firmware else None)
+            a.firmware.resolve() if a.firmware else None,a.profile)

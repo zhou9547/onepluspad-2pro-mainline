@@ -2,11 +2,10 @@
 [Unit]
 ConditionKernelCommandLine=oneplus13.desktop=1
 ConditionPathExists=/run/oneplus13/ram-session
-Description=Tablet power-key display control (%I)
+Description=OnePlus 13 lock and backlight power-key control (%I)
 BindsTo=dev-input-%i.device
 After=dev-input-%i.device systemd-logind.service
-# The backlight service is the compat path; oneplus13-display-power-mode masks it
-# for the standard path, and a masked Wants= does not keep this unit down.
+# Phone compatibility blanking keeps the KMS/SPR link running.
 Wants=oneplus13-display-power.socket
 After=oneplus13-display-power.socket
 JobTimeoutSec=15
