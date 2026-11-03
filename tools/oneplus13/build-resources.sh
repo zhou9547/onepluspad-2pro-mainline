@@ -63,10 +63,11 @@ p=pathlib.Path(sys.argv[1]);p.write_text('''resources (1.10.2-0ubuntu3.1+op13.1)
 PY
 chroot "$root" sh -c 'cd /build/resources && QUILT_PATCHES=debian/patches quilt push -a'
 chroot "$root" apt-get build-dep -y --no-install-recommends /build/resources
+# Capture corresponding patched source before Meson/gettext generate config.rs
+# and resources.pot. Keep dpkg-source's unexpected-change check enabled.
+chroot "$root" sh -c 'cd /build/resources && dpkg-buildpackage -S -us -uc -d'
 # Debian's native Meson/Cargo build and test rules, with vendored crate inputs.
 chroot "$root" sh -c 'cd /build/resources && dpkg-buildpackage -b -us -uc'
-# Ship corresponding patched source as well as the ARM64 binaries.
-chroot "$root" sh -c 'cd /build/resources && dpkg-buildpackage -S -us -uc -d'
 find "$root/build" -maxdepth 1 -type f \( -name '*.deb' -o -name '*.dsc' -o -name '*.tar.*' -o -name '*.buildinfo' -o -name '*.changes' \) -exec cp {} "$out/" \;
 python3 - "$out" <<'PY'
 import hashlib,json,pathlib,subprocess,sys
