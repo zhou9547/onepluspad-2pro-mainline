@@ -109,6 +109,10 @@ def main():
         raise SystemExit('Diagnostic profile unexpectedly contains full desktop metapackage')
     if packages['resources']!='1.10.2-0ubuntu3.1+op13.1':
         raise SystemExit('MSM-aware Resources build missing')
+    if profile=='diagnostic':
+        dock=json.loads(read('usr/share/gnome-shell/extensions/ubuntu-dock@ubuntu.com/metadata.json'))
+        if dock.get('uuid')!='ubuntu-dock@ubuntu.com':
+            raise SystemExit('Ubuntu extension bundle lacks the actual Dock extension')
     for name in binaries:
         binary = read(name)
         if binary[:5] != b'\x7fELF\x02' or struct.unpack_from('<H', binary, 18)[0] != 183:

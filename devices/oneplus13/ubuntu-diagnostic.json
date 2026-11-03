@@ -78,7 +78,7 @@
     "ubuntu-minimal",
     "gnome-settings-daemon",
     "gnome-keyring",
-    "gnome-shell-extension-ubuntu-dock",
+    "gnome-shell-ubuntu-extensions",
     "xdg-user-dirs",
     "gnome-text-editor"
   ],
