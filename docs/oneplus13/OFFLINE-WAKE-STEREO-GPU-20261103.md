@@ -64,6 +64,9 @@ targeting the phone sink move. Default volume stays50% on the filter with
 native software unity and the existing1023 hardware ceiling. Bluetooth/other
 sinks are not moved. Filter stop restores the native50% software cap; ordinary
 audio shutdown still stops the graph and proves actual amplifiers off.
+The RAM user-session filter binds the actual verified native node name, so
+UCM and Pulse fallback names both work. Stop cleanup matches name, node ID
+and object serial before capping volume; it does not act on a reused ID.
 
 ## Actual Resources monitoring, not invented GPU activity
 

@@ -191,6 +191,9 @@ def stereo_sink(native):
     amp controls and software ceilings are unchanged. Never reroute Bluetooth
     or other hardware sinks. Stop cleanup returns the native software cap.
     """
+    # UCM and the Pulse fallback can use different node names. Resolve the
+    # actual verified target in the user session, never a guessed default.
+    run(['/usr/libexec/oneplus13-stereo-session.py','prepare',str(native['id']),native['name']],user=True)
     run(['wpctl','set-mute',str(native['id']),'1'],user=True)
     run(['systemctl','--user','start','oneplus13-stereo-filter.service',
          'oneplus13-stereo-orientation.service'],15,user=True)

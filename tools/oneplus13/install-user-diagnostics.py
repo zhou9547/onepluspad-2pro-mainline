@@ -32,7 +32,8 @@ def install(root):
         files[name]=hashlib.sha256(data).hexdigest()
     for source,name in [('devices/oneplus13/display-power/display-power.py','usr/libexec/oneplus13-display-power.py'),
         ('devices/oneplus13/display-power/power-key.py','usr/libexec/oneplus13-power-key.py'),
-        ('tools/oneplus13/stereo-orientation.py','usr/libexec/oneplus13-stereo-orientation.py')]:
+        ('tools/oneplus13/stereo-orientation.py','usr/libexec/oneplus13-stereo-orientation.py'),
+        ('tools/oneplus13/stereo-session.py','usr/libexec/oneplus13-stereo-session.py')]:
         write(name,(REPO/source).read_bytes(),0o755)
     for name in ['oneplus13-display-power.service','oneplus13-display-power.socket','oneplus13-power-key@.service']:
         write('usr/lib/systemd/system/'+name,(REPO/'devices/oneplus13/display-power'/name).read_bytes())

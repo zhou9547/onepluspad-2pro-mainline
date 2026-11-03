@@ -8,6 +8,7 @@ power=load('phone_blank','devices/oneplus13/display-power/display-power.py')
 key=load('phone_key','devices/oneplus13/display-power/power-key.py')
 stereo=load('phone_stereo','tools/oneplus13/stereo-orientation.py')
 audio=load('phone_audio_route','tools/oneplus13/ram-desktop-audio.py')
+session=load('phone_stereo_session','tools/oneplus13/stereo-session.py')
 
 class BlankTests(unittest.TestCase):
     def light(self,root):
@@ -107,7 +108,8 @@ class StereoTests(unittest.TestCase):
             return ''
         with patch.object(audio,'run',side_effect=run):
             self.assertEqual(audio.stereo_sink({'id':31,'name':'oneplus13_speakers'}),{'id':42,'name':'oneplus13_stereo'})
-        self.assertEqual(calls[0],['wpctl','set-mute','31','1'])
+        self.assertEqual(calls[0],['/usr/libexec/oneplus13-stereo-session.py','prepare','31','oneplus13_speakers'])
+        self.assertEqual(calls[1],['wpctl','set-mute','31','1'])
         self.assertIn(['pactl','move-sink-input','90','oneplus13_stereo'],calls)
         self.assertNotIn(['pactl','move-sink-input','91','oneplus13_stereo'],calls)
         self.assertLess(calls.index(['pactl','set-default-sink','oneplus13_stereo']),calls.index(['wpctl','set-volume','--limit','1','31','1']))
@@ -125,6 +127,32 @@ class StereoTests(unittest.TestCase):
             with self.assertRaises(ValueError):audio.stereo_sink({'id':31,'name':'oneplus13_speakers'})
         self.assertNotIn(['wpctl','set-mute','31','0'],calls)
         self.assertNotIn(['wpctl','set-volume','--limit','1','31','1'],calls)
+
+    def test_ucm_name_is_bound_instead_of_guessed_fallback(self):
+        name='alsa_output.platform-oneplus13.HiFi__Speaker__sink'
+        node={'id':31,'info':{'props':{'node.name':name,'object.serial':77,'media.class':'Audio/Sink'}}}
+        target=session.select_native([node],31,name)
+        self.assertEqual(target,dict(id=31,name=name,serial=77))
+        config=session.render_config('{"target.object": "oneplus13_speakers"}',target['name'])
+        self.assertEqual(json.loads(config)['target.object'],name)
+        # A reused numeric ID or an unexpected source node is refused.
+        with self.assertRaises(ValueError):session.select_native([node],31,'oneplus13_speakers')
+        node['info']['props']['media.class']='Audio/Source'
+        with self.assertRaises(ValueError):session.select_native([node],31,name)
+
+    def test_target_name_is_encoded_and_ambiguous_template_refused(self):
+        marker='{"target.object": "oneplus13_speakers"}'
+        name='speaker" \\ name'
+        self.assertEqual(json.loads(session.render_config(marker,name))['target.object'],name)
+        with self.assertRaises(ValueError):session.render_config(marker+marker,name)
+        with self.assertRaises(ValueError):session.render_config('{}',name)
+
+    def test_replacement_sink_has_different_identity(self):
+        props={'node.name':'oneplus13_speakers','object.serial':77,'media.class':'Audio/Sink'}
+        node={'id':31,'info':{'props':props}}
+        old=session.identity(node)
+        props['object.serial']=78
+        self.assertNotEqual(session.identity(node),old)
 
 @unittest.skipUnless(shutil.which('gcc'),'native C compiler required')
 class AdapterTests(unittest.TestCase):
