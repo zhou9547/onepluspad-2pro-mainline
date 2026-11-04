@@ -11,10 +11,9 @@ import json,os,subprocess,time
 def matrix(transform):
     if type(transform) is not int or transform not in range(8):
         raise ValueError('Invalid Mutter transform')
-    # Owner-qualified transform1 is left-side-up; transform3 reverses the two
-    # physical speakers. Portrait retains the prior route. Mirroring is not a
-    # new hardware orientation claim: rotation bits retain the same policy.
-    swap=(transform & 3)==3
+    # On the phone, transform 3 retains the native speaker order. Transform 1
+    # swaps it. The portrait and mirror policy is otherwise unchanged.
+    swap=(transform & 3)==1
     return {'params':['outL:Gain 1',float(not swap),'outL:Gain 2',float(swap),
                       'outR:Gain 1',float(swap),'outR:Gain 2',float(not swap)]}
 
@@ -52,7 +51,7 @@ def main():
             if identity!=last:
                 call(['pw-cli','set-param',str(node['id']),'Props',json.dumps(matrix(transform))])
                 temp=state.with_suffix('.tmp');temp.write_text(json.dumps(dict(transform=transform,
-                    swap=(transform & 3)==3,filter_id=node['id'],unity_permutation=True)))
+                    swap=(transform & 3)==1,filter_id=node['id'],unity_permutation=True)))
                 temp.replace(state);last=identity
         except (OSError,RuntimeError,ValueError,subprocess.TimeoutExpired) as error:
             # Keep the last valid matrix on transient session/monitor loss;

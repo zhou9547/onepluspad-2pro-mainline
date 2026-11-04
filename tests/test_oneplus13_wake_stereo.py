@@ -81,8 +81,8 @@ class StereoTests(unittest.TestCase):
             params=stereo.matrix(transform)['params'];values=params[1::2]
             self.assertTrue(all(x in (0.,1.) for x in values))
             a,b,c,d=values;self.assertEqual((a+b,c+d,a+c,b+d),(1.,1.,1.,1.))
-        self.assertEqual(stereo.matrix(1)['params'][1::2],[1.,0.,0.,1.])
-        self.assertEqual(stereo.matrix(3)['params'][1::2],[0.,1.,1.,0.])
+        self.assertEqual(stereo.matrix(1)['params'][1::2],[0.,1.,1.,0.])
+        self.assertEqual(stereo.matrix(3)['params'][1::2],[1.,0.,0.,1.])
     def test_external_primary_does_not_control_phone(self):
         monitors=[(0,0,1.,1,True,[('DP-1','v','p','s')],{}),(0,0,2.,3,False,[('DSI-1','v','p','s')],{})]
         self.assertEqual(stereo.phone_transform(monitors),3)

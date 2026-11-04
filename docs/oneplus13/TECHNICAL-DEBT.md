@@ -1,3 +1,19 @@
+# r278 remaining acceptance, 2026-11-04
+
+The owner heard correct left and right speaker output in both actual
+landscape transforms after installing the same-version Canberra Pulse
+module and correcting the permutation in RAM. Volume and mute also passed.
+The diagnostic package seed and orientation source now include these changes.
+The final packed pair requires its own pristine temporary acceptance.
+
+The phone-powered USB dock passed both same-orientation inserts, watchdog
+and service recovery, and the flipped insert after owner unlock. GNOME had
+enumerated the flipped disk before it mounted on unlock. The PC connection
+required a cable reseat in the opposite orientation. Preserve these
+observations when testing further docks. Physical writes, powered docks,
+greeter wake, and native suspend are still unqualified. Ubuntu snapshot
+HTTP 401 remains a separate clean-build availability problem.
+
 # r276 hardware findings, 2026-11-04
 
 Owner-confirmed screen keyboard setup, Resources GPU recognition and live data,

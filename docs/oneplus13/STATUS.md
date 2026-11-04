@@ -1,3 +1,30 @@
+# r278 Settings audio and USB regression, 2026-11-04
+
+r278 booted the r277 local diagnostic pair once. The packaged filter route
+started automatically and passed its microphone and two-speaker checks.
+GNOME Settings remained silent because the diagnostic seed omitted the
+libcanberra Pulse backend. A matching ARM64 backend from the verified r272
+full image restored Settings playback in RAM. The owner then verified both
+actual landscape directions with the corrected mapping and confirmed volume
+and mute. Mutter transform 1 swaps the channels and transform 3 retains them.
+The diagnostic seed now explicitly installs libcanberra-pulse. The tested
+orientation script is retained byte for byte.
+
+First setup with the screen keyboard, real GLES and GTK GL/MSM, and the
+owner's short-key visible wake passed. The default five-minute automatic
+blank and wake previously passed in r276. Greeter and native suspend remain
+unqualified. The tested phone-powered dock passed three read-only holds
+of 130.535, 15.508 and 30.714 seconds, plus watchdog and service recovery.
+The flipped dock enumerated while locked and mounted after owner unlock.
+PC data returned after a flipped cable reseat. The 5220 MHz post-check,
+display health, saved firmware restoration, amplifier shutdown and all seven
+Android baseline properties passed.
+
+This evidence covers r277 with the exact two RAM supplements. The next
+packaged image needs its own temporary boot to qualify its pristine state.
+Actions 41823459139 was blocked by HTTP 401 from the pinned Ubuntu snapshot.
+The matched local repack workflow records its verified base and each change.
+
 # r276 physical results and stereo routing fix, 2026-11-04
 
 The r274 diagnostic image booted once in RAM. The owner completed first setup

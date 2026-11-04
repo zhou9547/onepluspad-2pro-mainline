@@ -54,6 +54,7 @@
     "pipewire",
     "pipewire-bin",
     "pipewire-pulse",
+    "libcanberra-pulse",
     "wireplumber",
     "pulseaudio-utils",
     "iproute2",
