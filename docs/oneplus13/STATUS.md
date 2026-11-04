@@ -1,3 +1,24 @@
+# r276 physical results and stereo routing fix, 2026-11-04
+
+The r274 diagnostic image booted once in RAM. The owner completed first setup
+with the screen keyboard and confirmed that Resources recognized the GPU and
+displayed changing data. GLES pixel readback and GTK GL/MSM counters passed.
+The owner confirmed four visible menu-lock/power-key wake cycles and a separate
+wake after the default five-minute automatic blank. Greeter wake and native
+suspend remain pending. 5 GHz at 5220 MHz passed before and after the audio
+failure, with the existing link preserved during the post-check.
+
+The packaged audio initializer failed. A real replay showed that Pulse exposed
+the filter's own playback as a sink input on the native sink. Moving that input
+to the filter caused both filter nodes to vanish. The source now excludes the
+filter playback by serial and node name. A private PipeWire/Pulse graph
+confirmed that the production setup preserves the playback link and default
+filter, and that the channel matrix, volume and mute still work. Phone
+acoustic stereo and physical USB regression await the corrected image.
+
+The host was interrupted before the final target receipt. Android later
+matched all seven baseline properties. The r276 ledger is consumed.
+
 # Current: lightweight r274 code built and independently read back, 2026-11-03
 
 Exact source `5e09fadb1f1e7bfefcd6ccfcd0ed68107c9675b7` / Actions [41633350418](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/41633350418)

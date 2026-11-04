@@ -1,3 +1,18 @@
+# r276 hardware findings, 2026-11-04
+
+Owner-confirmed screen keyboard setup, Resources GPU recognition and live data,
+four menu-lock/power-key wake cycles and wake after the default five-minute
+automatic blank pass on the exact r274 diagnostic image. Actual GLES and GTK
+GL/MSM checks also passed. Greeter and native suspend remain unqualified.
+
+The audio filter was linked to itself during sink-input migration. The fix
+excludes its own playback from migration and passes an isolated real
+PipeWire/Pulse graph. Retest the image's automatic activation and listen in
+both landscape orientations. USB was never physically attached. Use BusyBox
+wget for diagnostic-image staging and keep each topology capture filename
+unique. Android return matched seven baseline properties. The missing final
+target receipt remains unknown.
+
 # Current: lightweight r274 code built and independently read back, 2026-11-03
 
 Exact source `5e09fadb1f1e7bfefcd6ccfcd0ed68107c9675b7` / Actions [41633350418](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/41633350418)

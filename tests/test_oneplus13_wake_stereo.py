@@ -100,18 +100,23 @@ class StereoTests(unittest.TestCase):
             calls.append(argv)
             if argv==['pw-dump']:
                 return json.dumps([{'type':'PipeWire:Interface:Node','id':42,
-                    'info':{'props':{'node.name':'oneplus13_stereo'}}}])
+                    'info':{'props':{'node.name':'oneplus13_stereo'}}},
+                    {'type':'PipeWire:Interface:Node','id':59,
+                     'info':{'props':{'node.name':'oneplus13_stereo_out','object.serial':101}}}])
             if argv==['pactl','--format=json','list','sinks']:
                 return json.dumps([{'name':'oneplus13_speakers','index':7}])
             if argv==['pactl','--format=json','list','sink-inputs']:
-                return json.dumps([{'index':90,'sink':7},{'index':91,'sink':8}])
+                return json.dumps([{'index':90,'sink':7},{'index':91,'sink':8},
+                    {'index':101,'sink':7},
+                    {'index':102,'sink':7,'properties':{'node.name':'oneplus13_stereo_out'}}])
             return ''
         with patch.object(audio,'run',side_effect=run):
             self.assertEqual(audio.stereo_sink({'id':31,'name':'oneplus13_speakers'}),{'id':42,'name':'oneplus13_stereo'})
         self.assertEqual(calls[0],['/usr/libexec/oneplus13-stereo-session.py','prepare','31','oneplus13_speakers'])
         self.assertEqual(calls[1],['wpctl','set-mute','31','1'])
         self.assertIn(['pactl','move-sink-input','90','oneplus13_stereo'],calls)
-        self.assertNotIn(['pactl','move-sink-input','91','oneplus13_stereo'],calls)
+        for index in ['91','101','102']:
+            self.assertNotIn(['pactl','move-sink-input',index,'oneplus13_stereo'],calls)
         self.assertLess(calls.index(['pactl','set-default-sink','oneplus13_stereo']),calls.index(['wpctl','set-volume','--limit','1','31','1']))
         self.assertEqual(calls[-1],['wpctl','set-mute','31','0'])
         self.assertIn(['wpctl','set-volume','--limit','1','42','0.5'],calls)
@@ -120,7 +125,9 @@ class StereoTests(unittest.TestCase):
         calls=[]
         def run(argv,*args,**kwargs):
             calls.append(argv)
-            if argv==['pw-dump']:return json.dumps([{'type':'PipeWire:Interface:Node','id':42,'info':{'props':{'node.name':'oneplus13_stereo'}}}])
+            if argv==['pw-dump']:return json.dumps([{'type':'PipeWire:Interface:Node','id':42,'info':{'props':{'node.name':'oneplus13_stereo'}}},
+                    {'type':'PipeWire:Interface:Node','id':59,
+                     'info':{'props':{'node.name':'oneplus13_stereo_out','object.serial':101}}}])
             if argv==['pactl','--format=json','list','sinks']:return '[]'
             return ''
         with patch.object(audio,'run',side_effect=run):

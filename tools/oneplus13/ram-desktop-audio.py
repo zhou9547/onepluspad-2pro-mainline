@@ -200,12 +200,18 @@ def stereo_sink(native):
     end=time.monotonic()+8
     while True:
         nodes=[o for o in json.loads(run(['pw-dump'],user=True))
-            if o.get('type')=='PipeWire:Interface:Node'
-            and o.get('info',{}).get('props',{}).get('node.name')=='oneplus13_stereo']
-        if len(nodes)==1:break
+            if o.get('type')=='PipeWire:Interface:Node']
+        inputs=[o for o in nodes
+            if o.get('info',{}).get('props',{}).get('node.name')=='oneplus13_stereo']
+        outputs=[o for o in nodes
+            if o.get('info',{}).get('props',{}).get('node.name')=='oneplus13_stereo_out']
+        if len(inputs)==len(outputs)==1:break
         if time.monotonic()>end:raise ValueError('Phone stereo filter unavailable')
         time.sleep(.2)
-    sink={'id':nodes[0]['id'],'name':'oneplus13_stereo'}
+    sink={'id':inputs[0]['id'],'name':'oneplus13_stereo'}
+    output_serial=outputs[0]['info']['props'].get('object.serial')
+    if type(output_serial) is not int or output_serial<0:
+        raise ValueError('Phone stereo output identity unavailable')
     run(['wpctl','set-volume','--limit','1',str(sink['id']),'0.5'],user=True)
     run(['wpctl','set-mute',str(sink['id']),'0'],user=True)
     run(['wpctl','set-default',str(sink['id'])],user=True)
@@ -214,6 +220,11 @@ def stereo_sink(native):
         if o.get('name')==native['name']]
     if len(pulse)!=1:raise ValueError('Unique native Pulse sink required')
     for stream in json.loads(run(['pactl','--format=json','list','sink-inputs'],user=True)):
+        # PipeWire Pulse exposes the filter output as a sink input too.
+        # Moving it into the filter's capture sink creates a feedback loop.
+        if (stream.get('index')==output_serial
+                or stream.get('properties',{}).get('node.name')=='oneplus13_stereo_out'):
+            continue
         if stream.get('sink')==pulse[0]['index']:
             run(['pactl','move-sink-input',str(stream['index']),sink['name']],user=True)
     run(['wpctl','set-volume','--limit','1',str(native['id']),'1'],user=True)
