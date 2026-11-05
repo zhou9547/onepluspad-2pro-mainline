@@ -6,6 +6,8 @@ import tempfile
 import threading
 import time
 import unittest
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools/oneplus13'))
 
 SPEC = importlib.util.spec_from_file_location('deb_prefetch', Path(__file__).resolve().parents[1] / 'tools/oneplus13/prefetch-rootfs-debs.py')
 MOD = importlib.util.module_from_spec(SPEC)
@@ -77,6 +79,19 @@ class Prefetch(unittest.TestCase):
                 self.assertFalse((cache / ROW[1]).exists())
                 self.assertEqual(list(archives.iterdir()), [])
                 self.assertFalse(list(cache.glob('*.partial')))
+
+    def test_snapshot_transport_failure_uses_official_bytes_from_signed_plan(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);cache=MOD.cache_directory(root/'cache')
+            archives=MOD.safe_directory(root/'archives');calls=[]
+            def download(uri,target,*unused):
+                calls.append(uri)
+                if len(calls)==1:raise RuntimeError('snapshot unavailable')
+                target.write_bytes(DATA)
+            self.assertEqual(MOD.fetch(ROW,cache,archives,threading.Event(),
+                time.monotonic()+10,download),(False,len(DATA)))
+            self.assertEqual(calls,[ROW[0],'https://ports.ubuntu.com/ubuntu-ports/pool/main/x/x/x_1_arm64.deb'])
+            self.assertEqual((archives/ROW[1]).read_bytes(),DATA)
 
     def test_foreign_cache_is_preserved(self):
         with tempfile.TemporaryDirectory() as temp:

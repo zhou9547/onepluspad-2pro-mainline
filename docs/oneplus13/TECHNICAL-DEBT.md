@@ -1,3 +1,10 @@
+# r280 archive transport, 2026-11-05
+
+Signed snapshot indexes have recovered, while individual snapshot pool files
+can still fail. The builder uses hash-verified official pool alternatives
+for files selected by the original pins and authenticated package plan.
+A fresh Actions build will validate the recovered transport and packaging.
+
 # r278 remaining acceptance, 2026-11-04
 
 The owner heard correct left and right speaker output in both actual

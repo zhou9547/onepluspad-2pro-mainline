@@ -1,3 +1,17 @@
+# r280 reproducible download recovery, 2026-11-05
+
+The pinned signed Ubuntu indexes are available again. Some snapshot pool
+requests still fail with HTTP 500 or 502. Source archives and APT package
+payloads now have official Ubuntu pool fallbacks while preserving each
+original SHA256, package size and the snapshot-selected dependency versions.
+Index authentication remains with APT against the original snapshot.
+Resources bootstrap and build dependencies use that same verified prefetch
+path and an offline APT installation. Checksum failures remain build failures.
+
+The host suite runs 878 tests with one skip and zero failures. A fresh
+diagnostic source build is pending. The earlier r278 hardware results retain
+their exact image and RAM supplement scope.
+
 # r278 Settings audio and USB regression, 2026-11-04
 
 r278 booted the r277 local diagnostic pair once. The packaged filter route

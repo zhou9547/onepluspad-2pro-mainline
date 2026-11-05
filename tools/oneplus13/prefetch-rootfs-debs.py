@@ -19,6 +19,7 @@ import tempfile
 import threading
 import time
 from urllib.parse import unquote, urlsplit
+from verified_download import ubuntu_pool_urls
 
 OWNER = b'oneplus13-rootfs-debs-v1\n'
 
@@ -119,6 +120,7 @@ def curl_download(uri, target, stop, deadline):
 
 def fetch(row, cache, archives, stop, deadline, download=curl_download):
     uri, name, size, sha = row
+    candidates = ubuntu_pool_urls(uri)
     stored = cache / name
     hit = verified(stored, size, sha)
     if not hit:
@@ -129,7 +131,7 @@ def fetch(row, cache, archives, stop, deadline, download=curl_download):
             os.close(fd)
             temporary = Path(temporary)
             try:
-                download(uri, temporary, stop, deadline)
+                download(candidates[min(attempt, len(candidates) - 1)], temporary, stop, deadline)
                 if not verified(temporary, size, sha):
                     raise RuntimeError('Downloaded package size or SHA256 mismatch')
                 # Never replace a link, including when the cache was modified meanwhile.

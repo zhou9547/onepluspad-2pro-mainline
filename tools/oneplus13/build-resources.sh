@@ -12,12 +12,14 @@ out="$repo/out/oneplus13-resources"
 mkdir -p "$root" "$out" "$repo/cache"
 python3 - "$repo" <<'PY'
 import hashlib,json,pathlib,subprocess,sys
-repo=pathlib.Path(sys.argv[1]);pin=json.loads((repo/'devices/oneplus13/ubuntu.json').read_text())
+repo=pathlib.Path(sys.argv[1]);sys.path.insert(0,str(repo/'tools/oneplus13'))
+from verified_download import fetch
+pin=json.loads((repo/'devices/oneplus13/ubuntu.json').read_text())
 inputs=[dict(file='ubuntu-base.tar.gz',url=pin['base_url'],sha256=pin['base_sha256']),*json.loads((repo/'packaging/oneplus13-resources/ubuntu/source.json').read_text())['files']]
 for item in inputs:
  p=repo/'cache'/item['file']
  if not p.is_file() or hashlib.file_digest(p.open('rb'),'sha256').hexdigest()!=item['sha256']:
-  subprocess.run(['curl','--fail','--location','--retry','4','--connect-timeout','15','--max-time','300','-o',str(p),item['url']],check=True)
+  fetch(item['url'],item['sha256'],p,cache_dir=repo/'cache/oneplus13-pinned-downloads')
  assert hashlib.file_digest(p.open('rb'),'sha256').hexdigest()==item['sha256']
 PY
 tar -xzf cache/ubuntu-base.tar.gz -C "$root"
@@ -40,7 +42,20 @@ mount --rbind /dev "$root/dev"; mount --make-rslave "$root/dev"
 mount -t proc proc "$root/proc"
 export DEBIAN_FRONTEND=noninteractive
 chroot "$root" apt-get -o APT::Update::Error-Mode=any update
-chroot "$root" apt-get install -y --no-install-recommends ca-certificates dpkg-dev quilt build-essential
+install_packages() {
+  local phase=$1
+  local operation=$2
+  shift 2
+  chroot "$root" apt-get -o Acquire::ForceHash=SHA256 --print-uris --download-only \
+    "$operation" -y --no-install-recommends "$@" > "$out/apt-plan-$phase.txt"
+  python3 tools/oneplus13/prefetch-rootfs-debs.py \
+    --plan "$out/apt-plan-$phase.txt" \
+    --apt-uri https://snapshot.ubuntu.com/ubuntu/20261024T000000Z/ \
+    --cache "$repo/cache/oneplus13-resources-debs" \
+    --archives "$root/var/cache/apt/archives" --report "$out/deb-prefetch-$phase.json"
+  chroot "$root" apt-get "$operation" --no-download -y --no-install-recommends "$@"
+}
+install_packages bootstrap install ca-certificates dpkg-dev quilt build-essential
 mkdir -p "$root/build"
 cp cache/resources_1.10.2* "$root/build/"
 chroot "$root" sh -c 'cd /build && dpkg-source -x resources_1.10.2-0ubuntu3.1.dsc resources'
@@ -62,7 +77,7 @@ p=pathlib.Path(sys.argv[1]);p.write_text('''resources (1.10.2-0ubuntu3.1+op13.1)
 '''+p.read_text())
 PY
 chroot "$root" sh -c 'cd /build/resources && QUILT_PATCHES=debian/patches quilt push -a'
-chroot "$root" apt-get build-dep -y --no-install-recommends /build/resources
+install_packages dependencies build-dep /build/resources
 # Capture corresponding patched source before Meson/gettext generate config.rs
 # and resources.pot. Keep dpkg-source's unexpected-change check enabled.
 chroot "$root" sh -c 'cd /build/resources && dpkg-buildpackage -S -us -uc -d'

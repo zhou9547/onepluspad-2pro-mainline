@@ -40,4 +40,45 @@ class Download(unittest.TestCase):
             with self.assertRaises(urllib.error.URLError):m.fetch('https://example.test/archive','a'*64,root/'output',cache_dir=root/'cache',opener=fail,sleep=lambda _:None)
             self.assertEqual(len(calls),3);self.assertFalse((root/'output').exists());self.assertEqual(list((root/'cache').iterdir()),[])
 
+    def test_official_fallback_keeps_exact_pool_path_and_never_changes_indexes(self):
+        base='https://snapshot.ubuntu.com/ubuntu/20261024T000000Z/'
+        pool='pool/main/r/resources/resources_1%2b2.tar.gz'
+        self.assertEqual(m.ubuntu_pool_urls(base+pool),[
+            base+pool,'https://ports.ubuntu.com/ubuntu-ports/'+pool,
+            'https://archive.ubuntu.com/ubuntu/'+pool])
+        for url in [base+'dists/resolute/InRelease',base+pool+'?x=1',
+                    (base+pool).replace('snapshot.ubuntu.com','snapshot.ubuntu.com.evil')]:
+            self.assertEqual(m.ubuntu_pool_urls(url),[url])
+        for path in ['pool/../bad','pool/%2e%2e/bad','pool/a%2fb','pool/a%3fb']:
+            with self.assertRaises(ValueError):m.ubuntu_pool_urls(base+path)
+
+    def test_snapshot_failure_uses_hash_verified_official_pool(self):
+        data=b'exact snapshot bytes';sha=hashlib.sha256(data).hexdigest();calls=[]
+        uri='https://snapshot.ubuntu.com/ubuntu/20261024T000000Z/pool/main/r/r/source.tar.gz'
+        def open_(url,timeout):
+            calls.append(url)
+            if len(calls)==1:raise urllib.error.HTTPError(url,502,'Unavailable',{},None)
+            return io.BytesIO(data)
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            m.fetch(uri,sha,root/'output',cache_dir=root/'cache',opener=open_,sleep=lambda _:None)
+            self.assertEqual((root/'output').read_bytes(),data)
+            self.assertEqual(calls,m.ubuntu_pool_urls(uri)[:2])
+
+    def test_wrong_mirror_bytes_are_rejected_without_replacing_destination(self):
+        uri='https://snapshot.ubuntu.com/ubuntu/20261024T000000Z/pool/main/r/r/source.tar.gz'
+        calls=[]
+        def open_(url,timeout):
+            calls.append(url)
+            if len(calls)==1:raise urllib.error.HTTPError(url,502,'Unavailable',{},None)
+            return io.BytesIO(b'wrong')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);target=root/'output';target.write_bytes(b'previous')
+            with self.assertRaises(ValueError):
+                m.fetch(uri,hashlib.sha256(b'expected').hexdigest(),target,
+                        cache_dir=root/'cache',opener=open_,sleep=lambda _:None)
+            self.assertEqual(target.read_bytes(),b'previous')
+            self.assertEqual(len(calls),2)
+            self.assertEqual(list((root/'cache').iterdir()),[])
+
 if __name__=='__main__':unittest.main()
