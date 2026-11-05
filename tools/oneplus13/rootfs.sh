@@ -33,9 +33,13 @@ tar --extract --gzip --numeric-owner --preserve-permissions --file "$base" --dir
 # runner's standard trust bundle; apt replaces it when installing the target
 # ca-certificates package. Never disable TLS verification or archive signatures.
 install -D -m 0644 /etc/ssl/certs/ca-certificates.crt "$root/etc/ssl/certs/ca-certificates.crt"
-# Diagnose transport before entering the chroot, then name the trust file
-# explicitly: Ubuntu Base's TLS backend has no ca-certificates configuration yet.
-curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-max-time 180 --output /dev/null "${pin[2]}dists/resolute/InRelease"
+# A restored signed index is already the transport authority for this build.
+# Probe the live snapshot only when no signed cache is available: the snapshot
+# service can reject a redundant diagnostic request while serving cached
+# authenticated indexes and packages correctly.
+if [[ ! -d "$repo/cache/apt-lists/$snapshot/lists" ]]; then
+  curl --fail --silent --show-error --retry 5 --retry-delay 10 --retry-max-time 180 --output /dev/null "${pin[2]}dists/resolute/InRelease"
+fi
 test -r "$root/etc/ssl/certs/ca-certificates.crt"
 cat > "$root/etc/apt/apt.conf.d/80bootstrap-ca" <<'EOF'
 Acquire::https::CaInfo "/etc/ssl/certs/ca-certificates.crt";
