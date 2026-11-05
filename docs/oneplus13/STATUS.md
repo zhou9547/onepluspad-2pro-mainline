@@ -1,3 +1,17 @@
+# Current: pinned repository build cache restored, 2026-11-05
+
+The signed Ubuntu snapshot indexes recovered. The exact 768-package
+diagnostic rootfs plan, 469 unique Resources dependency packages, both signed
+list snapshots, Ubuntu Base and the Resources sources are now stored under
+the repository tag `cache-oneplus13-r280` at commit
+`d5c6fbbe9acc5084b556d9f4b770b026b2d396ce`.
+
+Actions restores the cache by content hash before rootfs and Resources builds.
+An incomplete or altered cache fails closed. Source archive and package
+transport also retains official Ubuntu pool and Launchpad alternatives, with
+the original hash checks. Local validation covers 1,157 plan rows and all
+source checksums. The next Actions build will validate native ARM64 assembly.
+
 # r280 reproducible download recovery, 2026-11-05
 
 The pinned signed Ubuntu indexes are available again. Some snapshot pool

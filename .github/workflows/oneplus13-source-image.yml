@@ -95,6 +95,10 @@ jobs:
         with:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y curl ca-certificates patch
+      - name: Restore verified repository build cache
+        run: >-
+          python3 tools/oneplus13/repo-cache.py restore
+          sources apt-lists resources-debs
       - run: sudo bash tools/oneplus13/build-resources.sh
       - uses: actions/upload-artifact@v4
         with:
@@ -113,6 +117,10 @@ jobs:
         with:
           persist-credentials: false
       - run: flock /tmp/oneplus13-apt-update.lock sudo apt-get update && flock /tmp/oneplus13-apt.lock sudo apt-get -o DPkg::Lock::Timeout=600 install -y squashfs-tools zstd build-essential pkg-config libqmi-glib-dev libqrtr-glib-dev libmbim-glib-dev
+      - name: Restore verified repository build cache
+        run: >-
+          python3 tools/oneplus13/repo-cache.py restore
+          sources apt-lists rootfs-debs
       - uses: actions/cache/restore@v4
         id: deb-cache
         with:

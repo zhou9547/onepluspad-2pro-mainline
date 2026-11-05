@@ -23,6 +23,8 @@ print(s['base_url']); print(s['base_sha256']); print(s['apt_uri'])
 print(' '.join(s['packages']))
 PY
 )
+snapshot=${pin[2]%/}
+snapshot=${snapshot##*/}
 base="$repo/cache/oneplus13-ubuntu-base.tar.gz"
 curl --fail --location --retry 5 --retry-delay 10 --retry-max-time 180 --output "$base" "${pin[0]}"
 printf '%s  %s\n' "${pin[1]}" "$base" | sha256sum --check -
@@ -66,7 +68,13 @@ for d in dev proc sys run; do
   mount --rbind "/$d" "$root/$d"
   mount --make-rslave "$root/$d"
 done
-chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive apt-get -o APT::Update::Error-Mode=any update
+if [[ -d "$repo/cache/apt-lists/$snapshot/lists" ]]; then
+  install -d -m 0755 "$root/var/lib/apt/lists"
+  cp -a "$repo/cache/apt-lists/$snapshot/lists/." "$root/var/lib/apt/lists/"
+else
+  chroot "$root" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+    apt-get -o APT::Update::Error-Mode=any update
+fi
 # Read the exact package set from the locked JSON. Package versions are fixed by
 # the signed Ubuntu snapshot and recorded in the delivered manifest.
 read -r -a packages <<< "${pin[3]}"

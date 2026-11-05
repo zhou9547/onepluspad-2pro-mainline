@@ -1,3 +1,11 @@
+# Repository cache lifecycle, 2026-11-05
+
+The r280 cache is pinned by tag and chunk hashes. It adds roughly 900 MB to
+the repository object store, so it must be replaced rather than extended.
+Create a new cache tag when source pins, package plans, or signed snapshots
+change. Never mutate the existing tag in place. GitHub repository capacity
+and clone latency must be monitored before adding further large variants.
+
 # r280 archive transport, 2026-11-05
 
 Signed snapshot indexes have recovered, while individual snapshot pool files

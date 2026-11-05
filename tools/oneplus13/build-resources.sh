@@ -41,7 +41,12 @@ trap cleanup EXIT
 mount --rbind /dev "$root/dev"; mount --make-rslave "$root/dev"
 mount -t proc proc "$root/proc"
 export DEBIAN_FRONTEND=noninteractive
-chroot "$root" apt-get -o APT::Update::Error-Mode=any update
+if [[ -d cache/apt-lists/20261024T000000Z/lists ]]; then
+  install -d -m 0755 "$root/var/lib/apt/lists"
+  cp -a cache/apt-lists/20261024T000000Z/lists/. "$root/var/lib/apt/lists/"
+else
+  chroot "$root" apt-get -o APT::Update::Error-Mode=any update
+fi
 install_packages() {
   local phase=$1
   local operation=$2

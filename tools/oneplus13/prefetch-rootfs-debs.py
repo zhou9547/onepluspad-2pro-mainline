@@ -115,7 +115,7 @@ def curl_download(uri, target, stop, deadline):
                     proc.kill()
                 raise RuntimeError('Package transport cancelled or deadline reached')
         if proc.returncode:
-            raise RuntimeError('Package transport failed')
+            raise RuntimeError('Package transport failed: '+uri)
 
 
 def fetch(row, cache, archives, stop, deadline, download=curl_download):
@@ -124,7 +124,9 @@ def fetch(row, cache, archives, stop, deadline, download=curl_download):
     stored = cache / name
     hit = verified(stored, size, sha)
     if not hit:
-        for attempt in range(3):
+        # Alternate the original snapshot with the two hash-identical official
+        # pools. Public archive endpoints can fail independently and briefly.
+        for attempt in range(9):
             if stop.is_set() or time.monotonic() >= deadline:
                 raise RuntimeError('Package prefetch deadline reached')
             fd, temporary = tempfile.mkstemp(prefix='.deb-', suffix='.partial', dir=cache)
@@ -143,7 +145,7 @@ def fetch(row, cache, archives, stop, deadline, download=curl_download):
                 os.replace(temporary, stored)
                 break
             except RuntimeError:
-                if attempt == 2:
+                if attempt == 8:
                     raise
             finally:
                 temporary.unlink(missing_ok=True)
@@ -158,7 +160,7 @@ def fetch(row, cache, archives, stop, deadline, download=curl_download):
     return hit, size
 
 
-def prefetch(rows, cache, archives, workers=8, seconds=1800):
+def prefetch(rows, cache, archives, workers=32, seconds=3600):
     cache = cache_directory(cache)
     archives = safe_directory(archives)
     stop = threading.Event()

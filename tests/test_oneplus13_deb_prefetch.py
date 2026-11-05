@@ -75,7 +75,7 @@ class Prefetch(unittest.TestCase):
                     calls.append(uri); target.write_bytes(data)
                 with self.assertRaisesRegex(RuntimeError, 'SHA256'):
                     MOD.fetch(ROW, cache, archives, threading.Event(), time.monotonic() + 10, download)
-                self.assertEqual(len(calls), 3)
+                self.assertEqual(len(calls), 9)
                 self.assertFalse((cache / ROW[1]).exists())
                 self.assertEqual(list(archives.iterdir()), [])
                 self.assertFalse(list(cache.glob('*.partial')))

@@ -45,7 +45,8 @@ class Download(unittest.TestCase):
         pool='pool/main/r/resources/resources_1%2b2.tar.gz'
         self.assertEqual(m.ubuntu_pool_urls(base+pool),[
             base+pool,'https://ports.ubuntu.com/ubuntu-ports/'+pool,
-            'https://archive.ubuntu.com/ubuntu/'+pool])
+            'https://archive.ubuntu.com/ubuntu/'+pool,
+            'https://launchpad.net/ubuntu/+archive/primary/+files/resources_1%2b2.tar.gz'])
         for url in [base+'dists/resolute/InRelease',base+pool+'?x=1',
                     (base+pool).replace('snapshot.ubuntu.com','snapshot.ubuntu.com.evil')]:
             self.assertEqual(m.ubuntu_pool_urls(url),[url])

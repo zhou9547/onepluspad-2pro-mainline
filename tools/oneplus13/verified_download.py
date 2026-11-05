@@ -21,7 +21,8 @@ def ubuntu_pool_urls(url):
             or re.search(r'%(?:2f|5c)',pool,re.I)):
         raise ValueError('Unsafe Ubuntu archive pool path')
     return [url,'https://ports.ubuntu.com/ubuntu-ports/'+pool,
-            'https://archive.ubuntu.com/ubuntu/'+pool]
+            'https://archive.ubuntu.com/ubuntu/'+pool,
+            'https://launchpad.net/ubuntu/+archive/primary/+files/'+pool.rsplit('/',1)[1]]
 
 
 def fetch(url,expected,destination,*,cache_dir=None,opener=urllib.request.urlopen,sleep=time.sleep):
