@@ -1,3 +1,21 @@
+# r286 full Ubuntu complete acceptance, 2026-11-06
+
+The r272 full-system line now includes every later validated wake, stereo,
+MSM/Adreno Resources, 180-second idle and USB change. Actions42042903083
+passes all jobs and the exact 1662-package image passes independent readback.
+Two functional RAM boots completed the combined acceptance: r288 covered
+first setup, real GPU, automatic audio, both channel directions, four visible
+wakes and actual180s wake; r289 covered A/A/B/B read-only USB, watchdog,
+service recovery, saved-value restoration, PC return,5220MHz WiFi, display,
+amplifier shutdown and Android. Boot and rootfs are
+48bb66ab661ec445067ee126be5a976533d7e959a2f10d4a7ee847680492923a and
+3d2d5c0fc94cdea2bc535f5cc4d37f51ff70142c4775cd7b61cd85ce91feca25.
+
+The first orchestration boot is retained as a host RouteMetric parser failure
+before target launch. Recovered USB-71 diagnostics remain; functional scope is
+the same phone-powered dock, unlocked GNOME and read-only use. Full r272 tag
+stays immutable; r286 is the new full milestone.
+
 # r285 repeat passes: tested USB use recorded normal, 2026-11-05
 
 Owner requested one more independent repeat and a normal status if it passed.

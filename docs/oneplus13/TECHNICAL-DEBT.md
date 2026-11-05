@@ -1,3 +1,13 @@
+# r286 full Ubuntu milestone scope, 2026-11-06
+
+The complete r286 image is now hardware-qualified for the tested full desktop,
+audio, stereo, wake, automatic OTG and5GHz scope. Keep recovered USB-71
+diagnostics and the earlier physical-attachment exceptions. Disk writes,
+external/PD-powered docks, video output, other docks/cables, greeter wake and
+native deep suspend remain unqualified. Camera/GNSS remain paused and NFC
+skipped. The new r286 tag/branch is immutable; future changes need a new round,
+new cache if dependencies change, and a fresh exact phone plan/ledger.
+
 # r285 repeat passes: tested USB use recorded normal, 2026-11-05
 
 Owner requested one more independent repeat and a normal status if it passed.
