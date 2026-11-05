@@ -1,3 +1,25 @@
+# r285 repeat passes: tested USB use recorded normal, 2026-11-05
+
+Owner requested one more independent repeat and a normal status if it passed.
+The exact unchanged r283 pair passed all four A/A/B/B phone-powered dock
+inserts again,130.663/15.604/30.610/30.499s, read-only automatic mount/block/file
+reads/unmount, watchdog/service recovery, preserved firmware values, PC return,
+GPU/automatic audio,5220MHz WiFi/display/amplifier cleanup, and all seven Android
+baseline properties. No extra failed physical reseat or functional RAM overlay.
+
+Record USB as NORMAL for the tested phone-powered dock/drive, unlocked GNOME
+and read-only use: r284 and r285 are two independent passing boots/eight inserts.
+Recovered protocol retries (38 deduplicated-71 lines this round) remain in the
+record; they did not block these functional gates. Do not reopen this as the
+first unfinished target solely for recovered logs. Broader writes/PD/video,
+other docks/cables and lock-time automount are not qualified. Prior failures
+and unproven root causes remain intact. Keep prior owner wake/stereo/Resources
+proofs in their original scope; these manual tests were not repeated here.
+
+Round ended, ledger consumed, Android confirmed, scoped host services/rules0.
+No persistence, no new runtime changes/build dispatch. Full r272 remains fixed.
+See DIAGNOSTIC-R283-USB-NORMAL-R285-20261105.md and sanitized JSON.
+
 # r284: pristine r283 functional acceptance completed, 2026-11-05
 
 The exact Actions42019690558 r283 diagnostic pair booted once temporarily.
