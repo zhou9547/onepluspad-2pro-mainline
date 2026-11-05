@@ -1,0 +1,171 @@
+{
+  "round": "r284",
+  "image_round": "r283",
+  "recorded_at": "2026-11-05T21:29:20.900394+08:00",
+  "scope": "PRISTINE_R283_DIAGNOSTIC_GPU_AUTOMATIC_AUDIO_FOUR_READONLY_DOCK_INSERTS_RECOVERY_WIFI_DISPLAY_CLEAN_EXIT",
+  "source_commit": "07b8435a8715ccdfb7beee7e0e87ba58eb1a3fba",
+  "source_tree": "e161a9930c1a0bdf51fdacf3fe48a761564912b8",
+  "bound_source_head": "3a55a1537d4cc17224b4bee4e38d5ddb8bd7814b",
+  "actions": 42019690558,
+  "boot_sha256": "ea7f5ea48c8e658da0720804e233fbd34a22d4620cba6a91b834f7766a1760d8",
+  "rootfs_sha256": "0a32d4499d846965a576467ddc9644dac6cd902f5a8d993140057c6622fa80c0",
+  "kernel_release": "7.2.0-oneplus13-g7a81d184e309-cfb5576138fcf-p4a4fad7955bc",
+  "desktop_profile": "diagnostic",
+  "packages": 841,
+  "delivery_regular_users": 0,
+  "first_user_setup_detected": {
+    "ordinary_user_created_by_setup": true,
+    "project_mesa_mapped": true,
+    "user_wayland_active": true
+  },
+  "functional_ram_overlays": false,
+  "idle_delay_seconds": 180,
+  "gpu": true,
+  "gtk_gpu": true,
+  "packaged_automatic_audio": true,
+  "packaged_audio_not_manually_enabled": true,
+  "usb_io": {
+    "usb_first": {
+      "functional_pass": true,
+      "cleanup_complete": true,
+      "autonomous_hold_seconds": 130.408,
+      "unmount_pass": true,
+      "readonly_mount": true,
+      "filesystem": "ntfs3",
+      "file_prefix_bytes": 4096,
+      "real_typec_host_source": true,
+      "external_storage_node": true,
+      "block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      },
+      "post_hold_block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      }
+    },
+    "usb_second": {
+      "functional_pass": true,
+      "cleanup_complete": true,
+      "autonomous_hold_seconds": 15.789,
+      "unmount_pass": true,
+      "readonly_mount": true,
+      "filesystem": "ntfs3",
+      "file_prefix_bytes": 4096,
+      "real_typec_host_source": true,
+      "external_storage_node": true,
+      "block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      },
+      "post_hold_block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      }
+    },
+    "usb_orientation_io": {
+      "functional_pass": true,
+      "cleanup_complete": true,
+      "autonomous_hold_seconds": 30.576,
+      "unmount_pass": true,
+      "readonly_mount": true,
+      "filesystem": "ntfs3",
+      "file_prefix_bytes": 4096,
+      "real_typec_host_source": true,
+      "external_storage_node": true,
+      "block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      },
+      "post_hold_block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      }
+    },
+    "usb_flipped_repeat": {
+      "functional_pass": true,
+      "cleanup_complete": true,
+      "autonomous_hold_seconds": 30.662,
+      "unmount_pass": true,
+      "readonly_mount": true,
+      "filesystem": "ntfs3",
+      "file_prefix_bytes": 4096,
+      "real_typec_host_source": true,
+      "external_storage_node": true,
+      "block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      },
+      "post_hold_block_read_only": {
+        "block_identity_verified": true,
+        "cleanup_complete": true,
+        "descriptor_read_only": true,
+        "read_bytes": 4096
+      }
+    }
+  },
+  "usb_extra_failed_reseats": 0,
+  "dock_external_power": false,
+  "watchdog_pass": true,
+  "watchdog_observed_seconds": 13.772,
+  "service_recovery_pass": true,
+  "service_recovery_stable_seconds": 5.238,
+  "firmware_saved_values_restored": true,
+  "restore_order": [
+    24,
+    64,
+    18,
+    17
+  ],
+  "pc_device_sink_udc": true,
+  "amplifiers_off": true,
+  "wifi_before": true,
+  "wifi_after": true,
+  "wifi_frequency_mhz": 5220,
+  "wifi_link_reactivated": false,
+  "dns_post_rc": 0,
+  "display": {
+    "idle_delay": "uint32 180",
+    "kernel_error_counts": {
+      "ctl_start_timeout": 0,
+      "frame_timeout": 0,
+      "gmu_vote_timeout": 0,
+      "kickoff_timeout": 0,
+      "panel_dead": 0
+    },
+    "native_crtc_active": true,
+    "pass": true,
+    "power_mode": "(<0>,)",
+    "scope": "READ_ONLY_DESKTOP_POWER_DRM_ERROR_GATE",
+    "screensaver": "(false,)"
+  },
+  "android_return": true,
+  "android_seven_keys_match": true,
+  "ledger_consumed": true,
+  "boot_count": 1,
+  "reported_partition_writes": 0,
+  "usb_transient_error71_present": true,
+  "usb_deduplicated_error71_lines": 29,
+  "error71_root_cause_proven": false,
+  "usb_error_free_qualified": false,
+  "owner_visible_wake_stereo_resources_this_round": false,
+  "previous_owner_wake_stereo_resources_record": "resume-r282/acceptance.json (exact r280 plus owner180s preference; retained historical scope)",
+  "greeter_wake_qualified": false,
+  "native_suspend_qualified": false,
+  "physical_write_pd_video_qualified": false,
+  "all_planned_functional_gates_pass": true
+}

@@ -1,3 +1,63 @@
+# r284: pristine r283 functional acceptance completed, 2026-11-05
+
+The exact Actions42019690558 r283 diagnostic pair booted once temporarily.
+Actual GLES/GTK GPU and packaged automatic audio passed. Four phone-powered
+read-only dock inserts (A,A,B,B) passed130.408/15.789/30.576/30.662s holds,
+automatic mount,4096-byte block/file reads and unmount. Watchdog/service
+recovery,5.238s recovered source/role/node stability, saved-value restoration,
+PC device/sink+UDC,5220MHz existing-link HTTP/TLS, display health, amplifier
+shutdown and all seven Android baseline properties passed. No extra failed
+reseat was needed. Native image default idle180s remained in force; owner
+confirmed unlock before flips. No functional RAM overlay or forced mount.
+
+Continuous observations retained29 deduplicated USB-71 lines. Recovery and
+I/O succeeded, but zero-protocol-error operation and the prior r282 failure
+root cause are NOT qualified. Keep r282 failed first flip/reseat/mount and
+observer-timeout evidence. Prior owner-visible wake/stereo/Resources results
+retain their exact r282/r280 scope; these manual tests were not repeated in
+r284. Greeter wake/native suspend, disk writes,PD/video remain unqualified.
+
+Android is confirmed, host services/firewall rules are gone, ledger consumed,
+and no boot remains authorized. Full r272 delivery/tag is unchanged. See
+DIAGNOSTIC-R283-ACCEPTANCE-20261105.md and sanitized JSON. Documentation only;
+no runtime edits or redundant build dispatch.
+
+# r282 hardware evidence and r283 build, 2026-11-05
+
+r282 temporarily booted the exact r280 Actions42011681214 pair. Owner-created
+screen-keyboard setup, real GLES/GTK GPU, live Resources GPU data, packaged
+audio, both actual landscape channel mappings, volume/mute, four visible
+lock/authentication wakes, and wake after an owner-requested180s idle blank
+passed. This180s setting was a RAM user preference; r280 contains300s.
+
+Both same-orientation phone-powered dock inserts,130s hold, read-only block
+and file reads/unmount, watchdog and service recovery passed. The first
+flipped attachment lacked host/source; reseating that orientation then passed
+30s I/O. An additional owner-requested same-boot flipped reseat enumerated the
+USB disk but failed automatic desktop mounting. USB-71 errors were captured.
+Do not assign a proven cable/physical/lock root cause, or qualify connector
+robustness from this round. Next observation must correlate actual lock,
+GVfs/udisks mount state and USB errors without forcing a role or mounting.
+
+Supplemental saved-value restoration and PC device/sink+UDC, final existing
+5220MHz WiFi HTTP/TLS checks, display health and amplifier shutdown passed.
+The separate DNS diagnostic timed out. A paused diagnostic controller caused
+an observer subprocess timeout and exhausted the original Android return
+window; the raw failure is retained. A later explicit read-only seven-key
+Android baseline check matches. Ledger consumed; no phone round remains.
+Do not pause the main controller for the next supplemental test.
+
+The source default is now180s. Actions42019690558 passes all six jobs from
+07b8435a8715ccdfb7beee7e0e87ba58eb1a3fba, tree
+e161a9930c1a0bdf51fdacf3fe48a761564912b8. Four artifact digests and independent
+41-image/46-kernel/15-Resources checks pass, including actual ARM64 SquashFS,
+841 packages, zero regular users/private credentials, default-off suspend,
+and preserved USB/storage/WiFi runtime bytes. This exact r283 pair is NOT
+phone-tested. Boot ea7f5ea48c8e658da0720804e233fbd34a22d4620cba6a91b834f7766a1760d8;
+rootfs0a32d4499d846965a576467ddc9644dac6cd902f5a8d993140057c6622fa80c0.
+Keep the full r272 stable delivery/tag unchanged. New boots require a fresh
+current-chat exact plan, unconsumed ledger and single-boot confirmation.
+
 # Owner sets idle blank to three minutes, 2026-11-05
 
 During the r282 attended test the owner requested 180 seconds instead of
