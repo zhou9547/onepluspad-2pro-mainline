@@ -10,7 +10,15 @@ Actions restores the cache by content hash before rootfs and Resources builds.
 An incomplete or altered cache fails closed. Source archive and package
 transport also retains official Ubuntu pool and Launchpad alternatives, with
 the original hash checks. Local validation covers 1,157 plan rows and all
-source checksums. The next Actions build will validate native ARM64 assembly.
+source checksums.
+
+Actions [42011681214](https://github.com/zhou9547/onepluspad-2pro-mainline/actions/runs/42011681214)
+now passes all six jobs. The four archives were downloaded with matching
+GitHub digests, and independent image readback passes boot/rootfs pairing,
+841-package SquashFS, ARM64 ELF, runtime bindings, privacy and default-off
+suspend checks. Delivery is `images/diagnostic-r280-20261105`.
+This exact pristine pair still needs separately authorized temporary-boot
+physical acceptance.
 
 # r280 reproducible download recovery, 2026-11-05
 

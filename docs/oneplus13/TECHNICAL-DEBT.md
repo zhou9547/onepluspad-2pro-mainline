@@ -6,6 +6,10 @@ Create a new cache tag when source pins, package plans, or signed snapshots
 change. Never mutate the existing tag in place. GitHub repository capacity
 and clone latency must be monitored before adding further large variants.
 
+Actions42011681214 validates the cache-backed build. The exact r280 pair has
+not yet received its own physical boot; r278's hardware results remain scoped
+to its RAM supplements and do not qualify this new binary.
+
 # r280 archive transport, 2026-11-05
 
 Signed snapshot indexes have recovered, while individual snapshot pool files
