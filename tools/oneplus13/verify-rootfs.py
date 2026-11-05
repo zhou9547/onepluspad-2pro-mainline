@@ -75,7 +75,7 @@ def main():
     if any(line.startswith(('GTK_IM_MODULE=','QT_IM_MODULE=','XMODIFIERS=')) for line in environment):
         raise SystemExit('A global IM override bypasses the native Wayland input path')
     mobile=read('usr/share/glib-2.0/schemas/90-oneplus13-mobile.gschema.override').decode()
-    if '[org.gnome.desktop.session]\nidle-delay=uint32 300\n' not in mobile:
+    if '[org.gnome.desktop.session]\nidle-delay=uint32 180\n' not in mobile:
         raise SystemExit('Phone compatibility blank policy missing')
     if 'power-button-action=\'nothing\'' not in mobile or 'sleep-inactive-battery-type=\'nothing\'' not in mobile:
         raise SystemExit('Unqualified system suspend must remain disabled')

@@ -7,7 +7,7 @@ toolkit-accessibility=true
 # Phone candidate uses the AA569 backlight compatibility backend. This is
 # blank/lock restoration, not qualification of native DPMS or system suspend.
 [org.gnome.desktop.session]
-idle-delay=uint32 300
+idle-delay=uint32 180
 
 [org.gnome.settings-daemon.plugins.power]
 idle-dim=false

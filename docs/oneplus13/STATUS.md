@@ -1,3 +1,13 @@
+# Owner sets idle blank to three minutes, 2026-11-05
+
+During the r282 attended test the owner requested 180 seconds instead of
+300 seconds. The current RAM session read back 180 and the owner confirmed
+visible short-key wake after the actual automatic blank. The source schema
+default and rootfs verifier now both require 180. The 881-test host suite
+passes with one skip. The original r280 pair still contains its earlier
+300-second default. Further r282 results are recorded with this explicit
+user-session policy change.
+
 # Current: pinned repository build cache restored, 2026-11-05
 
 The signed Ubuntu snapshot indexes recovered. The exact 768-package
